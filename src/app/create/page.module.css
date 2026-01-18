@@ -1,0 +1,137 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: white;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: white;
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.backLink:hover {
+  opacity: 1;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.form {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.typeSelector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.typeButton {
+  padding: 1.5rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: left;
+}
+
+.typeButton:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.typeButton.active {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.typeButton h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.typeButton p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0.25rem 0;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.summary {
+  background: #f5f5f5;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.summary p {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 1rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.submitButton:hover {
+  background: #5568d3;
+}
+
