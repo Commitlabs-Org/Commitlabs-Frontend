@@ -1,0 +1,829 @@
+/* ========================================
+   ABOUT US PAGE - STYLES
+   ======================================== */
+
+/* ========================================
+   LAYOUT & STRUCTURE
+   ======================================== */
+
+.mainContainer {
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #f8fafc, #ffffff);
+}
+
+.headerSection {
+  background: linear-gradient(to right, #2563eb, #1e40af);
+  color: #ffffff;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.headerContent {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.pageSubtitle {
+  font-size: 1.25rem;
+  color: #dbeafe;
+  line-height: 1.6;
+}
+
+.mainContent {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+}
+
+/* ========================================
+   TYPOGRAPHY
+   ======================================== */
+
+.sectionTitle {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2rem;
+  line-height: 1.3;
+}
+
+.subsectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1rem;
+}
+
+.body {
+  color: #374151;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.bodySmall {
+  color: #4b5563;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+/* ========================================
+   PROJECT OVERVIEW SECTION
+   ======================================== */
+
+.overviewSection {
+  margin-bottom: 4rem;
+}
+
+.missionBox {
+  background: #eff6ff;
+  border-left: 4px solid #2563eb;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 0.5rem;
+}
+
+.missionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.missionText {
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* ========================================
+   FEATURES GRID
+   ======================================== */
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.featureCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.featureCard:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #93c5fd;
+}
+
+.featureIcon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.featureCardTitle {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.featureCardDescription {
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* ========================================
+   HOW IT WORKS SECTION
+   ======================================== */
+
+.howItWorksBox {
+  background: linear-gradient(to right, #f0f9ff, #e0e7ff);
+  padding: 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid #bfdbfe;
+}
+
+.howItWorksSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+}
+
+.stepNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.stepContent h4 {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.stepContent p {
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ========================================
+   DOCUMENTATION SECTION
+   ======================================== */
+
+.documentationSection {
+  margin-bottom: 4rem;
+}
+
+.documentationGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.documentationCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 1.75rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.documentationCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(to right, #2563eb, #60a5fa);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.documentationCard:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #60a5fa;
+  transform: translateY(-4px);
+}
+
+.documentationCard:hover::before {
+  transform: scaleX(1);
+}
+
+.docIcon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.docCardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.docCardDescription {
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  flex-grow: 1;
+  margin-bottom: 1rem;
+}
+
+.docLink {
+  color: #2563eb;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.documentationCard:hover .docLink {
+  color: #1e40af;
+  transform: translateX(4px);
+}
+
+/* ========================================
+   FAQ SECTION
+   ======================================== */
+
+.faqSection {
+  margin-bottom: 4rem;
+}
+
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.faqItem {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.faqItem:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #bfdbfe;
+}
+
+.faqSummary {
+  padding: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #111827;
+  font-size: 1rem;
+  background: #ffffff;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.faqSummary:hover {
+  background: #f9fafb;
+}
+
+.faqToggle {
+  font-size: 1.5rem;
+  color: #2563eb;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.faqItem[open] .faqToggle {
+  transform: rotate(45deg);
+}
+
+.faqContent {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ========================================
+   HELP & RESOURCES SECTION
+   ======================================== */
+
+.resourcesSection {
+  margin-bottom: 4rem;
+}
+
+.resourcesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.resourceCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.resourceCard:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #60a5fa;
+  transform: translateY(-2px);
+}
+
+.resourceCardTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.resourceCardDescription {
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+/* ========================================
+   CTA SECTION
+   ======================================== */
+
+.ctaSection {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+.ctaTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #ffffff;
+}
+
+.ctaDescription {
+  color: #dbeafe;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.ctaButton {
+  display: inline-block;
+  background: #ffffff;
+  color: #2563eb;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.ctaButton:hover {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+/* ========================================
+   TEAM & CONTACT SECTION
+   ======================================== */
+
+.teamSection {
+  margin-bottom: 4rem;
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.contactCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.contactCard:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #60a5fa;
+}
+
+.contactCardTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.contactCardText {
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.contactLink {
+  display: inline-block;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.contactLink:hover {
+  color: #1e40af;
+  text-decoration: underline;
+}
+
+.socialLinks {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.socialLink {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.socialLink:hover {
+  background: #dbeafe;
+  color: #1e40af;
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   LEGAL SECTION
+   ======================================== */
+
+.legalSection {
+  margin-bottom: 4rem;
+}
+
+.legalGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.legalCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.legalCard::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, #2563eb, #60a5fa);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.legalCard:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #60a5fa;
+  transform: translateY(-2px);
+}
+
+.legalCard:hover::after {
+  transform: scaleX(1);
+}
+
+.legalCardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.legalCardDescription {
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+/* ========================================
+   CTA SECTION
+   ======================================== */
+
+@media (max-width: 768px) {
+  .mainContent {
+    padding: 2rem 1rem;
+  }
+
+  .headerSection {
+    padding: 2rem 1rem;
+  }
+
+  .pageTitle {
+    font-size: 2rem;
+  }
+
+  .pageSubtitle {
+    font-size: 1.05rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .resourcesGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .documentationGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .contactGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .legalGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .howItWorksSteps {
+    gap: 1.25rem;
+  }
+
+  .ctaSection {
+    padding: 1.5rem;
+  }
+
+  .ctaTitle {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .mainContainer {
+    min-height: 100vh;
+  }
+
+  .headerSection {
+    padding: 1.5rem 1rem;
+  }
+
+  .pageTitle {
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .pageSubtitle {
+    font-size: 1rem;
+  }
+
+  .mainContent {
+    padding: 1.5rem 1rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.25rem;
+  }
+
+  .subsectionTitle {
+    font-size: 1.1rem;
+  }
+
+  .overviewSection {
+    margin-bottom: 2.5rem;
+  }
+
+  .faqSection {
+    margin-bottom: 2.5rem;
+  }
+
+  .resourcesSection {
+    margin-bottom: 2.5rem;
+  }
+
+  .teamSection {
+    margin-bottom: 2.5rem;
+  }
+
+  .legalSection {
+    margin-bottom: 2.5rem;
+  }
+
+  .contactGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .legalGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .contactCard {
+    padding: 1.5rem;
+  }
+
+  .legalCard {
+    padding: 1.25rem;
+  }
+
+  .socialLinks {
+    gap: 0.75rem;
+  }
+
+  .socialLink {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .faqSummary {
+    padding: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .faqContent {
+    padding: 0 1rem 1rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .missionBox {
+    padding: 1rem;
+  }
+
+  .featureCard {
+    padding: 1rem;
+  }
+
+  .howItWorksBox {
+    padding: 1.5rem;
+  }
+
+  .resourceCard {
+    padding: 1.25rem;
+  }
+
+  .stepNumber {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .ctaButton {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY & FOCUS STATES
+   ======================================== */
+
+.faqSummary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.resourceCard:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.ctaButton:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.contactLink:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.socialLink:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.legalCard:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.featureCard {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.resourceCard {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.faqItem {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.contactCard {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.legalCard {
+  animation: fadeIn 0.5s ease-out;
+}
