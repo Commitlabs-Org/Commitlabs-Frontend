@@ -27,9 +27,9 @@ const mockListings = [
 
 export default function Marketplace() {
   return (
-    <div className={styles.container}>
+    <main id="main-content" className={styles.container}>
       <header className={styles.header}>
-        <Link href="/" className={styles.backLink}>
+        <Link href="/" className={styles.backLink} aria-label="Back to Home">
           ← Back to Home
         </Link>
         <h1>Commitment Marketplace</h1>
@@ -40,8 +40,8 @@ export default function Marketplace() {
         <div className={styles.filters}>
           <h2>Filters</h2>
           <div className={styles.filterGroup}>
-            <label>Type</label>
-            <select>
+            <label htmlFor="type-filter">Type</label>
+            <select id="type-filter">
               <option>All</option>
               <option>Safe</option>
               <option>Balanced</option>
@@ -49,8 +49,8 @@ export default function Marketplace() {
             </select>
           </div>
           <div className={styles.filterGroup}>
-            <label>Min Compliance Score</label>
-            <input type="number" min="0" max="100" defaultValue="80" />
+            <label htmlFor="compliance-filter">Min Compliance Score</label>
+            <input id="compliance-filter" type="number" min="0" max="100" defaultValue="80" />
           </div>
         </div>
 
@@ -87,15 +87,19 @@ export default function Marketplace() {
                   </div>
                 </div>
                 <div className={styles.listingActions}>
-                  <button className={styles.viewButton}>View Details</button>
-                  <button className={styles.tradeButton}>Trade NFT</button>
+                  <button className={styles.viewButton} aria-label={`View details for ${listing.type} commitment`}>
+                    View Details
+                  </button>
+                  <button className={styles.tradeButton} aria-label={`Trade NFT for ${listing.type} commitment`}>
+                    Trade NFT
+                  </button>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

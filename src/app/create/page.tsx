@@ -23,9 +23,9 @@ export default function CreateCommitment() {
   }
 
   return (
-    <div className={styles.container}>
+    <main id="main-content" className={styles.container}>
       <header className={styles.header}>
-        <Link href="/" className={styles.backLink}>
+        <Link href="/" className={styles.backLink} aria-label="Back to Home">
           ← Back to Home
         </Link>
         <h1>Create Liquidity Commitment</h1>
@@ -40,6 +40,7 @@ export default function CreateCommitment() {
               type="button"
               className={`${styles.typeButton} ${commitmentType === 'safe' ? styles.active : ''}`}
               onClick={() => setCommitmentType('safe')}
+              aria-pressed={commitmentType === 'safe'}
             >
               <h3>Safe Commitment</h3>
               <p>Duration: 30 days</p>
@@ -50,6 +51,7 @@ export default function CreateCommitment() {
               type="button"
               className={`${styles.typeButton} ${commitmentType === 'balanced' ? styles.active : ''}`}
               onClick={() => setCommitmentType('balanced')}
+              aria-pressed={commitmentType === 'balanced'}
             >
               <h3>Balanced Commitment</h3>
               <p>Duration: 60 days</p>
@@ -60,6 +62,7 @@ export default function CreateCommitment() {
               type="button"
               className={`${styles.typeButton} ${commitmentType === 'aggressive' ? styles.active : ''}`}
               onClick={() => setCommitmentType('aggressive')}
+              aria-pressed={commitmentType === 'aggressive'}
             >
               <h3>Aggressive Commitment</h3>
               <p>Duration: 90 days</p>
@@ -128,7 +131,7 @@ export default function CreateCommitment() {
           Create Commitment
         </button>
       </form>
-    </div>
+    </main>
   )
 }
 

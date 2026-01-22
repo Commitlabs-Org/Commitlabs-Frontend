@@ -33,9 +33,9 @@ const mockCommitments = [
 
 export default function MyCommitments() {
   return (
-    <div className={styles.container}>
+    <main id="main-content" className={styles.container}>
       <header className={styles.header}>
-        <Link href="/" className={styles.backLink}>
+        <Link href="/" className={styles.backLink} aria-label="Back to Home">
           ← Back to Home
         </Link>
         <h1>My Commitments</h1>
@@ -88,15 +88,21 @@ export default function MyCommitments() {
               </div>
 
               <div className={styles.cardActions}>
-                <button className={styles.actionButton}>View Details</button>
-                <button className={styles.actionButton}>View Attestations</button>
-                <button className={styles.actionButtonDanger}>Early Exit</button>
+                <button className={styles.actionButton} aria-label={`View details for ${commitment.type} commitment`}>
+                  View Details
+                </button>
+                <button className={styles.actionButton} aria-label={`View attestations for ${commitment.type} commitment`}>
+                  View Attestations
+                </button>
+                <button className={styles.actionButtonDanger} aria-label={`Early exit for ${commitment.type} commitment`}>
+                  Early Exit
+                </button>
               </div>
             </div>
           ))
         )}
       </div>
-    </div>
+    </main>
   )
 }
 

@@ -3,7 +3,7 @@
 
 interface NFTDisplayProps {
   tokenId: string
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 export default function NFTDisplay({ tokenId, metadata }: NFTDisplayProps) {

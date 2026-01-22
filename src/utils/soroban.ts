@@ -18,9 +18,9 @@ export async function connectWallet() {
 
 // TODO: Implement contract calls
 export async function callContract(
-  contractAddress: string,
-  functionName: string,
-  args: any[]
+  contractAddress: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+  functionName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+  args: any[] // eslint-disable-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 ) {
   // Placeholder for contract call logic
   throw new Error('Contract calls not implemented')
@@ -28,9 +28,9 @@ export async function callContract(
 
 // TODO: Implement contract reads
 export async function readContract(
-  contractAddress: string,
-  functionName: string,
-  args: any[]
+  contractAddress: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+  functionName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+  args: any[] // eslint-disable-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 ) {
   // Placeholder for contract read logic
   throw new Error('Contract reads not implemented')

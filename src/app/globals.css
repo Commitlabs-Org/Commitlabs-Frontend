@@ -25,3 +25,38 @@ a {
   text-decoration: none;
 }
 
+/* Accessibility */
+*:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Ensure sufficient color contrast */
+body {
+  color: #fff;
+}
+
+/* Skip links for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
