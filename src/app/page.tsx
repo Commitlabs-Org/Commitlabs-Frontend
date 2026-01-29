@@ -13,6 +13,7 @@ export default function Home() {
       <ImpactSection />
       <SolutionSection />
       </main>
+      <Footer />
     </div>
 
   )

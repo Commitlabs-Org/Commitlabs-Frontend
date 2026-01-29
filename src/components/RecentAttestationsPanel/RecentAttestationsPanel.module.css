@@ -1,0 +1,374 @@
+.panel {
+  background: #0A0A0A;
+  border-radius: 14px;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+}
+
+.viewAllButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(15, 240, 252, 0.15);
+  border: 0.5px solid rgba(15, 240, 252, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+}
+
+.viewAllButton:hover {
+  background: rgba(15, 240, 252, 0.22);
+  border-color: rgba(15, 240, 252, 0.4);
+  transform: translateY(-1px);
+}
+
+.viewAllButton:focus-visible {
+  outline: 2px solid rgba(15, 240, 252, 0.6);
+  outline-offset: 2px;
+}
+
+.viewAllButton:active {
+  transform: translateY(0);
+}
+
+.attestationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.attestationsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.attestationsList::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.attestationsList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.attestationsList::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9375rem;
+}
+
+.attestationRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+  text-align: left;
+  width: 100%;
+  min-height: 44px;
+}
+
+.attestationRow:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.attestationRow:focus-visible {
+  outline: 2px solid rgba(15, 240, 252, 0.6);
+  outline-offset: 2px;
+}
+
+.attestationRow:active {
+  transform: translateY(0);
+}
+
+/* Severity-based background colors */
+.attestationRow.ok {
+  background: rgba(5, 223, 114, 0.1);
+  border: 0.5px solid rgba(5, 223, 114, 0.2);
+}
+
+.attestationRow.ok:hover {
+  background: rgba(5, 223, 114, 0.15);
+  border-color: rgba(5, 223, 114, 0.3);
+}
+
+.attestationRow.warning {
+  background: rgba(255, 138, 4, 0.1);
+  border: 0.5px solid rgba(255, 138, 4, 0.2);
+}
+
+.attestationRow.warning:hover {
+  background: rgba(255, 138, 4, 0.15);
+  border-color: rgba(255, 138, 4, 0.3);
+}
+
+.attestationRow.violation {
+  background: rgba(255, 105, 0, 0.1);
+  border: 0.5px solid rgba(255, 105, 0, 0.2);
+}
+
+.attestationRow.violation:hover {
+  background: rgba(255, 105, 0, 0.15);
+  border-color: rgba(255, 105, 0, 0.3);
+}
+
+.rowLeft {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+}
+
+.rowContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rowTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.attestationRow.ok .rowTitle {
+  color: #05DF72;
+}
+
+.attestationRow.warning .rowTitle {
+  color: #FF8A04;
+}
+
+.attestationRow.violation .rowTitle {
+  color: #FF6900;
+}
+
+.rowDescription {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rowTxHash {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.rowRight {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: fit-content;
+}
+
+.rowTimestamp {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.attestationRow.ok .rowTimestamp {
+  color: #05DF72;
+}
+
+.attestationRow.warning .rowTimestamp {
+  color: #FF8A04;
+}
+
+.attestationRow.violation .rowTimestamp {
+  color: #FF6900;
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footerColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.footerValue {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.footerLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footerCompliance .footerValue,
+.footerCompliance .footerLabel {
+  color: #05DF72;
+}
+
+.footerWarning .footerValue,
+.footerWarning .footerLabel {
+  color: #FF8A04;
+}
+
+.footerViolation .footerValue,
+.footerViolation .footerLabel {
+  color: #FF6900;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .panel {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .title {
+    font-size: 1.125rem;
+  }
+
+  .viewAllButton {
+    padding: 8px 14px;
+    font-size: 0.8125rem;
+  }
+
+  .attestationsList {
+    gap: 10px;
+    max-height: 500px;
+  }
+
+  .attestationRow {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .rowTitle {
+    font-size: 0.875rem;
+  }
+
+  .rowDescription {
+    font-size: 0.75rem;
+  }
+
+  .rowTxHash {
+    font-size: 0.6875rem;
+  }
+
+  .rowTimestamp {
+    font-size: 0.75rem;
+  }
+
+  .footer {
+    gap: 0.75rem;
+  }
+
+  .footerValue {
+    font-size: 1.75rem;
+  }
+
+  .footerLabel {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .panel {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .viewAllButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .attestationRow {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  .rowRight {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 4px;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .footerColumn {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+  }
+
+  .footerValue {
+    font-size: 1.5rem;
+  }
+}

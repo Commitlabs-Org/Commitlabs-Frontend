@@ -1,7 +1,6 @@
 .container {
-  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 5.5rem;
   min-height: 100vh;
 }
 
@@ -157,5 +156,11 @@
 
 .actionButtonDanger:hover {
   background: #c82333;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 2rem 1.5rem;
+  }
 }
 
