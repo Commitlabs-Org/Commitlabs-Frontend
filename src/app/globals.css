@@ -66,3 +66,32 @@ textarea:focus {
 .skip-link:focus {
   top: 6px;
 }
+
+button {
+  cursor: pointer;
+}
+
+
+/* Subtle modal scrollbar */
+.animate-slideUp::-webkit-scrollbar {
+  width: 6px;
+}
+
+.animate-slideUp::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.animate-slideUp::-webkit-scrollbar-thumb {
+  background: rgba(15, 240, 252, 0.25);
+  border-radius: 999px;
+}
+
+.animate-slideUp::-webkit-scrollbar-thumb:hover {
+  background: rgba(73, 105, 106, 0.45);
+}
+
+/* Firefox */
+.animate-slideUp {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(221, 230, 231, 0.25) transparent;
+}
