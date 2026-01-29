@@ -3,29 +3,24 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-radius: 20px;
+  border-radius: 14px;
   padding: 18px;
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 18px 45px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(8px);
+  background: #0A0A0AE5;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   overflow: hidden;
 }
 
-.card::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  pointer-events: none;
-  border-radius: 20px;
-  opacity: 0.35;
-  filter: blur(10px);
-  background: radial-gradient(60% 40% at 20% 0%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+.card.typeSafe{
+    border-color: #00C95066;
+}
+
+.card.typeBalanced{
+    border-color: #2B7FFF66;
+}
+
+.card.typeAggressive{
+    border-color: #FF690066;
 }
 
 .card:hover {
@@ -50,8 +45,9 @@
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+  ;
+  border: 0.5px solid #FFFFFF33;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
@@ -75,28 +71,31 @@
   border-radius: 999px;
   color: rgba(255, 255, 255, 0.92);
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 .scoreBadge {
   font-size: 12px;
   font-weight: 700;
   padding: 8px 12px;
-  border-radius: 999px;
+  border-radius: 10px;
   color: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
 }
 
-.scoreHigh {
-  background: rgba(36, 201, 136, 0.16);
+.typeSafe .scoreBadge{
+    color: #05DF72;
 }
-.scoreMid {
-  background: rgba(56, 146, 255, 0.16);
+
+.typeBalanced .scoreBadge{
+    color:#51A2FF;
 }
-.scoreLow {
-  background: rgba(255, 154, 60, 0.16);
+
+.typeAggressive .scoreBadge{
+    color:#FF8904;
 }
+
+
 
 .body {
   flex: 1;
@@ -134,15 +133,17 @@
   color: rgba(255, 255, 255, 0.92);
 }
 
+.kvRow dd.accentValue{
+    color: #0FF0FC;
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.78);
 }
 
-.accentValue {
-  color: #67e8f9;
-}
+
 
 .bottom {
   margin-top: 16px;
@@ -155,13 +156,8 @@
 .pricePanel {
   border-radius: 14px;
   padding: 14px 14px;
-  background:
-    radial-gradient(120% 140% at 20% 0%, rgba(103, 232, 249, 0.12), rgba(103, 232, 249, 0) 55%),
-    rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(103, 232, 249, 0.18);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 10px 30px rgba(0, 0, 0, 0.35);
+  background: #0FF0FC0D;
+  border: 0.5px solid #0FF0FC33;
   text-align: center;
 }
 
@@ -210,10 +206,9 @@
 }
 
 .tradeButton {
-  color: rgba(0, 0, 0, 0.92);
-  background: #67e8f9;
-  border: 1px solid rgba(103, 232, 249, 0.45);
-  box-shadow: 0 16px 35px rgba(103, 232, 249, 0.14);
+  color: #0FF0FC;
+  background: #0FF0FC1A;
+  border: 0.56px solid #0FF0FC66;
   transition: transform 160ms ease, filter 160ms ease;
 }
 
@@ -256,16 +251,19 @@
 }
 
 .typeSafe .typeBadge {
-  background: rgba(36, 201, 136, 0.14);
+  background: #00C9501A;
   border-color: rgba(36, 201, 136, 0.22);
+  color: #05DF72;
 }
 .typeBalanced .typeBadge {
-  background: rgba(56, 146, 255, 0.14);
+  background: #2B7FFF1A;
   border-color: rgba(56, 146, 255, 0.22);
+  color: #51A2FF;
 }
 .typeAggressive .typeBadge {
-  background: rgba(255, 154, 60, 0.14);
+  background: #FF69001A;
   border-color: rgba(255, 154, 60, 0.22);
+  color: #FF8904;
 }
 
 .typeSafe:hover {
