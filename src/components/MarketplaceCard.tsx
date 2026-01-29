@@ -22,11 +22,11 @@ function clampScore(score: number) {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-function scoreTier(score: number): "high" | "mid" | "low" {
-  if (score >= 90) return "high";
-  if (score >= 80) return "mid";
-  return "low";
-}
+// function scoreTier(score: number): "high" | "mid" | "low" {
+//   if (score >= 90) return "high";
+//   if (score >= 80) return "mid";
+//   return "low";
+// }
 
 function truncateAddress(addr: string) {
   const s = addr?.trim() ?? "";
