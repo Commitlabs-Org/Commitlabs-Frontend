@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHeader'
 import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import styles from './page.module.css'
@@ -225,12 +226,38 @@ const mockListings = [
   },
 ]
 
+function filterBySearch(
+  items: typeof mockListings,
+  query: string
+): typeof mockListings {
+  if (!query.trim()) return items
+  const q = query.trim().toLowerCase()
+  return items.filter((item) => {
+    const searchable = [
+      item.type,
+      item.amount,
+      item.duration,
+      item.yield,
+      item.price,
+      item.owner,
+    ].join(' ')
+    return searchable.toLowerCase().includes(q)
+  })
+}
+
 export default function Marketplace() {
+  const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 9
-  const totalPages = Math.max(1, Math.ceil(mockListings.length / itemsPerPage))
-  const pagedListings = mockListings.slice(
+
+  const filteredListings = useMemo(
+    () => filterBySearch(mockListings, searchQuery),
+    [searchQuery]
+  )
+
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / itemsPerPage))
+  const pagedListings = filteredListings.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
@@ -251,9 +278,11 @@ export default function Marketplace() {
           <p>Browse and trade Commitment NFTs</p>
         </header>
 
+        <MarketplaceHeader onSearchChange={setSearchQuery} />
+
         <section className={styles.gridShell} aria-label="Marketplace listings">
           <MarketplaceResultsLayout
-            totalCount={mockListings.length}
+            totalCount={filteredListings.length}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             currentPage={currentPage}

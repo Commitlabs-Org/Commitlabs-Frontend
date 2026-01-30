@@ -1,166 +1,24 @@
-.container {
-  margin: 0 auto;
-  padding: 2rem 5.5rem;
+.pageWrapper {
   min-height: 100vh;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 3rem;
-  color: white;
-}
-
-.backLink {
-  display: inline-block;
-  margin-bottom: 1rem;
-  color: white;
-  opacity: 0.8;
-  text-decoration: underline;
-}
-
-.backLink:hover {
-  opacity: 1;
-}
-
-.header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.header p {
-  font-size: 1.1rem;
-  opacity: 0.9;
-}
-
-.commitmentsList {
-  display: grid;
-  gap: 2rem;
-}
-
-.emptyState {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  color: #666;
-}
-
-.createLink {
-  display: inline-block;
-  margin-top: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.commitmentCard {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.cardHeader h2 {
-  font-size: 1.5rem;
-  color: #333;
-}
-
-.status {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.status.active {
-  background: #d4edda;
-  color: #155724;
-}
-
-.status.settled {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.status.violated {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.cardBody {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.metric {
+  background: #000;
   display: flex;
   flex-direction: column;
 }
 
-.label {
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0.25rem;
+.container {
+  padding: 2rem 5.5rem;
+  width: 100%;
+  flex: 1;
 }
 
-.value {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.cardActions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.actionButton {
-  padding: 0.75rem 1.5rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.3s;
-}
-
-.actionButton:hover {
-  background: #5568d3;
-}
-
-.actionButtonDanger {
-  padding: 0.75rem 1.5rem;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.3s;
-}
-
-.actionButtonDanger:hover {
-  background: #c82333;
-}
-
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .container {
-    padding: 2rem 1.5rem;
+    padding: 2rem 2rem;
   }
 }
 
+@media (max-width: 640px) {
+  .container {
+    padding: 2rem 1rem;
+  }
+}

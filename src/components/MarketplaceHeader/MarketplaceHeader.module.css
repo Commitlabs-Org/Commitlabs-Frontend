@@ -1,0 +1,293 @@
+/* Visually hidden, available to screen readers */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Full-width header below global nav – spans entire page width */
+.root {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  background-color: #0a0a0a;
+  padding: 2rem 0 2.5rem;
+  margin-bottom: 0.5rem;
+  margin-left: 0;
+  margin-right: 0;
+  font-family: "Roboto Mono", sans-serif;
+}
+
+.inner {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+}
+
+/* Left-aligned content block */
+.contentBlock {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  transition: text-decoration 0.2s ease, outline 0.2s ease;
+  text-decoration: none;
+  background: linear-gradient(180deg, #F5F5F7 0%, #909091 50%, #000000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  background: linear-gradient(180deg, #F5F5F7 0%, #F5F5F7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-decoration: underline;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.headingWrap {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+/* Subtle radial glow behind heading */
+.headingGlow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 140%;
+  height: 180%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(15, 240, 252, 0.06) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.title {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  background: linear-gradient(180deg, #F5F5F7 0%, #909091 50%, #000000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subheading {
+  position: relative;
+  z-index: 1;
+  font-size: 1.05rem;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.4;
+  background: linear-gradient(180deg, #F5F5F7 0%, #909091 50%, #000000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Right-aligned controls block */
+.controlsBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 350px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.1rem;
+  height: 1.1rem;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+/* Search bar: background #0A0A0A 80%, top border 0.56px white 10%; text uses Inter */
+.searchInput {
+  width: 100%;
+  height: 44px;
+  padding: 0 1rem 0 2.75rem;
+  border-radius: 14px;
+  border: 1px;
+  border-color: #FFFFFF1A solid;
+  border-top: 0.56px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 10, 0.8);
+  color: #F5F5F7;
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, outline 0s;
+}
+
+.searchInput::placeholder {
+  color: #909091;
+  font-family: "Inter", sans-serif;
+}
+
+.searchInput:hover {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+
+.searchInput:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-top-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Primary CTA: + Create with cyan glow (design: fill #0A0A0A, border 0.56px #0FF0FC 40%, drop shadow #0FF0FC 20% blur 20) */
+.createButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 44px;
+  padding: 0 1.25rem;
+  border-radius: 14px;
+  background: #0A0A0A;
+  border: 0.56px solid rgba(15, 240, 252, 0.4);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 0 20px rgba(15, 240, 252, 0.2);
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.2s ease,
+    outline 0s;
+  white-space: nowrap;
+}
+
+.createButtonIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.createButtonLabel {
+  background: linear-gradient(180deg, #F5F5F7 0%, #909091 50%, #000000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.createButton:hover {
+  box-shadow:
+    0 0 22px rgba(15, 240, 252, 0.45),
+    0 0 0 1px rgba(15, 240, 252, 0.2);
+  transform: translateY(-1px);
+}
+
+.createButton:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 22px rgba(15, 240, 252, 0.45),
+    0 0 0 1px rgba(15, 240, 252, 0.2);
+}
+
+/* Tablet: allow wrapping */
+@media (max-width: 900px) {
+  .inner {
+    gap: 1.25rem;
+  }
+
+  .controlsBlock {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .searchWrap {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+}
+
+/* Mobile: stack vertically, full-width search and button */
+@media (max-width: 600px) {
+  .root {
+    padding: 1.5rem 0 2rem;
+  }
+
+  .inner {
+    padding: 0 1.25rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .contentBlock {
+    order: 1;
+  }
+
+  .backLink {
+    margin-bottom: 0.5rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .subheading {
+    font-size: 0.95rem;
+  }
+
+  .controlsBlock {
+    order: 2;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .searchWrap {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+
+  .createButton {
+    width: 100%;
+    min-height: 48px;
+  }
+}

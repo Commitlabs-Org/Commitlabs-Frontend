@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { HealthMetricsComplianceChart } from './HealthMetricsComplianceChart';
+
 import { HealthMetricsValueHistoryChart } from './HealthMetricsValueHistoryChart';
 
 function cn(...inputs: ClassValue[]) {
@@ -21,7 +22,7 @@ export default function CommitmentHealthMetrics({
     complianceData,
     valueHistoryData,
 }: CommitmentHealthMetricsProps) {
-    const [activeTab, setActiveTab] = useState<TabType>('value');
+    const [activeTab, setActiveTab] = useState<TabType>('compliance');
 
     const tabs: { id: TabType; label: string }[] = [
         { id: 'value', label: 'Value History' },
@@ -54,13 +55,13 @@ export default function CommitmentHealthMetrics({
             </div>
 
             <div className="w-full">
-                {activeTab === 'value' && (
-                    <HealthMetricsValueHistoryChart data={valueHistoryData} />
-                )}
                 {activeTab === 'compliance' && (
                     <HealthMetricsComplianceChart data={complianceData} />
                 )}
-                {activeTab !== 'value' && activeTab !== 'compliance' && (
+                {activeTab === 'value' && (
+                    <HealthMetricsValueHistoryChart data={valueHistoryData} />
+                )}
+                {activeTab !== 'compliance' && activeTab !== 'value' && (
                     <div className="flex items-center justify-center h-[300px] border border-[#222] border-dashed rounded-xl">
                         <p className="text-[#666]">
                             {tabs.find((t) => t.id === activeTab)?.label} chart placeholder

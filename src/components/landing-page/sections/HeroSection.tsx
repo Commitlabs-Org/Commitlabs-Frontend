@@ -4,9 +4,9 @@ import React from "react";
 import { StarField } from "../ui/StarField";
 import { FaGithub, FaEnvelope } from "react-icons/fa";
 import { IoDocumentText } from "react-icons/io5";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
@@ -15,7 +15,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } },
 };

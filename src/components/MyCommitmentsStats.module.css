@@ -1,0 +1,67 @@
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+
+.iconWrapper {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 0.56px solid #FFFFFF33;
+}
+
+.statValue {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--stat-color, #fff);
+}
+
+.statLabel {
+  font-size: 14px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+/* Colors for glows and icons */
+.statTeal { --stat-color: #0FF0FC; }
+
+.statGreen { --stat-color: #10B981; }
+
+.statBlue { --stat-color: #3B82F6; }
+
+.statPurple { --stat-color: #A855F7; }
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}
