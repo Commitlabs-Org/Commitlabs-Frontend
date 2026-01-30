@@ -1,6 +1,5 @@
 import { Clock, AlertTriangle, Shield, DollarSign } from 'lucide-react'
 import styles from './CommitmentDetailParameters.module.css'
-
 import { PiStack } from 'react-icons/pi'
 
 const DEFAULT_DURATION_DESCRIPTION = 'Commitment lock period'
