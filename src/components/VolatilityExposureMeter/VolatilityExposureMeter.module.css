@@ -6,74 +6,78 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
 .title {
   font-size: 1rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.95);
-  margin: 0 0 1rem 0;
+  margin: 0;
 }
 
-.barWrapper {
+.percentLabel {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0FF0FC;
+}
+
+.barTrack {
   position: relative;
   width: 100%;
   height: 12px;
   border-radius: 8px;
+  background: #1a1a1a; /* Dark background for empty part */
   overflow: hidden;
-  background: linear-gradient(90deg, #00C950 0%, #FF6900 50%, #FB2C36 100%);
   margin-bottom: 8px;
 }
 
 .barMask {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 0;
   bottom: 0;
-  background: #0A0A0A; 
-  opacity: 0.9; 
-  background: #1E2939;
-  transition: width 180ms ease;
-}
-.labelsRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  overflow: hidden; /* Clips the gradient */
+  transition: width 300ms ease-out;
 }
 
-.axisLabels {
+.barGradient {
+  width: 100vw; /* Ensure wide enough to cover the mask */
+  max-width: 600px; /* Or responsive constraint */
+  height: 100%;
+  border-radius: 8px;
+  /* Specific gradient from Green -> Orange -> Red matching design */
+  background: linear-gradient(
+    90deg,
+    #00C950 0%,
+    #FF6900 60%,
+    #FB2C36 100%
+  );
+}
+.labelsRow {
   display: flex;
   justify-content: space-between;
   width: 100%;
   font-size: 0.75rem;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.5);
-}
-
-.percentLabel {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0FF0FC;
-  flex-shrink: 0;
-  margin-left: 0.75rem;
+  margin-top: 4px;
 }
 
 .description {
   font-size: 0.8125rem;
   color: rgba(255, 255, 255, 0.6);
   line-height: 1.45;
-  margin: 0.5rem 0 0 0;
+  margin: 0.75rem 0 0 0;
 }
 
 @media (max-width: 520px) {
   .container {
     padding: 1rem 1.25rem;
-  }
-
-  .axisLabels {
-    font-size: 0.6875rem;
-  }
-
-  .percentLabel {
-    font-size: 0.9375rem;
   }
 }

@@ -25,11 +25,7 @@ interface TooltipPayload {
         value: number;
         dataKey: string;
         color: string;
-        payload: {
-            date: string;
-            currentValue: number;
-            initialAmount?: number;
-        };
+        name: string;
     }>;
     label?: string;
 }
@@ -37,7 +33,7 @@ interface TooltipPayload {
 const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
+            <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg min-w-[150px]">
                 <p className="text-[#99a1af] text-sm mb-2">{label}</p>
                 {payload.map((entry, index) => (
                     <div key={index} className="flex items-center gap-2 mb-1 last:mb-0">
@@ -45,8 +41,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
                             className="w-2 h-2 rounded-full" 
                             style={{ backgroundColor: entry.color }}
                         />
-                        <span className="text-sm font-medium text-white">
-                            {entry.dataKey === 'initialAmount' ? 'Initial Amount' : 'Current Value'}: {entry.value.toLocaleString()}
+                        <span className="text-gray-300 text-sm font-medium">
+                            {entry.name}: {entry.value.toLocaleString()}
                         </span>
                     </div>
                 ))}
@@ -62,7 +58,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
 }) => {
     return (
         <>
-            <div className="w-full h-full min-h-[300px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222]">
+            <div className="w-full h-full min-h-[350px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222] shadow-sm">
                 <ResponsiveContainer width="100%" height={300}>
                     <LineChart
                         data={data}
@@ -86,7 +82,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                             tick={{ fill: '#666', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
-                            tickFormatter={(value) => `${value}`}
+                            tickFormatter={(value) => `${value.toLocaleString()}`}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#333' }} />
                         <Legend
@@ -113,6 +109,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                         <Line
                             type="monotone"
                             dataKey="initialAmount"
+                            name="Initial Amount"
                             stroke="#666"
                             strokeWidth={2}
                             strokeDasharray="5 5"
@@ -123,6 +120,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                         <Line
                             type="monotone"
                             dataKey="currentValue"
+                            name="Current Value"
                             stroke="#0ff0fc"
                             strokeWidth={2}
                             dot={{ r: 4, fill: '#0ff0fc', stroke: '#111', strokeWidth: 2 }}
@@ -131,7 +129,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                     </LineChart>
                 </ResponsiveContainer>
                 <div className="mt-4 pt-4 border-t border-[#222]">
-                    <p className="text-[#99a1af] text-sm leading-relaxed">
+                    <p className="text-[#99a1af] text-sm leading-relaxed text-center sm:text-left">
                         Track how your commitment value has changed over time compared to the initial amount.
                     </p>
                 </div>

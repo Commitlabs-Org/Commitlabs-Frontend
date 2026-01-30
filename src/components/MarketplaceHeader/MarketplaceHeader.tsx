@@ -17,6 +17,7 @@ export interface MarketplaceHeaderProps {
   backHref?: string
   /** URL for the Create button. Default "/create". */
   createHref?: string
+   searchQuery?: string
 }
 
 const DEFAULT_PLACEHOLDER = 'Search commitments…'

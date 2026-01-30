@@ -7,16 +7,15 @@ import CommitmentHealthMetrics from '@/components/dashboard/CommitmentHealthMetr
 import CommitmentDetailAllocationConstraints from '@/components/CommitmentDetailAllocationConstraints';
 import { CommitmentDetailNftSection } from '@/components/dashboard/CommitmentDetailNftSection';
 import { CommitmentDetailParameters } from '@/components/CommitmentDetailParameters/CommitmentDetailParameters';
-import styles from './page.module.css';
 
-// TODO: Replace with actual data from contracts; keep in sync with list page mock data
+// Mock Commitments
 const MOCK_COMMITMENTS: Record<
   string,
   { id: string; type: string; duration: number; maxLoss: number; earlyExitPenaltyPercent?: number }
 > = {
   '1': { id: '1', type: 'Balanced', duration: 60, maxLoss: 8, earlyExitPenaltyPercent: 3 },
   '2': { id: '2', type: 'Safe', duration: 30, maxLoss: 2, earlyExitPenaltyPercent: 3 },
-}
+};
 
 // Mock data for health metrics
 const MOCK_COMPLIANCE_DATA = [
@@ -54,7 +53,7 @@ const MOCK_NFT_DATA = {
 };
 
 function getCommitmentById(id: string) {
-  return MOCK_COMMITMENTS[id] ?? null
+  return MOCK_COMMITMENTS[id] ?? null;
 }
 
 export default function CommitmentDetailPage({
@@ -114,12 +113,14 @@ export default function CommitmentDetailPage({
                     </div>
                 </header>
 
-                <CommitmentDetailParameters
-                    durationLabel={durationLabel}
-                    maxLossLabel={maxLossLabel}
-                    commitmentTypeLabel={commitmentTypeLabel}
-                    earlyExitPenaltyLabel={earlyExitPenaltyLabel}
-                />
+                <div className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
+                    <CommitmentDetailParameters
+                        durationLabel={durationLabel}
+                        maxLossLabel={maxLossLabel}
+                        commitmentTypeLabel={commitmentTypeLabel}
+                        earlyExitPenaltyLabel={earlyExitPenaltyLabel}
+                    />
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     <div className="lg:col-span-2 space-y-8">
@@ -146,7 +147,6 @@ export default function CommitmentDetailPage({
                             ownerAddress={MOCK_NFT_DATA.ownerAddress}
                             contractAddress={MOCK_NFT_DATA.contractAddress}
                             mintDate={MOCK_NFT_DATA.mintDate}
-                        
                             onCopyTokenId={() => handleCopy(MOCK_NFT_DATA.tokenId, 'Token ID')}
                             onCopyOwner={() => handleCopy(MOCK_NFT_DATA.ownerAddress, 'Owner Address')}
                             onCopyContract={() => handleCopy(MOCK_NFT_DATA.contractAddress, 'Contract Address')}

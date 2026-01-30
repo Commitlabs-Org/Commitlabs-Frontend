@@ -6,8 +6,6 @@ import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHea
 import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
-import { MarketplaceHeader } from '@/components/MarketplaceHeader'
-import styles from './page.module.css'
 
 // Interfaces matching the components
 interface Filters {
@@ -18,6 +16,22 @@ interface Filters {
   minCompliance: number
   maxLoss: number
 }
+
+
+// Listing type for marketplace items
+interface Listing {
+  id: string
+  type: 'Safe' | 'Balanced' | 'Aggressive'
+  score: number
+  amount: string
+  duration: string
+  yield: string
+  maxLoss: string
+  owner: string
+  price: string
+  forSale: boolean
+}
+
 
 const mockListings = [
   {
@@ -220,20 +234,20 @@ function ListTypeIcon({ type }: { type: 'Safe' | 'Balanced' | 'Aggressive' }) {
   )
 }
 
-function MarketplaceRow({ item }: { item: any }) {
+function MarketplaceRow({ item }: { item: Listing }) {
   const badgeClass =
     item.type === "Safe"
       ? "bg-[#0f2a1d] text-[#00C950]"
       : item.type === "Balanced"
-      ? "bg-[#122238] text-[#51A2FF]"
-      : "bg-[#2b1c10] text-[#FF8904]"
+        ? "bg-[#122238] text-[#51A2FF]"
+        : "bg-[#2b1c10] text-[#FF8904]"
 
   const scoreColorClass =
     item.type === "Safe"
       ? "text-[#00C950]"
       : item.type === "Balanced"
-      ? "text-[#51A2FF]"
-      : "text-[#FF8904]"
+        ? "text-[#51A2FF]"
+        : "text-[#FF8904]"
 
   return (
     <div className="group flex flex-col sm:flex-row sm:items-center justify-between gap-6 rounded-2xl border border-white/10 bg-[#0A0A0A]/90 p-6 sm:p-5 transition-all hover:border-white/20 hover:bg-white/5">
@@ -305,7 +319,7 @@ function MarketplaceRow({ item }: { item: any }) {
   )
 }
 
-function MarketplaceListView({ items }: { items: any[] }) {
+function MarketplaceListView({ items }: { items: Listing[] }) {
   if (items.length === 0) return null
   return (
     <div className="flex flex-col gap-4 mt-6">
@@ -320,7 +334,6 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [filters, setFilters] = useState<Filters>({
     sortBy: 'price',
@@ -368,7 +381,7 @@ export default function Marketplace() {
     }).sort((a, b) => {
       const priceA = parseInt(a.price.replace(/[$,—]/g, '')) || 0
       const priceB = parseInt(b.price.replace(/[$,—]/g, '')) || 0
-      
+
       switch (filters.sortBy) {
         case 'price': return priceA - priceB
         case 'price-desc': return priceB - priceA
@@ -398,14 +411,14 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen w-full bg-[#0a0a0a] text-white overflow-x-hidden">
       <main id="main-content" className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 pt-24 md:pt-32 pb-10 relative">
-        <MarketplaceHeader 
+        <MarketplaceHeader
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
 
         {/* Mobile Filter Toggle */}
         <div className="md:hidden mb-6">
-          <button 
+          <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
             className="w-full flex items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors active:scale-[0.98]"
           >
@@ -422,9 +435,9 @@ export default function Marketplace() {
             ${showMobileFilters ? 'block' : 'hidden md:block'}
             w-full
           `}>
-            <MarketplaceFilters 
-              filters={filters} 
-              onFilterChange={(f) => handleFilterChange(f as Filters)} 
+            <MarketplaceFilters
+              filters={filters}
+              onFilterChange={(f) => handleFilterChange(f as Filters)}
             />
           </aside>
 

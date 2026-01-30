@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0a0a0a;
   color: white;
   display: flex;
   align-items: center;
@@ -153,8 +153,8 @@
   padding: 1.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: #ffffff;
-  color: #000000;
+  background-color: #0a0a0a;
+  color: #99A1AF;
 }
 
 .cardSafe {
@@ -178,7 +178,7 @@
 
 .cardSelected {
   border-color: #14b8a6;
-  background-color: #f0fdfa;
+  background-color: #0a0a0a;
   box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.5);
 }
 
@@ -234,7 +234,7 @@
   font-size: 1.125rem;
   font-weight: 600;
   margin-bottom: 2rem;
-  color: #000000;
+  color: #ffffff;
 }
 
 .statsContainer {
@@ -253,13 +253,13 @@
 }
 
 .statLabel {
-  color: #000000;
+  color: #99A1AF;
   font-size: 0.85rem;
   font-weight: 400;
 }
 
 .statValue {
-  color: #000000;
+  color: #99A1AF;
   font-weight: 500;
   font-size: 0.85rem;
 }
@@ -270,7 +270,7 @@
 }
 
 .description {
-  color: #000000;
+  color: #99A1AF;
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -296,50 +296,62 @@
 
 .actionButtons {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
 }
 
 .backBtn {
-  padding: 0.75rem 1.75rem;
+  padding: 0.875rem 2rem;
   border-radius: 0.5rem;
-  background-color: white;
-  color: white;
-  transition: background-color 0.2s;
-  border: none;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transition: background-color 0.2s, border-color 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
 }
 
 .backBtn:hover {
-  background-color: #f3f4f6;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .continueBtn {
-  padding: 0.75rem 1.75rem;
+  padding: 0.875rem 2rem;
   border-radius: 0.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.2s;
+  transition: opacity 0.2s, transform 0.2s;
   border: none;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+  color: #ffffff;
+}
+
+.continueBtn:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
 }
 
 .continueBtnEnabled {
-  background-color: white;
-  color: #000000;
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+  color: #ffffff;
 }
 
 .continueBtnEnabled:hover {
-  background-color: #f3f4f6;
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 .continueBtnDisabled {
-  background-color: white;
-  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.1);
+  color: #99A1AF;
   cursor: not-allowed;
+  opacity: 0.6;
 }

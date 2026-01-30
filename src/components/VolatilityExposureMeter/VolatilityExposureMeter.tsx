@@ -34,12 +34,15 @@ export default function VolatilityExposureMeter({
       aria-labelledby="volatility-exposure-title"
       aria-describedby={description ? 'volatility-exposure-desc' : undefined}
     >
-      <h2 id="volatility-exposure-title" className={styles.title}>
-        Volatility Exposure
-      </h2>
+      <div className={styles.header}>
+        <h2 id="volatility-exposure-title" className={styles.title}>
+          Volatility Exposure
+        </h2>
+        <span className={styles.percentLabel}>{Math.round(percent)}%</span>
+      </div>
 
       <div
-        className={styles.barWrapper}
+        className={styles.barTrack}
         role="meter"
         aria-valuenow={percent}
         aria-valuemin={0}
@@ -49,17 +52,16 @@ export default function VolatilityExposureMeter({
       >
         <div
           className={styles.barMask}
-          style={{ width: `${100 - percent}%` }}
-        />
+          style={{ width: `${percent}%` }}
+        >
+             <div className={styles.barGradient} />
+        </div>
       </div>
 
       <div className={styles.labelsRow}>
-        <div className={styles.axisLabels}>
-          <span>Low</span>
-          <span>Medium</span>
-          <span>High</span>
-        </div>
-        <span className={styles.percentLabel}>{Math.round(percent)}%</span>
+        <span>Low</span>
+        <span>Medium</span>
+        <span>High</span>
       </div>
 
       {description && (

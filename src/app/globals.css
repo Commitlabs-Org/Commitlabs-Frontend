@@ -23,7 +23,7 @@ body {
 }
 
 body {
- background-color: #0A0A0A;
+  background: #0a0a0a;
   min-height: 100vh;
 }
 
@@ -33,8 +33,14 @@ a {
 }
 
 /* Accessibility */
-/* *:focus {
-  outline: 2px solid #fff;
+
+body {
+  background: #0a0a0a;
+  min-height: 100vh;
+}
+
+*:focus {
+  /* outline: 2px solid #fff; */
   outline-offset: 2px;
 }
 
@@ -42,9 +48,9 @@ button:focus,
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid #fff;
+  outline: 2px solid #00d4aa;
   outline-offset: 2px;
-} */
+}
 
 /* Ensure sufficient color contrast */
 /* body {
