@@ -1,0 +1,11 @@
+I worked  a new logo design for the Commitlabs organization.
+
+
+
+Unique, modern logo representing Commitlabs' identity.
+Works well on both light and dark backgrounds.
+Provide color palette and font/typography suggestions.
+Deliverables: SVG (vector) and PNG (transparent background) at multiple sizes (favicon, 128px, 512px).
+Provide usage examples (dark/light backgrounds, favicon, app icon).
+
+https://www.figma.com/design/Sc0fGbHqX9LpQSg0D5j3l5/Commitlab-branding?node-id=1-172&t=aPJdKgOweR6TSlC4-0
