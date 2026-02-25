@@ -12,6 +12,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Project Structure](#project-structure)
 - [Backend API Changelog](#backend-api-changelog)
 - [Contributing](#contributing)
+- [API Reference](#api-reference)
 - [License](#license)
 
 ## 🔭 Overview
@@ -106,6 +107,8 @@ The application requires the following environment variables (defined in `.env`)
 | `NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT`    | Address of the Core Logic contract         | _Required_                            |
 | `NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT` | Address of the Attestation Engine contract | _Required_                            |
 
+Note: The project also supports a versioned contract configuration via `NEXT_PUBLIC_CONTRACTS_JSON` and `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION`. See [docs/config.md](docs/config.md) for details.
+
 ## 📂 Project Structure
 
 ```
@@ -164,6 +167,17 @@ This project includes a reusable helper to attach standard security headers to H
 ## License
 
 We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md) for detailed instructions on coding standards, testing procedures, and the pull request process.
+
+## 📡 API Reference
+
+A description of the backend endpoints exposed under `/api` can be found in:
+
+- [docs/backend-api-reference.md](./docs/backend-api-reference.md)
+
+This document includes available routes, required parameters, and example
+requests/responses.  It is intended for developers building against or testing
+the backend.
+
 
 ## 📄 License
 

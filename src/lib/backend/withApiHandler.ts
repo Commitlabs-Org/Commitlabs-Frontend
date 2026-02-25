@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logger } from './logger';
+import { logWarn, logError } from './logger';
 import { fail } from './apiResponse';
 import { ApiError } from './errors';
 
@@ -37,7 +37,7 @@ export function withApiHandler(handler: RouteHandler): RouteHandler {
             return await handler(req, context);
         } catch (err: unknown) {
             if (err instanceof ApiError) {
-                logger.warn('[API] Handled error', {
+                logWarn(req, '[API] Handled error', {
                     code: err.code,
                     status: err.statusCode,
                     message: err.message,
@@ -50,7 +50,7 @@ export function withApiHandler(handler: RouteHandler): RouteHandler {
 
             const error = err instanceof Error ? err : new Error(String(err));
 
-            logger.error('[API] Unhandled exception', error, {
+            logError(req, '[API] Unhandled exception', error, {
                 url: req.url,
                 method: req.method,
             });

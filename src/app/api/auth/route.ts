@@ -12,7 +12,9 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new TooManyRequestsError();
     }
 
-    // TODO: verify credentials (wallet signature / JWT), issue session token, etc.
+    // TODO(issue-126): Implement session creation/refresh flow from docs/backend-session-csrf.md.
+    // TODO(issue-126): For browser-originated auth mutations, issue CSRF token according to the doc strategy.
+    // TODO: verify credentials (wallet signature / JWT), create signed cookie session (or chosen alternative), etc.
 
     return ok({ message: 'Authentication successful.' });
 });

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ok } from '@/lib/backend/apiResponse';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { ValidationError } from '@/lib/backend/errors';
 import {
     getMarketplaceSortKeys,
     isMarketplaceSortBy,
     listMarketplaceListings,
     type MarketplaceCommitmentType,
-    type MarketplaceListing,
+    type MarketplacePublicListing,
+    marketplaceService,
 } from '@/lib/backend/services/marketplace';
+import type { CreateListingRequest, CreateListingResponse } from '@/types/marketplace';
 
 const COMMITMENT_TYPES: readonly MarketplaceCommitmentType[] = ['Safe', 'Balanced', 'Aggressive'] as const;
 
@@ -20,7 +24,7 @@ interface ParseResult {
     sortBy?: string;
 }
 
-function toMarketplaceCard(listing: MarketplaceListing) {
+function toMarketplaceCard(listing: MarketplacePublicListing) {
     return {
         id: listing.listingId,
         type: listing.type,
@@ -120,3 +124,26 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         );
     }
 }
+
+export const POST = withApiHandler(async (req: NextRequest) => {
+        let body: unknown;
+
+        try {
+                body = await req.json();
+        } catch {
+                throw new ValidationError('Invalid JSON in request body');
+        }
+
+        if (!body || typeof body !== 'object') {
+                throw new ValidationError('Request body must be an object');
+        }
+
+        const request = body as CreateListingRequest;
+        const listing = await marketplaceService.createListing(request);
+
+        const response: CreateListingResponse = {
+                listing,
+        };
+
+        return ok(response, 201);
+});

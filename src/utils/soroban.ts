@@ -16,10 +16,12 @@
 export const rpcUrl = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org:443'
 export const networkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015'
 
+import { getContractAddress } from '../lib/backend/config'
+
 export const contractAddresses = {
-  commitmentNFT: process.env.NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT || '',
-  commitmentCore: process.env.NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT || '',
-  attestationEngine: process.env.NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT || '',
+  commitmentNFT: getContractAddress('commitmentNFT'),
+  commitmentCore: getContractAddress('commitmentCore'),
+  attestationEngine: getContractAddress('attestationEngine'),
 }
 
 // TODO: Implement wallet connection

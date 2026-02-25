@@ -1,0 +1,161 @@
+.container {
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icon {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  opacity: 0.9;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.description {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.instructions {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+.instructionsTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+.instructionsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.instructionsList li {
+  padding: 0.5rem 0;
+  opacity: 0.85;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: flex-start;
+}
+
+.instructionsList li::before {
+  content: '✓';
+  display: inline-block;
+  margin-right: 0.75rem;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.statusBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.statusText {
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .description {
+    font-size: 1rem;
+  }
+
+  .instructions {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .instructionsTitle {
+    font-size: 1rem;
+  }
+
+  .instructionsList li {
+    font-size: 0.9rem;
+  }
+
+  .statusBox {
+    padding: 0.875rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .statusText {
+    font-size: 0.9rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .actions button,
+  .actions a {
+    width: 100%;
+  }
+}
