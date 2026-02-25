@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { logCommitmentCreated } from '@/lib/backend/logger';
 import { createCommitmentOnChain } from '@/lib/backend/services/contracts';
 import {
     normalizeBackendError,
@@ -162,6 +163,19 @@ export const POST = withApiHandler(async (req: NextRequest) => {
             metadata: body.metadata
         });
 
+    // analytics hook
+    try {
+        const body = await req.json();
+        logCommitmentCreated({ ip, ...body });
+    } catch (e) {
+        // body might be empty or invalid; still log IP
+        logCommitmentCreated({ ip, error: 'failed to parse request body' });
+    }
+
+    return NextResponse.json({
+        message: 'Commitments creation endpoint stub - rate limiting applied',
+        ip: ip
+    });
      return ok({ message: 'Commitment created successfully.' }, 201);
 }
 

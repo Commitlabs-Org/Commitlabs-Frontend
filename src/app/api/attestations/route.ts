@@ -8,6 +8,7 @@ import {
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError } from '@/lib/backend/errors';
+import { logAttestation } from '@/lib/backend/logger';
 import { mapAttestationFromChain } from '@/lib/backend/dto';
 
 interface RecordAttestationRequestBody {
@@ -54,6 +55,16 @@ export const POST = withApiHandler(async (req: NextRequest) => {
             details: body.details
         });
 
+    // analytics hook
+    try {
+        const body = await req.json();
+        logAttestation({ ip, ...body });
+    } catch (e) {
+        logAttestation({ ip, error: 'failed to parse request body' });
+    }
+
+    return ok({ message: 'Attestation recorded successfully.' }, 201);
+});
         return NextResponse.json(result, { status: 201 });
     } catch (error) {
         const normalized = normalizeBackendError(error, {

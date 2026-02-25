@@ -11,6 +11,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
+- [API Reference](#api-reference)
 - [License](#license)
 
 ## 🔭 Overview
@@ -149,6 +150,17 @@ This project includes a reusable helper to attach standard security headers to H
 
 ## License
 We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md) for detailed instructions on coding standards, testing procedures, and the pull request process.
+
+## 📡 API Reference
+
+A description of the backend endpoints exposed under `/api` can be found in:
+
+- [docs/backend-api-reference.md](./docs/backend-api-reference.md)
+
+This document includes available routes, required parameters, and example
+requests/responses.  It is intended for developers building against or testing
+the backend.
+
 
 ## 📄 License
 
