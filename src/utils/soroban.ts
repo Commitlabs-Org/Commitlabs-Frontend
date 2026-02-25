@@ -1,3 +1,15 @@
+/**
+ * Soroban Utility Functions
+ * 
+ * This module handles all interactions with the Stellar network and Soroban smart contracts.
+ * It uses the @stellar/stellar-sdk and @stellar/freighter-api libraries.
+ * 
+ * CURRENT STATUS:
+ * - Contract addresses are loaded from environment variables.
+ * - Wallet connection and contract interaction functions are placeholders.
+ * - TODO: Implement `connectWallet`, `callContract`, and `readContract` using the SDK.
+ */
+
 // Soroban utility functions and configuration
 // TODO: Implement actual Soroban contract interactions
 

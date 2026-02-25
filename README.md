@@ -1,93 +1,122 @@
 # CommitLabs Frontend
 
-Frontend application for the CommitLabs protocol, built with Next.js and TypeScript.
+The frontend application for the CommitLabs protocol, a decentralized platform for managing liquidity commitments on the Stellar network. Built with Next.js, TypeScript, and Tailwind CSS.
 
-## Overview
+## 📋 Table of Contents
 
-This frontend provides a user interface for:
-- Creating liquidity commitments
-- Viewing and managing commitments
-- Browsing the commitment marketplace
-- Viewing attestation history and health metrics
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Prerequisites
+## 🔭 Overview
 
-- Node.js 18+ 
-- npm or yarn
+CommitLabs allows users to create, manage, and trade liquidity commitments. These commitments are on-chain contracts that lock assets for a specified duration in exchange for yield, with specific compliance and risk parameters.
 
-## Getting Started
+This frontend interacts with the CommitLabs Soroban smart contracts to:
+1.  Create new commitments with customizable parameters (Safe, Balanced, Aggressive).
+2.  Monitor the health and performance of existing commitments.
+3.  Trade commitments on a secondary marketplace.
 
-1. Install dependencies:
-```bash
-npm install
-```
+## ✨ Features
 
-2. Copy environment variables:
-```bash
-cp .env.example .env
-```
+-   **Commitment Creation Wizard**: Step-by-step process to configure asset, amount, duration, and risk parameters.
+-   **Dashboard**: Real-time visualization of commitment health, including value history, drawdown, and compliance scores.
+-   **Marketplace**: Browse and filter active commitments available for purchase.
+-   **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions (In Progress).
+-   **Responsive Design**: Optimized for both desktop and mobile devices.
 
-3. Update `.env` with your contract addresses and network configuration
+## 🏗 Architecture
 
-4. Run the development server:
-```bash
-npm run dev
-```
+The application is built using the **Next.js App Router** architecture.
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+-   **Framework**: Next.js 14
+-   **Language**: TypeScript
+-   **Styling**: Tailwind CSS (v4) with CSS Modules for component-specific styles.
+-   **State Management**: React Context & Hooks (Local state for forms).
+-   **Blockchain Interaction**: `@stellar/stellar-sdk` and `@stellar/freighter-api` (via `src/utils/soroban.ts`).
+-   **Data Visualization**: `recharts` for health metrics and performance charts.
 
-## Project Structure
+For a deep dive into the system design, modules, and data flow, please refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+-   Node.js 18.x or later
+-   pnpm (recommended) or npm/yarn
+-   A Stellar wallet extension (e.g., Freighter) installed in your browser.
+
+### Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-org/commitlabs-frontend.git
+    cd commitlabs-frontend
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    pnpm install
+    # or
+    npm install
+    ```
+
+3.  **Set up environment variables:**
+    Copy the example environment file and configure it.
+    ```bash
+    cp .env.example .env
+    ```
+    *See [Configuration](#configuration) for details.*
+
+4.  **Run the development server:**
+    ```bash
+    pnpm dev
+    # or
+    npm run dev
+    ```
+
+5.  **Open the application:**
+    Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+## ⚙️ Configuration
+
+The application requires the following environment variables (defined in `.env`):
+
+| Variable | Description | Default (Testnet) |
+|----------|-------------|-------------------|
+| `NEXT_PUBLIC_SOROBAN_RPC_URL` | URL of the Soroban RPC endpoint | `https://soroban-testnet.stellar.org` |
+| `NEXT_PUBLIC_NETWORK_PASSPHRASE` | Stellar network passphrase | `Test SDF Network ; September 2015` |
+| `NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT` | Address of the Commitment NFT contract | *Required* |
+| `NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT` | Address of the Core Logic contract | *Required* |
+| `NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT` | Address of the Attestation Engine contract | *Required* |
+
+## 📂 Project Structure
 
 ```
 src/
-├── app/                    # Next.js app router pages
-│   ├── page.tsx           # Home page
-│   ├── create/            # Create commitment page
-│   ├── commitments/       # My commitments page
-│   └── marketplace/       # Marketplace page
-├── components/            # Reusable components
-│   ├── CommitmentForm.tsx
-│   ├── NFTDisplay.tsx
-│   └── AttestationHistory.tsx
-└── utils/                 # Utility functions
-    └── soroban.ts         # Soroban contract utilities
+├── app/                    # Next.js App Router pages and layouts
+│   ├── commitments/        # Dashboard & Commitment Details
+│   ├── create/             # Commitment Creation Wizard
+│   ├── marketplace/        # Marketplace Listing
+│   └── page.tsx            # Landing Page
+├── components/             # Reusable UI components
+│   ├── dashboard/          # Charts and metrics components
+│   ├── modals/             # Global modals (Success, Errors)
+│   └── ...
+├── types/                  # TypeScript interfaces and types
+├── utils/                  # Utility functions (Soroban, formatting)
+└── ...
 ```
 
-## Features
+## 🤝 Contributing
 
-### Current (Placeholders)
-- ✅ Home page with overview
-- ✅ Create commitment form (UI only)
-- ✅ My commitments page (mock data)
-- ✅ Marketplace page (mock data)
-- ✅ Basic styling and layout
+We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md) for detailed instructions on coding standards, testing procedures, and the pull request process.
 
-### TODO
-- [ ] Wallet integration (Freighter, etc.)
-- [ ] Contract integration
-- [ ] Real-time commitment data
-- [ ] Attestation history visualization
-- [ ] NFT display and metadata
-- [ ] Transaction handling
-- [ ] Error handling
-- [ ] Loading states
-- [ ] Responsive design improvements
+## 📄 License
 
-## Development Status
-
-⚠️ **Early Development**: This is a skeleton frontend with placeholder components. Core functionality needs to be implemented.
-
-## Next Steps
-
-1. Integrate Stellar wallet (Freighter)
-2. Generate TypeScript bindings from contracts
-3. Implement contract interactions
-4. Add real-time data fetching
-5. Implement transaction flows
-6. Add error handling and loading states
-7. Improve UI/UX
-
-## License
-
-MIT
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

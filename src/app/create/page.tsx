@@ -35,6 +35,8 @@ export default function CreateCommitment() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Mock data based on selected type
+  // TODO: This should be replaced with real-time data fetching from the blockchain
+  // or a backend service that calculates these values based on current market conditions.
   const getMockData = () => {
     switch (selectedType) {
       case 'safe':
@@ -133,11 +135,8 @@ export default function CreateCommitment() {
     setCommitmentType(type)
   }
 
-  const handleNext = (type: 'safe' | 'balanced' | 'aggressive') => {
-    console.log('Selected commitment type:', type)
-    setStep(2)
-  }
-
+  // Navigation handlers
+  // Note: These control the wizard step flow
   const handleBack = () => {
     if (step > 1) {
       setStep(step - 1)
@@ -152,23 +151,11 @@ export default function CreateCommitment() {
     }
   }
 
-  const handleSubmit = () => {
-    console.log('Creating commitment:', {
-      type: commitmentType,
-      amount,
-      asset,
-      durationDays,
-      maxLossPercent,
-    })
-
-    // Simulate transaction success
-    setTimeout(() => {
-      const newCommitmentId = generateCommitmentId()
-      setCommitmentId(newCommitmentId)
-      setShowSuccessModal(true)
-    }, 500)
-  }
-
+  /**
+   * Submission Handler
+   * Currently mocks a blockchain transaction with a timeout.
+   * TODO: Integrate with wallet provider (Freighter) and Soroban contract.
+   */
   const handleSubmit = () => {
     setIsSubmitting(true);
 
@@ -287,22 +274,24 @@ export default function CreateCommitment() {
       )}
 
       {step === 3 && selectedType && (
-        <CreateCommitmentStepReview
-          {...getMockData()}
-          isSubmitting={isSubmitting}
-          onBack={handleBack}
-          onSubmit={handleSubmit}
-        />
-        
-        <CommitmentCreatedModal
-          isOpen={showSuccessModal}
-          commitmentId={commitmentId}
-          onViewCommitment={handleViewCommitment}
-          onCreateAnother={handleCreateAnother}
-          onClose={handleCloseModal}
-          onViewOnExplorer={handleViewOnExplorer}
-        />
-      </>
-    )
-  }
+        <>
+          <CreateCommitmentStepReview
+            {...getMockData()}
+            isSubmitting={isSubmitting}
+            onBack={handleBack}
+            onSubmit={handleSubmit}
+          />
+          
+          <CommitmentCreatedModal
+            isOpen={showSuccessModal}
+            commitmentId={commitmentId}
+            onViewCommitment={handleViewCommitment}
+            onCreateAnother={handleCreateAnother}
+            onClose={handleCloseModal}
+            onViewOnExplorer={handleViewOnExplorer}
+          />
+        </>
+      )}
+    </>
+  )
 }
