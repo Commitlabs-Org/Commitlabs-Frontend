@@ -23,6 +23,15 @@ Welcome to the CommitLabs Frontend developer guide. This document provides guide
     -   Functions/Variables: `camelCase` (e.g., `handleSubmit`)
     -   Constants: `UPPER_SNAKE_CASE` (e.g., `MAX_RETRY_ATTEMPTS`)
 
+### Backend Logging
+
+-   A lightweight analytics logger lives in `src/lib/backend/logger.ts`.
+-   Exposed helpers include `logCommitmentCreated`, `logCommitmentSettled`,
+    `logEarlyExit`, and `logAttestation`.
+-   Call these from API routes whenever you want to emit structured events
+    relevant to business actions. This makes it easy to wire an external
+    analytics platform later on.
+
 ### React & Next.js
 
 -   **Functional Components**: Use functional components with hooks.

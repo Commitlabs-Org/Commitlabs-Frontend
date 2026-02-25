@@ -1,0 +1,21 @@
+.errorContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.content {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .errorContainer {
+    padding: 1.5rem;
+  }
+}
