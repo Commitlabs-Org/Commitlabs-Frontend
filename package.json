@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:mock": "tsx scripts/seed-backend-mock.ts"
   },
   "dependencies": {
     "@stellar/freighter-api": "^1.6.0",
@@ -31,6 +32,7 @@
     "@types/react-dom": "^18.2.0",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.0.0",
     "vitest": "^4.0.18"
   }

@@ -1,0 +1,89 @@
+import fs from 'fs';
+import path from 'path';
+
+const mockDbPath = path.join(process.cwd(), '.mock-db.json');
+
+const sampleCommitments = [
+    {
+        id: 'CMT-ABC123',
+        type: 'Safe',
+        status: 'Active',
+        asset: 'XLM',
+        amount: '50,000',
+        currentValue: '52,600',
+        changePercent: 5.2,
+        durationProgress: 75,
+        daysRemaining: 15,
+        complianceScore: 95,
+        maxLoss: '2%',
+        currentDrawdown: '0.8%',
+        createdDate: 'Jan 10, 2026',
+        expiryDate: 'Feb 9, 2026',
+    },
+    {
+        id: 'CMT-XYZ789',
+        type: 'Balanced',
+        status: 'Active',
+        asset: 'USDC',
+        amount: '100,000',
+        currentValue: '112,500',
+        changePercent: 12.5,
+        durationProgress: 30,
+        daysRemaining: 42,
+        complianceScore: 88,
+        maxLoss: '8%',
+        currentDrawdown: '3.2%',
+        createdDate: 'Dec 15, 2025',
+        expiryDate: 'Feb 13, 2026',
+    }
+];
+
+const sampleAttestations = [
+    {
+        id: 'ATTR-001',
+        commitmentId: 'CMT-ABC123',
+        provider: 'Provider A',
+        status: 'Valid',
+        timestamp: '2026-01-11T12:00:00Z',
+    }
+];
+
+const sampleListings = [
+    {
+        id: '001',
+        type: 'Safe',
+        score: 95,
+        amount: '$50,000',
+        duration: '25 days',
+        yield: '5.2%',
+        maxLoss: '2%',
+        owner: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+        price: '$52,000',
+        forSale: true,
+    },
+    {
+        id: '002',
+        type: 'Balanced',
+        score: 88,
+        amount: '$100,000',
+        duration: '45 days',
+        yield: '12.5%',
+        maxLoss: '8%',
+        owner: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199',
+        price: '$105,000',
+        forSale: true,
+    }
+];
+
+function seedMockData() {
+    const data = {
+        commitments: sampleCommitments,
+        attestations: sampleAttestations,
+        listings: sampleListings,
+    };
+
+    fs.writeFileSync(mockDbPath, JSON.stringify(data, null, 2), 'utf8');
+    console.log(`Mock data successfully seeded to ${mockDbPath}`);
+}
+
+seedMockData();
