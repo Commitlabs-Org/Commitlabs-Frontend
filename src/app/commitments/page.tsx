@@ -1,13 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import MyCommitmentsHeader from '@/components/MyCommitmentsHeader'
 import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsStats'
 import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters'
 import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
 import { Commitment, CommitmentStats } from '@/types/commitment'
+import { listCommitments } from '@/lib/backend/mocks/contracts'
 
 const mockCommitments: Commitment[] = [
   {
@@ -138,6 +139,13 @@ export default function MyCommitments() {
 
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
+  const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_USE_MOCKS === 'true') {
+      listCommitments().then(setCommitmentsList)
+    }
+  }, [])
 
   // Derived State
   const filteredCommitments = useMemo(() => {
@@ -162,7 +170,7 @@ export default function MyCommitments() {
     return filtered
   }, [searchQuery, statusFilter, typeFilter, sortBy])
 
-  const commitmentForEarlyExit = mockCommitments.find((c) => c.id === earlyExitCommitmentId)
+  const commitmentForEarlyExit = commitmentsList.find((c) => c.id === earlyExitCommitmentId)
   const earlyExitSummary = useMemo(() => {
     return commitmentForEarlyExit
       ? getEarlyExitValues(commitmentForEarlyExit.amount, commitmentForEarlyExit.asset)
