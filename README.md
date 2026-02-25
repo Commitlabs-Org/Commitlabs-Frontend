@@ -96,6 +96,8 @@ The application requires the following environment variables (defined in `.env`)
 | `NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT` | Address of the Core Logic contract | *Required* |
 | `NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT` | Address of the Attestation Engine contract | *Required* |
 
+Note: The project also supports a versioned contract configuration via `NEXT_PUBLIC_CONTRACTS_JSON` and `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION`. See [docs/config.md](docs/config.md) for details.
+
 ## 📂 Project Structure
 
 ```
