@@ -3,6 +3,10 @@ import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError } from '@/lib/backend/errors';
+import { getBackendConfig } from '@/lib/backend/config';
+import { createCommitmentOnChain } from '@/lib/backend/contracts';
+import { parseCreateCommitmentInput } from '@/lib/backend/validation';
+import { mapCommitmentFromChain } from '@/lib/backend/dto';
 
 export const POST = withApiHandler(async (req: NextRequest) => {
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
@@ -12,8 +16,19 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new TooManyRequestsError();
     }
 
-    // TODO: validate request body, interact with Soroban smart contract,
-    //       store commitment record in database, mint NFT, etc.
+    const input = await parseCreateCommitmentInput(req);
+    const config = getBackendConfig();
+    const chainResult = await createCommitmentOnChain(config, input);
+    const commitment = mapCommitmentFromChain(chainResult.commitment);
 
-    return ok({ message: 'Commitment created successfully.' }, 201);
+    return ok(
+        {
+            commitmentId: chainResult.commitmentId,
+            nftTokenId: chainResult.nftTokenId,
+            txHash: chainResult.txHash ?? null,
+            reference: chainResult.reference ?? null,
+            commitment,
+        },
+        201
+    );
 });
