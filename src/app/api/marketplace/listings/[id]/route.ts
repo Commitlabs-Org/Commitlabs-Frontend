@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import { ValidationError } from '@/lib/backend/errors';
 import { marketplaceService } from '@/lib/backend/services/marketplace';
 import type { CancelListingResponse } from '@/types/marketplace';

@@ -1,6 +1,6 @@
 export { logger } from './logger';
-export { ok, fail } from './apiResponse';
-export type { OkResponse, FailResponse, ApiResponse } from './apiResponse';
+export { ok, fail } from './response';
+export type { OkResponse, FailResponse, ApiResponse } from './response';
 export { getBackendConfig } from './config';
 export {
     createCommitmentOnChain,
