@@ -3,7 +3,7 @@ import { POST } from './route';
 import { NextRequest } from 'next/server';
 import { marketplaceService } from '@/lib/backend/services/marketplace';
 import { ValidationError, ConflictError } from '@/lib/backend/errors';
-import type { MarketplaceListing } from '@/types/marketplace';
+import type { MarketplaceListing } from '@/lib/types/domain';
 
 // Mock the marketplace service
 vi.mock('@/lib/backend/services/marketplace', () => ({

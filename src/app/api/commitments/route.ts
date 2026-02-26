@@ -11,6 +11,7 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError } from '@/lib/backend/errors';
 import { getMockData } from '@/lib/backend/mockDb';
+import type { Commitment, CommitmentType, CommitmentStatus } from '@/lib/types/domain';
 
 export const GET = withApiHandler(async (req: NextRequest) => {
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
@@ -39,20 +40,7 @@ import {
 } from '@/lib/backend/pagination';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
-type CommitmentStatus = 'Active' | 'Settled' | 'Violated' | 'Early Exit';
-
-interface Commitment {
-    id: string;
-    type: CommitmentType;
-    status: CommitmentStatus;
-    asset: string;
-    amount: number;
-    complianceScore: number;
-    daysRemaining: number;
-    createdAt: string;
-}
+// Commitment, CommitmentType, CommitmentStatus from @/lib/types/domain
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -64,14 +52,14 @@ type CommitmentSortField = (typeof SORT_FIELDS)[number];
 // ── Mock data (replace with DB queries) ───────────────────────────────────────
 
 const MOCK_COMMITMENTS: Commitment[] = [
-    { id: 'CMT-ABC123', type: 'Safe', status: 'Active', asset: 'XLM', amount: 50000, complianceScore: 95, daysRemaining: 15, createdAt: '2026-01-10T00:00:00Z' },
-    { id: 'CMT-XYZ789', type: 'Balanced', status: 'Active', asset: 'USDC', amount: 100000, complianceScore: 88, daysRemaining: 42, createdAt: '2025-12-15T00:00:00Z' },
-    { id: 'CMT-DEF456', type: 'Aggressive', status: 'Active', asset: 'XLM', amount: 250000, complianceScore: 76, daysRemaining: 75, createdAt: '2025-11-20T00:00:00Z' },
-    { id: 'CMT-GHI012', type: 'Safe', status: 'Settled', asset: 'XLM', amount: 75000, complianceScore: 97, daysRemaining: 0, createdAt: '2025-12-01T00:00:00Z' },
-    { id: 'CMT-JKL345', type: 'Balanced', status: 'Early Exit', asset: 'USDC', amount: 150000, complianceScore: 72, daysRemaining: 0, createdAt: '2025-11-01T00:00:00Z' },
-    { id: 'CMT-MNO678', type: 'Aggressive', status: 'Violated', asset: 'XLM', amount: 200000, complianceScore: 45, daysRemaining: 0, createdAt: '2025-10-15T00:00:00Z' },
-    { id: 'CMT-PQR901', type: 'Safe', status: 'Active', asset: 'XLM', amount: 30000, complianceScore: 92, daysRemaining: 20, createdAt: '2026-01-20T00:00:00Z' },
-    { id: 'CMT-STU234', type: 'Balanced', status: 'Active', asset: 'USDC', amount: 80000, complianceScore: 85, daysRemaining: 33, createdAt: '2026-01-05T00:00:00Z' },
+    { id: 'CMT-ABC123', type: 'Safe', status: 'Active', asset: 'XLM', amount: '50000', complianceScore: 95, daysRemaining: 15, createdAt: '2026-01-10T00:00:00Z' },
+    { id: 'CMT-XYZ789', type: 'Balanced', status: 'Active', asset: 'USDC', amount: '100000', complianceScore: 88, daysRemaining: 42, createdAt: '2025-12-15T00:00:00Z' },
+    { id: 'CMT-DEF456', type: 'Aggressive', status: 'Active', asset: 'XLM', amount: '250000', complianceScore: 76, daysRemaining: 75, createdAt: '2025-11-20T00:00:00Z' },
+    { id: 'CMT-GHI012', type: 'Safe', status: 'Settled', asset: 'XLM', amount: '75000', complianceScore: 97, daysRemaining: 0, createdAt: '2025-12-01T00:00:00Z' },
+    { id: 'CMT-JKL345', type: 'Balanced', status: 'Early Exit', asset: 'USDC', amount: '150000', complianceScore: 72, daysRemaining: 0, createdAt: '2025-11-01T00:00:00Z' },
+    { id: 'CMT-MNO678', type: 'Aggressive', status: 'Violated', asset: 'XLM', amount: '200000', complianceScore: 45, daysRemaining: 0, createdAt: '2025-10-15T00:00:00Z' },
+    { id: 'CMT-PQR901', type: 'Safe', status: 'Active', asset: 'XLM', amount: '30000', complianceScore: 92, daysRemaining: 20, createdAt: '2026-01-20T00:00:00Z' },
+    { id: 'CMT-STU234', type: 'Balanced', status: 'Active', asset: 'USDC', amount: '80000', complianceScore: 85, daysRemaining: 33, createdAt: '2026-01-05T00:00:00Z' },
 ];
 
 /**
@@ -116,9 +104,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             if (typeof valA === 'string' && typeof valB === 'string') {
                 return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             }
-            return sortOrder === 'asc'
-                ? (valA as number) - (valB as number)
-                : (valB as number) - (valA as number);
+            const numA = typeof valA === 'string' ? parseFloat(valA) : (valA as number);
+            const numB = typeof valB === 'string' ? parseFloat(valB) : (valB as number);
+            return sortOrder === 'asc' ? numA - numB : numB - numA;
         });
 
         return NextResponse.json({ success: true, data: paginateArray(results, pagination) });

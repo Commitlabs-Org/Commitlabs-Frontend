@@ -3,8 +3,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../errors';
 import type {
   MarketplaceListing,
   CreateListingRequest,
-  ListingStatus,
-} from '@/types/marketplace';
+} from '@/lib/types/domain';
 
 /**
  * MarketplaceService
