@@ -1,187 +1,144 @@
-import { ConflictError, ForbiddenError, ValidationError } from './errors';
+// src/lib/backend/validation.ts
+import { z } from 'zod';
+import { StrKey } from '@stellar/stellar-sdk';
 
-export type CommitmentTypeInput = 'safe' | 'balanced' | 'aggressive';
-
-export interface SignatureContext {
-    nonce?: string;
-    signature?: string;
-    signerAddress?: string;
+export class ValidationError extends Error {
+  constructor(message: string, public field?: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
 }
 
-export interface CreateCommitmentInput {
-    ownerAddress: string;
-    amount: string;
-    assetCode: string;
-    assetIssuer: string | null;
-    durationDays: number;
-    maxLossPercent: number;
-    commitmentType: CommitmentTypeInput;
-    signatureContext: SignatureContext;
+export interface PaginationParams {
+  page: number;
+  limit: number;
 }
 
-export interface EarlyExitInput {
-    ownerAddress: string;
-    signatureContext: SignatureContext;
-    currentStatus?: string;
+export interface FilterParams {
+  [key: string]: string | number | boolean | undefined;
 }
 
-const STELLAR_ACCOUNT_ADDRESS_REGEX = /^[GC][A-Z2-7]{55}$/;
+// Zod schemas
+const addressSchema = z.string().refine(
+  (addr) => StrKey.isValidEd25519PublicKey(addr),
+  { message: 'Invalid Stellar address format' }
+);
 
-async function parseJsonBody(req: Request): Promise<unknown> {
-    try {
-        return await req.json();
-    } catch {
-        throw new ValidationError('Request body must be valid JSON.');
+const amountSchema = z.union([z.string(), z.number()]).transform((val) => {
+  const num = typeof val === 'string' ? parseFloat(val) : val;
+  if (isNaN(num) || num <= 0) {
+    throw new Error('Amount must be a positive number');
+  }
+  return num;
+});
+
+const paginationSchema = z.object({
+  page: z.union([z.string(), z.number()]).optional().default(1).transform((val) => {
+    const num = typeof val === 'string' ? parseInt(val, 10) : val;
+    if (isNaN(num) || num < 1) {
+      throw new Error('Page must be a positive integer');
     }
+    return num;
+  }),
+  limit: z.union([z.string(), z.number()]).optional().default(10).transform((val) => {
+    const num = typeof val === 'string' ? parseInt(val, 10) : val;
+    if (isNaN(num) || num < 1 || num > 100) {
+      throw new Error('Limit must be between 1 and 100');
+    }
+    return num;
+  }),
+}).transform((data) => ({
+  page: data.page,
+  limit: data.limit,
+}));
+
+// Request body schemas
+export const createCommitmentSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  amount: amountSchema,
+  creatorAddress: addressSchema,
+});
+
+export const createMarketplaceListingSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  price: amountSchema,
+  category: z.string().min(1, 'Category is required'),
+  sellerAddress: addressSchema,
+});
+
+export const createAttestationSchema = z.object({
+  commitmentId: z.string().min(1, 'Commitment ID is required'),
+  attesterAddress: addressSchema,
+  rating: z.number().int().min(1).max(5, 'Rating must be between 1 and 5'),
+  comment: z.string().optional(),
+});
+
+export type CreateCommitmentInput = z.infer<typeof createCommitmentSchema>;
+export type CreateMarketplaceListingInput = z.infer<typeof createMarketplaceListingSchema>;
+export type CreateAttestationInput = z.infer<typeof createAttestationSchema>;
+
+// Validate Stellar address
+export function validateAddress(address: string): string {
+  try {
+    return addressSchema.parse(address);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(error.issues[0].message, 'address');
+    }
+    throw error;
+  }
 }
 
-function asObject(value: unknown, message = 'Request body must be a JSON object.'): Record<string, unknown> {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        throw new ValidationError(message);
+// Validate amount (positive number, can be string or number)
+export function validateAmount(amount: string | number): number {
+  try {
+    return amountSchema.parse(amount);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(error.issues[0].message, 'amount');
     }
-    return value as Record<string, unknown>;
+    throw error;
+  }
 }
 
-function readStringField(body: Record<string, unknown>, field: string): string {
-    const value = body[field];
-    if (typeof value !== 'string' || value.trim().length === 0) {
-        throw new ValidationError(`${field} is required and must be a non-empty string.`);
+// Validate pagination parameters
+export function validatePagination(page?: string | number, limit?: string | number): PaginationParams {
+  try {
+    return paginationSchema.parse({ page, limit });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const field = error.issues[0].path[0] as string;
+      throw new ValidationError(error.issues[0].message, field);
     }
-    return value.trim();
+    throw error;
+  }
 }
 
-function readOptionalStringField(body: Record<string, unknown>, field: string): string | undefined {
-    const value = body[field];
-    if (value === undefined || value === null) {
-        return undefined;
+// Validate filters (generic, for now just check types)
+export function validateFilters(filters: Record<string, any>): FilterParams {
+  const validated: FilterParams = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      validated[key] = value;
+    } else {
+      throw new ValidationError(`Filter ${key} must be a string, number, or boolean`, key);
     }
-    if (typeof value !== 'string') {
-        throw new ValidationError(`${field} must be a string.`);
-    }
-    const normalized = value.trim();
-    if (normalized.length === 0) {
-        throw new ValidationError(`${field} must be a non-empty string.`);
-    }
-    return normalized;
+  }
+  return validated;
 }
 
-function readPositiveAmount(body: Record<string, unknown>, field: string): string {
-    const value = body[field];
-    const asString = typeof value === 'number' ? String(value) : value;
-    if (typeof asString !== 'string') {
-        throw new ValidationError(`${field} must be a numeric string or number.`);
-    }
-    const normalized = asString.trim();
-    const parsed = Number(normalized);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        throw new ValidationError(`${field} must be greater than zero.`);
-    }
-    return normalized;
-}
-
-function readIntegerInRange(
-    body: Record<string, unknown>,
-    field: string,
-    minimum: number,
-    maximum?: number
-): number {
-    const value = body[field];
-    if (typeof value !== 'number' || !Number.isInteger(value)) {
-        throw new ValidationError(`${field} must be an integer.`);
-    }
-    if (value < minimum || (maximum !== undefined && value > maximum)) {
-        throw new ValidationError(`${field} must be between ${minimum} and ${maximum ?? 'unbounded'}.`);
-    }
-    return value;
-}
-
-function validateStellarAddress(value: string, fieldName: string): string {
-    if (!STELLAR_ACCOUNT_ADDRESS_REGEX.test(value)) {
-        throw new ValidationError(`${fieldName} must be a valid Stellar account address.`);
-    }
-    return value;
-}
-
-function readSignatureContext(body: Record<string, unknown>): SignatureContext {
-    const signatureContext = asObject(body.signatureContext ?? {}, 'signatureContext must be a JSON object if provided.');
-    const nonceValue = signatureContext.nonce;
-    const nonce = nonceValue === undefined || nonceValue === null ? undefined : String(nonceValue);
-    return {
-        nonce,
-        signature: readOptionalStringField(signatureContext, 'signature'),
-        signerAddress: readOptionalStringField(signatureContext, 'signerAddress'),
-    };
-}
-
-function verifySignerMatchesOwner(ownerAddress: string, signatureContext: SignatureContext): void {
-    if (
-        signatureContext.signerAddress !== undefined &&
-        signatureContext.signerAddress.toLowerCase() !== ownerAddress.toLowerCase()
-    ) {
-        throw new ForbiddenError('Signature signer does not match ownerAddress.');
-    }
-}
-
-export async function parseCreateCommitmentInput(req: Request): Promise<CreateCommitmentInput> {
-    const raw = await parseJsonBody(req);
-    const body = asObject(raw);
-
-    const ownerAddress = validateStellarAddress(readStringField(body, 'ownerAddress'), 'ownerAddress');
-    const amount = readPositiveAmount(body, 'amount');
-    const durationDays = readIntegerInRange(body, 'durationDays', 1, 3650);
-    const maxLossPercent = readIntegerInRange(body, 'maxLossPercent', 0, 100);
-
-    const commitmentTypeRaw = readStringField(body, 'commitmentType').toLowerCase();
-    if (!['safe', 'balanced', 'aggressive'].includes(commitmentTypeRaw)) {
-        throw new ValidationError('commitmentType must be one of safe, balanced, or aggressive.');
-    }
-
-    const assetCode = (readOptionalStringField(body, 'assetCode') ?? 'XLM').toUpperCase();
-    const assetIssuer = readOptionalStringField(body, 'assetIssuer');
-    if (assetCode !== 'XLM' && assetIssuer === undefined) {
-        throw new ValidationError('assetIssuer is required for non-XLM assets.');
-    }
-    if (assetCode !== 'XLM' && assetIssuer !== undefined) {
-        validateStellarAddress(assetIssuer, 'assetIssuer');
-    }
-
-    const signatureContext = readSignatureContext(body);
-    if (signatureContext.signerAddress !== undefined) {
-        validateStellarAddress(signatureContext.signerAddress, 'signatureContext.signerAddress');
-    }
-    verifySignerMatchesOwner(ownerAddress, signatureContext);
-
-    return {
-        ownerAddress,
-        amount,
-        assetCode,
-        assetIssuer: assetCode === 'XLM' ? null : (assetIssuer ?? null),
-        durationDays,
-        maxLossPercent,
-        commitmentType: commitmentTypeRaw as CommitmentTypeInput,
-        signatureContext,
-    };
-}
-
-export async function parseEarlyExitInput(req: Request): Promise<EarlyExitInput> {
-    const raw = await parseJsonBody(req);
-    const body = asObject(raw);
-
-    const ownerAddress = validateStellarAddress(readStringField(body, 'ownerAddress'), 'ownerAddress');
-    const currentStatus = readOptionalStringField(body, 'currentStatus')?.toLowerCase();
-    if (currentStatus !== undefined && currentStatus !== 'active') {
-        throw new ConflictError('Commitment is not in an active state.');
-    }
-
-    const signatureContext = readSignatureContext(body);
-    if (signatureContext.signerAddress !== undefined) {
-        validateStellarAddress(signatureContext.signerAddress, 'signatureContext.signerAddress');
-    }
-    verifySignerMatchesOwner(ownerAddress, signatureContext);
-
-    return {
-        ownerAddress,
-        signatureContext,
-        currentStatus,
-    };
+// Helper to handle validation in API routes
+export function handleValidationError(error: unknown) {
+  if (error instanceof ValidationError) {
+    return Response.json({ error: error.message, field: error.field }, { status: 400 });
+  }
+  if (error instanceof z.ZodError) {
+    const firstError = error.issues[0];
+    const field = firstError.path.join('.');
+    return Response.json({ error: firstError.message, field }, { status: 400 });
+  }
+  throw error; // Re-throw if not validation error
 }

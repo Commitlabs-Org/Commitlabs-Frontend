@@ -17,7 +17,6 @@ export interface MarketplaceCardProps {
   owner: string;
   price: string;
   forSale: boolean;
-  viewHref?: string;
   tradeHref?: string;
 }
 

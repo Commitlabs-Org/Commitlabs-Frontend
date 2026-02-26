@@ -1,6 +1,6 @@
 export { logger } from './logger';
 export { ok, fail } from './apiResponse';
-export type { ApiSuccess, ApiError as ApiErrorResponse, ApiResponse } from './apiResponse';
+export type { OkResponse, FailResponse, ApiResponse } from './apiResponse';
 export { getBackendConfig } from './config';
 export {
     createCommitmentOnChain,
@@ -16,10 +16,14 @@ export {
 } from './validation';
 export {
     ApiError,
-    NotFoundError,
+    BadRequestError,
     ValidationError,
     UnauthorizedError,
     ForbiddenError,
+    NotFoundError,
     ConflictError,
+    TooManyRequestsError,
+    InternalError,
+    HTTP_ERROR_CODES,
 } from './errors';
 export { withApiHandler } from './withApiHandler';

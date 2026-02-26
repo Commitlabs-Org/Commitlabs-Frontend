@@ -45,7 +45,7 @@ export function withApiHandler(handler: RouteHandler): RouteHandler {
                     method: req.method,
                 });
 
-                return fail(err.message, err.code, err.statusCode, err.details);
+                return fail(err.code, err.message, err.details, err.statusCode);
             }
 
             const error = err instanceof Error ? err : new Error(String(err));
@@ -56,8 +56,9 @@ export function withApiHandler(handler: RouteHandler): RouteHandler {
             });
 
             return fail(
-                'An unexpected error occurred. Please try again later.',
                 'INTERNAL_ERROR',
+                'An unexpected error occurred. Please try again later.',
+                undefined,
                 500
             );
         }
