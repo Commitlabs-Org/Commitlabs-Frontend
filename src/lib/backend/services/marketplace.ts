@@ -3,6 +3,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../errors';
 import type {
   MarketplaceListing,
   CreateListingRequest,
+} from '@/lib/types/domain';
 } from '@/types/marketplace';
 
 export type MarketplaceCommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
