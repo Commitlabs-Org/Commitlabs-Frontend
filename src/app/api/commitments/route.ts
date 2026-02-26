@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 
-interface GetCommitmentsQuery {
-  status?: string
-  limit?: string
-  offset?: string
-}
 
 interface CommitmentData {
   id: string
