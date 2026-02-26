@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import { NotFoundError } from '@/lib/backend/errors';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { contractAddresses } from '@/utils/soroban';

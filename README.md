@@ -44,7 +44,8 @@ The application is built using the **Next.js App Router** architecture.
 - **Blockchain Interaction**: `@stellar/stellar-sdk` and `@stellar/freighter-api` (via `src/utils/soroban.ts`).
 - **Data Visualization**: `recharts` for health metrics and performance charts.
 
-For a deep dive into the system design, modules, and data flow, please refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
+- For a deep dive into the system design, modules, and data flow, please refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
+- For backend implementation details and contribution guidelines, see [docs/backend-architecture.md](./docs/backend-architecture.md).
 
 ## 🔄 Backend API Changelog
 

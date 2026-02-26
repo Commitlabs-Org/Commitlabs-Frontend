@@ -1,5 +1,5 @@
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import type { HealthMetrics } from '@/lib/types/domain';
 
 export const GET = withApiHandler(async () => {

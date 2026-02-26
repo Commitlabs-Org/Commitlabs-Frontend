@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import { TooManyRequestsError } from '@/lib/backend/errors';
 
 export const POST = withApiHandler(async (req: NextRequest) => {

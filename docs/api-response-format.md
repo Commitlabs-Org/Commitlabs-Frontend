@@ -66,7 +66,7 @@ All API routes in this project return a consistent JSON envelope so that the fro
 ### Returning a success response
 
 ```ts
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 
 // Simple success
 return ok({ status: 'healthy' });
@@ -92,7 +92,7 @@ Throw a typed error inside any route wrapped with `withApiHandler` — it will b
 
 ```ts
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import { NotFoundError, ValidationError } from '@/lib/backend/errors';
 
 export const GET = withApiHandler(async (req) => {
@@ -123,7 +123,7 @@ Available error classes (all from `@/lib/backend/errors`):
 ```ts
 // src/app/api/health/route.ts
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 
 export const GET = withApiHandler(async () => {
     return ok({ status: 'healthy' });
@@ -137,7 +137,7 @@ export const GET = withApiHandler(async () => {
 
 | File | Purpose |
 |------|---------|
-| `src/lib/backend/apiResponse.ts` | `ok()` and `fail()` response helpers |
+| `src/lib/backend/response.ts` | `ok()` and `fail()` response helpers |
 | `src/lib/backend/errors.ts`      | Typed error classes with HTTP status codes |
 | `src/lib/backend/withApiHandler.ts` | HOF that catches `ApiError` and calls `fail()` |
 | `docs/api-response-format.md`    | This document |

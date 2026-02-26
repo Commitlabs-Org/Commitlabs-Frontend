@@ -1,58 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
-import { createCommitmentOnChain } from '@/lib/backend/services/contracts';
-import {
-    normalizeBackendError,
-    toBackendErrorResponse
-} from '@/lib/backend/errors';
-
-// src/app/api/commitments/route.ts
 import { NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import { TooManyRequestsError } from '@/lib/backend/errors';
-import { getMockData } from '@/lib/backend/mockDb';
-import type { Commitment, CommitmentType, CommitmentStatus } from '@/lib/types/domain';
+import { createCommitmentOnChain } from '@/lib/backend/services/contracts';
 import { logInfo } from '@/lib/backend/logger';
-import { validatePagination, validateFilters, validateAddress, handleValidationError, ValidationError, createCommitmentSchema } from '@/lib/backend/validation';
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const page = searchParams.get('page');
-    const limit = searchParams.get('limit');
-    const status = searchParams.get('status');
-    const creator = searchParams.get('creator');
-
-    // Validate pagination
-    const pagination = validatePagination(page, limit);
-
-    const isAllowed = await checkRateLimit(ip, 'api/commitments');
-    if (!isAllowed) {
-        throw new TooManyRequestsError();
-    }
-
-    const { commitments } = await getMockData();
-
-    return ok({ commitments }, 200);
-});
-import { logInfo } from '@/lib/backend/logger';
-import { getBackendConfig } from '@/lib/backend/config';
-import { createCommitmentOnChain } from '@/lib/backend/contracts';
-import { parseCreateCommitmentInput } from '@/lib/backend/validation';
-import { mapCommitmentFromChain } from '@/lib/backend/dto';
 import {
     parsePaginationParams,
     parseSortParams,
     parseEnumFilter,
     paginateArray,
-    paginationErrorResponse,
     PaginationParseError,
+    paginationErrorResponse
 } from '@/lib/backend/pagination';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-// Commitment, CommitmentType, CommitmentStatus from @/lib/types/domain
+import type { Commitment, CommitmentType, CommitmentStatus } from '@/lib/types/domain';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +35,8 @@ const MOCK_COMMITMENTS: Commitment[] = [
     { id: 'CMT-STU234', type: 'Balanced', status: 'Active', asset: 'USDC', amount: '80000', complianceScore: 85, daysRemaining: 33, createdAt: '2026-01-05T00:00:00Z' },
 ];
 
+// ── GET Handler ───────────────────────────────────────────────────────────────
+
 /**
  * GET /api/commitments
  *
@@ -87,15 +50,12 @@ const MOCK_COMMITMENTS: Commitment[] = [
  * Example:
  *   /api/commitments?type=Safe&status=Active&sortBy=amount&sortOrder=desc&page=1&pageSize=5
  */
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export const GET = withApiHandler(async (req: NextRequest) => {
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
     const isAllowed = await checkRateLimit(ip, 'api/commitments');
 
     if (!isAllowed) {
-        return NextResponse.json(
-            { error: 'Too many requests' },
-            { status: 429 }
-        );
+        throw new TooManyRequestsError();
     }
 
     const { searchParams } = new URL(req.url);
@@ -111,8 +71,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         if (statusFilter) results = results.filter((c) => c.status === statusFilter);
 
         results = [...results].sort((a, b) => {
-            const valA = a[sortBy];
-            const valB = b[sortBy];
+            // Helper to get value or default for optional fields
+            const getVal = (obj: Commitment, key: CommitmentSortField) => {
+                if (key === 'createdAt') return obj.createdAt || '';
+                if (key === 'complianceScore') return obj.complianceScore || 0;
+                if (key === 'daysRemaining') return obj.daysRemaining || 0;
+                return obj[key];
+            };
+
+            const valA = getVal(a, sortBy);
+            const valB = getVal(b, sortBy);
+
             if (typeof valA === 'string' && typeof valB === 'string') {
                 return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             }
@@ -121,18 +90,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             return sortOrder === 'asc' ? numA - numB : numB - numA;
         });
 
-        return NextResponse.json({ success: true, data: paginateArray(results, pagination) });
+        return ok(paginateArray(results, pagination));
 
     } catch (err) {
         if (err instanceof PaginationParseError) return paginationErrorResponse(err);
-        console.error('[GET /api/commitments] Unhandled error:', err);
-        return NextResponse.json(
-            { success: false, error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' } },
-            { status: 500 }
-        );
+        throw err;
     }
-}
+});
 
+
+// ── POST Handler ──────────────────────────────────────────────────────────────
 
 interface CreateCommitmentRequestBody {
     ownerAddress: string;
@@ -151,81 +118,19 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new TooManyRequestsError();
     }
 
-    try {
-        const body = (await req.json()) as CreateCommitmentRequestBody;
-        const result = await createCommitmentOnChain({
-            ownerAddress: body.ownerAddress,
-            asset: body.asset,
-            amount: body.amount,
-            durationDays: body.durationDays,
-            maxLossBps: body.maxLossBps,
-            metadata: body.metadata
-        });
-        return NextResponse.json(result, { status: 201 });
-    } catch (error) {
-        const normalized = normalizeBackendError(error, {
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to create commitment.',
-            status: 500
-        });
-        return NextResponse.json(toBackendErrorResponse(normalized), {
-            status: normalized.status
-        });
-    }
-});
-    logInfo(req, 'Creating commitment', { ip });
+    const body = (await req.json()) as CreateCommitmentRequestBody;
+    
+    logInfo(req, 'Creating commitment', { ip, owner: body.ownerAddress });
 
-    // TODO(issue-126): Enforce validateSession(req) per docs/backend-session-csrf.md before mutating state.
-    // TODO(issue-126): Enforce CSRF validation for browser cookie-auth requests (token + origin checks).
-    // TODO: validate request body, interact with Soroban smart contract,
-    //       store commitment record in database, mint NFT, etc.
-
-    return ok({ message: 'Commitment created successfully.' }, 201);
-});
-    // Validate filters
-    const filters = validateFilters({ status, creator });
-
-    // If creator is provided, validate it as address
-    if (filters.creator) {
-      validateAddress(filters.creator as string);
-    }
-
-    // Mock response - in real app, fetch from database
-    const commitments = [
-      { id: '1', title: 'Sample Commitment', creator: 'GABC...', amount: 100 },
-      // ... more
-    ];
-
-    return Response.json({
-      commitments,
-      pagination,
-      filters,
-      total: commitments.length
+    // Mock implementation or calls to services
+    const result = await createCommitmentOnChain({
+        ownerAddress: body.ownerAddress,
+        asset: body.asset,
+        amount: body.amount,
+        durationDays: body.durationDays,
+        maxLossBps: body.maxLossBps,
+        metadata: body.metadata
     });
-  } catch (error) {
-    return handleValidationError(error);
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-
-    // Validate request body
-    const validatedData = createCommitmentSchema.parse(body);
-
-    // Mock creation - in real app, save to database
-    const newCommitment = {
-      id: Date.now().toString(),
-      title: validatedData.title,
-      description: validatedData.description,
-      amount: validatedData.amount,
-      creator: validatedData.creatorAddress,
-      createdAt: new Date().toISOString()
-    };
-
-    return Response.json(newCommitment, { status: 201 });
-  } catch (error) {
-    return handleValidationError(error);
-  }
-}
+    
+    return ok(result, 201);
+});

@@ -20,7 +20,7 @@ type RouteHandler = (
  * ```ts
  * // app/api/commitments/route.ts
  * import { withApiHandler } from '@/lib/backend/withApiHandler';
- * import { ok } from '@/lib/backend/apiResponse';
+ * import { ok } from '@/lib/backend/response';
  *
  * export const GET = withApiHandler(async (req) => {
  *   const commitments = await getCommitments();

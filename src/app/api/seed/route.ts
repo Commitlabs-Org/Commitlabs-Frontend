@@ -1,5 +1,5 @@
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok } from '@/lib/backend/response';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
