@@ -67,6 +67,19 @@ export interface RecordAttestationOnChainResult {
   txHash?: string;
 }
 
+export interface SettleCommitmentOnChainParams {
+  commitmentId: string;
+  callerAddress?: string;
+}
+
+export interface SettleCommitmentOnChainResult {
+  settlementAmount: string;
+  txHash?: string;
+  reference?: string;
+  finalStatus: string;
+}
+
+type ContractCallMode = 'read' | 'write';
 type ContractCallMode = "read" | "write";
 
 interface ContractInvocationResult {
@@ -534,6 +547,76 @@ export async function recordAttestationOnChain(
         method: "record_attestation",
         commitmentId: params.commitmentId,
       },
+    });
+  }
+}
+
+export async function settleCommitmentOnChain(
+  params: SettleCommitmentOnChainParams
+): Promise<SettleCommitmentOnChainResult> {
+  try {
+    if (!params.commitmentId) {
+      throw new BackendError({
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for settlement.',
+        status: 400
+      });
+    }
+
+    // First, get the commitment to check if it's matured
+    const commitment = await getCommitmentFromChain(params.commitmentId);
+    
+    // Check if commitment is matured (expired or can be settled)
+    if (commitment.status === 'SETTLED') {
+      throw new BackendError({
+        code: 'CONFLICT',
+        message: 'Commitment has already been settled.',
+        status: 409
+      });
+    }
+
+    if (commitment.status === 'ACTIVE') {
+      // Check if commitment has expired (if expiresAt is available)
+      if (commitment.expiresAt) {
+        const expiryTime = new Date(commitment.expiresAt).getTime();
+        const now = new Date().getTime();
+        if (now < expiryTime) {
+          throw new BackendError({
+            code: 'BAD_REQUEST',
+            message: 'Commitment has not matured yet and cannot be settled.',
+            status: 400
+          });
+        }
+      }
+      // TODO: Add additional maturity checks if needed
+      // For now, we'll allow settling active commitments
+    }
+
+    // Call the settlement function on the contract
+    const invocation = await invokeContractMethod(
+      getContractId('commitmentCore'),
+      'settle_commitment',
+      [params.commitmentId, params.callerAddress ?? commitment.ownerAddress],
+      'write'
+    );
+
+    // Parse the settlement result
+    const result = asRecord(invocation.value);
+    const settlementAmount = asString(result.settlementAmount, '0');
+    const finalStatus = asString(result.finalStatus, 'SETTLED');
+
+    return {
+      settlementAmount,
+      finalStatus,
+      txHash: invocation.txHash,
+      reference: invocation.txHash ? undefined : `TODO_CHAIN_CALL_SETTLE_COMMITMENT`
+    };
+  } catch (error) {
+    throw normalizeBackendError(error, {
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to settle commitment on chain.',
+      status: 502,
+      details: { method: 'settle_commitment', commitmentId: params.commitmentId }
     });
   }
 }
