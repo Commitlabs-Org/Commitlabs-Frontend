@@ -1,36 +1,172 @@
-import { logger } from '../logger';
+import { logInfo } from '../logger';
 import { ConflictError, NotFoundError, ValidationError } from '../errors';
 import type {
   MarketplaceListing,
   CreateListingRequest,
-  ListingStatus,
 } from '@/types/marketplace';
 
-/**
- * MarketplaceService
- *
- * Abstracts marketplace operations for Commitment NFT listings.
- * Currently uses in-memory stub data. Will be replaced with actual
- * on-chain contract calls in the future.
- */
+export type MarketplaceCommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
+
+export interface MarketplacePublicListing {
+  listingId: string;
+  commitmentId: string;
+  type: MarketplaceCommitmentType;
+  amount: number;
+  remainingDays: number;
+  maxLoss: number;
+  currentYield: number;
+  complianceScore: number;
+  price: number;
+}
+
+export interface MarketplaceListingsQuery {
+  type?: MarketplaceCommitmentType;
+  minCompliance?: number;
+  maxLoss?: number;
+  minAmount?: number;
+  maxAmount?: number;
+  sortBy?: string;
+}
+
+const MOCK_LISTINGS: MarketplacePublicListing[] = [
+  {
+    listingId: 'LST-001',
+    commitmentId: 'CMT-001',
+    type: 'Safe',
+    amount: 50000,
+    remainingDays: 25,
+    maxLoss: 2,
+    currentYield: 5.2,
+    complianceScore: 95,
+    price: 52000,
+  },
+  {
+    listingId: 'LST-002',
+    commitmentId: 'CMT-002',
+    type: 'Balanced',
+    amount: 100000,
+    remainingDays: 45,
+    maxLoss: 8,
+    currentYield: 12.5,
+    complianceScore: 88,
+    price: 105000,
+  },
+  {
+    listingId: 'LST-003',
+    commitmentId: 'CMT-003',
+    type: 'Aggressive',
+    amount: 250000,
+    remainingDays: 80,
+    maxLoss: 100,
+    currentYield: 18.7,
+    complianceScore: 76,
+    price: 262000,
+  },
+  {
+    listingId: 'LST-004',
+    commitmentId: 'CMT-004',
+    type: 'Safe',
+    amount: 75000,
+    remainingDays: 15,
+    maxLoss: 2,
+    currentYield: 4.8,
+    complianceScore: 92,
+    price: 76500,
+  },
+  {
+    listingId: 'LST-005',
+    commitmentId: 'CMT-005',
+    type: 'Balanced',
+    amount: 150000,
+    remainingDays: 55,
+    maxLoss: 8,
+    currentYield: 11.3,
+    complianceScore: 85,
+    price: 155000,
+  },
+  {
+    listingId: 'LST-006',
+    commitmentId: 'CMT-006',
+    type: 'Aggressive',
+    amount: 500000,
+    remainingDays: 85,
+    maxLoss: 100,
+    currentYield: 22.1,
+    complianceScore: 72,
+    price: 525000,
+  },
+];
+
+const SORT_CONFIG = {
+  price: { key: 'price', order: 'desc' },
+  amount: { key: 'amount', order: 'desc' },
+  complianceScore: { key: 'complianceScore', order: 'desc' },
+  remainingDays: { key: 'remainingDays', order: 'asc' },
+  maxLoss: { key: 'maxLoss', order: 'asc' },
+  currentYield: { key: 'currentYield', order: 'desc' },
+} as const satisfies Record<string, { key: keyof MarketplacePublicListing; order: 'asc' | 'desc' }>;
+
+export type MarketplaceSortBy = keyof typeof SORT_CONFIG;
+
+function sortListings(listings: MarketplacePublicListing[], sortBy: MarketplaceSortBy): MarketplacePublicListing[] {
+  const { key, order } = SORT_CONFIG[sortBy];
+
+  return [...listings].sort((a, b) => {
+    const lhs = a[key] as number;
+    const rhs = b[key] as number;
+    return order === 'asc' ? lhs - rhs : rhs - lhs;
+  });
+}
+
+export function isMarketplaceSortBy(value: string): value is MarketplaceSortBy {
+  return value in SORT_CONFIG;
+}
+
+export function getMarketplaceSortKeys(): MarketplaceSortBy[] {
+  return Object.keys(SORT_CONFIG) as MarketplaceSortBy[];
+}
+
+export async function listMarketplaceListings(query: MarketplaceListingsQuery): Promise<MarketplacePublicListing[]> {
+  let results = MOCK_LISTINGS;
+
+  if (query.type) {
+    results = results.filter((listing) => listing.type === query.type);
+  }
+  if (query.minCompliance !== undefined) {
+    const minCompliance = query.minCompliance;
+    results = results.filter((listing) => listing.complianceScore >= minCompliance);
+  }
+  if (query.maxLoss !== undefined) {
+    const maxLoss = query.maxLoss;
+    results = results.filter((listing) => listing.maxLoss <= maxLoss);
+  }
+  if (query.minAmount !== undefined) {
+    const minAmount = query.minAmount;
+    results = results.filter((listing) => listing.amount >= minAmount);
+  }
+  if (query.maxAmount !== undefined) {
+    const maxAmount = query.maxAmount;
+    results = results.filter((listing) => listing.amount <= maxAmount);
+  }
+
+  const sortBy = query.sortBy && isMarketplaceSortBy(query.sortBy) ? query.sortBy : 'price';
+
+  // TODO(on-chain): Replace mock listings with marketplace contract reads.
+  // TODO(attestation): Merge latest attestation engine score per commitment when available.
+  return sortListings(results, sortBy);
+}
+
 class MarketplaceService {
-  // In-memory stub storage (replace with contract calls)
   private listings: Map<string, MarketplaceListing> = new Map();
   private listingCounter = 0;
 
-  /**
-   * Create a new marketplace listing for a Commitment NFT
-   */
   async createListing(request: CreateListingRequest): Promise<MarketplaceListing> {
-    logger.info('[MarketplaceService] Creating listing', { request });
+    logInfo(undefined, '[MarketplaceService] Creating listing', { request });
 
-    // Validate request
     this.validateCreateListingRequest(request);
 
-    // Check if commitment is already listed
     const existingListing = Array.from(this.listings.values()).find(
-      (listing) =>
-        listing.commitmentId === request.commitmentId && listing.status === 'Active'
+      (listing) => listing.commitmentId === request.commitmentId && listing.status === 'Active'
     );
 
     if (existingListing) {
@@ -40,11 +176,9 @@ class MarketplaceService {
       );
     }
 
-    // Generate listing ID
-    this.listingCounter++;
+    this.listingCounter += 1;
     const listingId = `listing_${this.listingCounter}_${Date.now()}`;
 
-    // Create listing object
     const listing: MarketplaceListing = {
       id: listingId,
       commitmentId: request.commitmentId,
@@ -56,36 +190,23 @@ class MarketplaceService {
       updatedAt: new Date().toISOString(),
     };
 
-    // Store listing (stub - replace with contract call)
     this.listings.set(listingId, listing);
 
-    logger.info('[MarketplaceService] Listing created', { listingId });
+    logInfo(undefined, '[MarketplaceService] Listing created', { listingId });
 
-    // TODO: Replace with actual contract interaction
-    // await marketplaceContract.createListing({
-    //   commitmentId: request.commitmentId,
-    //   price: request.price,
-    //   currencyAsset: request.currencyAsset,
-    //   seller: request.sellerAddress,
-    // });
-
+    // TODO(on-chain): Replace in-memory listing creation with marketplace contract interaction.
     return listing;
   }
 
-  /**
-   * Cancel an existing marketplace listing
-   */
   async cancelListing(listingId: string, sellerAddress: string): Promise<void> {
-    logger.info('[MarketplaceService] Cancelling listing', { listingId, sellerAddress });
+    logInfo(undefined, '[MarketplaceService] Cancelling listing', { listingId, sellerAddress });
 
-    // Retrieve listing
     const listing = this.listings.get(listingId);
 
     if (!listing) {
       throw new NotFoundError('Listing', { listingId });
     }
 
-    // Verify seller
     if (listing.sellerAddress !== sellerAddress) {
       throw new ValidationError('Only the seller can cancel this listing.', {
         listingId,
@@ -94,7 +215,6 @@ class MarketplaceService {
       });
     }
 
-    // Check if listing is active
     if (listing.status !== 'Active') {
       throw new ConflictError('Only active listings can be cancelled.', {
         listingId,
@@ -102,27 +222,19 @@ class MarketplaceService {
       });
     }
 
-    // Update listing status
     listing.status = 'Cancelled';
     listing.updatedAt = new Date().toISOString();
     this.listings.set(listingId, listing);
 
-    logger.info('[MarketplaceService] Listing cancelled', { listingId });
+    logInfo(undefined, '[MarketplaceService] Listing cancelled', { listingId });
 
-    // TODO: Replace with actual contract interaction
-    // await marketplaceContract.cancelListing(listingId, sellerAddress);
+    // TODO(on-chain): Replace in-memory cancel with marketplace contract interaction.
   }
 
-  /**
-   * Get a listing by ID (helper method for future use)
-   */
   async getListing(listingId: string): Promise<MarketplaceListing | null> {
-    return this.listings.get(listingId) || null;
+    return this.listings.get(listingId) ?? null;
   }
 
-  /**
-   * Validate create listing request
-   */
   private validateCreateListingRequest(request: CreateListingRequest): void {
     const errors: string[] = [];
 
@@ -133,9 +245,8 @@ class MarketplaceService {
     if (!request.price || typeof request.price !== 'string') {
       errors.push('price is required and must be a string');
     } else {
-      // Validate price is a positive number
-      const priceNum = parseFloat(request.price);
-      if (isNaN(priceNum) || priceNum <= 0) {
+      const priceNum = Number.parseFloat(request.price);
+      if (Number.isNaN(priceNum) || priceNum <= 0) {
         errors.push('price must be a positive number');
       }
     }
@@ -154,5 +265,4 @@ class MarketplaceService {
   }
 }
 
-// Export singleton instance
 export const marketplaceService = new MarketplaceService();
