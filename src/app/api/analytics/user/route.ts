@@ -8,6 +8,7 @@ import {
   normalizeBackendError,
   toBackendErrorResponse
 } from '@/lib/backend/errors';
+import { isFeatureEnabled } from '@/lib/backend/config';
 
 interface UserAnalyticsResponse {
   ownerAddress: string;
@@ -63,6 +64,19 @@ function buildUserAnalytics(
 }
 
 export async function GET(req: NextRequest) {
+  if (!isFeatureEnabled('analyticsUser')) {
+    const error = new BackendError({
+      code: 'NOT_FOUND',
+      message: 'User analytics endpoint is disabled.',
+      status: 404,
+      details: { feature: 'analyticsUser' }
+    });
+
+    return NextResponse.json(toBackendErrorResponse(error), {
+      status: error.status
+    });
+  }
+
   const ownerAddress = req.nextUrl.searchParams.get('ownerAddress')?.trim();
 
   if (!ownerAddress) {
