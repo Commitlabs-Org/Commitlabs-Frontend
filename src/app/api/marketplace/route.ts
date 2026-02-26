@@ -1,15 +1,21 @@
 // src/app/api/marketplace/route.ts
-import { NextRequest } from 'next/server';
-import { validatePagination, validateFilters, validateAddress, validateAmount, handleValidationError, createMarketplaceListingSchema } from '@/lib/backend/validation';
+import { NextRequest } from "next/server";
+import {
+  validatePagination,
+  validateFilters,
+  validateAmount,
+  handleValidationError,
+  createMarketplaceListingSchema,
+} from "@/lib/backend/validation";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = searchParams.get('page');
-    const limit = searchParams.get('limit');
-    const category = searchParams.get('category');
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
+    const page = searchParams.get("page") ?? undefined;
+    const limit = searchParams.get("limit") ?? undefined;
+    const category = searchParams.get("category");
+    const minPrice = searchParams.get("minPrice");
+    const maxPrice = searchParams.get("maxPrice");
 
     // Validate pagination
     const pagination = validatePagination(page, limit);
@@ -27,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     // Mock response
     const listings = [
-      { id: '1', title: 'Sample Listing', category: 'impact', price: 50 },
+      { id: "1", title: "Sample Listing", category: "impact", price: 50 },
       // ... more
     ];
 
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
       listings,
       pagination,
       filters,
-      total: listings.length
+      total: listings.length,
     });
   } catch (error) {
     return handleValidationError(error);
@@ -49,17 +55,15 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validatedData = createMarketplaceListingSchema.parse(body);
 
-    return ok({ listings }, 200);
-});
     // Mock creation
     const newListing = {
       id: Date.now().toString(),
       title: validatedData.title,
-      description: validatedData.description || '',
+      description: validatedData.description || "",
       price: validatedData.price,
       category: validatedData.category,
       seller: validatedData.sellerAddress,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     return Response.json(newListing, { status: 201 });

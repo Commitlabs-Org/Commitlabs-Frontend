@@ -1,22 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 // ─── Success shape ────────────────────────────────────────────────────────────
 
 export interface OkResponse<T> {
-    ok: true;
-    data: T;
-    meta?: Record<string, unknown>;
+  success: true;
+  data: T;
+  meta?: Record<string, unknown>;
 }
 
 // ─── Error shape ──────────────────────────────────────────────────────────────
 
 export interface FailResponse {
-    ok: false;
-    error: {
-        code: string;
-        message: string;
-        details?: unknown;
-    };
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
 }
 
 export type ApiResponse<T> = OkResponse<T> | FailResponse;
@@ -38,23 +38,24 @@ export type ApiResponse<T> = OkResponse<T> | FailResponse;
  * return ok(data, 201);  // custom HTTP status, no meta
  */
 export function ok<T>(
-    data: T,
-    metaOrStatus?: Record<string, unknown> | number,
-    status = 200
+  data: T,
+  metaOrStatus?: Record<string, unknown> | number,
+  status = 200,
 ): NextResponse<OkResponse<T>> {
-    let resolvedMeta: Record<string, unknown> | undefined;
-    let resolvedStatus = status;
+  let resolvedMeta: Record<string, unknown> | undefined;
+  let resolvedStatus = status;
 
-    if (typeof metaOrStatus === 'number') {
-        resolvedStatus = metaOrStatus;
-    } else {
-        resolvedMeta = metaOrStatus;
-    }
+  if (typeof metaOrStatus === "number") {
+    resolvedStatus = metaOrStatus;
+  } else {
+    resolvedMeta = metaOrStatus;
+  }
 
-    const body: OkResponse<T> = resolvedMeta !== undefined
-        ? { ok: true, data, meta: resolvedMeta }
-        : { ok: true, data };
-    return NextResponse.json(body, { status: resolvedStatus });
+  const body: OkResponse<T> =
+    resolvedMeta !== undefined
+      ? { success: true, data, meta: resolvedMeta }
+      : { success: true, data };
+  return NextResponse.json(body, { status: resolvedStatus });
 }
 
 /**
@@ -70,18 +71,18 @@ export function ok<T>(
  * // { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
  */
 export function fail(
-    code: string,
-    message: string,
-    details?: unknown,
-    status = 500
+  code: string,
+  message: string,
+  details?: unknown,
+  status = 500,
 ): NextResponse<FailResponse> {
-    const body: FailResponse = {
-        ok: false,
-        error: {
-            code,
-            message,
-            ...(details !== undefined ? { details } : {}),
-        },
-    };
-    return NextResponse.json(body, { status });
+  const body: FailResponse = {
+    success: false,
+    error: {
+      code,
+      message,
+      ...(details !== undefined ? { details } : {}),
+    },
+  };
+  return NextResponse.json(body, { status });
 }

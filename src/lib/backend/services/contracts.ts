@@ -6,11 +6,17 @@ import {
   SorobanRpc,
   TransactionBuilder,
   nativeToScVal,
-  scValToNative
-} from '@stellar/stellar-sdk';
-import { BackendError, normalizeBackendError } from '@/lib/backend/errors';
+  scValToNative,
+} from "@stellar/stellar-sdk";
+import { BackendError, normalizeBackendError } from "@/lib/backend/errors";
+import { getBackendConfig } from "@/lib/backend/config";
 
-export type ChainCommitmentStatus = 'ACTIVE' | 'SETTLED' | 'VIOLATED' | 'EARLY_EXIT' | 'UNKNOWN';
+export type ChainCommitmentStatus =
+  | "ACTIVE"
+  | "SETTLED"
+  | "VIOLATED"
+  | "EARLY_EXIT"
+  | "UNKNOWN";
 
 export interface CreateCommitmentOnChainParams {
   ownerAddress: string;
@@ -61,43 +67,39 @@ export interface RecordAttestationOnChainResult {
   txHash?: string;
 }
 
-type ContractCallMode = 'read' | 'write';
+type ContractCallMode = "read" | "write";
 
 interface ContractInvocationResult {
   value: unknown;
   txHash?: string;
 }
 
-const DEFAULT_RPC_URL = 'https://soroban-testnet.stellar.org:443';
-const DEFAULT_NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
 const ANALYTICS_SCALE = 100;
 
+/**
+ * Gets the Soroban RPC URL from the centralized backend config.
+ */
 function getRpcUrl(): string {
-  return process.env.SOROBAN_RPC_URL || process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || DEFAULT_RPC_URL;
+  return getBackendConfig().sorobanRpcUrl;
 }
 
+/**
+ * Gets the network passphrase from the centralized backend config.
+ */
 function getNetworkPassphrase(): string {
-  return (
-    process.env.SOROBAN_NETWORK_PASSPHRASE ||
-    process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ||
-    DEFAULT_NETWORK_PASSPHRASE
-  );
+  return getBackendConfig().networkPassphrase;
 }
 
-function getContractId(kind: 'commitmentCore' | 'attestationEngine'): string {
-  if (kind === 'commitmentCore') {
-    return (
-      process.env.SOROBAN_COMMITMENT_CORE_CONTRACT ||
-      process.env.NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT ||
-      ''
-    );
+/**
+ * Gets the contract address for the specified contract type from the centralized backend config.
+ * @param kind - The type of contract: 'commitmentCore' or 'attestationEngine'
+ */
+function getContractId(kind: "commitmentCore" | "attestationEngine"): string {
+  const config = getBackendConfig();
+  if (kind === "commitmentCore") {
+    return config.contractAddresses.commitmentCore;
   }
-
-  return (
-    process.env.SOROBAN_ATTESTATION_ENGINE_CONTRACT ||
-    process.env.NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT ||
-    ''
-  );
+  return config.contractAddresses.attestationEngine;
 }
 
 function getSourceKeypair(): Keypair | null {
@@ -119,28 +121,30 @@ function getSourcePublicKey(): string | null {
 
 function getSorobanServer(): SorobanRpc.Server {
   const url = getRpcUrl();
-  return new SorobanRpc.Server(url, { allowHttp: url.startsWith('http://') });
+  return new SorobanRpc.Server(url, { allowHttp: url.startsWith("http://") });
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
-function asString(value: unknown, fallback = ''): string {
-  if (typeof value === 'string') {
+function asString(value: unknown, fallback = ""): string {
+  if (typeof value === "string") {
     return value;
   }
-  if (typeof value === 'number' || typeof value === 'bigint') {
+  if (typeof value === "number" || typeof value === "bigint") {
     return String(value);
   }
   return fallback;
 }
 
 function asNumber(value: unknown, fallback = 0): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const parsed = Number(value);
     if (Number.isFinite(parsed)) {
       return parsed;
@@ -150,11 +154,16 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 function normalizeStatus(value: unknown): ChainCommitmentStatus {
-  const raw = asString(value, 'UNKNOWN').toUpperCase();
-  if (raw === 'ACTIVE' || raw === 'SETTLED' || raw === 'VIOLATED' || raw === 'EARLY_EXIT') {
+  const raw = asString(value, "UNKNOWN").toUpperCase();
+  if (
+    raw === "ACTIVE" ||
+    raw === "SETTLED" ||
+    raw === "VIOLATED" ||
+    raw === "EARLY_EXIT"
+  ) {
     return raw;
   }
-  return 'UNKNOWN';
+  return "UNKNOWN";
 }
 
 function parseChainCommitment(value: unknown): ChainCommitment {
@@ -163,10 +172,10 @@ function parseChainCommitment(value: unknown): ChainCommitment {
 
   if (!id) {
     throw new BackendError({
-      code: 'BLOCKCHAIN_CALL_FAILED',
-      message: 'Soroban returned a commitment without an id.',
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Soroban returned a commitment without an id.",
       status: 502,
-      details: { raw }
+      details: { raw },
     });
   }
 
@@ -174,33 +183,39 @@ function parseChainCommitment(value: unknown): ChainCommitment {
     id,
     ownerAddress: asString(raw.ownerAddress ?? raw.owner_address),
     asset: asString(raw.asset),
-    amount: asString(raw.amount, '0'),
+    amount: asString(raw.amount, "0"),
     status: normalizeStatus(raw.status),
     complianceScore: asNumber(raw.complianceScore ?? raw.compliance_score),
-    currentValue: asString(raw.currentValue ?? raw.current_value ?? raw.amount, '0'),
-    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, '0'),
+    currentValue: asString(
+      raw.currentValue ?? raw.current_value ?? raw.amount,
+      "0",
+    ),
+    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, "0"),
     violationCount: asNumber(raw.violationCount ?? raw.violation_count),
     createdAt: asString(raw.createdAt ?? raw.created_at) || undefined,
-    expiresAt: asString(raw.expiresAt ?? raw.expires_at) || undefined
+    expiresAt: asString(raw.expiresAt ?? raw.expires_at) || undefined,
   };
 }
 
-function parseCreateCommitmentResult(value: unknown, txHash?: string): CreateCommitmentOnChainResult {
-  if (typeof value === 'string') {
+function parseCreateCommitmentResult(
+  value: unknown,
+  txHash?: string,
+): CreateCommitmentOnChainResult {
+  if (typeof value === "string") {
     return {
       commitmentId: value,
       commitment: {
         id: value,
-        ownerAddress: '',
-        asset: '',
-        amount: '0',
-        status: 'UNKNOWN',
+        ownerAddress: "",
+        asset: "",
+        amount: "0",
+        status: "UNKNOWN",
         complianceScore: 0,
-        currentValue: '0',
-        feeEarned: '0',
-        violationCount: 0
+        currentValue: "0",
+        feeEarned: "0",
+        violationCount: 0,
       },
-      txHash
+      txHash,
     };
   }
 
@@ -210,21 +225,24 @@ function parseCreateCommitmentResult(value: unknown, txHash?: string): CreateCom
   return {
     commitmentId: parsedCommitment.id,
     commitment: parsedCommitment,
-    txHash: asString(raw.txHash) || txHash
+    txHash: asString(raw.txHash) || txHash,
   };
 }
 
-function parseAttestationResult(value: unknown, txHash?: string): RecordAttestationOnChainResult {
+function parseAttestationResult(
+  value: unknown,
+  txHash?: string,
+): RecordAttestationOnChainResult {
   const raw = asRecord(value);
   const attestationId = asString(raw.attestationId ?? raw.id);
   const commitmentId = asString(raw.commitmentId ?? raw.commitment_id);
 
   if (!attestationId || !commitmentId) {
     throw new BackendError({
-      code: 'BLOCKCHAIN_CALL_FAILED',
-      message: 'Soroban returned an invalid attestation payload.',
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Soroban returned an invalid attestation payload.",
       status: 502,
-      details: { raw }
+      details: { raw },
     });
   }
 
@@ -233,9 +251,10 @@ function parseAttestationResult(value: unknown, txHash?: string): RecordAttestat
     commitmentId,
     complianceScore: asNumber(raw.complianceScore ?? raw.compliance_score),
     violation: Boolean(raw.violation),
-    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, '0'),
-    recordedAt: asString(raw.recordedAt ?? raw.recorded_at) || new Date().toISOString(),
-    txHash: asString(raw.txHash) || txHash
+    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, "0"),
+    recordedAt:
+      asString(raw.recordedAt ?? raw.recorded_at) || new Date().toISOString(),
+    txHash: asString(raw.txHash) || txHash,
   };
 }
 
@@ -250,7 +269,7 @@ function parseCommitmentList(value: unknown): ChainCommitment[] {
 async function waitForTransactionResult(
   server: SorobanRpc.Server,
   hash: string,
-  timeoutMs = 15_000
+  timeoutMs = 15_000,
 ): Promise<unknown> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -260,10 +279,10 @@ async function waitForTransactionResult(
     }
     if (tx.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
       throw new BackendError({
-        code: 'BLOCKCHAIN_CALL_FAILED',
-        message: 'Soroban transaction failed.',
+        code: "BLOCKCHAIN_CALL_FAILED",
+        message: "Soroban transaction failed.",
         status: 502,
-        details: { hash, txStatus: tx.status }
+        details: { hash, txStatus: tx.status },
       });
     }
 
@@ -273,10 +292,10 @@ async function waitForTransactionResult(
   }
 
   throw new BackendError({
-    code: 'BLOCKCHAIN_CALL_FAILED',
-    message: 'Timed out waiting for Soroban transaction result.',
+    code: "BLOCKCHAIN_CALL_FAILED",
+    message: "Timed out waiting for Soroban transaction result.",
     status: 504,
-    details: { hash }
+    details: { hash },
   });
 }
 
@@ -284,38 +303,41 @@ async function invokeContractMethod(
   contractId: string,
   methodName: string,
   params: unknown[],
-  mode: ContractCallMode
+  mode: ContractCallMode,
 ): Promise<ContractInvocationResult> {
   if (!contractId) {
     throw new BackendError({
-      code: 'BLOCKCHAIN_UNAVAILABLE',
-      message: 'Missing Soroban contract configuration.',
+      code: "BLOCKCHAIN_UNAVAILABLE",
+      message: "Missing Soroban contract configuration.",
       status: 500,
-      details: { methodName }
+      details: { methodName },
     });
   }
 
   const sourcePublicKey = getSourcePublicKey();
   if (!sourcePublicKey) {
     throw new BackendError({
-      code: 'BLOCKCHAIN_UNAVAILABLE',
-      message: 'Missing SOROBAN source account configuration.',
+      code: "BLOCKCHAIN_UNAVAILABLE",
+      message: "Missing SOROBAN source account configuration.",
       status: 500,
-      details: { methodName }
+      details: { methodName },
     });
   }
 
   const server = getSorobanServer();
   const contract = new Contract(contractId);
   const account =
-    mode === 'write'
+    mode === "write"
       ? await server.getAccount(sourcePublicKey)
-      : new Account(sourcePublicKey, '0');
-  const operation = contract.call(methodName, ...params.map((value) => nativeToScVal(value)));
+      : new Account(sourcePublicKey, "0");
+  const operation = contract.call(
+    methodName,
+    ...params.map((value) => nativeToScVal(value)),
+  );
 
   const tx = new TransactionBuilder(account, {
     fee: String(BASE_FEE),
-    networkPassphrase: getNetworkPassphrase()
+    networkPassphrase: getNetworkPassphrase(),
   })
     .addOperation(operation)
     .setTimeout(30)
@@ -324,26 +346,26 @@ async function invokeContractMethod(
   const simulation = await server.simulateTransaction(tx);
   if (SorobanRpc.Api.isSimulationError(simulation)) {
     throw new BackendError({
-      code: 'BLOCKCHAIN_CALL_FAILED',
+      code: "BLOCKCHAIN_CALL_FAILED",
       message: `Soroban simulation failed for ${methodName}.`,
       status: 502,
-      details: { methodName, error: simulation.error }
+      details: { methodName, error: simulation.error },
     });
   }
 
-  if (mode === 'read') {
+  if (mode === "read") {
     return {
-      value: simulation.result ? scValToNative(simulation.result.retval) : null
+      value: simulation.result ? scValToNative(simulation.result.retval) : null,
     };
   }
 
   const sourceKeypair = getSourceKeypair();
   if (!sourceKeypair) {
     throw new BackendError({
-      code: 'BLOCKCHAIN_UNAVAILABLE',
-      message: 'Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.',
+      code: "BLOCKCHAIN_UNAVAILABLE",
+      message: "Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.",
       status: 500,
-      details: { methodName }
+      details: { methodName },
     });
   }
 
@@ -359,83 +381,87 @@ async function invokeContractMethod(
 function validateOwnerAddress(ownerAddress: string): void {
   if (!ownerAddress || ownerAddress.trim().length < 5) {
     throw new BackendError({
-      code: 'BAD_REQUEST',
-      message: 'Invalid owner address.',
+      code: "BAD_REQUEST",
+      message: "Invalid owner address.",
       status: 400,
-      details: { ownerAddress }
+      details: { ownerAddress },
     });
   }
 }
 
 export async function createCommitmentOnChain(
-  params: CreateCommitmentOnChainParams
+  params: CreateCommitmentOnChainParams,
 ): Promise<CreateCommitmentOnChainResult> {
   try {
     validateOwnerAddress(params.ownerAddress);
     const invocation = await invokeContractMethod(
-      getContractId('commitmentCore'),
-      'create_commitment',
+      getContractId("commitmentCore"),
+      "create_commitment",
       [
         params.ownerAddress,
         params.asset,
         params.amount,
         params.durationDays,
         params.maxLossBps,
-        params.metadata ?? {}
+        params.metadata ?? {},
       ],
-      'write'
+      "write",
     );
 
     return parseCreateCommitmentResult(invocation.value, invocation.txHash);
   } catch (error) {
     throw normalizeBackendError(error, {
-      code: 'BLOCKCHAIN_CALL_FAILED',
-      message: 'Unable to create commitment on chain.',
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to create commitment on chain.",
       status: 502,
-      details: { method: 'create_commitment' }
+      details: { method: "create_commitment" },
     });
   }
 }
 
-export async function getCommitmentFromChain(commitmentId: string): Promise<ChainCommitment> {
+export async function getCommitmentFromChain(
+  commitmentId: string,
+): Promise<ChainCommitment> {
   try {
     if (!commitmentId) {
       throw new BackendError({
-        code: 'BAD_REQUEST',
-        message: 'Missing commitment id.',
-        status: 400
+        code: "BAD_REQUEST",
+        message: "Missing commitment id.",
+        status: 400,
       });
     }
 
     const invocation = await invokeContractMethod(
-      getContractId('commitmentCore'),
-      'get_commitment',
+      getContractId("commitmentCore"),
+      "get_commitment",
       [commitmentId],
-      'read'
+      "read",
     );
 
     return parseChainCommitment(invocation.value);
   } catch (error) {
     throw normalizeBackendError(error, {
-      code: 'BLOCKCHAIN_CALL_FAILED',
-      message: 'Unable to fetch commitment from chain.',
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to fetch commitment from chain.",
       status: 502,
-      details: { method: 'get_commitment', commitmentId }
+      details: { method: "get_commitment", commitmentId },
     });
   }
 }
 
-export async function getUserCommitmentsFromChain(ownerAddress: string): Promise<ChainCommitment[]> {
+export async function getUserCommitmentsFromChain(
+  ownerAddress: string,
+): Promise<ChainCommitment[]> {
   try {
     validateOwnerAddress(ownerAddress);
-    const contractId = getContractId('commitmentCore');
+    const contractId = getContractId("commitmentCore");
 
     try {
       const directResult = await invokeContractMethod(
         contractId,
-        'get_user_commitments',
+        "get_user_commitments",
         [ownerAddress],
-        'read'
+        "read",
       );
       const commitments = parseCommitmentList(directResult.value);
       if (commitments.length > 0) {
@@ -447,55 +473,67 @@ export async function getUserCommitmentsFromChain(ownerAddress: string): Promise
       }
     }
 
-    const idsResult = await invokeContractMethod(contractId, 'get_user_commitment_ids', [ownerAddress], 'read');
-    const commitmentIds = Array.isArray(idsResult.value) ? idsResult.value.map((id) => asString(id)).filter(Boolean) : [];
-    const commitments = await Promise.all(commitmentIds.map((commitmentId) => getCommitmentFromChain(commitmentId)));
+    const idsResult = await invokeContractMethod(
+      contractId,
+      "get_user_commitment_ids",
+      [ownerAddress],
+      "read",
+    );
+    const commitmentIds = Array.isArray(idsResult.value)
+      ? idsResult.value.map((id) => asString(id)).filter(Boolean)
+      : [];
+    const commitments = await Promise.all(
+      commitmentIds.map((commitmentId) => getCommitmentFromChain(commitmentId)),
+    );
 
     return commitments;
   } catch (error) {
     throw normalizeBackendError(error, {
-      code: 'BLOCKCHAIN_CALL_FAILED',
-      message: 'Unable to fetch user commitments from chain.',
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to fetch user commitments from chain.",
       status: 502,
-      details: { method: 'get_user_commitments', ownerAddress }
+      details: { method: "get_user_commitments", ownerAddress },
     });
   }
 }
 
 export async function recordAttestationOnChain(
-  params: RecordAttestationOnChainParams
+  params: RecordAttestationOnChainParams,
 ): Promise<RecordAttestationOnChainResult> {
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: 'BAD_REQUEST',
-        message: 'Missing commitment id for attestation.',
-        status: 400
+        code: "BAD_REQUEST",
+        message: "Missing commitment id for attestation.",
+        status: 400,
       });
     }
 
     const invocation = await invokeContractMethod(
-      getContractId('attestationEngine'),
-      'record_attestation',
+      getContractId("attestationEngine"),
+      "record_attestation",
       [
         params.commitmentId,
         params.attestorAddress,
         params.complianceScore / ANALYTICS_SCALE,
         params.violation,
-        params.feeEarned ?? '0',
+        params.feeEarned ?? "0",
         params.timestamp ?? new Date().toISOString(),
-        params.details ?? {}
+        params.details ?? {},
       ],
-      'write'
+      "write",
     );
 
     return parseAttestationResult(invocation.value, invocation.txHash);
   } catch (error) {
     throw normalizeBackendError(error, {
-      code: 'BLOCKCHAIN_CALL_FAILED',
-      message: 'Unable to record attestation on chain.',
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to record attestation on chain.",
       status: 502,
-      details: { method: 'record_attestation', commitmentId: params.commitmentId }
+      details: {
+        method: "record_attestation",
+        commitmentId: params.commitmentId,
+      },
     });
   }
 }
