@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import Link from 'next/link'
 import ErrorLayout from '@/components/ErrorLayout'
 import ErrorButton from '@/components/ErrorButton'
 import styles from './page.module.css'
@@ -55,8 +54,8 @@ export default function NetworkError() {
         <div className={styles.instructions}>
           <h2 className={styles.instructionsTitle}>What you can do:</h2>
           <ul className={styles.instructionsList}>
-            <li>Check that you're connected to the internet</li>
-            <li>Try disabling your VPN or proxy if you're using one</li>
+            <li>Check that you&apos;re connected to the internet</li>
+            <li>Try disabling your VPN or proxy if you&apos;re using one</li>
             <li>Restart your router or mobile connection</li>
             <li>Check if other websites are loading</li>
             <li>Clear your browser cache and cookies</li>

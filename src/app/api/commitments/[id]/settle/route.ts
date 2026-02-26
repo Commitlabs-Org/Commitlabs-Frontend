@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     try {
         const body = await req.json();
         logCommitmentSettled({ ip, commitmentId: id, ...body });
-    } catch (e) {
+    } catch {
         logCommitmentSettled({ ip, commitmentId: id, error: 'failed to parse request body' });
     }
 

@@ -4,16 +4,16 @@ import path from 'path';
 const mockDbPath = path.join(process.cwd(), '.mock-db.json');
 
 export interface MockData {
-    commitments: any[];
-    attestations: any[];
-    listings: any[];
+    commitments: unknown[];
+    attestations: unknown[];
+    listings: unknown[];
 }
 
 export async function getMockData(): Promise<MockData> {
     try {
         const data = await fs.readFile(mockDbPath, 'utf8');
         return JSON.parse(data);
-    } catch (error) {
+    } catch {
         // Return empty state if file doesn't exist
         return {
             commitments: [],

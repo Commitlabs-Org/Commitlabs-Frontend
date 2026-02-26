@@ -16,7 +16,20 @@ type LogLevel = 'info' | 'warn' | 'error' | 'debug';
  */
 
 export interface AnalyticsPayload {
-    [key: string]: any;
+    [key: string]: unknown;
+}
+
+interface LogEntry {
+    level: LogLevel;
+    message: string;
+    timestamp: string;
+    requestId?: string;
+    context?: Record<string, unknown>;
+    error?: {
+        name: string;
+        message: string;
+        stack?: string;
+    };
 }
 
 interface AnalyticsEvent {
@@ -24,6 +37,7 @@ interface AnalyticsEvent {
     timestamp: string;
     requestId?: string;
     context?: Record<string, unknown>;
+    payload?: AnalyticsPayload;
     error?: {
         name: string;
         message: string;
@@ -35,7 +49,7 @@ const requestIds = new WeakMap<Request | NextRequest, string>();
 
 export function getRequestId(req?: Request | NextRequest): string {
     if (!req) return randomUUID();
-    let rid = req.headers.get('x-request-id');
+    let rid: string | undefined | null = req.headers.get('x-request-id');
     if (rid) return rid;
 
     rid = requestIds.get(req);
@@ -105,8 +119,6 @@ export function logDebug(req: Request | NextRequest | undefined | string, messag
         console.debug(formatEntry(entry));
     }
 }
-    payload?: AnalyticsPayload;
-}
 
 function emit(event: AnalyticsEvent) {
     // In development we use console.log; in production this might be a call
@@ -146,3 +158,14 @@ export function logAttestation(payload: AnalyticsPayload = {}) {
         payload
     });
 }
+
+export const logger = {
+    info: (message: string, context?: Record<string, unknown>) =>
+        logInfo(undefined, message, context),
+    warn: (message: string, context?: Record<string, unknown>) =>
+        logWarn(undefined, message, context),
+    error: (message: string, context?: Record<string, unknown>) =>
+        logError(undefined, message, undefined, context),
+    debug: (message: string, context?: Record<string, unknown>) =>
+        logDebug(undefined, message, context),
+};

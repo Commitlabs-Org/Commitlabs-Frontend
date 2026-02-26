@@ -31,7 +31,7 @@ async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: numb
     return { reachable: true, latencyMs };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    logger.error('Soroban RPC connectivity check threw', error, { url: SOROBAN_RPC_URL });
+    logger.error('Soroban RPC connectivity check threw', { error, url: SOROBAN_RPC_URL });
     return { reachable: false, error: error.message };
   }
 }

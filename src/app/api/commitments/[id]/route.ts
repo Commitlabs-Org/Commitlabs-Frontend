@@ -82,7 +82,7 @@ function getDaysRemaining(expiresAt: string): number {
 
 export const GET = withApiHandler(async (
     _req: NextRequest,
-    context: { params: { id: string } }
+    context: { params: Record<string, string> }
 ) => {
     const commitmentId = context.params.id;
     const commitment = await getCommitmentFromChain(commitmentId);

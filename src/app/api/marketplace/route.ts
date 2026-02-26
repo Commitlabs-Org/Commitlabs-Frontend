@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validatedData = createMarketplaceListingSchema.parse(body);
 
+    return ok({ listings }, 200);
+});
     // Mock creation
     const newListing = {
       id: Date.now().toString(),

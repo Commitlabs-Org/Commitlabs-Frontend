@@ -45,7 +45,7 @@ export default function Error({ error, reset }: ErrorProps) {
         {/* Message */}
         <h1 className={styles.title}>Something Went Wrong</h1>
         <p className={styles.description}>
-          We're experiencing technical difficulties. Our team has been notified and is working to fix the issue.
+          We&apos;re experiencing technical difficulties. Our team has been notified and is working to fix the issue.
         </p>
 
         {/* Error Details (if available) */}

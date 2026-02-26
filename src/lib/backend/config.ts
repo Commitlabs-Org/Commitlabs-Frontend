@@ -98,8 +98,10 @@ export function getActiveContracts(): Record<string, ContractEntry> {
 export function getContractAddress(key: string): string {
   const contracts = getActiveContracts()
   const entry = contracts[key]
-  if (!entry) throw new Error(`Contract "${key}" not configured in active version "${getActiveContractVersion()}"`)
-  return entry.address
+  if (!entry) throw new Error(`Contract "${key}" is not configured in active version "${getActiveContractVersion()}"`);
+  return entry.address;
+}
+
 export interface BackendConfig {
     sorobanRpcUrl: string;
     networkPassphrase: string;
