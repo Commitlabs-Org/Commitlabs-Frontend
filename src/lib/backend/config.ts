@@ -178,6 +178,60 @@ function isTestEnvironment(): boolean {
   return process.env.NODE_ENV === "test";
 }
 
+export interface BackendFeatureFlags {
+    analyticsUser: boolean;
+    marketplace: boolean;
+}
+
+type FeatureFlagKey = keyof BackendFeatureFlags;
+
+const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
+
+function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
+    if (value === undefined) return defaultValue;
+    return TRUE_VALUES.has(value.trim().toLowerCase());
+}
+
+function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
+    const raw = process.env.COMMITLABS_FEATURE_FLAGS_JSON;
+    if (!raw) return {};
+
+    try {
+        const parsed = JSON.parse(raw) as Partial<Record<FeatureFlagKey, unknown>>;
+        return {
+            analyticsUser:
+                typeof parsed.analyticsUser === 'boolean'
+                    ? parsed.analyticsUser
+                    : undefined,
+            marketplace:
+                typeof parsed.marketplace === 'boolean'
+                    ? parsed.marketplace
+                    : undefined
+        };
+    } catch (err) {
+        throw new Error(
+            `Failed to parse COMMITLABS_FEATURE_FLAGS_JSON: ${(err as Error).message}`
+        );
+    }
+}
+
+export function getFeatureFlags(): BackendFeatureFlags {
+    const fromJson = parseFeatureFlagsJson();
+
+    return {
+        analyticsUser:
+            fromJson.analyticsUser ??
+            parseBooleanFlag(process.env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
+        marketplace:
+            fromJson.marketplace ??
+            parseBooleanFlag(process.env.COMMITLABS_FEATURE_MARKETPLACE, false)
+    };
+}
+
+export function isFeatureEnabled(feature: FeatureFlagKey): boolean {
+    return getFeatureFlags()[feature];
+}
+
 /**
  * Validates that a required configuration value is present.
  * Throws a clear error if the value is missing in non-test environments.
