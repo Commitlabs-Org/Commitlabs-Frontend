@@ -1,266 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
-
-
-interface CommitmentData {
-  id: string
-  title: string
-  amount: number
-  status: string
-  createdAt: string
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams
-    const status = searchParams.get('status') || 'active'
-    const limit = parseInt(searchParams.get('limit') || '10', 10)
-    const offset = parseInt(searchParams.get('offset') || '0', 10)
-
-    // Mock data - in production, this would call Soroban contracts
-    const mockCommitments: CommitmentData[] = [
-      {
-        id: '1',
-        title: 'Liquidity Commitment - USDC',
-        amount: 10000,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        title: 'Liquidity Commitment - EUR',
-        amount: 5000,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-      },
-    ]
-
-    // Filter by status
-    const filteredCommitments = mockCommitments.filter(
-      (c) => c.status === status
-    )
-
-    // Apply pagination
-    const paginatedCommitments = filteredCommitments.slice(
-      offset,
-      offset + limit
-    )
-
-    return NextResponse.json(
-      {
-        data: paginatedCommitments,
-        total: filteredCommitments.length,
-        limit,
-        offset,
-      },
-      { status: 200 }
-    )
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch commitments',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from 'next/server'
 import { checkRateLimit } from "@/lib/backend/rateLimit";
-import { createCommitmentOnChain } from "@/lib/backend/services/contracts";
-import {
-  normalizeBackendError,
-  toBackendErrorResponse,
-} from "@/lib/backend/errors";
-import { logInfo } from "@/lib/backend/logger";
-import type { Commitment } from "@/lib/types/domain";
-import {
-  parsePaginationParams,
-  parseSortParams,
-  parseEnumFilter,
-  paginateArray,
-  paginationErrorResponse,
-  PaginationParseError,
-} from "@/lib/backend/pagination";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const COMMITMENT_TYPES = ["Safe", "Balanced", "Aggressive"] as const;
-const COMMITMENT_STATUSES = [
-  "Active",
-  "Settled",
-  "Violated",
-  "Early Exit",
-] as const;
-const SORT_FIELDS = [
-  "amount",
-  "complianceScore",
-  "daysRemaining",
-  "createdAt",
-] as const;
-type CommitmentSortField = (typeof SORT_FIELDS)[number];
-
-// ── Mock data (replace with DB queries) ───────────────────────────────────────
-
-const MOCK_COMMITMENTS: Commitment[] = [
-  {
-    id: "CMT-ABC123",
-    type: "Safe",
-    status: "Active",
-    asset: "XLM",
-    amount: "50000",
-    complianceScore: 95,
-    daysRemaining: 15,
-    createdAt: "2026-01-10T00:00:00Z",
-  },
-  {
-    id: "CMT-XYZ789",
-    type: "Balanced",
-    status: "Active",
-    asset: "USDC",
-    amount: "100000",
-    complianceScore: 88,
-    daysRemaining: 42,
-    createdAt: "2025-12-15T00:00:00Z",
-  },
-  {
-    id: "CMT-DEF456",
-    type: "Aggressive",
-    status: "Active",
-    asset: "XLM",
-    amount: "250000",
-    complianceScore: 76,
-    daysRemaining: 75,
-    createdAt: "2025-11-20T00:00:00Z",
-  },
-  {
-    id: "CMT-GHI012",
-    type: "Safe",
-    status: "Settled",
-    asset: "XLM",
-    amount: "75000",
-    complianceScore: 97,
-    daysRemaining: 0,
-    createdAt: "2025-12-01T00:00:00Z",
-  },
-  {
-    id: "CMT-JKL345",
-    type: "Balanced",
-    status: "Early Exit",
-    asset: "USDC",
-    amount: "150000",
-    complianceScore: 72,
-    daysRemaining: 0,
-    createdAt: "2025-11-01T00:00:00Z",
-  },
-  {
-    id: "CMT-MNO678",
-    type: "Aggressive",
-    status: "Violated",
-    asset: "XLM",
-    amount: "200000",
-    complianceScore: 45,
-    daysRemaining: 0,
-    createdAt: "2025-10-15T00:00:00Z",
-  },
-  {
-    id: "CMT-PQR901",
-    type: "Safe",
-    status: "Active",
-    asset: "XLM",
-    amount: "30000",
-    complianceScore: 92,
-    daysRemaining: 20,
-    createdAt: "2026-01-20T00:00:00Z",
-  },
-  {
-    id: "CMT-STU234",
-    type: "Balanced",
-    status: "Active",
-    asset: "USDC",
-    amount: "80000",
-    complianceScore: 85,
-    daysRemaining: 33,
-    createdAt: "2026-01-05T00:00:00Z",
-  },
-];
-
-/**
- * GET /api/commitments
- *
- * Query params:
- *   Pagination : page, pageSize
- *   Sorting    : sortBy (amount | complianceScore | daysRemaining | createdAt)
- *                sortOrder (asc | desc)
- *   Filters    : type   (Safe | Balanced | Aggressive)
- *                status (Active | Settled | Violated | Early Exit)
- */
-export async function GET(req: NextRequest): Promise<NextResponse> {
-  const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
-  const isAllowed = await checkRateLimit(ip, "api/commitments");
-
-  if (!isAllowed) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
-  const { searchParams } = new URL(req.url);
-
-  try {
-    const pagination = parsePaginationParams(searchParams, {
-      defaultPageSize: 10,
-    });
-    const { sortBy, sortOrder } = parseSortParams<CommitmentSortField>(
-      searchParams,
-      SORT_FIELDS,
-      "createdAt",
-      "desc",
-    );
-    const typeFilter = parseEnumFilter(searchParams, "type", COMMITMENT_TYPES);
-    const statusFilter = parseEnumFilter(
-      searchParams,
-      "status",
-      COMMITMENT_STATUSES,
-    );
-
-    let results = MOCK_COMMITMENTS;
-    if (typeFilter) results = results.filter((c) => c.type === typeFilter);
-    if (statusFilter)
-      results = results.filter((c) => c.status === statusFilter);
-
-    results = [...results].sort((a, b) => {
-      const valA = a[sortBy];
-      const valB = b[sortBy];
-      if (typeof valA === "string" && typeof valB === "string") {
-        return sortOrder === "asc"
-          ? valA.localeCompare(valB)
-          : valB.localeCompare(valA);
-      }
-      const numA =
-        typeof valA === "string" ? parseFloat(valA) : (valA as number);
-      const numB =
-        typeof valB === "string" ? parseFloat(valB) : (valB as number);
-      return sortOrder === "asc" ? numA - numB : numB - numA;
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: paginateArray(results, pagination),
-    });
-  } catch (err) {
-    if (err instanceof PaginationParseError)
-      return paginationErrorResponse(err);
-    console.error("[GET /api/commitments] Unhandled error:", err);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "An unexpected error occurred.",
-        },
-      },
-      { status: 500 },
-    );
-  }
-}
+import { withApiHandler } from "@/lib/backend/withApiHandler";
+import { ok, fail } from "@/lib/backend/apiResponse";
+import { TooManyRequestsError } from "@/lib/backend/errors";
+import { getUserCommitmentsFromChain, createCommitmentOnChain } from "@/lib/backend/services/contracts";
 
 interface CreateCommitmentRequestBody {
   ownerAddress: string;
@@ -271,64 +14,108 @@ interface CreateCommitmentRequestBody {
   metadata?: Record<string, unknown>;
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+
+export const GET = withApiHandler(async (req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
+
+  const ownerAddress = searchParams.get("ownerAddress");
+  const page = Number(searchParams.get("page") ?? 1);
+  const pageSize = Number(searchParams.get("pageSize") ?? 10);
+
+  if (!ownerAddress) {
+    return fail("Missing ownerAddress", "BAD_REQUEST", 400);
+  }
+
+  if (page < 1 || pageSize < 1 || pageSize > 100) {
+    return fail("Invalid pagination params", "BAD_REQUEST", 400);
+  }
+
   const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
 
   const isAllowed = await checkRateLimit(ip, "api/commitments");
   if (!isAllowed) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    throw new TooManyRequestsError();
   }
 
-  logInfo(req, "Creating commitment", { ip });
+  const commitments = await getUserCommitmentsFromChain(ownerAddress);
 
-  try {
-    const body = await request.json()
+  const mapped = commitments.map((c) => ({
+    commitmentId: String(c.id),
+    ownerAddress:  c.ownerAddress,
+    asset: c.asset,
+    amount: typeof c.amount === "bigint" ? String(c.amount) : c.amount,
+    status: c.status,
+    complianceScore: c.complianceScore,
+    currentValue:
+      typeof c.currentValue === "bigint"
+        ? c.currentValue
+        : c.currentValue,
+    feeEarned: c.feeEarned,
+    violationCount: c.violationCount,
+    createdAt: c.createdAt,
+    expiresAt: c.expiresAt,
+  }));
 
-    // Validate required fields
-    if (!body.title || !body.amount) {
-      return NextResponse.json(
-        { error: 'Missing required fields: title, amount' },
-        { status: 400 }
-      )
-    }
+  const start = (page - 1) * pageSize;
+  const items = mapped.slice(start, start + pageSize);
 
-    // Mock Soroban contract interaction
-    // In production, this would invoke the actual contract
-    const newCommitment: CommitmentData = {
-      id: randomUUID(),
-      title: body.title,
-      amount: body.amount,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    }
+  return ok({
+    items,
+    page,
+    pageSize,
+    total: mapped.length, // TODO: optimize if chain indexing improves
+  });
+});
 
-    return NextResponse.json(newCommitment, { status: 201 })
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: 'Failed to create commitment',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
-    const body = (await req.json()) as CreateCommitmentRequestBody;
-    const result = await createCommitmentOnChain({
-      ownerAddress: body.ownerAddress,
-      asset: body.asset,
-      amount: body.amount,
-      durationDays: body.durationDays,
-      maxLossBps: body.maxLossBps,
-      metadata: body.metadata,
-    });
-    return NextResponse.json(result, { status: 201 });
-  } catch (error) {
-    const normalized = normalizeBackendError(error, {
-      code: "INTERNAL_ERROR",
-      message: "Failed to create commitment.",
-      status: 500,
-    });
-    return NextResponse.json(toBackendErrorResponse(normalized), {
-      status: normalized.status,
-    });
+export const POST = withApiHandler(async (req: NextRequest) => {
+  const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
+
+  const isAllowed = await checkRateLimit(ip, "api/commitments");
+  if (!isAllowed) {
+    throw new TooManyRequestsError();
   }
-}
+
+  const body = (await req.json()) as CreateCommitmentRequestBody;
+
+  const {
+    ownerAddress,
+    asset,
+    amount,
+    durationDays,
+    maxLossBps,
+    metadata,
+  } = body;
+
+  // Basic validation
+  if (!ownerAddress || typeof ownerAddress !== "string") {
+    return fail("Invalid ownerAddress", "BAD_REQUEST", 400);
+  }
+
+  if (!asset || typeof asset !== "string") {
+    return fail("Invalid asset", "BAD_REQUEST", 400);
+  }
+
+  if (!amount || isNaN(Number(amount))) {
+    return fail("Invalid amount", "BAD_REQUEST", 400);
+  }
+
+  if (!durationDays || durationDays <= 0) {
+    return fail("Invalid durationDays", "BAD_REQUEST", 400);
+  }
+
+  if (maxLossBps == null || maxLossBps < 0) {
+    return fail("Invalid maxLossBps", "BAD_REQUEST", 400);
+  }
+
+  // Call chain interaction
+  const result = await createCommitmentOnChain({
+    ownerAddress,
+    asset,
+    amount,
+    durationDays,
+    maxLossBps,
+    metadata,
+  });
+
+  return ok(result, 201);
+});
