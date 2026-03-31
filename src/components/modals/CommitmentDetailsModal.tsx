@@ -187,7 +187,7 @@ export function CommitmentDetailsModal({
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-[#FFFFFF0D] hover:bg-[#FFFFFF1A] flex items-center justify-center transition-colors"
+            className="focus-ring w-10 h-10 rounded-full bg-[#FFFFFF0D] hover:bg-[#FFFFFF1A] flex items-center justify-center transition-colors"
             aria-label="Close modal"
           >
             <X className="w-5 h-5 text-white/70" />
@@ -265,7 +265,7 @@ export function CommitmentDetailsModal({
               <button
                 key={item.id}
                 onClick={() => onSelectComplianceItem?.(item.id)}
-                className={`w-full flex items-center justify-between bg-[#FFFFFF03] rounded-[12px] p-4 border border-[#FFFFFF08] transition-colors ${
+                className={`focus-ring w-full flex items-center justify-between bg-[#FFFFFF03] rounded-[12px] p-4 border border-[#FFFFFF08] transition-colors ${
                   onSelectComplianceItem
                     ? "hover:bg-[#FFFFFF08] cursor-pointer"
                     : "cursor-default"

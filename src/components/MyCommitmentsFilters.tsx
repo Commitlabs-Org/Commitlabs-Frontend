@@ -27,7 +27,7 @@ const MyCommitmentsFilters: React.FC<MyCommitmentsFiltersProps> = ({
         <input
           type="text"
           placeholder="Search by commitment ID…"
-          className="w-full rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.08)] py-3.5 pl-12 pr-4 text-[16px] text-white transition-all duration-200 ease-[ease] focus:border-[#0FF0FC] focus:outline-none focus:shadow-[0_0_15px_rgba(15,240,252,0.2)]"
+          className="focus-ring w-full rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.08)] py-3.5 pl-12 pr-4 text-[16px] text-white transition-all duration-200 ease-[ease] focus:border-[#0FF0FC] focus:outline-none focus:shadow-[0_0_15px_rgba(15,240,252,0.2)]"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -36,7 +36,7 @@ const MyCommitmentsFilters: React.FC<MyCommitmentsFiltersProps> = ({
       <div className="flex flex-wrap gap-3 max-[640px]:flex-col max-[640px]:gap-3">
         <div className="relative min-w-[160px] max-[640px]:w-full max-[640px]:min-w-0">
           <select
-            className="w-full appearance-none rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[#0a0a0a] py-2.5 pl-4 pr-10 text-[14px] text-white transition-all duration-200 ease-[ease] hover:border-[rgba(255,255,255,0.2)] focus:border-[#0FF0FC] focus:outline-none"
+            className="focus-ring w-full appearance-none rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[#0a0a0a] py-2.5 pl-4 pr-10 text-[14px] text-white transition-all duration-200 ease-[ease] hover:border-[rgba(255,255,255,0.2)] focus:border-[#0FF0FC] focus:outline-none"
             value={statusFilter}
             onChange={(e) => onStatusChange(e.target.value)}
           >
@@ -51,7 +51,7 @@ const MyCommitmentsFilters: React.FC<MyCommitmentsFiltersProps> = ({
 
         <div className="relative min-w-[160px] max-[640px]:w-full max-[640px]:min-w-0">
           <select
-            className="w-full appearance-none rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[#0a0a0a] py-2.5 pl-4 pr-10 text-[14px] text-white transition-all duration-200 ease-[ease] hover:border-[rgba(255,255,255,0.2)] focus:border-[#0FF0FC] focus:outline-none"
+            className="focus-ring w-full appearance-none rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[#0a0a0a] py-2.5 pl-4 pr-10 text-[14px] text-white transition-all duration-200 ease-[ease] hover:border-[rgba(255,255,255,0.2)] focus:border-[#0FF0FC] focus:outline-none"
             value={typeFilter}
             onChange={(e) => onTypeChange(e.target.value)}
           >
@@ -64,7 +64,7 @@ const MyCommitmentsFilters: React.FC<MyCommitmentsFiltersProps> = ({
         </div>
 
         <div className="relative min-w-[200px] flex-[0_0_200px] max-[640px]:w-full max-[640px]:min-w-0 max-[640px]:flex-none">
-          <select className="w-full appearance-none rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[#0a0a0a] py-2.5 pl-4 pr-10 text-[14px] text-white transition-all duration-200 ease-[ease] hover:border-[rgba(255,255,255,0.2)] focus:border-[#0FF0FC] focus:outline-none">
+          <select className="focus-ring w-full appearance-none rounded-[14px] border border-[rgba(255,255,255,0.2)] bg-[#0a0a0a] py-2.5 pl-4 pr-10 text-[14px] text-white transition-all duration-200 ease-[ease] hover:border-[rgba(255,255,255,0.2)] focus:border-[#0FF0FC] focus:outline-none">
             <option value="Any">Any</option>
             <option value="Short">Short Term (&lt; 30 days)</option>
             <option value="Medium">Medium Term (30-90 days)</option>

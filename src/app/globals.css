@@ -5,6 +5,14 @@
   --font-roboto: "Roboto Mono", sans-serif;
 }
 
+:root {
+  --focus-ring-color: #0ff0fc;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-shadow: 0 0 0 4px rgba(15, 240, 252, 0.22);
+  --focus-ring-z-index: 4;
+}
+
 /* * {
   box-sizing: border-box;
   padding: 0;
@@ -39,17 +47,25 @@ body {
   min-height: 100vh;
 }
 
-*:focus {
-  /* outline: 2px solid #fff; */
-  outline-offset: 2px;
+*:focus-visible {
+  outline-offset: var(--focus-ring-offset);
 }
 
-button:focus,
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid #00d4aa;
-  outline-offset: 2px;
+.focus-ring-container {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.focus-ring {
+  position: relative;
+}
+
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: var(--focus-ring-shadow);
+  z-index: var(--focus-ring-z-index);
 }
 
 /* Ensure sufficient color contrast */

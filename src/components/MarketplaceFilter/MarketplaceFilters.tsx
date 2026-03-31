@@ -80,7 +80,7 @@ const MarketplaceFilters = ({
 
   return (
     <aside
-      className="custom-scrollbar w-full md:fixed md:top-28 lg:left-10 xl:left-20 md:h-[600px] md:overflow-y-scroll md:w-80 bg-[#0A0A0A] border border-white/10 rounded-xl p-5 text-white custom-scrollbar"
+      className="focus-ring-container custom-scrollbar w-full md:fixed md:top-28 lg:left-10 xl:left-20 md:h-[600px] md:overflow-y-scroll md:w-80 bg-[#0A0A0A] border border-white/10 rounded-xl p-5 text-white custom-scrollbar"
     >
       {/* Sort By */}
       <div className="mb-4 border-b border-white/5 pb-3">
@@ -98,7 +98,7 @@ const MarketplaceFilters = ({
               placeholder="Search filters..."
               value={sidebarSearch}
               onChange={(e) => setSidebarSearch(e.target.value)}
-              className="w-full rounded-md border border-white/10 pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-[#51A2FF]/50"
+              className="focus-ring w-full rounded-md border border-white/10 pl-9 pr-3 py-2 text-sm text-white outline-none focus:border-[#51A2FF]/50"
             />
           </div>
         </div>
@@ -118,11 +118,12 @@ const MarketplaceFilters = ({
             {commitmentTypes.map((type) => {
               const isActive = localFilters.commitmentType.includes(type);
               return (
-                <div
+                <button
+                  type="button"
                   key={type}
-                  className={`flex items-center gap-2 cursor-pointer select-none ${
+                  className={`focus-ring flex items-center gap-2 cursor-pointer select-none bg-transparent border-0 text-left ${
                     isActive ? "text-white" : "text-white/70"
-                  }`}
+                  } rounded-md px-1 py-0.5`}
                   onClick={() => {
                     const current = localFilters.commitmentType;
                     const next = isActive
@@ -130,6 +131,7 @@ const MarketplaceFilters = ({
                       : [...current, type];
                     handleFilterUpdate("commitmentType", next);
                   }}
+                  aria-pressed={isActive}
                 >
                   <div
                     className={`w-5 h-5 rounded-sm border border-white/30 flex items-center justify-center transition-colors ${
@@ -151,7 +153,7 @@ const MarketplaceFilters = ({
                   <span className="text-sm font-medium">
                     {type === "balanced" ? "Balanced" : type === "aggressive" ? "Aggressive" : "Safe"}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -188,7 +190,7 @@ const MarketplaceFilters = ({
                 onChange={(e) =>
                   handleFilterUpdate("priceRange", [0, Number(e.target.value)])
                 }
-                className="absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer"
+                className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
             <div className="flex justify-between text-xs text-white/60 mt-2">
@@ -227,7 +229,7 @@ const MarketplaceFilters = ({
                 onChange={(e) =>
                   handleFilterUpdate("durationRange", [0, Number(e.target.value)])
                 }
-                className="absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer"
+                className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
             <div className="flex justify-between text-xs text-white/60 mt-2">
@@ -257,7 +259,7 @@ const MarketplaceFilters = ({
                 max="100"
                 value={localFilters.minCompliance}
                 onChange={(e) => handleFilterUpdate("minCompliance", Number(e.target.value))}
-                className="absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer"
+                className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
             <div className="flex justify-between text-xs text-white/60 mt-2">
@@ -287,7 +289,7 @@ const MarketplaceFilters = ({
                 max="100"
                 value={localFilters.maxLoss}
                 onChange={(e) => handleFilterUpdate("maxLoss", Number(e.target.value))}
-                className="absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer"
+                className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
             <div className="flex justify-between text-xs text-white/60 mt-2">
@@ -300,7 +302,7 @@ const MarketplaceFilters = ({
 
       <button
         onClick={handleReset}
-        className="w-full mt-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/20 hover:text-white transition"
+        className="focus-ring w-full mt-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/20 hover:text-white transition"
       >
         Reset Filters
       </button>
