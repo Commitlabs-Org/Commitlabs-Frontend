@@ -9,6 +9,7 @@ import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
+import { MyCommitmentCardSkeleton, MyCommitmentsStatsSkeleton } from '@/components/MyCommitmentsSkeletons'
 
 const mockCommitments: Commitment[] = [
   {
@@ -140,6 +141,15 @@ export default function MyCommitments() {
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Initial data load simulation
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_USE_MOCKS === 'true') {
@@ -201,12 +211,16 @@ export default function MyCommitments() {
       />
 
       <div className="w-full flex-1 px-22 py-8 max-[1024px]:px-8 max-[640px]:px-4">
-        <MyCommitmentsStats
-          totalActive={mockStats.totalActive}
-          totalCommittedValue={mockStats.totalCommittedValue}
-          averageComplianceScore={`${mockStats.avgComplianceScore}%`}
-          totalFeesGenerated={mockStats.totalFeesGenerated}
-        />
+        {isLoading ? (
+          <MyCommitmentsStatsSkeleton />
+        ) : (
+          <MyCommitmentsStats
+            totalActive={mockStats.totalActive}
+            totalCommittedValue={mockStats.totalCommittedValue}
+            averageComplianceScore={`${mockStats.avgComplianceScore}%`}
+            totalFeesGenerated={mockStats.totalFeesGenerated}
+          />
+        )}
 
         <MyCommitmentsFilters
           searchQuery={searchQuery}
@@ -219,12 +233,20 @@ export default function MyCommitments() {
           onSortByChange={setSortBy}
         />
 
-        <MyCommitmentsGrid
-          commitments={filteredCommitments}
-          onDetails={(id) => router.push(`/commitments/${id}`)}
-          onAttestations={(id) => console.log('Attestations for', id)}
-          onEarlyExit={openEarlyExitModal}
-        />
+        {isLoading ? (
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <MyCommitmentCardSkeleton key={`loading-${i}`} />
+            ))}
+          </div>
+        ) : (
+          <MyCommitmentsGrid
+            commitments={filteredCommitments}
+            onDetails={(id) => router.push(`/commitments/${id}`)}
+            onAttestations={(id) => console.log('Attestations for', id)}
+            onEarlyExit={openEarlyExitModal}
+          />
+        )}
       </div>
 
       {commitmentForEarlyExit && earlyExitSummary && (

@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHeader'
 import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
+import { MarketplaceCardSkeleton, MarketplaceRowSkeleton } from '@/components/MarketplaceSkeletons'
 
 // Interfaces matching the components
 interface Filters {
@@ -335,6 +336,7 @@ export default function Marketplace() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [filters, setFilters] = useState<Filters>({
     sortBy: 'price',
     commitmentType: ['balanced'],
@@ -343,6 +345,14 @@ export default function Marketplace() {
     minCompliance: 0,
     maxLoss: 100,
   })
+
+  useEffect(() => {
+    // Initial data load simulation
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [])
 
   // ... rest of the logic
   const itemsPerPage = 9
@@ -451,7 +461,25 @@ export default function Marketplace() {
               totalPages={totalPages}
               onPageChange={handlePageChange}
             >
-              {viewMode === 'grid' ? (
+              {isLoading ? (
+                viewMode === 'grid' ? (
+                  <section className="mt-6">
+                    <ul className="list-none p-0 m-0 grid grid-cols-3 gap-6 max-[1024px]:grid-cols-2 max-[720px]:grid-cols-1">
+                      {[1, 2, 3, 4, 5, 6].map((idx) => (
+                        <li key={`skel-${idx}`}>
+                          <MarketplaceCardSkeleton />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : (
+                  <div className="flex flex-col gap-4 mt-6">
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                      <MarketplaceRowSkeleton key={`skel-row-${idx}`} />
+                    ))}
+                  </div>
+                )
+              ) : viewMode === 'grid' ? (
                 <MarketplaceGrid items={pagedListings} />
               ) : (
                 <MarketplaceListView items={pagedListings} />

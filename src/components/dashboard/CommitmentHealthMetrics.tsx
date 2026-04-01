@@ -8,6 +8,7 @@ import { HealthMetricsDrawdownChart } from './HealthMetricsDrawdownChart';
 import { HealthMetricsValueHistoryChart } from './HealthMetricsValueHistoryChart';
 import { HealthMetricsFeeGenerationChart } from './HealthMetricsFeeGenerationChart';
 import { TrendingUp, TrendingDown, DollarSign, CheckCircle } from 'lucide-react';
+import { ChartSkeleton } from '../ChartSkeleton';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -29,6 +30,7 @@ interface CommitmentHealthMetricsProps {
     feeGenerationData: Array<{ date: string; feeAmount: number }>;
     thresholdPercent?: number;
     volatilityPercent?: number;
+    isLoading?: boolean;
 }
 
 export default function CommitmentHealthMetrics({
@@ -38,6 +40,7 @@ export default function CommitmentHealthMetrics({
     feeGenerationData,
     thresholdPercent,
     volatilityPercent,
+    isLoading = false,
 }: CommitmentHealthMetricsProps) {
     const [activeTab, setActiveTab] = useState<TabType>('value');
 
@@ -72,28 +75,34 @@ export default function CommitmentHealthMetrics({
                 </div>
             </div>
 
-            <div className="w-full">
-                {activeTab === 'value' && (
-                    <HealthMetricsValueHistoryChart 
-                        data={valueHistoryData} 
-                        volatilityPercent={volatilityPercent}
-                    />
-                )}
-                {activeTab === 'drawdown' && (
-                    <HealthMetricsDrawdownChart 
-                        data={drawdownData}
-                        thresholdPercent={thresholdPercent}
-                        volatilityPercent={volatilityPercent}
-                    />
-                )}
-                {activeTab === 'fee' && (
-                    <HealthMetricsFeeGenerationChart 
-                        data={feeGenerationData}
-                        volatilityPercent={volatilityPercent}
-                    />
-                )}
-                {activeTab === 'compliance' && (
-                    <HealthMetricsComplianceChart data={complianceData} />
+            <div className="w-full h-full min-h-[350px]">
+                {isLoading ? (
+                    <ChartSkeleton />
+                ) : (
+                    <>
+                        {activeTab === 'value' && (
+                            <HealthMetricsValueHistoryChart 
+                                data={valueHistoryData} 
+                                volatilityPercent={volatilityPercent}
+                            />
+                        )}
+                        {activeTab === 'drawdown' && (
+                            <HealthMetricsDrawdownChart 
+                                data={drawdownData}
+                                thresholdPercent={thresholdPercent}
+                                volatilityPercent={volatilityPercent}
+                            />
+                        )}
+                        {activeTab === 'fee' && (
+                            <HealthMetricsFeeGenerationChart 
+                                data={feeGenerationData}
+                                volatilityPercent={volatilityPercent}
+                            />
+                        )}
+                        {activeTab === 'compliance' && (
+                            <HealthMetricsComplianceChart data={complianceData} />
+                        )}
+                    </>
                 )}
             </div>
         </div>

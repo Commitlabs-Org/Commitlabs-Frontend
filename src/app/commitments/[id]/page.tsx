@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import CommitmentHealthMetrics from '@/components/dashboard/CommitmentHealthMetrics';
@@ -119,6 +119,15 @@ export default function CommitmentDetailPage({
 }: {
     params: { id: string };
 }) {
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsLoading(false)
+        }, 1000)
+        return () => clearTimeout(timer)
+    }, [])
+
     const commitment = getCommitmentById(params.id)
     if (!commitment) notFound()
 
@@ -189,6 +198,7 @@ export default function CommitmentDetailPage({
                             feeGenerationData={MOCK_FEE_GENERATION_DATA}
                             thresholdPercent={0.5}
                             volatilityPercent={35}
+                            isLoading={isLoading}
                         />
 
                         <RecentAttestationsPanel
