@@ -6,7 +6,6 @@ import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
 import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
 
-// Request validation schema
 const VerifyRequestSchema = z.object({
     address: z.string().min(1, 'Address is required'),
     signature: z.string().min(1, 'Signature is required'),
@@ -16,17 +15,15 @@ const VerifyRequestSchema = z.object({
 export const POST = withApiHandler(async (req: NextRequest) => {
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-    // Rate limiting
-    const isAllowed = await checkRateLimit(ip, 'api/auth/verify');
-    if (!isAllowed) {
-        throw new TooManyRequestsError();
+    const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/auth/verify');
+    if (!allowed) {
+        throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
     }
 
-    // Parse and validate request body
     let body;
     try {
         body = await req.json();
-    } catch (error) {
+    } catch {
         throw new ValidationError('Invalid JSON in request body');
     }
 
@@ -37,7 +34,6 @@ export const POST = withApiHandler(async (req: NextRequest) => {
 
     const { address, signature, message } = validation.data;
 
-    // Verify the signature and nonce
     const verificationResult = verifySignatureWithNonce({
         address,
         signature,
@@ -48,16 +44,13 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
     }
 
-    // TODO: Create a proper session token (JWT or similar)
     const sessionToken = createSessionToken(address);
 
-    // Return success response with session token
     return ok({
         verified: true,
         address: verificationResult.address,
         message: 'Signature verified successfully',
-        // TODO: Replace with proper JWT/session management
         sessionToken,
-        sessionType: 'placeholder', // Indicates this is a placeholder implementation
+        sessionType: 'placeholder',
     });
 });

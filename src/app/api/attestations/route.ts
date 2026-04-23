@@ -160,9 +160,9 @@ function mapToRecordParams(
 export const GET = withApiHandler(async (req: NextRequest) => {
   const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-  const isAllowed = await checkRateLimit(ip, 'api/attestations');
-  if (!isAllowed) {
-    throw new TooManyRequestsError();
+  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/attestations');
+  if (!allowed) {
+    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
   }
 
   const { attestations } = await getMockData();
@@ -173,9 +173,22 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 export const POST = withApiHandler(async (req: NextRequest) => {
   const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-  const isAllowed = await checkRateLimit(ip, 'api/attestations');
-  if (!isAllowed) {
-    throw new TooManyRequestsError();
+  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/attestations');
+  if (!allowed) {
+    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
+  }
+
+  const { attestations } = await getMockData();
+
+  return ok({ attestations }, 200);
+});
+
+export const POST = withApiHandler(async (req: NextRequest) => {
+  const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+
+  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/attestations');
+  if (!allowed) {
+    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
   }
 
   let body: RecordAttestationRequestBody;

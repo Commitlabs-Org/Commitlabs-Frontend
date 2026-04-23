@@ -7,9 +7,9 @@ import { TooManyRequestsError } from '@/lib/backend/errors';
 export const POST = withApiHandler(async (req: NextRequest) => {
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-    const isAllowed = await checkRateLimit(ip, 'api/auth');
-    if (!isAllowed) {
-        throw new TooManyRequestsError();
+    const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/auth');
+    if (!allowed) {
+        throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
     }
 
     // TODO(issue-126): Implement session creation/refresh flow from docs/backend-session-csrf.md.

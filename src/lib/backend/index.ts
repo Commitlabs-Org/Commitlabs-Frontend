@@ -26,6 +26,7 @@ export {
   NotFoundError,
   ConflictError,
   TooManyRequestsError,
+  ServiceUnavailableError,
   InternalError,
   HTTP_ERROR_CODES,
 } from "./errors";
