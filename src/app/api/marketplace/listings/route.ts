@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { ok } from '@/lib/backend/apiResponse';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
@@ -126,6 +127,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export const POST = withApiHandler(async (req: NextRequest) => {
+        assertMutationCsrf(req);
+
         let body: unknown;
 
         try {

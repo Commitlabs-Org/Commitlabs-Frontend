@@ -23,6 +23,7 @@ export {
   ValidationError,
   UnauthorizedError,
   ForbiddenError,
+  CsrfValidationError,
   NotFoundError,
   ConflictError,
   TooManyRequestsError,

@@ -10,6 +10,7 @@ import {
   ValidationError,
   TooManyRequestsError,
 } from '@/lib/backend/errors';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { getMockData } from '@/lib/backend/mockDb';
@@ -171,6 +172,8 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 });
 
 export const POST = withApiHandler(async (req: NextRequest) => {
+  assertMutationCsrf(req);
+
   const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
   const isAllowed = await checkRateLimit(ip, 'api/attestations');

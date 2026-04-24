@@ -1,172 +1,107 @@
-import { describe, it, expect, vi } from 'vitest'
-import { GET, POST } from '@/app/api/commitments/route'
-import { createMockRequest, parseResponse } from './helpers'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GET, POST } from '@/app/api/commitments/route';
+import { createMockRequest, parseResponse } from './helpers';
+import { __resetSessionStoreForTests, createBrowserSession, SESSION_COOKIE_NAME } from '@/lib/backend/session';
+import { CSRF_HEADER_NAME } from '@/lib/backend/csrf';
+
+vi.mock('@/lib/backend/services/contracts', () => ({
+  getUserCommitmentsFromChain: vi.fn().mockResolvedValue([]),
+  createCommitmentOnChain: vi.fn().mockResolvedValue({
+    commitmentId: 'mock-1',
+    ownerAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    status: 'ACTIVE',
+  }),
+}));
+
+const ORIGIN = 'http://localhost:3000';
+
+const validPostBody = {
+  ownerAddress: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+  asset: 'USDC',
+  amount: '100',
+  durationDays: 30,
+  maxLossBps: 100,
+};
 
 describe('GET /api/commitments', () => {
-  it('should return a list of commitments with default parameters', async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 400 when ownerAddress is missing', async () => {
+    const request = createMockRequest(`${ORIGIN}/api/commitments`);
+    const response = await GET(request);
+    const result = await parseResponse(response);
+    expect(result.status).toBe(400);
+    expect(result.data.success).toBe(false);
+  });
+
+  it('returns paginated items when ownerAddress is provided', async () => {
     const request = createMockRequest(
-      'http://localhost:3000/api/commitments'
-    )
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    expect(result.status).toBe(200)
-    expect(result.data).toHaveProperty('data')
-    expect(result.data).toHaveProperty('total')
-    expect(result.data).toHaveProperty('limit')
-    expect(result.data).toHaveProperty('offset')
-    expect(Array.isArray(result.data.data)).toBe(true)
-  })
-
-  it('should return commitments filtered by status', async () => {
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments?status=active'
-    )
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    expect(result.status).toBe(200)
-    expect(result.data.data).toBeInstanceOf(Array)
-    // All returned commitments should have the requested status
-    result.data.data.forEach((commitment: any) => {
-      expect(commitment.status).toBe('active')
-    })
-  })
-
-  it('should support pagination with limit and offset', async () => {
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments?limit=5&offset=0'
-    )
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    expect(result.status).toBe(200)
-    expect(result.data.limit).toBe(5)
-    expect(result.data.offset).toBe(0)
-    expect(result.data.data.length).toBeLessThanOrEqual(5)
-  })
-
-  it('should return commitment objects with required fields', async () => {
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments'
-    )
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    expect(result.data.data.length).toBeGreaterThan(0)
-
-    result.data.data.forEach((commitment: any) => {
-      expect(commitment).toHaveProperty('id')
-      expect(commitment).toHaveProperty('title')
-      expect(commitment).toHaveProperty('amount')
-      expect(commitment).toHaveProperty('status')
-      expect(commitment).toHaveProperty('createdAt')
-    })
-  })
-})
+      `${ORIGIN}/api/commitments?ownerAddress=GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&page=1&pageSize=10`,
+    );
+    const response = await GET(request);
+    const result = await parseResponse(response);
+    expect(result.status).toBe(200);
+    expect(result.data.success).toBe(true);
+    expect(result.data.data).toMatchObject({
+      items: [],
+      page: 1,
+      pageSize: 10,
+      total: 0,
+    });
+  });
+});
 
 describe('POST /api/commitments', () => {
-  it('should create a new commitment with valid data', async () => {
-    const commitmentData = {
-      title: 'Test Commitment',
-      amount: 1000,
-    }
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetSessionStoreForTests();
+  });
 
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments',
-      {
-        method: 'POST',
-        body: commitmentData,
-      }
-    )
+  it('succeeds without CSRF when no session cookie is sent', async () => {
+    const request = createMockRequest(`${ORIGIN}/api/commitments`, {
+      method: 'POST',
+      body: validPostBody,
+      headers: { Origin: ORIGIN },
+    });
+    const response = await POST(request);
+    const result = await parseResponse(response);
+    expect(result.status).toBe(201);
+    expect(result.data.success).toBe(true);
+  });
 
-    const response = await POST(request)
-    const result = await parseResponse(response)
+  it('returns 403 when session cookie is present but CSRF header is missing', async () => {
+    const { sessionId } = createBrowserSession();
+    const request = createMockRequest(`${ORIGIN}/api/commitments`, {
+      method: 'POST',
+      body: validPostBody,
+      headers: {
+        Origin: ORIGIN,
+        Cookie: `${SESSION_COOKIE_NAME}=${sessionId}`,
+      },
+    });
+    const response = await POST(request);
+    const result = await parseResponse(response);
+    expect(result.status).toBe(403);
+    expect(result.data.success).toBe(false);
+    expect(result.data.error?.code).toBe('CSRF_INVALID');
+  });
 
-    expect(result.status).toBe(201)
-    expect(result.data).toHaveProperty('id')
-    expect(result.data).toHaveProperty('title', commitmentData.title)
-    expect(result.data).toHaveProperty('amount', commitmentData.amount)
-    expect(result.data).toHaveProperty('status', 'pending')
-    expect(result.data).toHaveProperty('createdAt')
-  })
-
-  it('should return 400 if required fields are missing', async () => {
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments',
-      {
-        method: 'POST',
-        body: { title: 'Incomplete Commitment' },
-      }
-    )
-
-    const response = await POST(request)
-    const result = await parseResponse(response)
-
-    expect(result.status).toBe(400)
-    expect(result.data).toHaveProperty('error')
-    expect(result.data.error).toContain('Missing required fields')
-  })
-
-  it('should return 400 if title is missing', async () => {
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments',
-      {
-        method: 'POST',
-        body: { amount: 5000 },
-      }
-    )
-
-    const response = await POST(request)
-    const result = await parseResponse(response)
-
-    expect(result.status).toBe(400)
-  })
-
-  it('should return 400 if amount is missing', async () => {
-    const request = createMockRequest(
-      'http://localhost:3000/api/commitments',
-      {
-        method: 'POST',
-        body: { title: 'No Amount' },
-      }
-    )
-
-    const response = await POST(request)
-    const result = await parseResponse(response)
-
-    expect(result.status).toBe(400)
-  })
-
-  it('should generate a unique ID for each commitment', async () => {
-    const commitmentData = {
-      title: 'Test Commitment',
-      amount: 1000,
-    }
-
-    const request1 = createMockRequest(
-      'http://localhost:3000/api/commitments',
-      {
-        method: 'POST',
-        body: commitmentData,
-      }
-    )
-
-    const request2 = createMockRequest(
-      'http://localhost:3000/api/commitments',
-      {
-        method: 'POST',
-        body: commitmentData,
-      }
-    )
-
-    const response1 = await POST(request1)
-    const response2 = await POST(request2)
-
-    const result1 = await parseResponse(response1)
-    const result2 = await parseResponse(response2)
-
-    // IDs should be different
-    expect(result1.data.id).not.toBe(result2.data.id)
-  })
-})
+  it('returns 201 when session and CSRF header are valid', async () => {
+    const { sessionId, csrfToken } = createBrowserSession();
+    const request = createMockRequest(`${ORIGIN}/api/commitments`, {
+      method: 'POST',
+      body: validPostBody,
+      headers: {
+        Origin: ORIGIN,
+        Cookie: `${SESSION_COOKIE_NAME}=${sessionId}`,
+        [CSRF_HEADER_NAME]: csrfToken,
+      },
+    });
+    const response = await POST(request);
+    const result = await parseResponse(response);
+    expect(result.status).toBe(201);
+    expect(result.data.success).toBe(true);
+  });
+});

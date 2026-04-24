@@ -5,6 +5,8 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
 import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
+import { createBrowserSession } from '@/lib/backend/session';
+import { applySessionCookie } from '@/lib/backend/sessionCookies';
 
 // Request validation schema
 const VerifyRequestSchema = z.object({
@@ -26,13 +28,13 @@ export const POST = withApiHandler(async (req: NextRequest) => {
     let body;
     try {
         body = await req.json();
-    } catch (error) {
+    } catch {
         throw new ValidationError('Invalid JSON in request body');
     }
 
     const validation = VerifyRequestSchema.safeParse(body);
     if (!validation.success) {
-        throw new ValidationError('Invalid request data', validation.error.errors);
+        throw new ValidationError('Invalid request data', validation.error.issues);
     }
 
     const { address, signature, message } = validation.data;
@@ -48,16 +50,17 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
     }
 
-    // TODO: Create a proper session token (JWT or similar)
     const sessionToken = createSessionToken(address);
+    const { sessionId, csrfToken } = createBrowserSession(verificationResult.address);
 
-    // Return success response with session token
-    return ok({
+    const response = ok({
         verified: true,
         address: verificationResult.address,
         message: 'Signature verified successfully',
-        // TODO: Replace with proper JWT/session management
         sessionToken,
-        sessionType: 'placeholder', // Indicates this is a placeholder implementation
+        sessionType: 'placeholder',
+        csrfToken,
     });
+    applySessionCookie(response, sessionId);
+    return response;
 });

@@ -1,30 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { ok } from '@/lib/backend/apiResponse';
 import { logEarlyExit } from '@/lib/backend/logger';
+import { TooManyRequestsError } from '@/lib/backend/errors';
 
-interface Params {
-    params: { id: string };
-}
+export const POST = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }) => {
+  assertMutationCsrf(req);
 
-export async function POST(req: NextRequest, { params }: Params) {
-    const { id } = params;
+  const { id } = context.params;
+  const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-    const ip = req.ip || req.headers.get('x-forwarded-for') || 'anonymous';
-    const isAllowed = await checkRateLimit(ip, 'api/commitments/early-exit');
-    if (!isAllowed) {
-        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-    }
+  const isAllowed = await checkRateLimit(ip, 'api/commitments/early-exit');
+  if (!isAllowed) {
+    throw new TooManyRequestsError();
+  }
 
-    // TODO: perform early exit processing (penalty calculation, contract call, etc.)
-    try {
-        const body = await req.json();
-        logEarlyExit({ ip, commitmentId: id, ...body });
-    } catch {
-        logEarlyExit({ ip, commitmentId: id, error: 'failed to parse request body' });
-    }
+  try {
+    const body = await req.json();
+    logEarlyExit({ ip, commitmentId: id, ...body });
+  } catch {
+    logEarlyExit({ ip, commitmentId: id, error: 'failed to parse request body' });
+  }
 
-    return NextResponse.json({
-        message: `Stub early-exit endpoint for commitment ${id}`,
-        commitmentId: id
-    });
-}
+  return ok({
+    message: `Stub early-exit endpoint for commitment ${id}`,
+    commitmentId: id,
+  });
+});

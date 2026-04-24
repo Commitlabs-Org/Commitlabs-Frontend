@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
@@ -12,12 +13,10 @@ const SettleRequestSchema = z.object({
     callerAddress: z.string().optional(),
 });
 
-interface Params {
-    params: { id: string };
-}
+export const POST = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }) => {
+    assertMutationCsrf(req);
 
-export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
-    const { id } = params;
+    const { id } = context.params;
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
     // Rate limiting
@@ -35,13 +34,13 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
     let body;
     try {
         body = await req.json();
-    } catch (error) {
+    } catch {
         throw new ValidationError('Invalid JSON in request body');
     }
 
     const validation = SettleRequestSchema.safeParse(body);
     if (!validation.success) {
-        throw new ValidationError('Invalid request data', validation.error.errors);
+        throw new ValidationError('Invalid request data', validation.error.issues);
     }
 
     const { callerAddress } = validation.data;

@@ -80,7 +80,6 @@ export interface SettleCommitmentOnChainResult {
 }
 
 type ContractCallMode = 'read' | 'write';
-type ContractCallMode = "read" | "write";
 
 interface ContractInvocationResult {
   value: unknown;

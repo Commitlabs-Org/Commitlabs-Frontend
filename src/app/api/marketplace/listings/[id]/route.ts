@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { ValidationError } from '@/lib/backend/errors';
@@ -15,6 +16,8 @@ import type { CancelListingResponse } from '@/types/marketplace';
  */
 export const DELETE = withApiHandler(
   async (req: NextRequest, { params }: { params: Record<string, string> }) => {
+    assertMutationCsrf(req);
+
     const listingId = params.id;
 
     if (!listingId) {

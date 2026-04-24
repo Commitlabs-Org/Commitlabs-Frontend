@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Calendar, Activity, AlertTriangle, DollarSign, ChevronRight } from "lucide-react";
+import { X, Calendar, Activity, AlertTriangle, DollarSign } from "lucide-react";
 
 type CommitmentTypeVariant = "safe" | "balanced" | "aggressive";
 type CommitmentTypeCapitalized = "Safe" | "Balanced" | "Aggressive";
@@ -265,8 +265,9 @@ export function CommitmentDetailsModal({
               </button>
             ))}
           </div>
+          </div>
         </div>
-        
+
         {/* Footer Actions - Standardized Bottom Placement */}
         <div className="px-6 sm:px-10 pb-10 mt-auto">
           <button

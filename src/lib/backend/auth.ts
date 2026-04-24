@@ -215,6 +215,6 @@ export function createSessionToken(address: string): string {
  */
 export function verifySessionToken(token: string): { valid: boolean; address?: string } {
     // TODO: Implement JWT verification or session validation
-    // For now, return placeholder
+    void token;
     return { valid: false };
 }
