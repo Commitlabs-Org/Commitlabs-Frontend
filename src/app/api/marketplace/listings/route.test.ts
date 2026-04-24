@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET, OPTIONS, POST } from './route';
 import { NextRequest } from 'next/server';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
 import {
+  getMarketplaceSortKeys,
+  isMarketplaceSortBy,
   listMarketplaceListings,
   marketplaceService,
 } from '@/lib/backend/services/marketplace';
 import { ValidationError, ConflictError } from '@/lib/backend/errors';
 import type { MarketplaceListing } from '@/lib/types/domain';
+
+vi.mock('@/lib/backend/rateLimit', () => ({
+  checkRateLimit: vi.fn(async () => true),
+}))
 
 // Mock the marketplace service
 vi.mock('@/lib/backend/services/marketplace', () => ({
@@ -22,6 +29,9 @@ describe('POST /api/marketplace/listings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
+    vi.mocked(checkRateLimit).mockResolvedValue(true);
+    vi.mocked(isMarketplaceSortBy).mockReturnValue(true);
+    vi.mocked(getMarketplaceSortKeys).mockReturnValue(['amount', 'yield', 'price']);
     vi.mocked(listMarketplaceListings).mockResolvedValue([]);
   });
 
@@ -84,6 +94,108 @@ describe('POST /api/marketplace/listings', () => {
       'GET, POST, OPTIONS'
     );
     expect(data.success).toBe(true);
+  });
+
+  it('should parse and forward supported marketplace filters', async () => {
+    const request = new NextRequest(
+      'http://localhost:3000/api/marketplace/listings?type=safe&minCompliance=80&maxLoss=12&minAmount=100&maxAmount=500&sortBy=yield',
+      {
+        method: 'GET',
+      }
+    );
+
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(listMarketplaceListings).toHaveBeenCalledWith({
+      type: 'Safe',
+      minCompliance: 80,
+      maxLoss: 12,
+      minAmount: 100,
+      maxAmount: 500,
+      sortBy: 'yield',
+    });
+  });
+
+  it('should return 400 for invalid numeric filters', async () => {
+    const request = new NextRequest(
+      'http://localhost:3000/api/marketplace/listings?minCompliance=not-a-number',
+      {
+        method: 'GET',
+      }
+    );
+
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('should return 400 when minAmount exceeds maxAmount', async () => {
+    const request = new NextRequest(
+      'http://localhost:3000/api/marketplace/listings?minAmount=500&maxAmount=100',
+      {
+        method: 'GET',
+      }
+    );
+
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('should return 400 for unsupported commitment types', async () => {
+    const request = new NextRequest(
+      'http://localhost:3000/api/marketplace/listings?type=unknown',
+      {
+        method: 'GET',
+      }
+    );
+
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('should return 400 for unsupported sort fields', async () => {
+    vi.mocked(isMarketplaceSortBy).mockReturnValue(false);
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/marketplace/listings?sortBy=createdAt',
+      {
+        method: 'GET',
+      }
+    );
+
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error.code).toBe('VALIDATION_ERROR');
+    expect(getMarketplaceSortKeys).toHaveBeenCalled();
+  });
+
+  it('should return 429 when GET rate limiting blocks the request', async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue(false);
+
+    const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
+      method: 'GET',
+    });
+
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(data.error.code).toBe('TOO_MANY_REQUESTS');
+    expect(listMarketplaceListings).not.toHaveBeenCalled();
   });
 
   it('should reject disallowed first-party origins for POST', async () => {
@@ -224,5 +336,26 @@ describe('POST /api/marketplace/listings', () => {
     expect(response.status).toBe(409);
     expect(data.success).toBe(false);
     expect(data.error.code).toBe('CONFLICT');
+  });
+
+  it('should return 500 for unexpected service errors', async () => {
+    vi.mocked(marketplaceService.createListing).mockRejectedValue(new Error('boom'));
+
+    const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
+      method: 'POST',
+      body: JSON.stringify({
+        commitmentId: 'commitment_123',
+        price: '1000.50',
+        currencyAsset: 'USDC',
+        sellerAddress: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      }),
+    });
+
+    const response = await POST(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('INTERNAL_ERROR');
   });
 });

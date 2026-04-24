@@ -30,11 +30,11 @@ export const GET = withApiHandler(async (req: NextRequest) => {
   const pageSize = Number(searchParams.get("pageSize") ?? 10);
 
   if (!ownerAddress) {
-    return fail("Missing ownerAddress", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Missing ownerAddress", undefined, 400);
   }
 
   if (page < 1 || pageSize < 1 || pageSize > 100) {
-    return fail("Invalid pagination params", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid pagination params", undefined, 400);
   }
 
   const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
@@ -95,23 +95,23 @@ export const POST = withApiHandler(async (req: NextRequest) => {
 
   // Basic validation
   if (!ownerAddress || typeof ownerAddress !== "string") {
-    return fail("Invalid ownerAddress", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400);
   }
 
   if (!asset || typeof asset !== "string") {
-    return fail("Invalid asset", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid asset", undefined, 400);
   }
 
   if (!amount || isNaN(Number(amount))) {
-    return fail("Invalid amount", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid amount", undefined, 400);
   }
 
   if (!durationDays || durationDays <= 0) {
-    return fail("Invalid durationDays", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid durationDays", undefined, 400);
   }
 
   if (maxLossBps == null || maxLossBps < 0) {
-    return fail("Invalid maxLossBps", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid maxLossBps", undefined, 400);
   }
 
   // Call chain interaction
