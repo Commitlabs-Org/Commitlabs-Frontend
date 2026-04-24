@@ -113,6 +113,35 @@ curl -X POST http://localhost:3000/api/attestations \
 
 ---
 
+## `GET /api/protocol/constants`
+
+Returns the public protocol constants used by UX copy and calculations, including fee parameters, penalty tiers, and commitment limits. This endpoint is public and includes caching headers.
+
+### Example
+
+```bash
+curl http://localhost:3000/api/protocol/constants
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "protocolVersion": "v1",
+    "network": "Test SDF Network ; September 2015",
+    "fees": {
+      "networkBaseFeeStroops": 100,
+      "platformFeePercent": 0
+    },
+    "penalties": [...],
+    "commitmentLimits": { ... },
+    "cachedAt": "2026-02-25T00:00:00.000Z"
+  }
+}
+```
+
+---
+
 ## `GET /api/metrics`
 
 Simple health/metrics endpoint used by monitoring tools.

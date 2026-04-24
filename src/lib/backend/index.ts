@@ -30,3 +30,13 @@ export {
   HTTP_ERROR_CODES,
 } from "./errors";
 export { withApiHandler } from "./withApiHandler";
+export {
+  getProtocolConstants,
+  invalidateProtocolConstantsCache,
+} from "./services/protocolConstants";
+export type {
+  ProtocolConstants,
+  FeeConstants,
+  PenaltyTier,
+  CommitmentLimits,
+} from "./services/protocolConstants";
