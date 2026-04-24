@@ -12,11 +12,7 @@ const SettleRequestSchema = z.object({
     callerAddress: z.string().optional(),
 });
 
-interface Params {
-    params: { id: string };
-}
-
-export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
+export const POST = withApiHandler(async (req: NextRequest, { params }: { params: Record<string, string> }) => {
     const { id } = params;
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
@@ -41,7 +37,7 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
 
     const validation = SettleRequestSchema.safeParse(body);
     if (!validation.success) {
-        throw new ValidationError('Invalid request data', validation.error.errors);
+        throw new ValidationError('Invalid request data', validation.error.issues);
     }
 
     const { callerAddress } = validation.data;

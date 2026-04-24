@@ -79,7 +79,6 @@ export interface SettleCommitmentOnChainResult {
   finalStatus: string;
 }
 
-type ContractCallMode = 'read' | 'write';
 type ContractCallMode = "read" | "write";
 
 interface ContractInvocationResult {
@@ -569,7 +568,7 @@ export async function settleCommitmentOnChain(
     // Check if commitment is matured (expired or can be settled)
     if (commitment.status === 'SETTLED') {
       throw new BackendError({
-        code: 'CONFLICT',
+        code: 'BAD_REQUEST',
         message: 'Commitment has already been settled.',
         status: 409
       });

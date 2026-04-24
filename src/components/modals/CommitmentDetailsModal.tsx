@@ -265,6 +265,7 @@ export function CommitmentDetailsModal({
               </button>
             ))}
           </div>
+          </div>
         </div>
         
         {/* Footer Actions - Standardized Bottom Placement */}
