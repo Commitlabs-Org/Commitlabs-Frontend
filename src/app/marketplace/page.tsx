@@ -6,6 +6,7 @@ import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHea
 import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
+import { TrustBadge } from '@/components/TrustBadge'
 
 // Interfaces matching the components
 interface Filters {
@@ -30,6 +31,7 @@ interface Listing {
   owner: string
   price: string
   forSale: boolean
+  trustLevel?: 'verified' | 'reputable' | 'unverified'
 }
 
 
@@ -45,6 +47,7 @@ const mockListings = [
     owner: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     price: '$52,000',
     forSale: true,
+    trustLevel: 'verified' as const,
   },
   {
     id: '002',
@@ -57,6 +60,7 @@ const mockListings = [
     owner: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199',
     price: '$105,000',
     forSale: true,
+    trustLevel: 'reputable' as const,
   },
   {
     id: '003',
@@ -141,6 +145,7 @@ const mockListings = [
     owner: '0x123...456',
     price: '$125,000',
     forSale: true,
+    trustLevel: 'unverified' as const,
   },
   {
     id: '010',
@@ -257,8 +262,11 @@ function MarketplaceRow({ item }: { item: Listing }) {
           <ListTypeIcon type={item.type} />
         </div>
         <div>
-          <div className={`inline-flex rounded-full px-2.5 py-1 sm:py-0.5 text-[10px] font-bold uppercase tracking-wider ${badgeClass}`}>
-            {item.type}
+          <div className="flex items-center gap-2">
+            <div className={`inline-flex rounded-full px-2.5 py-1 sm:py-0.5 text-[10px] font-bold uppercase tracking-wider ${badgeClass}`}>
+              {item.type}
+            </div>
+            <TrustBadge level={item.trustLevel ?? 'unverified'} showTooltip={false} />
           </div>
           <div className="font-mono text-sm text-white/50 mt-1 sm:mt-0">#CMT-{item.id.padStart(3, '0')}</div>
         </div>
