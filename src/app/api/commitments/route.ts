@@ -1,9 +1,10 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from "@/lib/backend/rateLimit";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
 import { ok, fail } from "@/lib/backend/apiResponse";
-import { TooManyRequestsError } from "@/lib/backend/errors";
+import { TooManyRequestsError, ConflictError } from "@/lib/backend/errors";
 import { getUserCommitmentsFromChain, createCommitmentOnChain } from "@/lib/backend/services/contracts";
+import { idempotencyService } from "@/lib/backend/idempotency";
 
 interface CreateCommitmentRequestBody {
   ownerAddress: string;
@@ -69,53 +70,85 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 
 export const POST = withApiHandler(async (req: NextRequest) => {
   const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
+  const idempotencyKey = req.headers.get("idempotency-key");
 
   const isAllowed = await checkRateLimit(ip, "api/commitments");
   if (!isAllowed) {
     throw new TooManyRequestsError();
   }
 
-  const body = (await req.json()) as CreateCommitmentRequestBody;
-
-  const {
-    ownerAddress,
-    asset,
-    amount,
-    durationDays,
-    maxLossBps,
-    metadata,
-  } = body;
-
-  // Basic validation
-  if (!ownerAddress || typeof ownerAddress !== "string") {
-    return fail("Invalid ownerAddress", "BAD_REQUEST", 400);
+  // Idempotency check
+  if (idempotencyKey) {
+    const existing = await idempotencyService.getRecord(idempotencyKey);
+    if (existing) {
+      if (existing.status === "COMPLETED") {
+        return NextResponse.json(existing.response, { status: existing.statusCode });
+      }
+      if (existing.status === "STARTED") {
+        throw new ConflictError("A request with this idempotency key is already in progress.");
+      }
+    }
+    await idempotencyService.start(idempotencyKey);
   }
 
-  if (!asset || typeof asset !== "string") {
-    return fail("Invalid asset", "BAD_REQUEST", 400);
+  try {
+    const body = (await req.json()) as CreateCommitmentRequestBody;
+
+    const {
+      ownerAddress,
+      asset,
+      amount,
+      durationDays,
+      maxLossBps,
+      metadata,
+    } = body;
+
+    // Basic validation
+    if (!ownerAddress || typeof ownerAddress !== "string") {
+      return fail("Invalid ownerAddress", "BAD_REQUEST", 400);
+    }
+
+    if (!asset || typeof asset !== "string") {
+      return fail("Invalid asset", "BAD_REQUEST", 400);
+    }
+
+    if (!amount || isNaN(Number(amount))) {
+      return fail("Invalid amount", "BAD_REQUEST", 400);
+    }
+
+    if (!durationDays || durationDays <= 0) {
+      return fail("Invalid durationDays", "BAD_REQUEST", 400);
+    }
+
+    if (maxLossBps == null || maxLossBps < 0) {
+      return fail("Invalid maxLossBps", "BAD_REQUEST", 400);
+    }
+
+    // Call chain interaction
+    const result = await createCommitmentOnChain({
+      ownerAddress,
+      asset,
+      amount,
+      durationDays,
+      maxLossBps,
+      metadata,
+    });
+
+    const response = ok(result, 201);
+
+    if (idempotencyKey) {
+      // Extract the body from the NextResponse for caching
+      // Since ok() returns a NextResponse, we need to handle it carefully
+      const responseData = await response.json();
+      await idempotencyService.complete(idempotencyKey, responseData, 201);
+      return NextResponse.json(responseData, { status: 201 });
+    }
+
+    return response;
+  } catch (error) {
+    if (idempotencyKey) {
+      await idempotencyService.fail(idempotencyKey);
+    }
+    throw error;
   }
-
-  if (!amount || isNaN(Number(amount))) {
-    return fail("Invalid amount", "BAD_REQUEST", 400);
-  }
-
-  if (!durationDays || durationDays <= 0) {
-    return fail("Invalid durationDays", "BAD_REQUEST", 400);
-  }
-
-  if (maxLossBps == null || maxLossBps < 0) {
-    return fail("Invalid maxLossBps", "BAD_REQUEST", 400);
-  }
-
-  // Call chain interaction
-  const result = await createCommitmentOnChain({
-    ownerAddress,
-    asset,
-    amount,
-    durationDays,
-    maxLossBps,
-    metadata,
-  });
-
-  return ok(result, 201);
 });

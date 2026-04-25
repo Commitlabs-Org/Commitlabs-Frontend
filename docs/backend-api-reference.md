@@ -11,12 +11,21 @@ an example response.  All endpoints return JSON.
 
 ## `POST /api/commitments`
 
-Creates a new commitment.  In the stub implementation, no persistence occurs;
-this route is mainly used to log `CommitmentCreated` analytics events.
+Creates a new commitment on the Stellar network.
 
-- **Request body**: arbitrary JSON with commitment parameters (amount, term,
-etc.)
-- **Response**: stub message with the requester IP.
+- **Headers**:
+    - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Recommended for safe retries.
+- **Request body**:
+    - `ownerAddress`: (string, required) The Stellar address of the owner.
+    - `asset`: (string, required) The asset code.
+    - `amount`: (string, required) The amount to commit.
+    - `durationDays`: (number, required) The duration of the commitment in days.
+    - `maxLossBps`: (number, required) Maximum loss in basis points.
+    - `metadata`: (object, optional) Additional metadata.
+- **Response**:
+    - `201 Created`: The commitment was successfully created.
+    - `409 Conflict`: A request with the same `Idempotency-Key` is already in progress.
+    - `429 Too Many Requests`: Rate limit exceeded.
 
 ### Example
 
