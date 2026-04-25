@@ -1,11 +1,11 @@
-import { logInfo } from "../logger";
-import { ConflictError, NotFoundError, ValidationError } from "../errors";
+import { logInfo } from '../logger';
+import { ConflictError, NotFoundError, ValidationError } from '../errors';
 import type {
   MarketplaceListing,
   CreateListingRequest,
-} from "@/lib/types/domain";
+} from '@/lib/types/domain';
 
-export type MarketplaceCommitmentType = "Safe" | "Balanced" | "Aggressive";
+export type MarketplaceCommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
 export interface MarketplacePublicListing {
   listingId: string;
@@ -26,13 +26,22 @@ export interface MarketplaceListingsQuery {
   minAmount?: number;
   maxAmount?: number;
   sortBy?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MarketplaceListingsResult {
+  items: MarketplacePublicListing[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 const MOCK_LISTINGS: MarketplacePublicListing[] = [
   {
-    listingId: "LST-001",
-    commitmentId: "CMT-001",
-    type: "Safe",
+    listingId: 'LST-001',
+    commitmentId: 'CMT-001',
+    type: 'Safe',
     amount: 50000,
     remainingDays: 25,
     maxLoss: 2,
@@ -41,9 +50,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 52000,
   },
   {
-    listingId: "LST-002",
-    commitmentId: "CMT-002",
-    type: "Balanced",
+    listingId: 'LST-002',
+    commitmentId: 'CMT-002',
+    type: 'Balanced',
     amount: 100000,
     remainingDays: 45,
     maxLoss: 8,
@@ -52,9 +61,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 105000,
   },
   {
-    listingId: "LST-003",
-    commitmentId: "CMT-003",
-    type: "Aggressive",
+    listingId: 'LST-003',
+    commitmentId: 'CMT-003',
+    type: 'Aggressive',
     amount: 250000,
     remainingDays: 80,
     maxLoss: 100,
@@ -63,9 +72,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 262000,
   },
   {
-    listingId: "LST-004",
-    commitmentId: "CMT-004",
-    type: "Safe",
+    listingId: 'LST-004',
+    commitmentId: 'CMT-004',
+    type: 'Safe',
     amount: 75000,
     remainingDays: 15,
     maxLoss: 2,
@@ -74,9 +83,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 76500,
   },
   {
-    listingId: "LST-005",
-    commitmentId: "CMT-005",
-    type: "Balanced",
+    listingId: 'LST-005',
+    commitmentId: 'CMT-005',
+    type: 'Balanced',
     amount: 150000,
     remainingDays: 55,
     maxLoss: 8,
@@ -85,9 +94,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 155000,
   },
   {
-    listingId: "LST-006",
-    commitmentId: "CMT-006",
-    type: "Aggressive",
+    listingId: 'LST-006',
+    commitmentId: 'CMT-006',
+    type: 'Aggressive',
     amount: 500000,
     remainingDays: 85,
     maxLoss: 100,
@@ -98,15 +107,15 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
 ];
 
 const SORT_CONFIG = {
-  price: { key: "price", order: "desc" },
-  amount: { key: "amount", order: "desc" },
-  complianceScore: { key: "complianceScore", order: "desc" },
-  remainingDays: { key: "remainingDays", order: "asc" },
-  maxLoss: { key: "maxLoss", order: "asc" },
-  currentYield: { key: "currentYield", order: "desc" },
+  price: { key: 'price', order: 'desc' },
+  amount: { key: 'amount', order: 'desc' },
+  complianceScore: { key: 'complianceScore', order: 'desc' },
+  remainingDays: { key: 'remainingDays', order: 'asc' },
+  maxLoss: { key: 'maxLoss', order: 'asc' },
+  currentYield: { key: 'currentYield', order: 'desc' },
 } as const satisfies Record<
   string,
-  { key: keyof MarketplacePublicListing; order: "asc" | "desc" }
+  { key: keyof MarketplacePublicListing; order: 'asc' | 'desc' }
 >;
 
 export type MarketplaceSortBy = keyof typeof SORT_CONFIG;
@@ -120,7 +129,7 @@ function sortListings(
   return [...listings].sort((a, b) => {
     const lhs = a[key] as number;
     const rhs = b[key] as number;
-    return order === "asc" ? lhs - rhs : rhs - lhs;
+    return order === 'asc' ? lhs - rhs : rhs - lhs;
   });
 }
 
@@ -134,7 +143,7 @@ export function getMarketplaceSortKeys(): MarketplaceSortBy[] {
 
 export async function listMarketplaceListings(
   query: MarketplaceListingsQuery,
-): Promise<MarketplacePublicListing[]> {
+): Promise<MarketplaceListingsResult> {
   let results = MOCK_LISTINGS;
 
   if (query.type) {
@@ -160,11 +169,16 @@ export async function listMarketplaceListings(
   }
 
   const sortBy =
-    query.sortBy && isMarketplaceSortBy(query.sortBy) ? query.sortBy : "price";
+    query.sortBy && isMarketplaceSortBy(query.sortBy) ? query.sortBy : 'price';
 
-  // TODO(on-chain): Replace mock listings with marketplace contract reads.
-  // TODO(attestation): Merge latest attestation engine score per commitment when available.
-  return sortListings(results, sortBy);
+  const sorted = sortListings(results, sortBy);
+  const page = Number.isInteger(query.page) && query.page && query.page > 0 ? query.page : 1;
+  const pageSize = Number.isInteger(query.pageSize) && query.pageSize && query.pageSize > 0 ? query.pageSize : 10;
+  const total = sorted.length;
+  const start = (page - 1) * pageSize;
+  const items = sorted.slice(start, start + pageSize);
+
+  return { items, total, page, pageSize };
 }
 
 class MarketplaceService {
@@ -174,19 +188,19 @@ class MarketplaceService {
   async createListing(
     request: CreateListingRequest,
   ): Promise<MarketplaceListing> {
-    logInfo(undefined, "[MarketplaceService] Creating listing", { request });
+    logInfo(undefined, '[MarketplaceService] Creating listing', { request });
 
     this.validateCreateListingRequest(request);
 
     const existingListing = Array.from(this.listings.values()).find(
       (listing) =>
         listing.commitmentId === request.commitmentId &&
-        listing.status === "Active",
+        listing.status === 'Active',
     );
 
     if (existingListing) {
       throw new ConflictError(
-        "Commitment is already listed on the marketplace.",
+        'Commitment is already listed on the marketplace.',
         {
           commitmentId: request.commitmentId,
           existingListingId: existingListing.id,
@@ -203,21 +217,20 @@ class MarketplaceService {
       price: request.price,
       currencyAsset: request.currencyAsset,
       sellerAddress: request.sellerAddress,
-      status: "Active",
+      status: 'Active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     this.listings.set(listingId, listing);
 
-    logInfo(undefined, "[MarketplaceService] Listing created", { listingId });
+    logInfo(undefined, '[MarketplaceService] Listing created', { listingId });
 
-    // TODO(on-chain): Replace in-memory listing creation with marketplace contract interaction.
     return listing;
   }
 
   async cancelListing(listingId: string, sellerAddress: string): Promise<void> {
-    logInfo(undefined, "[MarketplaceService] Cancelling listing", {
+    logInfo(undefined, '[MarketplaceService] Cancelling listing', {
       listingId,
       sellerAddress,
     });
@@ -225,31 +238,29 @@ class MarketplaceService {
     const listing = this.listings.get(listingId);
 
     if (!listing) {
-      throw new NotFoundError("Listing", { listingId });
+      throw new NotFoundError('Listing', { listingId });
     }
 
     if (listing.sellerAddress !== sellerAddress) {
-      throw new ValidationError("Only the seller can cancel this listing.", {
+      throw new ValidationError('Only the seller can cancel this listing.', {
         listingId,
         expectedSeller: listing.sellerAddress,
         providedSeller: sellerAddress,
       });
     }
 
-    if (listing.status !== "Active") {
-      throw new ConflictError("Only active listings can be cancelled.", {
+    if (listing.status !== 'Active') {
+      throw new ConflictError('Only active listings can be cancelled.', {
         listingId,
         currentStatus: listing.status,
       });
     }
 
-    listing.status = "Cancelled";
+    listing.status = 'Cancelled';
     listing.updatedAt = new Date().toISOString();
     this.listings.set(listingId, listing);
 
-    logInfo(undefined, "[MarketplaceService] Listing cancelled", { listingId });
-
-    // TODO(on-chain): Replace in-memory cancel with marketplace contract interaction.
+    logInfo(undefined, '[MarketplaceService] Listing cancelled', { listingId });
   }
 
   async getListing(listingId: string): Promise<MarketplaceListing | null> {
@@ -259,29 +270,29 @@ class MarketplaceService {
   private validateCreateListingRequest(request: CreateListingRequest): void {
     const errors: string[] = [];
 
-    if (!request.commitmentId || typeof request.commitmentId !== "string") {
-      errors.push("commitmentId is required and must be a string");
+    if (!request.commitmentId || typeof request.commitmentId !== 'string') {
+      errors.push('commitmentId is required and must be a string');
     }
 
-    if (!request.price || typeof request.price !== "string") {
-      errors.push("price is required and must be a string");
+    if (!request.price || typeof request.price !== 'string') {
+      errors.push('price is required and must be a string');
     } else {
       const priceNum = Number.parseFloat(request.price);
       if (Number.isNaN(priceNum) || priceNum <= 0) {
-        errors.push("price must be a positive number");
+        errors.push('price must be a positive number');
       }
     }
 
-    if (!request.currencyAsset || typeof request.currencyAsset !== "string") {
-      errors.push("currencyAsset is required and must be a string");
+    if (!request.currencyAsset || typeof request.currencyAsset !== 'string') {
+      errors.push('currencyAsset is required and must be a string');
     }
 
-    if (!request.sellerAddress || typeof request.sellerAddress !== "string") {
-      errors.push("sellerAddress is required and must be a string");
+    if (!request.sellerAddress || typeof request.sellerAddress !== 'string') {
+      errors.push('sellerAddress is required and must be a string');
     }
 
     if (errors.length > 0) {
-      throw new ValidationError("Invalid listing request", { errors });
+      throw new ValidationError('Invalid listing request', { errors });
     }
   }
 }
