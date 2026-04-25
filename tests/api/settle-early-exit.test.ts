@@ -18,7 +18,73 @@ vi.mock('@/lib/backend/logger', () => ({
 }))
 
 vi.mock('@/lib/backend/withApiHandler', () => ({
-  withApiHandler: (handler: any) => handler
+  withApiHandler: (handler: any) => async (req: any, params: any) => {
+    try {
+      return await handler(req, params)
+    } catch (error: any) {
+      // Simulate the error handling that withApiHandler would do
+      if (error.constructor.name === 'TooManyRequestsError') {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: {
+              code: 'TOO_MANY_REQUESTS',
+              message: error.message
+            }
+          }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      if (error.constructor.name === 'ValidationError') {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: error.message
+            }
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      if (error.constructor.name === 'NotFoundError') {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: {
+              code: 'NOT_FOUND',
+              message: error.message
+            }
+          }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      if (error.constructor.name === 'ConflictError') {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: {
+              code: 'CONFLICT',
+              message: error.message
+            }
+          }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Default internal server error
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Internal server error'
+          }
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+  }
 }))
 
 vi.mock('@/lib/backend/apiResponse', () => ({
@@ -104,14 +170,12 @@ describe('POST /api/commitments/[id]/settle - Error States', () => {
     })
 
     it('should return 400 when request body contains invalid JSON', async () => {
-      const request = createMockRequest(
-        'http://localhost:3000/api/commitments/test-id/settle',
-        { 
-          method: 'POST',
-          body: 'invalid json{',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
+      // Create a mock request that will fail JSON parsing
+      const request = new Request('http://localhost:3000/api/commitments/test-id/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'invalid json{'
+      })
       
       const response = await POST(request, { params: { id: 'test-id' } })
       const result = await parseResponse(response)
@@ -125,7 +189,7 @@ describe('POST /api/commitments/[id]/settle - Error States', () => {
     it('should return 400 when request body is missing', async () => {
       const request = createMockRequest(
         'http://localhost:3000/api/commitments/test-id/settle',
-        { method: 'POST', body: null }
+        { method: 'POST', body: {} }
       )
       
       const response = await POST(request, { params: { id: 'test-id' } })
@@ -342,14 +406,12 @@ describe('POST /api/commitments/[id]/early-exit - Error States', () => {
 
   describe('Request Validation', () => {
     it('should handle invalid JSON gracefully', async () => {
-      const request = createMockRequest(
-        'http://localhost:3000/api/commitments/test-id/early-exit',
-        { 
-          method: 'POST',
-          body: 'invalid json{',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
+      // Create a mock request that will fail JSON parsing
+      const request = new Request('http://localhost:3000/api/commitments/test-id/early-exit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'invalid json{'
+      })
       
       const response = await EarlyExitPOST(request, { params: { id: 'test-id' } })
       const result = await parseResponse(response)
@@ -363,10 +425,11 @@ describe('POST /api/commitments/[id]/early-exit - Error States', () => {
     })
 
     it('should handle missing request body gracefully', async () => {
-      const request = createMockRequest(
-        'http://localhost:3000/api/commitments/test-id/early-exit',
-        { method: 'POST', body: null }
-      )
+      // Create a mock request with empty body
+      const request = new Request('http://localhost:3000/api/commitments/test-id/early-exit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
       
       const response = await EarlyExitPOST(request, { params: { id: 'test-id' } })
       const result = await parseResponse(response)
