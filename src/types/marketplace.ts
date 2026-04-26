@@ -10,7 +10,7 @@ export interface MarketplaceListing {
   createdAt: string;
   updatedAt: string;
 }
-
+// TODO: Update with actual Soroban contract interaction types
 export interface CreateListingRequest {
   commitmentId: string;
   price: string;

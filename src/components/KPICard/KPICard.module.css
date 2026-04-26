@@ -1,0 +1,398 @@
+/* ============================================================================
+   KPI Card Component Styles
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   Base Card Structure
+   --------------------------------------------------------------------------- */
+.card {
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: var(--accent-color, rgba(255, 255, 255, 0.2));
+  box-shadow: 0 0 20px var(--glow-color, rgba(255, 255, 255, 0.05));
+  transform: translateY(-2px);
+}
+
+.card.clickable {
+  cursor: pointer;
+}
+
+.card.clickable:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Size Variants
+   --------------------------------------------------------------------------- */
+.small {
+  padding: 1rem;
+  gap: 0.5rem;
+}
+
+.medium {
+  padding: 1.5rem;
+  gap: 0.75rem;
+}
+
+.large {
+  padding: 2rem;
+  gap: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Accent Color Variants
+   --------------------------------------------------------------------------- */
+.teal {
+  --accent-color: #0ff0fc;
+  --glow-color: rgba(15, 240, 252, 0.2);
+}
+
+.green {
+  --accent-color: #00ff7a;
+  --glow-color: rgba(0, 255, 122, 0.2);
+}
+
+.blue {
+  --accent-color: #3b82f6;
+  --glow-color: rgba(59, 130, 246, 0.2);
+}
+
+.purple {
+  --accent-color: #a855f7;
+  --glow-color: rgba(168, 85, 247, 0.2);
+}
+
+.orange {
+  --accent-color: #f97316;
+  --glow-color: rgba(249, 115, 22, 0.2);
+}
+
+.neutral {
+  --accent-color: #94a3b8;
+  --glow-color: rgba(148, 163, 184, 0.2);
+}
+
+/* ---------------------------------------------------------------------------
+   Header Section (Icon + Label)
+   --------------------------------------------------------------------------- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.iconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+  border: 0.56px solid rgba(255, 255, 255, 0.1);
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.small .iconWrapper {
+  width: 28px;
+  height: 28px;
+}
+
+.large .iconWrapper {
+  width: 44px;
+  height: 44px;
+}
+
+.label {
+  font-size: 0.875rem;
+  color: #99a1af;
+  font-weight: 500;
+  flex: 1;
+}
+
+.small .label {
+  font-size: 0.75rem;
+}
+
+.large .label {
+  font-size: 1rem;
+}
+
+.tooltip {
+  color: #64748b;
+  font-size: 0.75rem;
+  cursor: help;
+  margin-left: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Value Display Section
+   --------------------------------------------------------------------------- */
+.valueContainer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  line-height: 1.2;
+}
+
+.small .value {
+  font-size: 1.5rem;
+}
+
+.large .value {
+  font-size: 2.5rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Delta/Change Indicator
+   --------------------------------------------------------------------------- */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.deltaSmall {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  gap: 0.125rem;
+}
+
+.deltaMedium {
+  font-size: 0.75rem;
+}
+
+.deltaLarge {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.deltaPositive {
+  background: rgba(0, 255, 122, 0.15);
+  color: #00ff7a;
+}
+
+.deltaNegative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.deltaNeutral {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.deltaPeriod {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Description
+   --------------------------------------------------------------------------- */
+.description {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+   Loading State
+   --------------------------------------------------------------------------- */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.loadingSmall {
+  gap: 0.5rem;
+}
+
+.loadingMedium {
+  gap: 0.75rem;
+}
+
+.loadingLarge {
+  gap: 1rem;
+}
+
+.spinner {
+  color: var(--accent-color);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingMessage {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.skeletonBar {
+  height: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Error State
+   --------------------------------------------------------------------------- */
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.errorSmall {
+  gap: 0.375rem;
+}
+
+.errorMedium {
+  gap: 0.5rem;
+}
+
+.errorLarge {
+  gap: 0.75rem;
+}
+
+.errorIcon {
+  color: #ef4444;
+}
+
+.errorMessage {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.retryButton {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retryButton:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ---------------------------------------------------------------------------
+   Empty State
+   --------------------------------------------------------------------------- */
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.emptySmall {
+  padding: 0.5rem 0;
+}
+
+.emptyMedium {
+  padding: 1rem 0;
+}
+
+.emptyLarge {
+  padding: 1.5rem 0;
+}
+
+.emptyMessage {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive Breakpoints
+   --------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .card {
+    padding: 1.25rem;
+  }
+  
+  .value {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
+  
+  .value {
+    font-size: 1.5rem;
+  }
+  
+  .label {
+    font-size: 0.75rem;
+  }
+  
+  .valueContainer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
