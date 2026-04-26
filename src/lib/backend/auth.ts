@@ -1,10 +1,18 @@
 import { randomBytes } from 'crypto';
 import Stellar from '@stellar/stellar-sdk';
+import { getKV } from './kv';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
 export interface NonceRecord {
     nonce: string;
+    address: string;
+    createdAt: Date;
+    expiresAt: Date;
+}
+
+export interface SessionRecord {
+    token: string;
     address: string;
     createdAt: Date;
     expiresAt: Date;
@@ -22,22 +30,12 @@ export interface SignatureVerificationResult {
     error?: string;
 }
 
-// ─── In‑memory storage (TODO: replace with Redis/database) ─────────────────────
+// ─── Configuration ──────────────────────────────────────────────────────────
 
-const nonceStore = new Map<string, NonceRecord>();
+const NONCE_TTL_SECONDS = 5 * 60; // 5 minutes
 
-// Clean up expired nonces every 5 minutes
-const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const NONCE_TTL = 5 * 60 * 1000; // 5 minutes
-
-setInterval(() => {
-    const now = new Date();
-    for (const [key, record] of nonceStore.entries()) {
-        if (record.expiresAt < now) {
-            nonceStore.delete(key);
-        }
-    }
-}, CLEANUP_INTERVAL);
+const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 // ─── Nonce Management ───────────────────────────────────────────────────────
 
@@ -49,25 +47,23 @@ export function generateNonce(): string {
 }
 
 /**
- * Store a nonce for a given Stellar address.
- * 
- * TODO: Replace in‑memory storage with Redis or database for production.
- * TODO: Add rate limiting per address to prevent nonce spam.
+ * Store a nonce for a given Stellar address in KV store with TTL.
  */
-export function storeNonce(address: string, nonce: string): NonceRecord {
+export async function storeNonce(address: string, nonce: string): Promise<NonceRecord> {
     const now = new Date();
+    const expiresAt = new Date(now.getTime() + NONCE_TTL_SECONDS * 1000);
+    
     const record: NonceRecord = {
         nonce,
         address,
         createdAt: now,
-        expiresAt: new Date(now.getTime() + NONCE_TTL),
+        expiresAt,
     };
     
-    // Store with nonce as key for quick lookup
-    nonceStore.set(nonce, record);
+    const kv = getKV();
+    const redisKey = `auth:nonce:${nonce}`;
     
-    // Also store by address for potential cleanup/lookup
-    // nonceStore.set(`${address}:${nonce}`, record);
+    await kv.set(redisKey, record, NONCE_TTL_SECONDS);
     
     return record;
 }
@@ -75,31 +71,21 @@ export function storeNonce(address: string, nonce: string): NonceRecord {
 /**
  * Retrieve a nonce record by nonce value.
  */
-export function getNonceRecord(nonce: string): NonceRecord | undefined {
-    const record = nonceStore.get(nonce);
-    if (!record) {
-        return undefined;
-    }
-    
-    // Check if expired
-    if (record.expiresAt < new Date()) {
-        nonceStore.delete(nonce);
-        return undefined;
-    }
-    
-    return record;
+export async function getNonceRecord(nonce: string): Promise<NonceRecord | null> {
+    const kv = getKV();
+    const redisKey = `auth:nonce:${nonce}`;
+    return await kv.get<NonceRecord>(redisKey);
 }
 
 /**
- * Consume/remove a nonce after successful verification.
+ * Consume/remove a nonce after successful verification (Atomic).
+ * Uses GETDEL if supported by the KV store.
  */
-export function consumeNonce(nonce: string): boolean {
-    const record = getNonceRecord(nonce);
-    if (record) {
-        nonceStore.delete(nonce);
-        return true;
-    }
-    return false;
+export async function consumeNonce(nonce: string): Promise<boolean> {
+    const kv = getKV();
+    const redisKey = `auth:nonce:${nonce}`;
+    const record = await kv.getdel<NonceRecord>(redisKey);
+    return !!record;
 }
 
 // ─── Signature Verification ─────────────────────────────────────────────────
@@ -149,7 +135,7 @@ export function verifyStellarSignature(
 /**
  * Verify a signature request including nonce validation.
  */
-export function verifySignatureWithNonce(request: SignatureVerificationRequest): SignatureVerificationResult {
+export async function verifySignatureWithNonce(request: SignatureVerificationRequest): Promise<SignatureVerificationResult> {
     const { address, signature, message } = request;
     
     // Extract nonce from message (expected format: "Sign in to CommitLabs: {nonce}")
@@ -162,7 +148,7 @@ export function verifySignatureWithNonce(request: SignatureVerificationRequest):
     }
     
     const nonce = nonceMatch[1];
-    const nonceRecord = getNonceRecord(nonce);
+    const nonceRecord = await getNonceRecord(nonce);
     
     if (!nonceRecord) {
         return {
@@ -181,9 +167,15 @@ export function verifySignatureWithNonce(request: SignatureVerificationRequest):
     // Verify the signature
     const verificationResult = verifyStellarSignature(address, signature, message);
     
-    // If signature is valid, consume the nonce
+    // If signature is valid, consume the nonce (atomic)
     if (verificationResult.valid) {
-        consumeNonce(nonce);
+        const consumed = await consumeNonce(nonce);
+        if (!consumed) {
+            return {
+                valid: false,
+                error: 'Nonce already consumed or expired during verification',
+            };
+        }
     }
     
     return verificationResult;
@@ -198,23 +190,57 @@ export function generateChallengeMessage(nonce: string): string {
     return `Sign in to CommitLabs: ${nonce}`;
 }
 
-// ─── Session Management (TODO) ─────────────────────────────────────────────────
+// ─── Session Management ───────────────────────────────────────────────────────
 
 /**
- * TODO: Create a session token after successful verification.
- * This should return a JWT or similar session identifier.
+ * Create a session token after successful verification and store it.
  */
 export function createSessionToken(address: string): string {
-    // TODO: Implement JWT creation or session management
-    // For now, return a placeholder
-    return `session_${address}_${Date.now()}`;
+    const token = `session_${randomBytes(16).toString('hex')}`;
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_TTL);
+
+    const record: SessionRecord = {
+        token,
+        address,
+        createdAt: now,
+        expiresAt,
+    };
+
+    sessionStore.set(token, record);
+    return token;
 }
 
 /**
- * TODO: Verify a session token.
+ * Verify a session token.
  */
 export function verifySessionToken(token: string): { valid: boolean; address?: string } {
-    // TODO: Implement JWT verification or session validation
-    // For now, return placeholder
-    return { valid: false };
+    const record = sessionStore.get(token);
+    
+    if (!record) {
+        return { valid: false };
+    }
+
+    if (record.expiresAt < new Date()) {
+        sessionStore.delete(token);
+        return { valid: false };
+    }
+
+    return { valid: true, address: record.address };
+}
+
+/**
+ * Invalidate a session token.
+ */
+export function revokeSession(token: string): boolean {
+    return sessionStore.delete(token);
+}
+
+/**
+ * Export for testing purposes (in-memory store)
+ * @internal
+ */
+export function _clearStores(): void {
+    nonceStore.clear();
+    sessionStore.clear();
 }

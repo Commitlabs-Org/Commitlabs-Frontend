@@ -159,6 +159,22 @@ export function logAttestation(payload: AnalyticsPayload = {}) {
     });
 }
 
+export function logListingCancelled(payload: AnalyticsPayload = {}) {
+    emit({
+        event: 'ListingCancelled',
+        timestamp: new Date().toISOString(),
+        payload
+    });
+}
+
+export function logListingCancellationFailed(payload: AnalyticsPayload = {}) {
+    emit({
+        event: 'ListingCancellationFailed',
+        timestamp: new Date().toISOString(),
+        payload
+    });
+}
+
 export const logger = {
     info: (message: string, context?: Record<string, unknown>) =>
         logInfo(undefined, message, context),

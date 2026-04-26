@@ -14,10 +14,10 @@ const NonceRequestSchema = z.object({
 export const POST = withApiHandler(async (req: NextRequest) => {
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-    // Rate limiting
-    const isAllowed = await checkRateLimit(ip, 'api/auth/nonce');
-    if (!isAllowed) {
-        throw new TooManyRequestsError();
+    // Rate limiting by IP
+    const isIpAllowed = await checkRateLimit(ip, 'api/auth/nonce');
+    if (!isIpAllowed) {
+        throw new TooManyRequestsError('Rate limit exceeded for your IP. Please try again later.');
     }
 
     // Parse and validate request body
@@ -35,12 +35,15 @@ export const POST = withApiHandler(async (req: NextRequest) => {
 
     const { address } = validation.data;
 
-    // TODO: Add additional validation for Stellar address format
-    // For now, we'll accept any string but could add Stellar address validation
+    // Rate limiting by Stellar Address
+    const isAddressAllowed = await checkRateLimit(address, 'auth:nonce:address');
+    if (!isAddressAllowed) {
+        throw new TooManyRequestsError('Too many nonce requests for this address. Please try again later.');
+    }
 
-    // Generate and store nonce
+    // Generate and store nonce (async)
     const nonce = generateNonce();
-    const nonceRecord = storeNonce(address, nonce);
+    const nonceRecord = await storeNonce(address, nonce);
     const challengeMessage = generateChallengeMessage(nonce);
 
     // Return the nonce and challenge message
