@@ -296,6 +296,52 @@ export function validateAddress(address: string): string {
   }
 }
 
+/**
+ * Validates a Stellar StrKey address (Ed25519 public key, G... format).
+ *
+ * @param address - The address string to validate
+ * @param field   - Optional field name for error context (default: "address")
+ * @returns The trimmed, validated address string
+ * @throws {ValidationError} with field context if the address is invalid
+ *
+ * @example
+ * validateStellarAddress("GABC..."); // returns the address
+ * validateStellarAddress("invalid"); // throws ValidationError
+ */
+export function validateStellarAddress(
+  address: unknown,
+  field = "address",
+): string {
+  if (typeof address !== "string" || address.trim() === "") {
+    throw new ValidationError(
+      `${field} is required and must be a non-empty string.`,
+      field,
+    );
+  }
+  const trimmed = address.trim();
+  if (!StrKey.isValidEd25519PublicKey(trimmed)) {
+    throw new ValidationError(
+      `${field} must be a valid Stellar address (G... format).`,
+      field,
+    );
+  }
+  return trimmed;
+}
+
+/**
+ * Zod schema refinement for Stellar addresses.
+ * Use this inside any Zod schema that accepts a Stellar address field.
+ *
+ * @example
+ * z.object({ ownerAddress: stellarAddressSchema })
+ */
+export const stellarAddressSchema = z
+  .string()
+  .trim()
+  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
+    message: "Must be a valid Stellar address (G... format).",
+  });
+
 // Validate amount (positive number, can be string or number)
 export function validateAmount(amount: string | number): number {
   try {
