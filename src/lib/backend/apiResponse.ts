@@ -16,6 +16,7 @@ export interface FailResponse {
     code: string;
     message: string;
     details?: unknown;
+    retryAfterSeconds?: number;
   };
 }
 
@@ -28,11 +29,11 @@ export type ApiResponse<T> = OkResponse<T> | FailResponse;
  *
  * @example
  * return ok({ status: 'healthy' });
- * // { ok: true, data: { status: 'healthy' } }
+ * // { success: true, data: { status: 'healthy' } }
  *
  * @example
  * return ok(items, { total: 42, page: 1 });
- * // { ok: true, data: [...], meta: { total: 42, page: 1 } }
+ * // { success: true, data: [...], meta: { total: 42, page: 1 } }
  *
  * @example
  * return ok(data, 201);  // custom HTTP status, no meta
@@ -61,20 +62,26 @@ export function ok<T>(
 /**
  * Returns a standard JSON error response.
  *
- * @param code    - Short machine-readable error code, e.g. 'NOT_FOUND'
- * @param message - Human-readable description safe for UI display
- * @param details - Optional extra context (omit in production for sensitive errors)
- * @param status  - HTTP status code (default 500)
+ * @param code              - Short machine-readable error code, e.g. 'NOT_FOUND'
+ * @param message           - Human-readable description safe for UI display
+ * @param details           - Optional extra context (omit in production for sensitive errors)
+ * @param status            - HTTP status code (default 500)
+ * @param retryAfterSeconds - Optional seconds the client should wait before retrying
  *
  * @example
  * return fail('NOT_FOUND', 'Commitment not found.', undefined, 404);
- * // { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
+ * // { success: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
+ *
+ * @example
+ * return fail('TOO_MANY_REQUESTS', 'Rate limit exceeded.', undefined, 429, 60);
+ * // { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Rate limit exceeded.', retryAfterSeconds: 60 } }
  */
 export function fail(
   code: string,
   message: string,
   details?: unknown,
   status = 500,
+  retryAfterSeconds?: number,
 ): NextResponse<FailResponse> {
   const body: FailResponse = {
     success: false,
@@ -82,7 +89,17 @@ export function fail(
       code,
       message,
       ...(details !== undefined ? { details } : {}),
+      ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
     },
   };
-  return NextResponse.json(body, { status });
+
+  const headers: HeadersInit = {};
+  if (retryAfterSeconds !== undefined) {
+    headers["Retry-After"] = String(retryAfterSeconds);
+  }
+
+  return NextResponse.json(body, {
+    status,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
+  });
 }
