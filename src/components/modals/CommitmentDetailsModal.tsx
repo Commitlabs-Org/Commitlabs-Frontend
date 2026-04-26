@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Calendar, Activity, AlertTriangle, DollarSign, ChevronRight } from "lucide-react";
+import { X, Calendar, Activity, AlertTriangle, DollarSign } from "lucide-react";
 
 type CommitmentTypeVariant = "safe" | "balanced" | "aggressive";
 type CommitmentTypeCapitalized = "Safe" | "Balanced" | "Aggressive";
@@ -242,29 +242,32 @@ export function CommitmentDetailsModal({
               Compliance & Attestations
             </h3>
 
-          <div className="space-y-3">
-            {complianceItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onSelectComplianceItem?.(item.id)}
-                className={`focus-ring w-full flex items-center justify-between bg-[#FFFFFF03] rounded-[12px] p-4 border border-[#FFFFFF08] transition-colors ${
-                  onSelectComplianceItem
-                    ? "hover:bg-[#FFFFFF08] cursor-pointer"
-                    : "cursor-default"
-                }`}
-                disabled={!onSelectComplianceItem}
-                aria-label={`${item.label}: ${item.statusLabel}`}
-              >
-                <span className="text-[#9CA3AF] text-[14px]">
-                  {item.label}
-                </span>
-                <div className="flex items-center gap-2 text-white font-mono text-[13px]">
-                  {getStatusIcon(item.statusVariant)}
-                  {item.statusLabel}
-                </div>
-              </button>
-            ))}
+            <div className="space-y-3">
+              {complianceItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onSelectComplianceItem?.(item.id)}
+                  className={`focus-ring w-full flex items-center justify-between bg-[#FFFFFF03] rounded-[12px] p-4 border border-[#FFFFFF08] transition-colors ${
+                    onSelectComplianceItem
+                      ? "hover:bg-[#FFFFFF08] cursor-pointer"
+                      : "cursor-default"
+                  }`}
+                  disabled={!onSelectComplianceItem}
+                  aria-label={`${item.label}: ${item.statusLabel}`}
+                >
+                  <span className="text-[#9CA3AF] text-[14px]">
+                    {item.label}
+                  </span>
+                  <div className="flex items-center gap-2 text-white font-mono text-[13px]">
+                    {getStatusIcon(item.statusVariant)}
+                    {item.statusLabel}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
+          </div>
+        </div>
         </div>
         
         {/* Footer Actions - Standardized Bottom Placement */}

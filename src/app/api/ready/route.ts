@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/backend';
+import { methodNotAllowed } from '@/lib/backend/apiResponse';
 
 const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL;
 
@@ -56,3 +57,5 @@ export async function GET() {
 
   return NextResponse.json(body, { status: ready ? 200 : 503 });
 }
+const _405 = methodNotAllowed(['GET']);
+export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

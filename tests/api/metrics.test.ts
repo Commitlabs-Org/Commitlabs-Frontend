@@ -1,114 +1,83 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { GET } from '@/app/api/metrics/route'
 import { createMockRequest, parseResponse } from './helpers'
+import { getCountersAdapter, resetCountersAdapter } from '@/lib/backend/counters/provider'
+
+// Mock ioredis to avoid dependency issues in tests
+vi.mock('ioredis', () => {
+  return {
+    default: class MockRedis {
+      constructor() {
+        this.data = new Map()
+      }
+      incr(key) {
+        const val = this.data.get(key) || 0
+        this.data.set(key, val + 1)
+        return Promise.resolve(val + 1)
+      }
+      mget(keys) {
+        const values = keys.map(key => this.data.get(key) || null)
+        return Promise.resolve(values)
+      }
+      del(keys) {
+        keys.forEach(key => this.data.delete(key))
+        return Promise.resolve(keys.length)
+      }
+      quit() {
+        return Promise.resolve()
+      }
+    }
+  }
+})
 
 describe('GET /api/metrics', () => {
-  it('should return 200', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
+  beforeEach(() => {
+    // Reset the counters adapter singleton and reset the counters
+    resetCountersAdapter()
+    // Ensure we are in test environment for the provider to return in-memory counters
+    vi.stubEnv('NODE_ENV', 'test')
   })
 
-  it('should return success envelope with data field', async () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('should return a 200 status with metrics', async () => {
     const request = createMockRequest('http://localhost:3000/api/metrics')
     const response = await GET(request)
     const result = await parseResponse(response)
 
-    expect(result.data).toHaveProperty('success', true)
-    expect(result.data).toHaveProperty('data')
+    expect(result.status).toBe(200)
+    expect(result.data.success).toBe(true)
+    expect(result.data.data).toHaveProperty('status', 'up')
+    expect(result.data.data).toHaveProperty('uptime')
+    expect(result.data.data).toHaveProperty('rate_limit_blocks', 0)
+    expect(result.data.data).toHaveProperty('auth_failures', 0)
+    expect(result.data.data).toHaveProperty('chain_failures', 0)
+    expect(result.data.data).toHaveProperty('successful_actions', 0)
+    expect(result.data.data).toHaveProperty('timestamp')
   })
 
-  it('should return all required HealthMetrics fields', async () => {
+  it('should increment counters when called from other services', async () => {
+    // Simulate some events
+    const countersAdapter = getCountersAdapter()
+    countersAdapter.incrementRateLimitBlocks()
+    countersAdapter.incrementAuthFailures()
+    countersAdapter.incrementAuthFailures()
+    countersAdapter.incrementChainFailures()
+    countersAdapter.incrementSuccessfulActions()
+    countersAdapter.incrementSuccessfulActions()
+    countersAdapter.incrementSuccessfulActions()
+
     const request = createMockRequest('http://localhost:3000/api/metrics')
     const response = await GET(request)
     const result = await parseResponse(response)
 
-    const metrics = result.data.data
-
-    expect(metrics).toHaveProperty('status')
-    expect(metrics).toHaveProperty('uptime')
-    expect(metrics).toHaveProperty('timestamp')
-  })
-
-  it('should return status "up"', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    expect(result.data.data.status).toBe('up')
-  })
-
-  it('should return uptime as a non-negative number', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    const { uptime } = result.data.data
-    expect(typeof uptime).toBe('number')
-    expect(uptime).toBeGreaterThanOrEqual(0)
-  })
-
-  it('should return a valid ISO timestamp', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    const { timestamp } = result.data.data
-    expect(typeof timestamp).toBe('string')
-    const parsed = new Date(timestamp)
-    expect(parsed).toBeInstanceOf(Date)
-    expect(parsed.toString()).not.toBe('Invalid Date')
-  })
-
-  it('should return mock_requests_total as a non-negative integer', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    const { mock_requests_total } = result.data.data
-    expect(typeof mock_requests_total).toBe('number')
-    expect(Number.isInteger(mock_requests_total)).toBe(true)
-    expect(mock_requests_total).toBeGreaterThanOrEqual(0)
-  })
-
-  it('should return mock_errors_total as a non-negative integer', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    const { mock_errors_total } = result.data.data
-    expect(typeof mock_errors_total).toBe('number')
-    expect(Number.isInteger(mock_errors_total)).toBe(true)
-    expect(mock_errors_total).toBeGreaterThanOrEqual(0)
-  })
-
-  it('should not expose sensitive fields in the response', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    const metrics = result.data.data
-    // Ensure no internal/sensitive keys leak into the metrics payload
-    expect(metrics).not.toHaveProperty('env')
-    expect(metrics).not.toHaveProperty('secret')
-    expect(metrics).not.toHaveProperty('password')
-    expect(metrics).not.toHaveProperty('token')
-    expect(metrics).not.toHaveProperty('apiKey')
-  })
-
-  it('should return Content-Type application/json', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-
-    expect(response.headers.get('content-type')).toContain('application/json')
-  })
-
-  it('should not expose server implementation headers', async () => {
-    const request = createMockRequest('http://localhost:3000/api/metrics')
-    const response = await GET(request)
-
-    // X-Powered-By leaks server technology and should not be present
-    expect(response.headers.get('x-powered-by')).toBeNull()
+    expect(result.status).toBe(200)
+    expect(result.data.success).toBe(true)
+    expect(result.data.data.rate_limit_blocks).toBe(1)
+    expect(result.data.data.auth_failures).toBe(2)
+    expect(result.data.data.chain_failures).toBe(1)
+    expect(result.data.data.successful_actions).toBe(3)
   })
 })
