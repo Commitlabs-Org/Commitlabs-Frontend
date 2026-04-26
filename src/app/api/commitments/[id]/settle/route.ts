@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';

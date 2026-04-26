@@ -50,6 +50,14 @@ export class ForbiddenError extends ApiError {
   }
 }
 
+/** 403 — CSRF token missing, invalid, or cross-site request when using cookie session. */
+export class CsrfValidationError extends ApiError {
+    constructor(message = 'Invalid or missing CSRF token.', details?: unknown) {
+        super(message, 'CSRF_INVALID', 403, details);
+        this.name = 'CsrfValidationError';
+    }
+}
+
 /** 404 — requested resource does not exist. */
 export class NotFoundError extends ApiError {
   constructor(resource = "Resource", details?: unknown) {

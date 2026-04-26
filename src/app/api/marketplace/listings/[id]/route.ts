@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { ValidationError, UnauthorizedError, ForbiddenError, NotFoundError } from '@/lib/backend/errors';

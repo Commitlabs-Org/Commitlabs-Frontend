@@ -6,9 +6,8 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError } from '@/lib/backend/errors';
 
-interface Params {
-    params: { id: string };
-}
+export const POST = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }) => {
+  assertMutationCsrf(req);
 
 export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
     const { id } = params;
