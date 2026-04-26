@@ -9,6 +9,51 @@ an example response.  All endpoints return JSON.
 
 ---
 
+## Standard Response Conventions
+
+All endpoints follow these conventions.
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": { ... }       // optional pagination / additional metadata
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TOO_MANY_REQUESTS",
+    "message": "Too many requests. Please try again later.",
+    "retryAfterSeconds": 60  // present on 429 and 503 only
+  }
+}
+```
+
+### Rate Limited Responses (429 / 503)
+
+When a request is rate-limited, the response includes the `Retry-After` HTTP header:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
+
+| Status | `retryAfterSeconds` default | Meaning |
+|--------|---------------------------|---------|
+| 429 | 60 s | Client exceeded rate limit |
+| 503 | 30 s | Service temporarily unavailable |
+
+Clients should wait the indicated seconds before retrying. See [error-handling.md](./error-handling.md) for the full client retry strategy (exponential backoff + jitter).
+
+---
+
 ## `POST /api/commitments`
 
 Creates a new commitment.  In the stub implementation, no persistence occurs;
@@ -108,6 +153,35 @@ curl -X POST http://localhost:3000/api/attestations \
 {
   "message": "Attestations recording endpoint stub - rate limiting applied",
   "ip": "::1"
+}
+```
+
+---
+
+## `GET /api/protocol/constants`
+
+Returns the public protocol constants used by UX copy and calculations, including fee parameters, penalty tiers, and commitment limits. This endpoint is public and includes caching headers.
+
+### Example
+
+```bash
+curl http://localhost:3000/api/protocol/constants
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "protocolVersion": "v1",
+    "network": "Test SDF Network ; September 2015",
+    "fees": {
+      "networkBaseFeeStroops": 100,
+      "platformFeePercent": 0
+    },
+    "penalties": [...],
+    "commitmentLimits": { ... },
+    "cachedAt": "2026-02-25T00:00:00.000Z"
+  }
 }
 ```
 
