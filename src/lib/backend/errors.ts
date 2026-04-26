@@ -5,7 +5,8 @@ export class ApiError extends Error {
         public readonly message: string,
         public readonly code: string,
         public readonly statusCode: number,
-        public readonly details?: unknown
+        public readonly details?: unknown,
+        public readonly retryAfterSeconds?: number
     ) {
         super(message);
         this.name = 'ApiError';
@@ -62,11 +63,35 @@ export class ConflictError extends ApiError {
     }
 }
 
+/** 413 — request entity is larger than the server is willing to process. */
+export class PayloadTooLargeError extends ApiError {
+    constructor(message = 'Request body is too large.', details?: unknown) {
+        super(message, 'PAYLOAD_TOO_LARGE', 413, details);
+        this.name = 'PayloadTooLargeError';
+    }
+}
+
 /** 429 — client has exceeded the allowed request rate. */
 export class TooManyRequestsError extends ApiError {
-    constructor(message = 'Too many requests. Please try again later.', details?: unknown) {
-        super(message, 'TOO_MANY_REQUESTS', 429, details);
+    constructor(
+        message = 'Too many requests. Please try again later.',
+        details?: unknown,
+        retryAfterSeconds = 60
+    ) {
+        super(message, 'TOO_MANY_REQUESTS', 429, details, retryAfterSeconds);
         this.name = 'TooManyRequestsError';
+    }
+}
+
+/** 503 — service is temporarily unavailable. */
+export class ServiceUnavailableError extends ApiError {
+    constructor(
+        message = 'The service is temporarily unavailable. Please try again later.',
+        details?: unknown,
+        retryAfterSeconds = 30
+    ) {
+        super(message, 'SERVICE_UNAVAILABLE', 503, details, retryAfterSeconds);
+        this.name = 'ServiceUnavailableError';
     }
 }
 
@@ -78,7 +103,7 @@ export class InternalError extends ApiError {
     }
 }
 
-// ─── HTTP status → error code mapping ────────────────────────────────────────
+// ─── HTTP status → error code mapping ───────────────────────────────────────
 
 /** Map of HTTP status codes to their canonical error code strings. */
 export const HTTP_ERROR_CODES: Record<number, string> = {
@@ -87,6 +112,7 @@ export const HTTP_ERROR_CODES: Record<number, string> = {
     403: 'FORBIDDEN',
     404: 'NOT_FOUND',
     409: 'CONFLICT',
+    413: 'PAYLOAD_TOO_LARGE',
     422: 'UNPROCESSABLE_ENTITY',
     429: 'TOO_MANY_REQUESTS',
     500: 'INTERNAL_ERROR',

@@ -4,6 +4,8 @@ import type {
   MarketplaceListing,
   CreateListingRequest,
 } from "@/lib/types/domain";
+import { cache } from "@/lib/backend/cache/factory";
+import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
 
 export type MarketplaceCommitmentType = "Safe" | "Balanced" | "Aggressive";
 
@@ -26,6 +28,12 @@ export interface MarketplaceListingsQuery {
   minAmount?: number;
   maxAmount?: number;
   sortBy?: string;
+}
+
+export interface FeaturedMarketplaceConfig {
+  minComplianceScore: number;
+  maxLoss: number;
+  limit: number;
 }
 
 const MOCK_LISTINGS: MarketplacePublicListing[] = [
@@ -109,6 +117,16 @@ const SORT_CONFIG = {
   { key: keyof MarketplacePublicListing; order: "asc" | "desc" }
 >;
 
+export const FEATURED_MARKETPLACE_CONFIG: FeaturedMarketplaceConfig =
+  Object.freeze({
+    minComplianceScore: 85,
+    maxLoss: 8,
+    limit: 4,
+  });
+
+export const FEATURED_MARKETPLACE_CACHE_CONTROL =
+  "public, max-age=300, s-maxage=300, stale-while-revalidate=600";
+
 export type MarketplaceSortBy = keyof typeof SORT_CONFIG;
 
 function sortListings(
@@ -132,9 +150,27 @@ export function getMarketplaceSortKeys(): MarketplaceSortBy[] {
   return Object.keys(SORT_CONFIG) as MarketplaceSortBy[];
 }
 
+/** Stable key for a given query — order of keys is deterministic via sort. */
+function queryHash(query: MarketplaceListingsQuery): string {
+  const entries = Object.entries(query)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
+
+const LISTINGS_PREFIX = "commitlabs:marketplace:listings:";
+
 export async function listMarketplaceListings(
   query: MarketplaceListingsQuery,
 ): Promise<MarketplacePublicListing[]> {
+  const cacheKey = CacheKey.marketplaceListings(queryHash(query));
+  const cached = await cache.get<MarketplacePublicListing[]>(cacheKey);
+  if (cached !== null) {
+    logInfo(undefined, "[cache] hit marketplace-listings", { query });
+    return cached;
+  }
+  logInfo(undefined, "[cache] miss marketplace-listings", { query });
+
   let results = MOCK_LISTINGS;
 
   if (query.type) {
@@ -164,7 +200,37 @@ export async function listMarketplaceListings(
 
   // TODO(on-chain): Replace mock listings with marketplace contract reads.
   // TODO(attestation): Merge latest attestation engine score per commitment when available.
-  return sortListings(results, sortBy);
+  const listings = sortListings(results, sortBy);
+  await cache.set(cacheKey, listings, CacheTTL.MARKETPLACE_LISTINGS);
+  return listings;
+}
+
+export function selectFeaturedMarketplaceListings(
+  listings: readonly MarketplacePublicListing[],
+  config: FeaturedMarketplaceConfig = FEATURED_MARKETPLACE_CONFIG,
+): MarketplacePublicListing[] {
+  return [...listings]
+    .filter(
+      (listing) =>
+        listing.complianceScore >= config.minComplianceScore &&
+        listing.maxLoss <= config.maxLoss,
+    )
+    .sort((left, right) => {
+      if (right.complianceScore !== left.complianceScore) {
+        return right.complianceScore - left.complianceScore;
+      }
+
+      if (right.currentYield !== left.currentYield) {
+        return right.currentYield - left.currentYield;
+      }
+
+      if (left.price !== right.price) {
+        return left.price - right.price;
+      }
+
+      return left.listingId.localeCompare(right.listingId);
+    })
+    .slice(0, config.limit);
 }
 
 class MarketplaceService {
@@ -210,7 +276,11 @@ class MarketplaceService {
 
     this.listings.set(listingId, listing);
 
-    logInfo(undefined, "[MarketplaceService] Listing created", { listingId });
+    // Invalidate all cached listing queries — the set has changed.
+    await cache.invalidate(LISTINGS_PREFIX);
+    logInfo(undefined, "[cache] invalidated marketplace-listings after create", {
+      listingId,
+    });
 
     // TODO(on-chain): Replace in-memory listing creation with marketplace contract interaction.
     return listing;
@@ -247,13 +317,24 @@ class MarketplaceService {
     listing.updatedAt = new Date().toISOString();
     this.listings.set(listingId, listing);
 
-    logInfo(undefined, "[MarketplaceService] Listing cancelled", { listingId });
+    // Invalidate all cached listing queries — the set has changed.
+    await cache.invalidate(LISTINGS_PREFIX);
+    logInfo(
+      undefined,
+      "[cache] invalidated marketplace-listings after cancel",
+      { listingId },
+    );
 
     // TODO(on-chain): Replace in-memory cancel with marketplace contract interaction.
   }
 
   async getListing(listingId: string): Promise<MarketplaceListing | null> {
     return this.listings.get(listingId) ?? null;
+  }
+
+  async getFeaturedListings(): Promise<MarketplacePublicListing[]> {
+    // TODO(on-chain): Replace mock listing reads with marketplace contract queries.
+    return selectFeaturedMarketplaceListings(MOCK_LISTINGS);
   }
 
   private validateCreateListingRequest(request: CreateListingRequest): void {
