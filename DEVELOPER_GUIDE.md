@@ -32,6 +32,14 @@ Welcome to the CommitLabs Frontend developer guide. This document provides guide
     relevant to business actions. This makes it easy to wire an external
     analytics platform later on.
 
+### Request ID Correlation
+
+-   All App Router API routes should be wrapped with `withApiHandler`.
+-   `withApiHandler` will accept an incoming `x-request-id` header if present,
+    otherwise it will generate a new one.
+-   The resolved request id is included in structured backend logs and returned
+    to the client via the `x-request-id` response header.
+
 ### React & Next.js
 
 -   **Functional Components**: Use functional components with hooks.

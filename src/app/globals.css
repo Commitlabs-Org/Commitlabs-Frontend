@@ -132,6 +132,22 @@ button {
             animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
+        /* Skeleton loading animations with reduced motion support */
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-shimmer {
+            animation: none;
+          }
+        }
+
 /* Hide scrollbar utility class */
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */

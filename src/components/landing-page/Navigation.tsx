@@ -67,6 +67,13 @@ export const Navigation: React.FC = () => {
             Benefits
           </a>
           <Link
+            href="/settings"
+            className="font-['Inter',sans-serif] text-[14px] font-normal leading-5 text-white/75 transition-[color,text-shadow] duration-300 ease-[ease] hover:text-white hover:[text-shadow:0_0_12px_rgba(0,212,255,0.5)] focus-visible:text-white focus-visible:[text-shadow:0_0_12px_rgba(0,212,255,0.5)]"
+            onClick={handleNavClick}
+          >
+            Settings
+          </Link>
+          <Link
             href="/create"
             className="hidden w-auto justify-center mt-[0.4rem] rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-6 py-[0.7rem] font-roboto text-[14px] font-medium leading-5 text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus-visible:shadow-[0_0_22px_rgba(0,212,255,0.7)] focus-visible:-translate-y-px max-[900px]:inline-flex max-[600px]:px-[1.1rem] max-[600px]:py-[0.6rem] max-[600px]:text-[0.9rem]"
             onClick={handleNavClick}
