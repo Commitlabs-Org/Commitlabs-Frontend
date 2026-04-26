@@ -1,30 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { getClientIp } from '@/lib/backend/getClientIp';
 import { logEarlyExit } from '@/lib/backend/logger';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { ok } from '@/lib/backend/apiResponse';
+import { TooManyRequestsError } from '@/lib/backend/errors';
 
-interface Params {
-    params: { id: string };
-}
+export const POST = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }) => {
+  assertMutationCsrf(req);
 
-export async function POST(req: NextRequest, { params }: Params) {
+export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
     const { id } = params;
+    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
-    const ip = req.ip || req.headers.get('x-forwarded-for') || 'anonymous';
-    const isAllowed = await checkRateLimit(ip, 'api/commitments/early-exit');
-    if (!isAllowed) {
-        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+
+    const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/commitments/early-exit');
+    if (!allowed) {
+        throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
     }
 
-    // TODO: perform early exit processing (penalty calculation, contract call, etc.)
+    let body: Record<string, unknown> = {};
     try {
-        const body = await req.json();
-        logEarlyExit({ ip, commitmentId: id, ...body });
+        body = await req.json();
     } catch {
-        logEarlyExit({ ip, commitmentId: id, error: 'failed to parse request body' });
+        // non-fatal - log and continue
     }
 
-    return NextResponse.json({
+    logEarlyExit({ ip, commitmentId: id, ...body });
+
+    return ok({
         message: `Stub early-exit endpoint for commitment ${id}`,
-        commitmentId: id
+        commitmentId: id,
     });
-}
+});

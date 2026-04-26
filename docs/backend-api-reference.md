@@ -1,122 +1,217 @@
-﻿# Backend API Reference
+# Backend API Reference
 
-Base URL: /api
-Content-Type: application/json
-Auth: Routes marked [auth] require a valid session token.
-Rate limiting is enforced per-IP on all major routes.
+This document describes the HTTP API surface exposed by the frontend backend
+(`src/app/api`).  The routes are intentionally thin stubs in the current code
+base; they exist primarily for analytics hooks and development/testing.
 
-## Endpoint Matrix
+Each entry includes the HTTP method, path, expected request body (if any), and
+an example response.  All endpoints return JSON.
 
-| Method | Route | Auth | Description |
-|--------|-------|------|-------------|
-| POST | /api/auth | no | Session creation stub |
-| POST | /api/auth/nonce | no | Request wallet sign-in nonce |
-| POST | /api/auth/verify | no | Verify wallet signature |
-| POST | /api/login | no | Mock login dev only |
-| GET | /api/commitments | yes | List commitments for wallet |
-| POST | /api/commitments | yes | Create on-chain commitment |
-| GET | /api/commitments/[id] | yes | Get single commitment |
-| POST | /api/commitments/[id]/settle | yes | Settle a commitment |
-| POST | /api/commitments/[id]/early-exit | yes | Early exit from commitment |
-| GET | /api/marketplace | no | List listings generic |
-| POST | /api/marketplace | no | Create listing generic |
-| GET | /api/marketplace/listings | no | List listings filterable |
-| POST | /api/marketplace/listings | no | Create listing |
-| GET | /api/attestations | no | List attestations |
-| POST | /api/attestations | no | Record attestation on-chain |
-| GET | /api/analytics/user | no | User analytics by wallet |
-| GET | /api/metrics | no | Platform health metrics |
-| GET | /api/health | no | Liveness check |
-| GET | /api/ready | no | Readiness check Soroban RPC |
-| POST | /api/seed | no | Seed mock data dev only |
+---
 
-## Auth
+## Standard Response Conventions
 
-### POST /api/auth
-Session creation stub. Rate-limited per IP. Pending issue 126.
-Success 200: { ok: true, data: { message: Authentication successful. } }
-Error 429: TOO_MANY_REQUESTS - Rate limit exceeded
+All endpoints follow these conventions.
 
-### POST /api/auth/nonce
-Request a one-time nonce for wallet sign-in. Rate-limited per IP.
-Request body: { address: GABC...XYZ }
-Success 200: { ok: true, data: { nonce: a1b2c3, message: Sign this message..., expiresAt: 2026-04-24T12:05:00.000Z } }
-Error 400: VALIDATION_ERROR - Missing or invalid address
-Error 429: TOO_MANY_REQUESTS - Rate limit exceeded
+### Success Response
 
-### POST /api/auth/verify
-Verify signed challenge and create session. Rate-limited per IP.
-Request body: { address, signature, message }
-Success 200: { ok: true, data: { verified: true, address, sessionToken: placeholder, sessionType: placeholder } }
-Error 400: VALIDATION_ERROR - Missing or invalid fields
-Error 401: UNAUTHORIZED - Signature verification failed
-Error 429: TOO_MANY_REQUESTS - Rate limit exceeded
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": { ... }       // optional pagination / additional metadata
+}
+```
 
-### POST /api/login
-Mock login for development. Success 200: { success: true, message: Login successful (mock) }
+### Error Response
 
-## Commitments
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TOO_MANY_REQUESTS",
+    "message": "Too many requests. Please try again later.",
+    "retryAfterSeconds": 60  // present on 429 and 503 only
+  }
+}
+```
 
-### GET /api/commitments
-List on-chain commitments for a wallet. Rate-limited per IP.
-Query params: ownerAddress (required), page (default 1), pageSize (default 10, max 100)
-Success 200: { ok: true, data: { items: [...], page: 1, pageSize: 10, total: 1 } }
-Error 400: BAD_REQUEST - Missing ownerAddress or invalid pagination
-Error 429: TOO_MANY_REQUESTS - Rate limit exceeded
+### Rate Limited Responses (429 / 503)
 
-### POST /api/commitments
-Create a new on-chain commitment. Rate-limited per IP.
-Required fields: ownerAddress, asset, amount (string), durationDays (>0), maxLossBps (>=0)
-Optional fields: metadata (object)
-Success 201: { ok: true, data: { commitmentId, ownerAddress, asset, amount, status: ACTIVE, createdAt, expiresAt } }
-Error 400: BAD_REQUEST - Invalid or missing fields
-Error 429: TOO_MANY_REQUESTS - Rate limit exceeded
+When a request is rate-limited, the response includes the `Retry-After` HTTP header:
 
-### GET /api/commitments/[id]
-Fetch a single commitment by ID.
-Success 200: { ok: true, data: { commitmentId, ownerAddress, asset, amount, status, complianceScore, violationCount, createdAt, expiresAt } }
-Error 404: NOT_FOUND - Commitment does not exist
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
 
-### POST /api/commitments/[id]/settle
-Settle a commitment at natural expiry.
-Success 200: { ok: true, data: { commitmentId, status: SETTLED, settledAt } }
-Error 404: NOT_FOUND - Commitment not found
-Error 400: BAD_REQUEST - Not eligible for settlement
+| Status | `retryAfterSeconds` default | Meaning |
+|--------|---------------------------|---------|
+| 429 | 60 s | Client exceeded rate limit |
+| 503 | 30 s | Service temporarily unavailable |
 
-### POST /api/commitments/[id]/early-exit
-Trigger early exit from an active commitment.
-Success 200: { ok: true, data: { commitmentId, status: EXITED, exitedAt } }
-Error 404: NOT_FOUND - Commitment not found
-Error 400: BAD_REQUEST - Not eligible for early exit
+Clients should wait the indicated seconds before retrying. See [error-handling.md](./error-handling.md) for the full client retry strategy (exponential backoff + jitter).
 
-## Marketplace
+---
 
-### GET /api/marketplace
-List listings with optional filters. Query params: page, limit, category, minPrice, maxPrice.
-Success 200: { listings: [...], pagination: { page, limit }, total: 1 }
+## `POST /api/commitments`
 
-### POST /api/marketplace
-Create a listing. Body: { title, description, price, category, sellerAddress }
-Success 201: { id, title, price, category, seller, createdAt }
+Creates a new commitment.  In the stub implementation, no persistence occurs;
+this route is mainly used to log `CommitmentCreated` analytics events.
 
-### GET /api/marketplace/listings
-List with advanced filtering. Rate-limited per IP.
-Query params: type (Safe/Balanced/Aggressive), minCompliance, maxLoss, minAmount, maxAmount, sortBy
-Success 200: { ok: true, data: { listings: [...], cards: [...], total: 1 } }
-Error 400: VALIDATION_ERROR - Invalid filter or sort param
-Error 500: INTERNAL_ERROR - Failed to fetch listings
+- **Request body**: arbitrary JSON with commitment parameters (amount, term,
+etc.)
+- **Response**: stub message with the requester IP.
 
-### POST /api/marketplace/listings
-Create a new listing. Body: { commitmentId, price, sellerAddress }
-Success 201: { ok: true, data: { listing: { listingId, commitmentId, price, sellerAddress, createdAt } } }
-Error 400: VALIDATION_ERROR - Invalid or missing fields
+### Example
 
-## Attestations
+```bash
+curl -X POST http://localhost:3000/api/commitments \
+     -H 'Content-Type: application/json' \
+     -d '{"asset":"XLM","amount":100}'
+```
 
-### GET /api/attestations
-List all attestations from mock database. Rate-limited per IP.
-Success 200: { ok: true, data: { attestations: [ { id, commitmentId, provider, status, timestamp } ] } }
-Error 429: TOO_MANY_REQUESTS - Rate limit exceeded
+```json
+{
+  "message": "Commitments creation endpoint stub - rate limiting applied",
+  "ip": "::1"
+}
+```
 
-### POST /api/attestations
-Record an attestation on-chain. Rate-limited per IP.
+---
+
+## `POST /api/commitments/[id]/settle`
+
+Marks the commitment identified by `id` as settled.  Currently a stub that emits
+`CommitmentSettled` events.
+
+- **Path parameter**: `id` (string)
+- **Request body**: optional JSON payload with additional details.
+- **Response**: stub confirmation message.
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/commitments/abc123/settle \
+     -H 'Content-Type: application/json' \
+     -d '{"finalValue":105}'
+```
+
+```json
+{
+  "message": "Stub settlement endpoint for commitment abc123",
+  "commitmentId": "abc123"
+}
+```
+
+---
+
+## `POST /api/commitments/[id]/early-exit`
+
+Triggers an early exit (with penalty) for the named commitment.  Emits
+`CommitmentEarlyExit` events.
+
+- **Path parameter**: `id` (string)
+- **Request body**: optional JSON with penalty or reason.
+- **Response**: stub message.
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/commitments/abc123/early-exit \
+     -H 'Content-Type: application/json' \
+     -d '{"reason":"user-request"}'
+```
+
+```json
+{
+  "message": "Stub early-exit endpoint for commitment abc123",
+  "commitmentId": "abc123"
+}
+```
+
+---
+
+## `POST /api/attestations`
+
+Records an attestation event.  Stub implementation logs
+`AttestationReceived`.
+
+- **Request body**: JSON describing the attestation (e.g. signature,
+commitmentId).
+- **Response**: stub message with requester IP.
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/attestations \
+     -H 'Content-Type: application/json' \
+     -d '{"commitmentId":"abc123","status":"valid"}'
+```
+
+```json
+{
+  "message": "Attestations recording endpoint stub - rate limiting applied",
+  "ip": "::1"
+}
+```
+
+---
+
+## `GET /api/protocol/constants`
+
+Returns the public protocol constants used by UX copy and calculations, including fee parameters, penalty tiers, and commitment limits. This endpoint is public and includes caching headers.
+
+### Example
+
+```bash
+curl http://localhost:3000/api/protocol/constants
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "protocolVersion": "v1",
+    "network": "Test SDF Network ; September 2015",
+    "fees": {
+      "networkBaseFeeStroops": 100,
+      "platformFeePercent": 0
+    },
+    "penalties": [...],
+    "commitmentLimits": { ... },
+    "cachedAt": "2026-02-25T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+## `GET /api/metrics`
+
+Simple health/metrics endpoint used by monitoring tools.
+
+- **Response**: JSON object containing uptime, mock request/error counts, and
+current timestamp.
+
+### Example
+
+```bash
+curl http://localhost:3000/api/metrics
+```
+
+```json
+{
+  "status": "up",
+  "uptime": 123.456,
+  "mock_requests_total": 789,
+  "mock_errors_total": 2,
+  "timestamp": "2026-02-25T00:00:00.000Z"
+}
+```
+
+---
+
+> 🔧 _This reference will grow as the backend implements real business logic._
+
+```

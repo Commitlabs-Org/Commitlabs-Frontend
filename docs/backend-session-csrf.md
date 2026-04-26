@@ -1,15 +1,61 @@
 # Backend Session and CSRF Strategy
 
-Issue: `#126`  
-Scope: backend routes that mutate state (`/api/auth`, `/api/commitments`, `/api/attestations`)
+Issues: `#126`, `#247`  
+Scope: cookie-backed browser sessions and CSRF for state-changing API routes.
 
 ## Goals
 
-- Define a consistent authentication session model for browser and API clients.
-- Prevent CSRF attacks on browser-originated state-changing requests.
-- Keep this as a design and stub reference, not a full implementation.
+- Consistent session model for browser clients (opaque server-side session id).
+- CSRF protection on browser-originated mutations when a session cookie is present.
+- Non-browser clients: `Authorization: Bearer <token>` skips CSRF (no cookie session assumption).
 
-## Session Options
+## Implemented behavior (current codebase)
+
+### Cookies
+
+| Name | Attributes | Purpose |
+|------|------------|---------|
+| `cl_session` | `HttpOnly`, `SameSite=Lax`, `Secure` in production, `Path=/`, 7-day `Max-Age` | Opaque session id; server maps id → CSRF synchronizer token (and optional wallet metadata). |
+
+Session store is **in-memory** (`src/lib/backend/session.ts`) — replace with Redis/DB for production and horizontal scale.
+
+### CSRF (synchronizer + origin)
+
+- Server stores a random CSRF token per session.
+- Browser sends **`X-CSRF-Token`** (header name lowercased as `x-csrf-token` over HTTP) on `POST`, `PUT`, `PATCH`, `DELETE` when **`cl_session` is present**.
+- **`Origin`** must equal the request URL origin, or **`Referer`** must match that origin (prefix or exact). Otherwise **`403`** with `error.code: CSRF_INVALID`.
+- If **no** `cl_session` cookie is sent, mutations behave as before (CSRF not required) so legacy clients keep working until they opt into sessions.
+
+Implementation: `assertMutationCsrf` in [`src/lib/backend/csrf.ts`](../src/lib/backend/csrf.ts).
+
+### Bearer bypass
+
+Requests with `Authorization: Bearer <non-empty>` **skip** CSRF enforcement (intended for API clients not using cookie sessions).
+
+### Endpoints
+
+| Route | Session issuance | CSRF enforced on mutations |
+|-------|-------------------|---------------------------|
+| `POST /api/auth` | Sets `cl_session`, returns `csrfToken` in JSON | N/A (creates session) |
+| `POST /api/auth/verify` | Sets `cl_session` after wallet verify, returns `csrfToken` | N/A |
+| `GET /api/auth/csrf` | Requires `cl_session`; returns current `csrfToken` | N/A |
+| `POST /api/commitments` | — | Yes, when cookie present |
+| `POST /api/commitments/[id]/settle` | — | Yes |
+| `POST /api/commitments/[id]/early-exit` | — | Yes |
+| `POST /api/attestations` | — | Yes |
+| `POST /api/marketplace/listings` | — | Yes |
+| `DELETE /api/marketplace/listings/[id]` | — | Yes |
+
+### Error shape (403 CSRF)
+
+JSON body matches [`fail`](../src/lib/backend/apiResponse.ts): `success: false`, `error.code` **`CSRF_INVALID`**, human-readable `error.message`.
+
+### CORS and credentials
+
+- Do **not** use `Access-Control-Allow-Origin: *` together with `Access-Control-Allow-Credentials: true`.
+- This repo does not add wildcard CORS for credentialed cross-origin access; keep any future CORS allowlist explicit.
+
+## Original design options (reference)
 
 ### Option A: JWT access token + refresh token
 
@@ -28,68 +74,29 @@ Scope: backend routes that mutate state (`/api/auth`, `/api/commitments`, `/api/
 
 - Store an opaque signed session ID in `HttpOnly`, `Secure`, `SameSite=Strict` cookie.
 - Session data lives server-side (DB/Redis).
-- Pros:
-  - Immediate revocation and central session control.
-  - Smaller attack surface for token misuse in clients.
-- Risks/Tradeoffs:
-  - Stateful infrastructure dependency (session store).
-  - Horizontal scaling requires shared store.
+- Current implementation uses **opaque id + server map** (step toward Option B).
 
 ### Option C: Stateless signatures only (wallet/message signing)
 
 - No persistent session cookie or JWT refresh model.
 - Each sensitive request includes a wallet signature + nonce/timestamp.
-- Pros:
-  - Minimal session storage and reduced long-lived credential footprint.
-  - Good fit for wallet-native authentication.
-- Risks/Tradeoffs:
-  - Higher per-request complexity and UX friction.
-  - Strict replay protection needed (nonce tracking).
+- `/api/auth/verify` still performs wallet verification; session cookie is issued **after** verification for subsequent browser mutations.
 
-## CSRF Protection Options (Browser-Originated Requests)
+## Client usage (SPA)
 
-### CSRF Option 1: Synchronizer token pattern
+1. Call `POST /api/auth` or `POST /api/auth/verify` with `credentials: 'include'`.
+2. Read `csrfToken` from the JSON body (or call `GET /api/auth/csrf` with the session cookie).
+3. On each mutating request, send:
+   - `credentials: 'include'`
+   - Header `X-CSRF-Token: <csrfToken>`
+   - Same-origin `Origin` (default for `fetch` from the app).
 
-- Server issues a CSRF token bound to server-side session.
-- Client sends token in custom header (`X-CSRF-Token`) for `POST/PUT/PATCH/DELETE`.
-- Server validates against session value.
+## Test coverage (CSRF modules)
 
-### CSRF Option 2: Double-submit cookie pattern
+Run:
 
-- Server sets non-HttpOnly CSRF cookie.
-- Client mirrors value in request header/body field.
-- Server verifies cookie value equals submitted token.
+```bash
+npm run test:coverage:csrf
+```
 
-### CSRF Option 3: SameSite + origin/referer verification (defense-in-depth)
-
-- Require `SameSite=Strict` or `Lax` for auth cookies.
-- Validate `Origin` (preferred) and fallback to `Referer` on mutation routes.
-- Keep this as an additional layer, not sole protection when cookies authenticate requests.
-
-## Recommended Baseline for Commitlabs
-
-- Session: start with Option B (signed server cookie session) for browser flows.
-- CSRF: combine Option 1 (synchronizer token) + Option 3 checks.
-- Non-browser/API clients: allow token-based auth path (Option A style bearer token) without cookie CSRF requirements.
-
-## Route-Level Expectations
-
-- `/api/auth`:
-  - Create/refresh/revoke session based on chosen session strategy.
-  - On successful login, issue CSRF token for browser session.
-- `/api/commitments`:
-  - Require authenticated session.
-  - Enforce CSRF validation for browser cookie-auth requests.
-- `/api/attestations`:
-  - Require authenticated session.
-  - Enforce CSRF validation for browser cookie-auth requests.
-
-## Implementation TODOs
-
-- Add reusable `validateSession(req)` helper.
-- Add reusable `validateCsrf(req)` helper for mutation methods.
-- Standardize error responses for `401` (unauthenticated) and `403` (csrf/origin failure).
-- Add integration tests for:
-  - missing/invalid CSRF token
-  - cross-origin mutation attempts
-  - session expiration and revocation behavior
+This enforces **≥95%** statements/lines/functions and **≥90%** branches on `csrf.ts`, `session.ts`, and `sessionCookies.ts` only.
