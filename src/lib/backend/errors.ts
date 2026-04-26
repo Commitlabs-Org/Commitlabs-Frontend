@@ -62,6 +62,14 @@ export class ConflictError extends ApiError {
     }
 }
 
+/** 413 — request entity is larger than the server is willing to process. */
+export class PayloadTooLargeError extends ApiError {
+    constructor(message = 'Request body is too large.', details?: unknown) {
+        super(message, 'PAYLOAD_TOO_LARGE', 413, details);
+        this.name = 'PayloadTooLargeError';
+    }
+}
+
 /** 429 — client has exceeded the allowed request rate. */
 export class TooManyRequestsError extends ApiError {
     constructor(message = 'Too many requests. Please try again later.', details?: unknown) {
@@ -87,6 +95,7 @@ export const HTTP_ERROR_CODES: Record<number, string> = {
     403: 'FORBIDDEN',
     404: 'NOT_FOUND',
     409: 'CONFLICT',
+    413: 'PAYLOAD_TOO_LARGE',
     422: 'UNPROCESSABLE_ENTITY',
     429: 'TOO_MANY_REQUESTS',
     500: 'INTERNAL_ERROR',

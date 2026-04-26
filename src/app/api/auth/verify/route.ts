@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
+import { ApiError, TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
+import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
 import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
 
 // Request validation schema
@@ -22,11 +23,14 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
     }
 
-    // Parse and validate request body
-    let body;
+    // Parse and validate request body (with payload size enforcement)
+    let body: unknown;
     try {
-        body = await req.json();
-    } catch (error) {
+        body = await parseJsonWithLimit(req, {
+            limitBytes: JSON_BODY_LIMITS.authVerify,
+        });
+    } catch (err) {
+        if (err instanceof ApiError) throw err;
         throw new ValidationError('Invalid JSON in request body');
     }
 
