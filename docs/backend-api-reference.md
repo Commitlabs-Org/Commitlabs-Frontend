@@ -9,49 +9,48 @@ an example response.  All endpoints return JSON.
 
 ---
 
-## `GET /api/marketplace/featured`
+## Standard Response Conventions
 
-Returns a cacheable, deterministic subset of public marketplace listings for
-featured carousel discovery.
+All endpoints follow these conventions.
 
-- **Authentication**: none
-- **Selection criteria**:
-  - `complianceScore >= 85`
-  - `maxLoss <= 8`
-  - ordered by `complianceScore DESC`, `currentYield DESC`, `price ASC`,
-    `listingId ASC`
-  - limited to 4 results
-- **Response headers**:
-  - `Cache-Control: public, max-age=300, s-maxage=300, stale-while-revalidate=600`
-  - standard security headers
-
-### Example
-
-```bash
-curl http://localhost:3000/api/marketplace/featured
-```
+### Success Response
 
 ```json
 {
   "success": true,
-  "data": {
-    "listings": [
-      {
-        "listingId": "LST-001",
-        "commitmentId": "CMT-001",
-        "type": "Safe",
-        "amount": 50000,
-        "remainingDays": 25,
-        "maxLoss": 2,
-        "currentYield": 5.2,
-        "complianceScore": 95,
-        "price": 52000
-      }
-    ],
-    "total": 1
+  "data": { ... },
+  "meta": { ... }       // optional pagination / additional metadata
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TOO_MANY_REQUESTS",
+    "message": "Too many requests. Please try again later.",
+    "retryAfterSeconds": 60  // present on 429 and 503 only
   }
 }
 ```
+
+### Rate Limited Responses (429 / 503)
+
+When a request is rate-limited, the response includes the `Retry-After` HTTP header:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
+
+| Status | `retryAfterSeconds` default | Meaning |
+|--------|---------------------------|---------|
+| 429 | 60 s | Client exceeded rate limit |
+| 503 | 30 s | Service temporarily unavailable |
+
+Clients should wait the indicated seconds before retrying. See [error-handling.md](./error-handling.md) for the full client retry strategy (exponential backoff + jitter).
 
 ---
 
