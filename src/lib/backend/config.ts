@@ -1,6 +1,8 @@
 // Versioned contract configuration accessor
 // Provides a centralized, typed, and validated way to access contract configs
 
+import { getValidatedEnv } from "./env";
+
 export interface ContractEntry {
   address: string;
   network?: string;
@@ -19,14 +21,15 @@ const LEGACY_ENV_MAPPING = {
 };
 
 function buildFromLegacyEnv(): ContractsConfig | null {
+  const env = getValidatedEnv();
   const anySet = Object.values(LEGACY_ENV_MAPPING).some(
-    (k) => !!process.env[k],
+    (k) => !!(env as Record<string, string | undefined>)[k],
   );
   if (!anySet) return null;
 
   const v1: Record<string, ContractEntry | undefined> = {};
   for (const [key, envName] of Object.entries(LEGACY_ENV_MAPPING)) {
-    const addr = process.env[envName] || "";
+    const addr = (env as Record<string, string | undefined>)[envName] || "";
     if (addr) v1[key] = { address: addr };
   }
 
@@ -34,8 +37,8 @@ function buildFromLegacyEnv(): ContractsConfig | null {
 }
 
 function parseJsonEnv(): ContractsConfig | null {
-  const raw =
-    process.env.NEXT_PUBLIC_CONTRACTS_JSON || process.env.CONTRACTS_JSON;
+  const env = getValidatedEnv();
+  const raw = env.NEXT_PUBLIC_CONTRACTS_JSON ?? env.CONTRACTS_JSON;
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -75,9 +78,10 @@ export function loadContractsConfig(): ContractsConfig {
 }
 
 export function getActiveContractVersion(): string {
+  const env = getValidatedEnv();
   return (
-    process.env.NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION ||
-    process.env.ACTIVE_CONTRACT_VERSION ||
+    env.NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION ??
+    env.ACTIVE_CONTRACT_VERSION ??
     "v1"
   );
 }
@@ -159,23 +163,16 @@ export interface BackendConfig {
  * @returns The current environment: 'development', 'preview', or 'production'
  */
 function getEnvironment(): Environment {
-  const vercelEnv = process.env.VERCEL_ENV;
-  if (vercelEnv === "production") return "production";
-  if (vercelEnv === "preview") return "preview";
-
-  const nodeEnv = process.env.NODE_ENV;
-  if (nodeEnv === "production") return "production";
-  if (nodeEnv === "test") return "development";
-
+  const env = getValidatedEnv();
+  if (env.VERCEL_ENV === "production") return "production";
+  if (env.VERCEL_ENV === "preview") return "preview";
+  if (env.NODE_ENV === "production") return "production";
+  if (env.NODE_ENV === "test") return "development";
   return "development";
 }
 
-/**
- * Checks if the current environment is a test environment.
- * @returns true if NODE_ENV is 'test'
- */
 function isTestEnvironment(): boolean {
-  return process.env.NODE_ENV === "test";
+  return getValidatedEnv().NODE_ENV === "test";
 }
 
 export interface BackendFeatureFlags {
@@ -193,7 +190,7 @@ function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boo
 }
 
 function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
-    const raw = process.env.COMMITLABS_FEATURE_FLAGS_JSON;
+    const raw = getValidatedEnv().COMMITLABS_FEATURE_FLAGS_JSON;
     if (!raw) return {};
 
     try {
@@ -217,14 +214,15 @@ function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
 
 export function getFeatureFlags(): BackendFeatureFlags {
     const fromJson = parseFeatureFlagsJson();
+    const env = getValidatedEnv();
 
     return {
         analyticsUser:
             fromJson.analyticsUser ??
-            parseBooleanFlag(process.env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
+            parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
         marketplace:
             fromJson.marketplace ??
-            parseBooleanFlag(process.env.COMMITLABS_FEATURE_MARKETPLACE, false)
+            parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE, false),
     };
 }
 
@@ -233,34 +231,11 @@ export function isFeatureEnabled(feature: FeatureFlagKey): boolean {
 }
 
 /**
- * Validates that a required configuration value is present.
- * Throws a clear error if the value is missing in non-test environments.
- *
- * @param value - The configuration value to validate
- * @param name - The name of the configuration field (for error messages)
- * @param envVars - The environment variable names that can provide this value
- * @throws Error if the value is missing and not in test environment
- */
-function validateRequired(
-  value: string,
-  name: string,
-  envVars: string[],
-): void {
-  if (!value && !isTestEnvironment()) {
-    throw new Error(
-      `Missing required configuration: ${name}. ` +
-        `Set one of the following environment variables: ${envVars.join(", ")}`,
-    );
-  }
-}
-
-/**
  * Returns the backend configuration for API routes and server-side code.
- * This function provides a centralized, typed, and validated way to access
- * environment variables and network settings.
+ * All values are sourced from the Zod-validated environment (see env.ts).
  *
  * In non-test environments, this function will throw a clear error if any
- * required configuration values are missing.
+ * required contract-address configuration values are missing.
  *
  * @returns BackendConfig object with all configuration values
  * @throws Error if required configuration values are missing (in non-test envs)
@@ -275,44 +250,50 @@ function validateRequired(
  * ```
  */
 export function getBackendConfig(): BackendConfig {
+  const env = getValidatedEnv();
+
   const sorobanRpcUrl =
-    process.env.SOROBAN_RPC_URL ??
-    process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
+    env.SOROBAN_RPC_URL ??
+    env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
     "https://soroban-testnet.stellar.org:443";
 
   const networkPassphrase =
-    process.env.SOROBAN_NETWORK_PASSPHRASE ??
-    process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
+    env.SOROBAN_NETWORK_PASSPHRASE ??
+    env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
     "Test SDF Network ; September 2015";
 
   const commitmentNFT =
-    process.env.COMMITMENT_NFT_CONTRACT ??
-    process.env.NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT ??
+    env.COMMITMENT_NFT_CONTRACT ??
+    env.NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT ??
     "";
 
   const commitmentCore =
-    process.env.COMMITMENT_CORE_CONTRACT ??
-    process.env.NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT ??
+    env.COMMITMENT_CORE_CONTRACT ??
+    env.NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT ??
     "";
 
   const attestationEngine =
-    process.env.ATTESTATION_ENGINE_CONTRACT ??
-    process.env.NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT ??
+    env.ATTESTATION_ENGINE_CONTRACT ??
+    env.NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT ??
     "";
 
-  // Validate required values in non-test environments
-  validateRequired(commitmentNFT, "commitmentNFT", [
-    "COMMITMENT_NFT_CONTRACT",
-    "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT",
-  ]);
-  validateRequired(commitmentCore, "commitmentCore", [
-    "COMMITMENT_CORE_CONTRACT",
-    "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT",
-  ]);
-  validateRequired(attestationEngine, "attestationEngine", [
-    "ATTESTATION_ENGINE_CONTRACT",
-    "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT",
-  ]);
+  if (!isTestEnvironment()) {
+    if (!commitmentNFT)
+      throw new Error(
+        "Missing required configuration: commitmentNFT. " +
+          "Set COMMITMENT_NFT_CONTRACT or NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT",
+      );
+    if (!commitmentCore)
+      throw new Error(
+        "Missing required configuration: commitmentCore. " +
+          "Set COMMITMENT_CORE_CONTRACT or NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT",
+      );
+    if (!attestationEngine)
+      throw new Error(
+        "Missing required configuration: attestationEngine. " +
+          "Set ATTESTATION_ENGINE_CONTRACT or NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT",
+      );
+  }
 
   return {
     sorobanRpcUrl,
@@ -323,6 +304,6 @@ export function getBackendConfig(): BackendConfig {
       attestationEngine,
     },
     environment: getEnvironment(),
-    chainWritesEnabled: process.env.COMMITLABS_ENABLE_CHAIN_WRITES === "true",
+    chainWritesEnabled: env.COMMITLABS_ENABLE_CHAIN_WRITES === "true",
   };
 }
