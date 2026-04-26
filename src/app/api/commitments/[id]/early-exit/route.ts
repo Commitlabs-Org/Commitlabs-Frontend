@@ -11,6 +11,7 @@ export const POST = withApiHandler(async (req: NextRequest, context: { params: R
 
 export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
     const { id } = params;
+    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 
     const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
 

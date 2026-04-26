@@ -8,6 +8,7 @@ import { TooManyRequestsError, ValidationError, NotFoundError, ConflictError } f
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { settleCommitmentOnChain } from '@/lib/backend/services/contracts';
 import { logCommitmentSettled } from '@/lib/backend/logger';
+import { getCommitmentFromChain } from '@/lib/backend/services/contracts';
 
 const SettleRequestSchema = z.object({
   callerAddress: z.string().optional(),
@@ -34,7 +35,6 @@ export const POST = withApiHandler(
       throw new ValidationError("Commitment ID is required");
     }
 
-    // Parse and validate request body
     let body;
     try {
       body = await req.json();
@@ -50,7 +50,24 @@ export const POST = withApiHandler(
       );
     }
 
-    const { callerAddress } = validation.data;
+    if (commitment.status === 'VIOLATED') {
+        throw new ConflictError('Commitment has been violated and cannot be settled');
+    }
+
+    if (commitment.status === 'EARLY_EXIT') {
+        throw new ConflictError('Commitment has already been exited early');
+    }
+
+    if (commitment.status === 'ACTIVE' && commitment.expiresAt) {
+        const expiryTime = new Date(commitment.expiresAt).getTime();
+        const now = new Date().getTime();
+        if (now < expiryTime) {
+            throw new ValidationError('Commitment has not matured yet and cannot be settled', {
+                currentStatus: commitment.status,
+                expiresAt: commitment.expiresAt,
+            });
+        }
+    }
 
     try {
       const settlementResult = await settleCommitmentOnChain({
