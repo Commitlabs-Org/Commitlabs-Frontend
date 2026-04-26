@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
 import Link from "next/link";
+import { TrustBadge, TrustLevel } from "./TrustBadge";
 
 export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 
@@ -18,6 +19,7 @@ export interface MarketplaceCardProps {
   price: string;
   forSale: boolean;
   tradeHref?: string;
+  trustLevel?: TrustLevel;
 }
 
 function clampScore(score: number) {
@@ -173,6 +175,7 @@ export function MarketplaceCard({
   price,
   forSale,
   tradeHref,
+  trustLevel,
 }: MarketplaceCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -256,10 +259,13 @@ export function MarketplaceCard({
               {maxLoss}
             </dd>
           </div>
-          <div className="flex items-baseline justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <dt className="text-white/60 text-[14px]">Owner</dt>
-            <dd className="m-0 text-[15px] font-mono font-semibold text-white/80">
-              {truncateAddress(owner)}
+            <dd className="m-0 flex items-center gap-2">
+              <span className="text-[15px] font-mono font-semibold text-white/80">
+                {truncateAddress(owner)}
+              </span>
+              <TrustBadge level={trustLevel ?? 'unverified'} showTooltip={false} />
             </dd>
           </div>
         </dl>

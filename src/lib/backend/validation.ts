@@ -2,6 +2,37 @@
 import { z } from "zod";
 import { StrKey } from "@stellar/stellar-sdk";
 
+// ─── Warning types ────────────────────────────────────────────────────────────
+
+export type WarningCode =
+  | "HIGH_RISK_LOSS_TOLERANCE"
+  | "UNUSUAL_DURATION"
+  | "UNUSUAL_AMOUNT"
+  | "LOW_COMPLIANCE_SCORE"
+  | "DUPLICATE_COMMITMENT";
+
+export interface ValidationWarning {
+  code: WarningCode;
+  message: string;
+  field?: string;
+}
+
+export interface ValidatedCommitmentDraft {
+  ownerAddress: string;
+  asset: string;
+  amount: number;
+  durationDays: number;
+  maxLossBps: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationWarning[];
+  warnings: ValidationWarning[];
+  data?: ValidatedCommitmentDraft;
+}
+
 export class ValidationError extends Error {
   constructor(
     message: string,
@@ -89,6 +120,164 @@ export const createAttestationSchema = z.object({
   comment: z.string().optional(),
 });
 
+export type CreateAttestationInput = z.infer<typeof createAttestationSchema>;
+
+// ─── Commitment draft validation schema ──────────────────────────────────────
+
+const commitmentDraftInputSchema = z.object({
+  ownerAddress: z.string().min(1, "Owner address is required"),
+  asset: z.string().min(1, "Asset is required"),
+  amount: z.unknown(),
+  durationDays: z.unknown(),
+  maxLossBps: z.unknown(),
+});
+
+export function validateCommitmentDraft(
+  input: unknown
+): ValidationResult {
+  const errors: ValidationWarning[] = [];
+
+  const parsed = commitmentDraftInputSchema.safeParse(input);
+
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      errors.push({
+        code: "VALIDATION_ERROR" as WarningCode,
+        message: issue.message,
+        field: issue.path.join("."),
+      });
+    }
+    return { valid: false, errors, warnings: [] };
+  }
+
+  const rawData = parsed.data;
+
+  const amount = typeof rawData.amount === "string" ? parseFloat(rawData.amount) : rawData.amount;
+  const durationDays = typeof rawData.durationDays === "string" ? parseInt(rawData.durationDays, 10) : rawData.durationDays;
+  const maxLossBps = typeof rawData.maxLossBps === "string" ? parseFloat(rawData.maxLossBps) : rawData.maxLossBps;
+
+  if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
+    return {
+      valid: false,
+      errors: [
+        {
+          code: "VALIDATION_ERROR" as WarningCode,
+          message: "Amount must be a positive number",
+          field: "amount",
+        },
+      ],
+      warnings: [],
+    };
+  }
+
+  if (typeof durationDays !== "number" || isNaN(durationDays) || !Number.isInteger(durationDays) || durationDays <= 0) {
+    return {
+      valid: false,
+      errors: [
+        {
+          code: "VALIDATION_ERROR" as WarningCode,
+          message: "Duration must be a positive integer",
+          field: "durationDays",
+        },
+      ],
+      warnings: [],
+    };
+  }
+
+  if (typeof maxLossBps !== "number" || isNaN(maxLossBps) || maxLossBps < 0) {
+    return {
+      valid: false,
+      errors: [
+        {
+          code: "VALIDATION_ERROR" as WarningCode,
+          message: "Max loss must be a non-negative number",
+          field: "maxLossBps",
+        },
+      ],
+      warnings: [],
+    };
+  }
+
+  if (!StrKey.isValidEd25519PublicKey(rawData.ownerAddress)) {
+    return {
+      valid: false,
+      errors: [
+        {
+          code: "VALIDATION_ERROR" as WarningCode,
+          message: "Invalid Stellar address format",
+          field: "ownerAddress",
+        },
+      ],
+      warnings: [],
+    };
+  }
+
+  const data: ValidatedCommitmentDraft = {
+    ownerAddress: rawData.ownerAddress,
+    asset: rawData.asset,
+    amount,
+    durationDays,
+    maxLossBps,
+  };
+
+  const warnings = checkWarnings(data);
+
+  return {
+    valid: true,
+    errors: [],
+    warnings,
+    data,
+  };
+}
+
+export type CommitmentDraftInput = z.infer<typeof commitmentDraftInputSchema>;
+
+// ─── Warning rules ────────────────────────────────────────────────────────────
+
+const HIGH_RISK_THRESHOLD_BPS = 5000;
+const UNUSUAL_DURATION_MIN_DAYS = 1;
+const UNUSUAL_DURATION_MAX_DAYS = 365;
+const UNUSUAL_AMOUNT_MIN = 0.001;
+const UNUSUAL_AMOUNT_MAX = 1000000;
+
+function checkWarnings(data: ValidatedCommitmentDraft): ValidationWarning[] {
+  const warnings: ValidationWarning[] = [];
+
+  if (data.maxLossBps > HIGH_RISK_THRESHOLD_BPS) {
+    warnings.push({
+      code: "HIGH_RISK_LOSS_TOLERANCE",
+      message: `Max loss tolerance of ${data.maxLossBps} bps is high (>${HIGH_RISK_THRESHOLD_BPS} bps). Consider reducing risk exposure.`,
+      field: "maxLossBps",
+    });
+  }
+
+  if (
+    data.durationDays < UNUSUAL_DURATION_MIN_DAYS ||
+    data.durationDays > UNUSUAL_DURATION_MAX_DAYS
+  ) {
+    warnings.push({
+      code: "UNUSUAL_DURATION",
+      message: `Duration of ${data.durationDays} days is unusual. Consider a duration between ${UNUSUAL_DURATION_MIN_DAYS} and ${UNUSUAL_DURATION_MAX_DAYS} days.`,
+      field: "durationDays",
+    });
+  }
+
+  if (
+    data.amount < UNUSUAL_AMOUNT_MIN ||
+    data.amount > UNUSUAL_AMOUNT_MAX
+  ) {
+    warnings.push({
+      code: "UNUSUAL_AMOUNT",
+      message: `Amount of ${data.amount} is outside typical range. Consider an amount between ${UNUSUAL_AMOUNT_MIN} and ${UNUSUAL_AMOUNT_MAX}.`,
+      field: "amount",
+    });
+  }
+
+  return warnings;
+}
+
+// ─── Address validation ───────────────────────────────────────────────────────
+
 export type CreateCommitmentInput = z.infer<typeof createCommitmentSchema>;
 export type CreateMarketplaceListingInput = z.infer<
   typeof createMarketplaceListingSchema
@@ -106,6 +295,52 @@ export function validateAddress(address: string): string {
     throw error;
   }
 }
+
+/**
+ * Validates a Stellar StrKey address (Ed25519 public key, G... format).
+ *
+ * @param address - The address string to validate
+ * @param field   - Optional field name for error context (default: "address")
+ * @returns The trimmed, validated address string
+ * @throws {ValidationError} with field context if the address is invalid
+ *
+ * @example
+ * validateStellarAddress("GABC..."); // returns the address
+ * validateStellarAddress("invalid"); // throws ValidationError
+ */
+export function validateStellarAddress(
+  address: unknown,
+  field = "address",
+): string {
+  if (typeof address !== "string" || address.trim() === "") {
+    throw new ValidationError(
+      `${field} is required and must be a non-empty string.`,
+      field,
+    );
+  }
+  const trimmed = address.trim();
+  if (!StrKey.isValidEd25519PublicKey(trimmed)) {
+    throw new ValidationError(
+      `${field} must be a valid Stellar address (G... format).`,
+      field,
+    );
+  }
+  return trimmed;
+}
+
+/**
+ * Zod schema refinement for Stellar addresses.
+ * Use this inside any Zod schema that accepts a Stellar address field.
+ *
+ * @example
+ * z.object({ ownerAddress: stellarAddressSchema })
+ */
+export const stellarAddressSchema = z
+  .string()
+  .trim()
+  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
+    message: "Must be a valid Stellar address (G... format).",
+  });
 
 // Validate amount (positive number, can be string or number)
 export function validateAmount(amount: string | number): number {
