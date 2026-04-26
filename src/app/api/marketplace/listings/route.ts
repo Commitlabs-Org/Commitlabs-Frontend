@@ -14,6 +14,25 @@ import {
 } from '@/lib/backend/services/marketplace';
 import type { CreateListingRequest, CreateListingResponse } from '@/types/marketplace';
 
+/**
+ * GET /api/marketplace/listings
+ * Returns a paginated marketplace listing contract for the UI.
+ * Auth: public read-only endpoint with rate limiting.
+ * Query params:
+ *   - type: optional commitment type filter (Safe|Balanced|Aggressive)
+ *   - minCompliance, maxLoss, minAmount, maxAmount: optional numeric filters
+ *   - sortBy: optional stable sort key; default is price
+ *   - page: optional page number; default is 1
+ *   - pageSize: optional page size; default is 10
+ * Response:
+ *   - listings: paged listing objects
+ *   - cards: lightweight UI card payloads
+ *   - total, page, pageSize: pagination contract fields
+ * Error codes:
+ *   - VALIDATION_ERROR: invalid query params
+ *   - INTERNAL_ERROR: unexpected server failure
+ */
+
 const COMMITMENT_TYPES: readonly MarketplaceCommitmentType[] = ['Safe', 'Balanced', 'Aggressive'] as const;
 
 interface ParseResult {
@@ -23,6 +42,8 @@ interface ParseResult {
     minAmount?: number;
     maxAmount?: number;
     sortBy?: string;
+    page?: number;
+    pageSize?: number;
 }
 
 function toMarketplaceCard(listing: MarketplacePublicListing) {
@@ -43,8 +64,20 @@ function parseNumber(searchParams: URLSearchParams, key: string): number | undef
     if (raw === null) return undefined;
 
     const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) {
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed)) {
         throw new Error(`Invalid '${key}' query param. Expected a number.`);
+    }
+
+    return parsed;
+}
+
+function parseInteger(searchParams: URLSearchParams, key: string, defaultValue: number): number {
+    const raw = searchParams.get(key);
+    if (raw === null) return defaultValue;
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+        throw new Error(`Invalid '${key}' query param. Expected a positive integer.`);
     }
 
     return parsed;
@@ -88,6 +121,8 @@ function parseQuery(searchParams: URLSearchParams): ParseResult {
         minAmount,
         maxAmount,
         sortBy,
+        page: parseInteger(searchParams, 'page', 1),
+        pageSize: parseInteger(searchParams, 'pageSize', 10),
     };
 }
 

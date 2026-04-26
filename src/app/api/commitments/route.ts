@@ -52,9 +52,9 @@ export const GET = withApiHandler(async (req: NextRequest, context: { params: Re
   // Map and add derived/placeholder fields if needed
   let mapped = commitments.map((c) => ({
     commitmentId: String(c.id),
-    ownerAddress:  c.ownerAddress,
+    ownerAddress: c.ownerAddress,
     asset: c.asset,
-    amount: typeof c.amount === "bigint" ? String(c.amount) : c.amount,
+    amount: typeof c.amount === 'bigint' ? String(c.amount) : c.amount,
     status: c.status,
     complianceScore: c.complianceScore,
     // Note: 'type' is not natively on chain, using a placeholder or metadata if available

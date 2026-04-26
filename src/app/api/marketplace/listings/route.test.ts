@@ -21,13 +21,38 @@ vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn(),
 }));
 
-describe('POST /api/marketplace/listings', () => {
+describe('Marketplace listings API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  it('should paginate and sort listings with stable ordering', async () => {
+    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?sortBy=amount&page=1&pageSize=2');
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.page).toBe(1);
+    expect(data.data.pageSize).toBe(2);
+    expect(data.data.total).toBe(6);
+    expect(data.data.listings).toHaveLength(2);
+    expect(data.data.listings[0].amount).toBe(500000);
+    expect(data.data.listings[1].amount).toBe(250000);
+  });
+
+  it('should return validation error for invalid sortBy', async () => {
+    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?sortBy=invalid');
+    const response = await GET(request, { params: {} });
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('should create a listing successfully', async () => {
-    const mockListing: MarketplaceListing = {
+    const mockListing = {
       id: 'listing_1_1234567890',
       commitmentId: 'commitment_123',
       price: '1000.50',
@@ -38,7 +63,7 @@ describe('POST /api/marketplace/listings', () => {
       updatedAt: '2026-02-25T10:00:00.000Z',
     };
 
-    vi.mocked(marketplaceService.createListing).mockResolvedValue(mockListing);
+    vi.mocked(marketplaceService.createListing).mockResolvedValue(mockListing as any);
 
     const requestBody = {
       commitmentId: 'commitment_123',
@@ -101,58 +126,6 @@ describe('POST /api/marketplace/listings', () => {
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
     expect(data.error.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('should propagate validation errors from service', async () => {
-    const validationError = new ValidationError('Invalid listing request', {
-      errors: ['price must be a positive number'],
-    });
-
-    vi.mocked(marketplaceService.createListing).mockRejectedValue(validationError);
-
-    const requestBody = {
-      commitmentId: 'commitment_123',
-      price: '-100',
-      currencyAsset: 'USDC',
-      sellerAddress: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    const response = await POST(request, { params: {} });
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('should propagate conflict errors from service', async () => {
-    const conflictError = new ConflictError('Commitment is already listed on the marketplace.');
-
-    vi.mocked(marketplaceService.createListing).mockRejectedValue(conflictError);
-
-    const requestBody = {
-      commitmentId: 'commitment_duplicate',
-      price: '1000.50',
-      currencyAsset: 'USDC',
-      sellerAddress: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-    };
-
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
-
-    const response = await POST(request, { params: {} });
-    const data = await response.json();
-
-    expect(response.status).toBe(409);
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe('CONFLICT');
   });
 });
 

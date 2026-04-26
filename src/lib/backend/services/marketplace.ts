@@ -41,6 +41,15 @@ export interface MarketplaceListingsQuery {
   minAmount?: number;
   maxAmount?: number;
   sortBy?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MarketplaceListingsResult {
+  items: MarketplacePublicListing[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface FeaturedMarketplaceConfig {
