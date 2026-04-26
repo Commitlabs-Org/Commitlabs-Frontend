@@ -146,9 +146,9 @@ export const POST = withApiHandler(async (req: NextRequest) => {
   const result = await createCommitmentOnChain({
     ownerAddress,
     asset,
-    amount,
-    durationDays,
-    maxLossBps,
+    amount: parsedAmount,
+    durationDays: parsedDuration,
+    maxLossBps: parsedMaxLossBps,
     metadata,
   });
 
