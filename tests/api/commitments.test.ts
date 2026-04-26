@@ -89,7 +89,7 @@ describe('GET /api/commitments', () => {
     expect(Array.isArray(result.data.data.items)).toBe(true)
   })
 
-  it('should return commitments filtered by status', async () => {
+  it('should include security headers on response', async () => {
     const request = createMockRequest(
       'http://localhost:3000/api/commitments?ownerAddress=GOWNER&status=active'
     )

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
 import { ok, methodNotAllowed } from "@/lib/backend/apiResponse";
 import { logInfo } from "@/lib/backend/logger";
-import { attachSecurityHeaders } from "@/utils/response";
+import { ok } from "@/lib/backend/apiResponse";
 
 export const GET = withApiHandler(async (req: NextRequest) => {
   logInfo(req, "Healthcheck requested");

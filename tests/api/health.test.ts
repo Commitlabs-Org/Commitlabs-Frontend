@@ -48,7 +48,7 @@ describe('GET /api/health', () => {
     expect(timestamp.toString()).not.toBe('Invalid Date')
   })
 
-  it('should return version in response', async () => {
+  it('should include security headers', async () => {
     const request = createMockRequest('http://localhost:3000/api/health')
     const response = await GET(request, createMockRouteContext())
     const result = await parseResponse(response)

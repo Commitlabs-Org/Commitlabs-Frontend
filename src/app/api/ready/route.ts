@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { logger } from '@/lib/backend';
 import { methodNotAllowed } from '@/lib/backend/apiResponse';
 
@@ -37,7 +38,7 @@ async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: numb
   }
 }
 
-export async function GET() {
+export const GET = withApiHandler(async () => {
   logger.info('Readiness check requested');
 
   const rpc = await checkSorobanRpc();
