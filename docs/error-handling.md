@@ -267,4 +267,86 @@ When reviewing any PR that adds or modifies API routes, verify:
 
 ---
 
+---
+
+## Client Retry Strategy
+
+When a client receives a `429` or `503` response, it should not retry immediately. Use the `Retry-After` header value (in seconds) as guidance.
+
+### Recommended Retry Algorithm
+
+Use **exponential backoff with jitter** to avoid thundering herd:
+
+```ts
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  maxRetries = 5
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status !== 429 && response.status !== 503) {
+      return response;
+    }
+
+    if (attempt === maxRetries) {
+      throw new Error(`Exceeded max retries after ${maxRetries} attempts`);
+    }
+
+    const retryAfter = response.headers.get('Retry-After');
+    let waitMs: number;
+
+    if (retryAfter) {
+      // Honor the server-specified delay
+      waitMs = Number(retryAfter) * 1000;
+    } else {
+      // Exponential backoff: 1s, 2s, 4s, 8s, 16s (capped)
+      waitMs = Math.min(1000 * 2 ** attempt, 16_000);
+    }
+
+    // Add ±20% jitter to prevent synchronized retries
+    const jitter = waitMs * (0.8 + Math.random() * 0.4);
+    await new Promise((resolve) => setTimeout(resolve, jitter));
+  }
+
+  throw new Error('Unreachable');
+}
+```
+
+### Retry Decision Matrix
+
+| Status | Should Retry | Strategy |
+|--------|-------------|----------|
+| 400 | No | Fix request first |
+| 401 | No | Re-authenticate |
+| 403 | No | Check permissions |
+| 404 | No | Resource doesn't exist |
+| 409 | No | Resolve conflict first |
+| 429 | Yes | Wait `Retry-After`, then backoff |
+| 500 | Yes | Exponential backoff |
+| 502 | Yes | Exponential backoff |
+| 503 | Yes | Wait `Retry-After`, then backoff |
+| 504 | Yes | Exponential backoff |
+
+### Frontend Integration
+
+```ts
+// Example: wrapper that auto-retries on 429/503
+async function apiRequest(url: string, init?: RequestInit) {
+  const res = await fetch(url, init);
+
+  if (res.status === 429 || res.status === 503) {
+    const retryAfter = res.headers.get('Retry-After');
+    const delay = retryAfter ? Number(retryAfter) * 1000 : 1000;
+    await new Promise((r) => setTimeout(r, delay));
+    return apiRequest(url, init); // retry once
+  }
+
+  return res;
+}
+```
+
+---
+
 *This document was created as part of issue #133. Update it as new error types are introduced.*

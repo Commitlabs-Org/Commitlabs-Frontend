@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from './route';
+import { POST, PUT, PATCH, DELETE } from './route';
 import { NextRequest } from 'next/server';
 import { marketplaceService } from '@/lib/backend/services/marketplace';
 import { ValidationError, ConflictError } from '@/lib/backend/errors';
@@ -144,5 +144,39 @@ describe('POST /api/marketplace/listings', () => {
     expect(response.status).toBe(409);
     expect(data.success).toBe(false);
     expect(data.error.code).toBe('CONFLICT');
+  });
+});
+
+describe('405 Method Not Allowed — /api/marketplace/listings', () => {
+  const url = 'http://localhost:3000/api/marketplace/listings';
+
+  it.each([
+    ['PUT', PUT],
+    ['PATCH', PATCH],
+    ['DELETE', DELETE],
+  ] as const)('%s returns 405 with Allow header', async (method, handler) => {
+    const request = new NextRequest(url, { method });
+    const response = await handler(request, { params: {} });
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get('Allow')).toBe('GET, POST');
+
+    const data = await response.json();
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('METHOD_NOT_ALLOWED');
+    expect(data.error.message).toContain('GET, POST');
+  });
+
+  it('same handler instance is reused across unsupported methods (no side effects)', async () => {
+    const req1 = new NextRequest(url, { method: 'PUT' });
+    const req2 = new NextRequest(url, { method: 'PATCH' });
+
+    const [r1, r2] = await Promise.all([
+      PUT(req1, { params: {} }),
+      PATCH(req2, { params: {} }),
+    ]);
+
+    expect(r1.status).toBe(405);
+    expect(r2.status).toBe(405);
   });
 });
