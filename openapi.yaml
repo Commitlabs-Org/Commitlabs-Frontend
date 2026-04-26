@@ -228,6 +228,50 @@ paths:
                 $ref: '#/components/schemas/SuccessEnvelope'
 
   /api/attestations:
+    get:
+      summary: List Attestations
+      description: Returns a paginated list of attestations, optionally filtered by commitmentId.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: commitmentId
+          in: query
+          schema:
+            type: string
+          description: Filter attestations by a specific commitment ID.
+      responses:
+        '200':
+          description: A paginated list of attestations.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                          meta:
+                            type: object
+                            properties:
+                              totalItems: { type: integer }
+                              itemCount: { type: integer }
+                              itemsPerPage: { type: integer }
+                              totalPages: { type: integer }
+                              currentPage: { type: integer }
     post:
       summary: Record Attestation
       description: Logs an attestation event for a commitment (Stub).
