@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { NotFoundError } from '@/lib/backend/errors';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { contractAddresses } from '@/utils/soroban';
@@ -82,7 +82,8 @@ function getDaysRemaining(expiresAt: string): number {
 
 export const GET = withApiHandler(async (
     _req: NextRequest,
-    context: { params: Record<string, string> }
+    context: { params: Record<string, string> },
+    correlationId: string
 ) => {
     const commitmentId = context.params.id;
     const commitment = await getCommitmentFromChain(commitmentId);
@@ -111,5 +112,8 @@ export const GET = withApiHandler(async (
         nftMetadataLink: getNftMetadataLink(commitment.tokenId),
     };
 
-    return ok(response);
+    return ok(response, undefined, 200, correlationId);
 });
+
+const _405 = methodNotAllowed(['GET']);
+export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

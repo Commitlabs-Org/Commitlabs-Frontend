@@ -154,6 +154,10 @@ The application requires the following environment variables (defined in `.env`)
 
 Note: The project also supports a versioned contract configuration via `NEXT_PUBLIC_CONTRACTS_JSON` and `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION`. See [docs/config.md](docs/config.md) for details.
 
+Backend API storage uses a provider-agnostic adapter. Configure
+`COMMITLABS_STORAGE_PROVIDER=memory` by default and see
+[docs/backend-storage.md](docs/backend-storage.md) for adapter details.
+
 ## 📂 Project Structure
 
 ```
@@ -218,6 +222,7 @@ We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md)
 A description of the backend endpoints exposed under `/api` can be found in:
 
 - [docs/backend-api-reference.md](./docs/backend-api-reference.md)
+- [docs/backend-storage.md](./docs/backend-storage.md)
 
 This document includes available routes, required parameters, and example
 requests/responses.  It is intended for developers building against or testing

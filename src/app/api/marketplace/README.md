@@ -1,5 +1,55 @@
 # Marketplace API Endpoints
 
+## Featured Listings
+
+**GET** `/api/marketplace/featured`
+
+Returns a deterministic curated subset of public marketplace listings for the
+featured marketplace carousel.
+
+### Selection Rules
+
+- Only listings with `complianceScore >= 85`
+- Only listings with `maxLoss <= 8`
+- Ordered by `complianceScore` descending, then `currentYield` descending, then
+  `price` ascending, then `listingId` ascending
+- Limited to `4` listings
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "listings": [
+      {
+        "listingId": "LST-001",
+        "commitmentId": "CMT-001",
+        "type": "Safe",
+        "amount": 50000,
+        "remainingDays": 25,
+        "maxLoss": 2,
+        "currentYield": 5.2,
+        "complianceScore": 95,
+        "price": 52000
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+### Response Headers
+
+- `Cache-Control: public, max-age=300, s-maxage=300, stale-while-revalidate=600`
+- Standard API security headers via `attachSecurityHeaders`
+
+### Error Responses
+
+- **429 Too Many Requests**: Request rate limit exceeded
+
+---
+
 ## Create Listing
 
 **POST** `/api/marketplace/listings`

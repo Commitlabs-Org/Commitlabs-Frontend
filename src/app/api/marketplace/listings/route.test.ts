@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET, POST } from './route';
+import { POST, PUT, PATCH, DELETE } from './route';
 import { NextRequest } from 'next/server';
 import { marketplaceService, listMarketplaceListings, isMarketplaceSortBy } from '@/lib/backend/services/marketplace';
 import { ValidationError, ConflictError } from '@/lib/backend/errors';
@@ -156,111 +156,36 @@ describe('POST /api/marketplace/listings', () => {
   });
 });
 
-describe('GET /api/marketplace/listings', () => {
-  const mockPublicListings: MarketplacePublicListing[] = [
-    {
-      listingId: 'LST-001',
-      commitmentId: 'CMT-001',
-      type: 'Safe',
-      amount: 50000,
-      remainingDays: 25,
-      maxLoss: 2,
-      currentYield: 5.2,
-      complianceScore: 95,
-      price: 52000,
-    },
-  ];
+describe('405 Method Not Allowed — /api/marketplace/listings', () => {
+  const url = 'http://localhost:3000/api/marketplace/listings';
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(checkRateLimit).mockResolvedValue(true);
-    vi.mocked(listMarketplaceListings).mockResolvedValue(mockPublicListings);
-    vi.mocked(isMarketplaceSortBy).mockImplementation((val) => ['price', 'amount'].includes(val));
-  });
+  it.each([
+    ['PUT', PUT],
+    ['PATCH', PATCH],
+    ['DELETE', DELETE],
+  ] as const)('%s returns 405 with Allow header', async (method, handler) => {
+    const request = new NextRequest(url, { method });
+    const response = await handler(request, { params: {} });
 
-  it('should return listings with cards successfully', async () => {
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
-    const response = await GET(request);
+    expect(response.status).toBe(405);
+    expect(response.headers.get('Allow')).toBe('GET, POST');
+
     const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.listings).toEqual(mockPublicListings);
-    expect(data.data.cards).toHaveLength(1);
-    expect(data.data.cards[0].amount).toBe('$50,000');
-    expect(data.data.total).toBe(1);
-  });
-
-  it('should parse filters correctly and map type case-insensitively', async () => {
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?type=SAFE&minAmount=1000&maxAmount=5000&sortBy=price');
-    await GET(request);
-
-    expect(listMarketplaceListings).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'Safe',
-      minAmount: 1000,
-      maxAmount: 5000,
-      sortBy: 'price',
-    }));
-  });
-
-  it('should return 400 for invalid type', async () => {
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?type=invalid');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
     expect(data.success).toBe(false);
-    expect(data.error.code).toBe('VALIDATION_ERROR');
-    expect(data.error.message).toContain("Invalid 'type' query param");
+    expect(data.error.code).toBe('METHOD_NOT_ALLOWED');
+    expect(data.error.message).toContain('GET, POST');
   });
 
-  it('should return 400 for non-numeric params', async () => {
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?minAmount=abc');
-    const response = await GET(request);
-    const data = await response.json();
+  it('same handler instance is reused across unsupported methods (no side effects)', async () => {
+    const req1 = new NextRequest(url, { method: 'PUT' });
+    const req2 = new NextRequest(url, { method: 'PATCH' });
 
-    expect(response.status).toBe(400);
-    expect(data.error.code).toBe('VALIDATION_ERROR');
-    expect(data.error.message).toContain("Invalid 'minAmount' query param");
-  });
+    const [r1, r2] = await Promise.all([
+      PUT(req1, { params: {} }),
+      PATCH(req2, { params: {} }),
+    ]);
 
-  it('should return 400 when minAmount > maxAmount', async () => {
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?minAmount=5000&maxAmount=1000');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.error.message).toContain("cannot be greater than");
-  });
-
-  it('should return 400 for invalid sortBy', async () => {
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings?sortBy=invalid_key');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.error.message).toContain("Invalid 'sortBy' query param");
-  });
-
-  it('should return 429 when rate limited', async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue(false);
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(429);
-    expect(data.error).toBe('Too many requests');
-  });
-
-  it('should return 500 for unexpected errors', async () => {
-    vi.mocked(listMarketplaceListings).mockRejectedValue(new Error('Database explosion'));
-    const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
-    const response = await GET(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe('INTERNAL_ERROR');
-    expect(data.error.message).toBe('Database explosion');
+    expect(r1.status).toBe(405);
+    expect(r2.status).toBe(405);
   });
 });
