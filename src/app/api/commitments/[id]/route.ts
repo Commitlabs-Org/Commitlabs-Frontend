@@ -82,7 +82,8 @@ function getDaysRemaining(expiresAt: string): number {
 
 export const GET = withApiHandler(async (
     _req: NextRequest,
-    context: { params: Record<string, string> }
+    context: { params: Record<string, string> },
+    correlationId: string
 ) => {
     const commitmentId = context.params.id;
     const commitment = await getCommitmentFromChain(commitmentId);
@@ -111,7 +112,7 @@ export const GET = withApiHandler(async (
         nftMetadataLink: getNftMetadataLink(commitment.tokenId),
     };
 
-    return ok(response);
+    return ok(response, undefined, 200, correlationId);
 });
 
 const _405 = methodNotAllowed(['GET']);

@@ -11,7 +11,11 @@ type NextRouteHandler = (
 export interface OkResponse<T> {
   success: true;
   data: T;
-  meta?: Record<string, unknown>;
+  meta?: {
+    correlationId?: string;
+    timestamp?: string;
+    [key: string]: unknown;
+  };
 }
 
 // ─── Error shape ──────────────────────────────────────────────────────────────
@@ -21,6 +25,8 @@ export interface FailResponse {
   error: {
     code: string;
     message: string;
+    correlationId?: string;
+    timestamp?: string;
     details?: unknown;
     retryAfterSeconds?: number;
   };
@@ -31,7 +37,7 @@ export type ApiResponse<T> = OkResponse<T> | FailResponse;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Returns a standard JSON success response.
+ * Returns a standard JSON success response with correlation ID.
  *
  * @example
  * return ok({ status: 'healthy' });
@@ -42,12 +48,13 @@ export type ApiResponse<T> = OkResponse<T> | FailResponse;
  * // { success: true, data: [...], meta: { total: 42, page: 1 } }
  *
  * @example
- * return ok(data, 201);  // custom HTTP status, no meta
+ * return ok(data, undefined, 201);  // custom HTTP status, no meta
  */
 export function ok<T>(
   data: T,
   metaOrStatus?: Record<string, unknown> | number,
   status = 200,
+  correlationId?: string,
 ): NextResponse<OkResponse<T>> {
   let resolvedMeta: Record<string, unknown> | undefined;
   let resolvedStatus = status;
@@ -58,15 +65,31 @@ export function ok<T>(
     resolvedMeta = metaOrStatus;
   }
 
-  const body: OkResponse<T> =
-    resolvedMeta !== undefined
-      ? { success: true, data, meta: resolvedMeta }
-      : { success: true, data };
-  return NextResponse.json(body, { status: resolvedStatus });
+  const timestamp = new Date().toISOString();
+  const responseMeta: Record<string, unknown> = {
+    correlationId,
+    timestamp,
+    ...resolvedMeta,
+  };
+
+  const body: OkResponse<T> = {
+    success: true,
+    data,
+    meta: Object.keys(responseMeta).length > 0 ? responseMeta : undefined,
+  };
+  
+  const response = NextResponse.json(body, { status: resolvedStatus });
+  
+  // Add correlation ID to response headers for tracing
+  if (correlationId) {
+    response.headers.set('x-correlation-id', correlationId);
+  }
+  
+  return response;
 }
 
 /**
- * Returns a standard JSON error response.
+ * Returns a standard JSON error response with correlation ID.
  *
  * @param code              - Short machine-readable error code, e.g. 'NOT_FOUND'
  * @param message           - Human-readable description safe for UI display
@@ -119,11 +142,15 @@ export function fail(
   status = 500,
   retryAfterSeconds?: number,
 ): NextResponse<FailResponse> {
+  const timestamp = new Date().toISOString();
+  
   const body: FailResponse = {
     success: false,
     error: {
       code,
       message,
+      correlationId,
+      timestamp,
       ...(details !== undefined ? { details } : {}),
       ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
     },

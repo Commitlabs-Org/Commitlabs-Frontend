@@ -17,7 +17,7 @@ export const POST = withApiHandler(async (req: NextRequest) => {
     // TODO(issue-126): For browser-originated auth mutations, issue CSRF token according to the doc strategy.
     // TODO: verify credentials (wallet signature / JWT), create signed cookie session (or chosen alternative), etc.
 
-    return ok({ message: 'Authentication successful.' });
+    return ok({ message: 'Authentication successful.' }, undefined, 200, correlationId);
 });
 
 const _405 = methodNotAllowed(['POST']);

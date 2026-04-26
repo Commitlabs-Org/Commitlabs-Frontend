@@ -16,7 +16,7 @@ import type { CancelListingResponse } from '@/types/marketplace';
  *   Authorization: Bearer <token> (required)
  */
 export const DELETE = withApiHandler(
-  async (req: NextRequest, { params }: { params: Record<string, string> }) => {
+  async (req: NextRequest, { params }: { params: Record<string, string> }, correlationId: string) => {
     const listingId = params.id;
 
     if (!listingId) {
@@ -65,7 +65,7 @@ export const DELETE = withApiHandler(
       message: 'Listing cancelled successfully',
     };
 
-    return ok(response);
+    return ok(response, undefined, 200, correlationId);
   }
 );
 

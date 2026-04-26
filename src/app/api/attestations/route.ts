@@ -126,7 +126,7 @@ function mapToRecordParams(
   };
 }
 
-export const GET = withApiHandler(async (req: NextRequest) => {
+export const GET = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
   const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
   const isAllowed = await checkRateLimit(ip, 'api/attestations');
   if (!isAllowed) throw new TooManyRequestsError();
@@ -135,7 +135,7 @@ export const GET = withApiHandler(async (req: NextRequest) => {
   return ok({ attestations }, 200);
 });
 
-export const POST = withApiHandler(async (req: NextRequest) => {
+export const POST = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
   const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
   const isAllowed = await checkRateLimit(ip, 'api/attestations');
   if (!isAllowed) throw new TooManyRequestsError();

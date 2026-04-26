@@ -28,7 +28,7 @@ interface CreateCommitmentRequestBody {
 }
 
 
-export const GET = withApiHandler(async (req: NextRequest) => {
+export const GET = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
   const { searchParams } = new URL(req.url);
   
   // Validate query parameters using Zod
@@ -118,7 +118,7 @@ export const POST = withApiHandler(async (req: NextRequest) => {
   } = body;
 
   if (!ownerAddress || typeof ownerAddress !== "string") {
-    return fail("Invalid ownerAddress", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400, correlationId);
   }
 
   try {
@@ -128,19 +128,19 @@ export const POST = withApiHandler(async (req: NextRequest) => {
   }
 
   if (!asset || typeof asset !== "string") {
-    return fail("Invalid asset", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid asset", undefined, 400, correlationId);
   }
 
   if (!amount || isNaN(Number(amount))) {
-    return fail("Invalid amount", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid amount", undefined, 400, correlationId);
   }
 
   if (!durationDays || durationDays <= 0) {
-    return fail("Invalid durationDays", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid durationDays", undefined, 400, correlationId);
   }
 
   if (maxLossBps == null || maxLossBps < 0) {
-    return fail("Invalid maxLossBps", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid maxLossBps", undefined, 400, correlationId);
   }
 
   const result = await createCommitmentOnChain({
@@ -152,7 +152,7 @@ export const POST = withApiHandler(async (req: NextRequest) => {
     metadata,
   });
 
-  return ok(result, 201);
+  return ok(result, undefined, 201, correlationId);
 });
 
 const _405 = methodNotAllowed(['GET', 'POST']);

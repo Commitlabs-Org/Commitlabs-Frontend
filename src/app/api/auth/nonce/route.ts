@@ -49,7 +49,7 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         nonce,
         message: challengeMessage,
         expiresAt: nonceRecord.expiresAt.toISOString(),
-    });
+    }, undefined, 200, correlationId);
 });
 
 const _405 = methodNotAllowed(['POST']);

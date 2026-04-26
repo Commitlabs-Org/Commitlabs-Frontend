@@ -1,8 +1,9 @@
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import type { HealthMetrics } from '@/lib/types/domain';
 
-export const GET = withApiHandler(async () => {
+export const GET = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
   const metrics: HealthMetrics = {
     status: 'up',
     uptime: process.uptime(),
