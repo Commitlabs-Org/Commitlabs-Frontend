@@ -30,6 +30,12 @@ export interface MarketplaceListingsQuery {
   sortBy?: string;
 }
 
+export interface FeaturedMarketplaceConfig {
+  minComplianceScore: number;
+  maxLoss: number;
+  limit: number;
+}
+
 const MOCK_LISTINGS: MarketplacePublicListing[] = [
   {
     listingId: "LST-001",
@@ -111,6 +117,16 @@ const SORT_CONFIG = {
   { key: keyof MarketplacePublicListing; order: "asc" | "desc" }
 >;
 
+export const FEATURED_MARKETPLACE_CONFIG: FeaturedMarketplaceConfig =
+  Object.freeze({
+    minComplianceScore: 85,
+    maxLoss: 8,
+    limit: 4,
+  });
+
+export const FEATURED_MARKETPLACE_CACHE_CONTROL =
+  "public, max-age=300, s-maxage=300, stale-while-revalidate=600";
+
 export type MarketplaceSortBy = keyof typeof SORT_CONFIG;
 
 function sortListings(
@@ -187,6 +203,34 @@ export async function listMarketplaceListings(
   const listings = sortListings(results, sortBy);
   await cache.set(cacheKey, listings, CacheTTL.MARKETPLACE_LISTINGS);
   return listings;
+}
+
+export function selectFeaturedMarketplaceListings(
+  listings: readonly MarketplacePublicListing[],
+  config: FeaturedMarketplaceConfig = FEATURED_MARKETPLACE_CONFIG,
+): MarketplacePublicListing[] {
+  return [...listings]
+    .filter(
+      (listing) =>
+        listing.complianceScore >= config.minComplianceScore &&
+        listing.maxLoss <= config.maxLoss,
+    )
+    .sort((left, right) => {
+      if (right.complianceScore !== left.complianceScore) {
+        return right.complianceScore - left.complianceScore;
+      }
+
+      if (right.currentYield !== left.currentYield) {
+        return right.currentYield - left.currentYield;
+      }
+
+      if (left.price !== right.price) {
+        return left.price - right.price;
+      }
+
+      return left.listingId.localeCompare(right.listingId);
+    })
+    .slice(0, config.limit);
 }
 
 class MarketplaceService {
@@ -286,6 +330,11 @@ class MarketplaceService {
 
   async getListing(listingId: string): Promise<MarketplaceListing | null> {
     return this.listings.get(listingId) ?? null;
+  }
+
+  async getFeaturedListings(): Promise<MarketplacePublicListing[]> {
+    // TODO(on-chain): Replace mock listing reads with marketplace contract queries.
+    return selectFeaturedMarketplaceListings(MOCK_LISTINGS);
   }
 
   private validateCreateListingRequest(request: CreateListingRequest): void {
