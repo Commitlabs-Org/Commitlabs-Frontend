@@ -129,6 +129,44 @@ Cancel an existing marketplace listing.
 
 ---
 
+## Marketplace Stats
+
+**GET** `/api/marketplace/stats`
+
+Returns aggregate statistics for the marketplace for use in header KPIs and analytics.
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "activeListings": 6,
+    "averageYield": 12.43,
+    "medianPrice": 130000,
+    "typeBreakdown": {
+      "Safe": 2,
+      "Balanced": 2,
+      "Aggressive": 2
+    }
+  }
+}
+```
+
+### Metrics Definitions
+
+- **activeListings**: Total number of active listings currently on the marketplace.
+- **averageYield**: The arithmetic mean of `currentYield` across all active listings.
+- **medianPrice**: The middle price value among all active listings, ensuring outliers don't skew the KPI.
+- **typeBreakdown**: Count of listings categorized by commitment type (Safe, Balanced, Aggressive).
+
+### Performance
+
+- **Cacheable**: Includes `Cache-Control` headers (`public, s-maxage=60, stale-while-revalidate=30`) for high performance and low origin load.
+- **Rate Limited**: Protected by IP-based rate limiting to prevent abuse.
+
+---
+
 ## Implementation Notes
 
 - Currently uses in-memory stub storage

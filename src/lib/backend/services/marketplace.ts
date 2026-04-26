@@ -27,6 +27,13 @@ export interface MarketplacePublicListing {
   price: number;
 }
 
+export interface MarketplaceStats {
+  activeListings: number;
+  averageYield: number;
+  medianPrice: number;
+  typeBreakdown: Record<MarketplaceCommitmentType, number>;
+}
+
 export interface MarketplaceListingsQuery {
   type?: MarketplaceCommitmentType;
   minCompliance?: number;
@@ -392,6 +399,53 @@ class MarketplaceService {
 
   async getFeaturedListings(): Promise<MarketplacePublicListing[]> {
     return selectFeaturedMarketplaceListings(MOCK_LISTINGS);
+  }
+
+  /**
+   * Aggregates marketplace metrics for header KPIs and analytics.
+   * 
+   * @returns Promise<MarketplaceStats> - Aggregated metrics including active listings, avg yield, and median price.
+   */
+  async getMarketplaceStats(): Promise<MarketplaceStats> {
+    // TODO(on-chain): Replace mock listings with marketplace contract reads.
+    const listings = MOCK_LISTINGS;
+
+    if (listings.length === 0) {
+      return {
+        activeListings: 0,
+        averageYield: 0,
+        medianPrice: 0,
+        typeBreakdown: { Safe: 0, Balanced: 0, Aggressive: 0 },
+      };
+    }
+
+    const activeListings = listings.length;
+    const totalYield = listings.reduce((sum, l) => sum + l.currentYield, 0);
+    const averageYield = parseFloat((totalYield / activeListings).toFixed(2));
+
+    const sortedPrices = [...listings].map((l) => l.price).sort((a, b) => a - b);
+    const mid = Math.floor(sortedPrices.length / 2);
+    const medianPrice =
+      sortedPrices.length % 2 !== 0
+        ? sortedPrices[mid]
+        : (sortedPrices[mid - 1] + sortedPrices[mid]) / 2;
+
+    const typeBreakdown: Record<MarketplaceCommitmentType, number> = {
+      Safe: 0,
+      Balanced: 0,
+      Aggressive: 0,
+    };
+
+    listings.forEach((l) => {
+      typeBreakdown[l.type] += 1;
+    });
+
+    return {
+      activeListings,
+      averageYield,
+      medianPrice,
+      typeBreakdown,
+    };
   }
 
   private validateCreateListingRequest(request: CreateListingRequest): void {
