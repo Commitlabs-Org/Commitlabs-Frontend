@@ -6,6 +6,7 @@ import MyCommitmentsHeader from '@/components/MyCommitmentsHeader'
 import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsStats'
 import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters'
 import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
+import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
@@ -140,10 +141,20 @@ export default function MyCommitments() {
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_USE_MOCKS === 'true') {
-      listCommitments().then(setCommitmentsList)
+      setIsLoading(true)
+      listCommitments()
+        .then(setCommitmentsList)
+        .finally(() => setIsLoading(false))
+    } else {
+      // Simulate loading for demo purposes
+      const timer = setTimeout(() => {
+        setIsLoading(false)
+      }, 1000)
+      return () => clearTimeout(timer)
     }
   }, [])
 
@@ -201,30 +212,40 @@ export default function MyCommitments() {
       />
 
       <div className="w-full flex-1 px-22 py-8 max-[1024px]:px-8 max-[640px]:px-4">
-        <MyCommitmentsStats
-          totalActive={mockStats.totalActive}
-          totalCommittedValue={mockStats.totalCommittedValue}
-          averageComplianceScore={`${mockStats.avgComplianceScore}%`}
-          totalFeesGenerated={mockStats.totalFeesGenerated}
-        />
+        {isLoading ? (
+          <MyCommitmentsGridSkeleton
+            showStats={true}
+            showFilters={true}
+            cardCount={6}
+          />
+        ) : (
+          <>
+            <MyCommitmentsStats
+              totalActive={mockStats.totalActive}
+              totalCommittedValue={mockStats.totalCommittedValue}
+              averageComplianceScore={`${mockStats.avgComplianceScore}%`}
+              totalFeesGenerated={mockStats.totalFeesGenerated}
+            />
 
-        <MyCommitmentsFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          status={statusFilter}
-          onStatusChange={setStatusFilter}
-          type={typeFilter}
-          onTypeChange={setTypeFilter}
-          sortBy={sortBy}
-          onSortByChange={setSortBy}
-        />
+            <MyCommitmentsFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              status={statusFilter}
+              onStatusChange={setStatusFilter}
+              type={typeFilter}
+              onTypeChange={setTypeFilter}
+              sortBy={sortBy}
+              onSortByChange={setSortBy}
+            />
 
-        <MyCommitmentsGrid
-          commitments={filteredCommitments}
-          onDetails={(id) => router.push(`/commitments/${id}`)}
-          onAttestations={(id) => console.log('Attestations for', id)}
-          onEarlyExit={openEarlyExitModal}
-        />
+            <MyCommitmentsGrid
+              commitments={filteredCommitments}
+              onDetails={(id) => router.push(`/commitments/${id}`)}
+              onAttestations={(id) => console.log('Attestations for', id)}
+              onEarlyExit={openEarlyExitModal}
+            />
+          </>
+        )}
       </div>
 
       {commitmentForEarlyExit && earlyExitSummary && (
