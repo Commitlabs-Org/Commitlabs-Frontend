@@ -448,6 +448,42 @@ class MarketplaceService {
     };
   }
 
+  async getPurchasePreflight(
+    listingId: string,
+    buyerAddress: string,
+  ): Promise<PurchasePreflightResponse> {
+    logInfo(undefined, "[MarketplaceService] Purchase preflight", {
+      listingId,
+      buyerAddress,
+    });
+
+    const listing = this.listings.get(listingId);
+    if (!listing) {
+      throw new NotFoundError("Listing", { listingId });
+    }
+
+    const reasons: string[] = [];
+
+    if (listing.status !== "Active") {
+      reasons.push("listing_inactive");
+    }
+
+    if (listing.sellerAddress === buyerAddress) {
+      reasons.push("buyer_is_seller");
+    }
+
+    // Example of how we might handle non-transferable commitments
+    // In a real app, this would check a property on the commitment or contract
+    if (listing.commitmentId.includes("non-transferable")) {
+      reasons.push("non_transferable");
+    }
+
+    return {
+      eligible: reasons.length === 0,
+      reasons,
+    };
+  }
+
   private validateCreateListingRequest(request: CreateListingRequest): void {
     const errors: string[] = [];
 
