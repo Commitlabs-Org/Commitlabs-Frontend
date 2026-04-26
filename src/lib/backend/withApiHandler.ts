@@ -18,7 +18,7 @@ type RouteHandler = (
  *
  * @example
  * ```ts
- * // app/api/commitments/route.ts
+ * // src/app/api/commitments/route.ts
  * import { withApiHandler } from '@/lib/backend/withApiHandler';
  * import { ok } from '@/lib/backend/apiResponse';
  *
@@ -45,7 +45,13 @@ export function withApiHandler(handler: RouteHandler): RouteHandler {
                     method: req.method,
                 });
 
-                return fail(err.code, err.message, err.details, err.statusCode);
+                return fail(
+                    err.code,
+                    err.message,
+                    err.details,
+                    err.statusCode,
+                    err.retryAfterSeconds,
+                );
             }
 
             const error = err instanceof Error ? err : new Error(String(err));

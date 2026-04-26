@@ -3,10 +3,11 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
+import { ApiError, TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
+import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
 import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
+import { getClientIp } from '@/lib/backend/getClientIp';
 
-// Request validation schema
 const VerifyRequestSchema = z.object({
     address: z.string().min(1, 'Address is required'),
     signature: z.string().min(1, 'Signature is required'),
@@ -14,19 +15,22 @@ const VerifyRequestSchema = z.object({
 });
 
 export const POST = withApiHandler(async (req: NextRequest) => {
-    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+    const ip = getClientIp(req);
 
     // Rate limiting
     const isAllowed = await checkRateLimit(ip, 'api/auth/verify');
     if (!isAllowed) {
-        throw new TooManyRequestsError();
+        throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
     }
 
-    // Parse and validate request body
-    let body;
+    // Parse and validate request body (with payload size enforcement)
+    let body: unknown;
     try {
-        body = await req.json();
-    } catch (error) {
+        body = await parseJsonWithLimit(req, {
+            limitBytes: JSON_BODY_LIMITS.authVerify,
+        });
+    } catch (err) {
+        if (err instanceof ApiError) throw err;
         throw new ValidationError('Invalid JSON in request body');
     }
 
@@ -37,8 +41,8 @@ export const POST = withApiHandler(async (req: NextRequest) => {
 
     const { address, signature, message } = validation.data;
 
-    // Verify the signature and nonce
-    const verificationResult = verifySignatureWithNonce({
+    // Verify the signature and nonce (async)
+    const verificationResult = await verifySignatureWithNonce({
         address,
         signature,
         message,
@@ -48,34 +52,22 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
     }
 
-    // Create JWT session token with CSRF token
-    const { token: sessionToken, csrfToken } = createSessionToken(address);
+    // Create a proper session token
+    const sessionToken = createSessionToken(address);
 
-    // Create response with session cookie
-    const response = NextResponse.json({
+    // Prepare success response
+    const response = ok({
         verified: true,
         address: verificationResult.address,
         message: 'Signature verified successfully',
-        csrfToken, // Send CSRF token for client to use in subsequent requests
+        sessionToken,
     });
 
-    // Set secure HTTP-only session cookie
-    response.cookies.set('session', sessionToken, {
-        httpOnly: true, // Prevent JavaScript access
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-        sameSite: 'strict', // Prevent CSRF
-        maxAge: 24 * 60 * 60, // 24 hours in seconds
-        path: '/', // Available site-wide
-    });
-
-    // Set non-HttpOnly CSRF cookie for client-side access (double-submit pattern)
-    response.cookies.set('csrf', csrfToken, {
-        httpOnly: false, // Allow JavaScript access for CSRF token
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-        sameSite: 'strict', // Prevent CSRF
-        maxAge: 24 * 60 * 60, // 24 hours in seconds
-        path: '/', // Available site-wide
-    });
+    // Set session cookie
+    response.cookies.set(AUTH_COOKIE_NAME, sessionToken, COOKIE_OPTIONS);
 
     return response;
 });
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

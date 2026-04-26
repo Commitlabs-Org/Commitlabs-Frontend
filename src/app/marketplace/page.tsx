@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHeader'
 import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
+import { MarketplaceGridSkeleton } from '@/components/MarketplaceGridSkeleton'
 
 // Interfaces matching the components
 interface Filters {
@@ -335,6 +336,7 @@ export default function Marketplace() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [filters, setFilters] = useState<Filters>({
     sortBy: 'price',
     commitmentType: ['balanced'],
@@ -343,6 +345,14 @@ export default function Marketplace() {
     minCompliance: 0,
     maxLoss: 100,
   })
+
+  useEffect(() => {
+    // Simulate loading for demo purposes
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   // ... rest of the logic
   const itemsPerPage = 9
@@ -443,20 +453,27 @@ export default function Marketplace() {
 
           {/* Results Area */}
           <div className="flex-1 min-w-0 w-full">
-            <MarketplaceResultsLayout
-              totalCount={filteredListings.length}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            >
-              {viewMode === 'grid' ? (
-                <MarketplaceGrid items={pagedListings} />
-              ) : (
-                <MarketplaceListView items={pagedListings} />
-              )}
-            </MarketplaceResultsLayout>
+            {isLoading ? (
+              <MarketplaceGridSkeleton
+                showFilters={false}
+                cardCount={9}
+              />
+            ) : (
+              <MarketplaceResultsLayout
+                totalCount={filteredListings.length}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              >
+                {viewMode === 'grid' ? (
+                  <MarketplaceGrid items={pagedListings} />
+                ) : (
+                  <MarketplaceListView items={pagedListings} />
+                )}
+              </MarketplaceResultsLayout>
+            )}
           </div>
         </div>
       </main>

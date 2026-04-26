@@ -1,47 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { verifySessionToken, revokeSessionToken } from '@/lib/backend/auth';
-import { UnauthorizedError } from '@/lib/backend/errors';
+import { ok } from '@/lib/backend/apiResponse';
+import { AUTH_COOKIE_NAME, COOKIE_OPTIONS, revokeSession } from '@/lib/backend/auth';
 
+/**
+ * Handle POST /api/auth/logout
+ * 
+ * Clears the session cookie and revokes the session in the backend store.
+ * This endpoint is idempotent; calling it multiple times will still return 200.
+ */
 export const POST = withApiHandler(async (req: NextRequest) => {
-    // Get session token from cookie
-    const sessionToken = req.cookies.get('session')?.value;
-    
-    if (!sessionToken) {
-        throw new UnauthorizedError('No session token provided');
+    // 1. Get the session token from cookies
+    const sessionCookie = req.cookies.get(AUTH_COOKIE_NAME);
+    const token = sessionCookie?.value;
+
+    // 2. Revoke the session if token exists
+    if (token) {
+        revokeSession(token);
     }
-    
-    // Verify and revoke the session token
-    const verification = verifySessionToken(sessionToken);
-    if (!verification.valid) {
-        throw new UnauthorizedError(verification.error || 'Invalid session token');
-    }
-    
-    revokeSessionToken(sessionToken);
-    
-    // Create response that clears cookies
-    const response = NextResponse.json({
-        loggedOut: true,
-        message: 'Session terminated successfully',
+
+    // 3. Prepare response
+    const response = ok({
+        message: 'Logged out successfully',
     });
-    
-    // Clear session cookie
-    response.cookies.set('session', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 0, // Immediately expire
-        path: '/',
+
+    // 4. Clear the session cookie
+    // We use the same attributes as when setting, but set an empty value and expired date
+    response.cookies.set(AUTH_COOKIE_NAME, '', {
+        ...COOKIE_OPTIONS,
+        expires: new Date(0),
     });
-    
-    // Clear CSRF cookie
-    response.cookies.set('csrf', '', {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 0, // Immediately expire
-        path: '/',
-    });
-    
+
     return response;
 });

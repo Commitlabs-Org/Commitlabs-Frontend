@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { NotFoundError } from '@/lib/backend/errors';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { contractAddresses } from '@/utils/soroban';
@@ -113,3 +113,6 @@ export const GET = withApiHandler(async (
 
     return ok(response);
 });
+
+const _405 = methodNotAllowed(['GET']);
+export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };
