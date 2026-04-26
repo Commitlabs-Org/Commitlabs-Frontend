@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
-import { verifySignatureWithNonce, createSessionToken, AUTH_COOKIE_NAME, COOKIE_OPTIONS } from '@/lib/backend/auth';
+import { ApiError, TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
+import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
+import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
 
 // Request validation schema
 const VerifyRequestSchema = z.object({
@@ -19,14 +20,17 @@ export const POST = withApiHandler(async (req: NextRequest) => {
     // Rate limiting
     const isAllowed = await checkRateLimit(ip, 'api/auth/verify');
     if (!isAllowed) {
-        throw new TooManyRequestsError();
+        throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
     }
 
-    // Parse and validate request body
-    let body;
+    // Parse and validate request body (with payload size enforcement)
+    let body: unknown;
     try {
-        body = await req.json();
-    } catch (error) {
+        body = await parseJsonWithLimit(req, {
+            limitBytes: JSON_BODY_LIMITS.authVerify,
+        });
+    } catch (err) {
+        if (err instanceof ApiError) throw err;
         throw new ValidationError('Invalid JSON in request body');
     }
 
@@ -37,8 +41,8 @@ export const POST = withApiHandler(async (req: NextRequest) => {
 
     const { address, signature, message } = validation.data;
 
-    // Verify the signature and nonce
-    const verificationResult = verifySignatureWithNonce({
+    // Verify the signature and nonce (async)
+    const verificationResult = await verifySignatureWithNonce({
         address,
         signature,
         message,

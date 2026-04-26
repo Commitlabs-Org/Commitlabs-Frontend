@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok } from '@/lib/backend/apiResponse';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ValidationError } from '@/lib/backend/errors';
+import { ApiError, ValidationError } from '@/lib/backend/errors';
+import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
 import {
     getMarketplaceSortKeys,
     isMarketplaceSortBy,
@@ -129,8 +130,11 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         let body: unknown;
 
         try {
-                body = await req.json();
-        } catch {
+                body = await parseJsonWithLimit(req, {
+                        limitBytes: JSON_BODY_LIMITS.marketplaceListingsCreate,
+                });
+        } catch (err) {
+                if (err instanceof ApiError) throw err;
                 throw new ValidationError('Invalid JSON in request body');
         }
 

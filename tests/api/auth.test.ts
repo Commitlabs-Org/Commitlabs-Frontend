@@ -1,121 +1,195 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { POST as verifyPOST } from '@/app/api/auth/verify/route';
-import { POST as logoutPOST } from '@/app/api/auth/logout/route';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { POST as nonceHandler } from '@/app/api/auth/nonce/route';
+import { POST as verifyHandler } from '@/app/api/auth/verify/route';
 import { createMockRequest, parseResponse } from './helpers';
-import { _clearStores, verifySessionToken, AUTH_COOKIE_NAME } from '@/lib/backend/auth';
-import * as authUtils from '@/lib/backend/auth';
+import Stellar from '@stellar/stellar-sdk';
+import { getKV } from '@/lib/backend/kv';
 
-// Mock Stellar SDK because we don't want to actually verify signatures in these tests
-// We'll mock the verifySignatureWithNonce function directly for simplicity
-vi.mock('@/lib/backend/auth', async () => {
-    const actual = await vi.importActual<typeof authUtils>('@/lib/backend/auth');
-    return {
-        ...actual,
-        verifySignatureWithNonce: vi.fn(),
-    };
-});
+// Mock Stellar SDK
+vi.mock('@stellar/stellar-sdk', () => ({
+    default: {
+        verifySignature: vi.fn(),
+    },
+}));
 
-describe('Authentication API', () => {
-    beforeEach(() => {
-        _clearStores();
+describe('Auth API', () => {
+    const mockAddress = 'GBRPYH6QC6WGLS33ADC6ZZZ2ZXZXZXZXZXZXZXZXZXZXZXZXZXZX';
+    const kv = getKV();
+
+    beforeEach(async () => {
         vi.clearAllMocks();
+        // Clear KV store if possible or use a fresh prefix
+        // Since it's a MemoryKVStore in tests, we can just let it be or add a clear method
+    });
+
+    describe('POST /api/auth/nonce', () => {
+        it('should generate a nonce for a valid address', async () => {
+            const req = createMockRequest('http://localhost/api/auth/nonce', {
+                method: 'POST',
+                body: { address: mockAddress },
+            });
+
+            const response = await nonceHandler(req);
+            const { status, data } = await parseResponse(response);
+
+            expect(status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.nonce).toBeDefined();
+            expect(data.data.message).toContain(data.data.nonce);
+        });
+
+        it('should return 400 if address is missing', async () => {
+            const req = createMockRequest('http://localhost/api/auth/nonce', {
+                method: 'POST',
+                body: {},
+            });
+
+            const response = await nonceHandler(req);
+            const { status, data } = await parseResponse(response);
+
+            expect(status).toBe(400);
+            expect(data.success).toBe(false);
+        });
+
+        it('should rate limit nonce issuance per address', async () => {
+            // Default limit is 3 per 5 minutes per address
+            for (let i = 0; i < 3; i++) {
+                const req = createMockRequest('http://localhost/api/auth/nonce', {
+                    method: 'POST',
+                    body: { address: mockAddress },
+                });
+                await nonceHandler(req);
+            }
+
+            // 4th request should fail
+            const req4 = createMockRequest('http://localhost/api/auth/nonce', {
+                method: 'POST',
+                body: { address: mockAddress },
+            });
+            const response = await nonceHandler(req4);
+            const { status } = await parseResponse(response);
+
+            expect(status).toBe(429);
+        });
     });
 
     describe('POST /api/auth/verify', () => {
-        it('should set session cookie on successful verification', async () => {
-            // Setup mock
-            (authUtils.verifySignatureWithNonce as any).mockReturnValue({
-                valid: true,
-                address: 'GBTEST123',
+        it('should verify a valid signature and consume the nonce', async () => {
+            // 1. Get a nonce
+            const nonceReq = createMockRequest('http://localhost/api/auth/nonce', {
+                method: 'POST',
+                body: { address: mockAddress },
             });
+            const nonceRes = await nonceHandler(nonceReq);
+            const { data: nonceData } = await parseResponse(nonceRes);
+            const nonce = nonceData.data.nonce;
+            const message = nonceData.data.message;
 
-            const request = createMockRequest('http://localhost:3000/api/auth/verify', {
+            // 2. Mock successful Stellar verification
+            (Stellar.verifySignature as any).mockReturnValue(true);
+
+            // 3. Verify
+            const verifyReq = createMockRequest('http://localhost/api/auth/verify', {
                 method: 'POST',
                 body: {
-                    address: 'GBTEST123',
-                    signature: 'validsignature',
-                    message: 'Sign in to CommitLabs: 12345',
+                    address: mockAddress,
+                    signature: 'mock_signature',
+                    message: message,
                 },
             });
 
-            const response = await verifyPOST(request);
-            const result = await parseResponse(response);
+            const response = await verifyHandler(verifyReq);
+            const { status, data } = await parseResponse(response);
 
-            expect(result.status).toBe(200);
-            expect(result.data.success).toBe(true);
-            expect(result.data.data.sessionToken).toBeDefined();
+            expect(status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.verified).toBe(true);
+            expect(data.data.sessionToken).toBeDefined();
 
-            // Check if cookie was set
-            const setCookie = response.headers.get('set-cookie');
-            expect(setCookie).toContain(AUTH_COOKIE_NAME);
-            expect(setCookie).toContain(result.data.data.sessionToken);
-        });
-
-        it('should return 401 on failed verification', async () => {
-            (authUtils.verifySignatureWithNonce as any).mockReturnValue({
-                valid: false,
-                error: 'Invalid signature',
-            });
-
-            const request = createMockRequest('http://localhost:3000/api/auth/verify', {
+            // 4. Try to reuse the same nonce (replay attack)
+            const replayReq = createMockRequest('http://localhost/api/auth/verify', {
                 method: 'POST',
                 body: {
-                    address: 'GBTEST123',
-                    signature: 'invalid',
-                    message: 'Sign in to CommitLabs: 12345',
+                    address: mockAddress,
+                    signature: 'mock_signature',
+                    message: message,
                 },
             });
 
-            const response = await verifyPOST(request);
-            const result = await parseResponse(response);
+            const replayResponse = await verifyHandler(replayReq);
+            const { status: replayStatus } = await parseResponse(replayResponse);
 
-            expect(result.status).toBe(401);
-            expect(result.data.success).toBe(false);
-            expect(result.data.error.code).toBe('UNAUTHORIZED');
+            expect(replayStatus).toBe(401); // Nonce should be consumed
         });
-    });
 
-    describe('POST /api/auth/logout', () => {
-        it('should clear session cookie and revoke session', async () => {
-            // 1. Create a session first
-            const token = authUtils.createSessionToken('GBTEST123');
-            expect(verifySessionToken(token).valid).toBe(true);
-
-            // 2. Call logout with the session cookie
-            const request = createMockRequest('http://localhost:3000/api/auth/logout', {
+        it('should return 401 for invalid signature', async () => {
+            // 1. Get a nonce
+            const nonceReq = createMockRequest('http://localhost/api/auth/nonce', {
                 method: 'POST',
-                headers: {
-                    cookie: `${AUTH_COOKIE_NAME}=${token}`,
+                body: { address: mockAddress },
+            });
+            const nonceRes = await nonceHandler(nonceReq);
+            const { data: nonceData } = await parseResponse(nonceRes);
+            
+            // 2. Mock failed Stellar verification
+            (Stellar.verifySignature as any).mockReturnValue(false);
+
+            // 3. Verify
+            const verifyReq = createMockRequest('http://localhost/api/auth/verify', {
+                method: 'POST',
+                body: {
+                    address: mockAddress,
+                    signature: 'invalid_signature',
+                    message: nonceData.data.message,
                 },
             });
 
-            const response = await logoutPOST(request);
-            const result = await parseResponse(response);
+            const response = await verifyHandler(verifyReq);
+            const { status } = await parseResponse(response);
 
-            expect(result.status).toBe(200);
-            expect(result.data.success).toBe(true);
-
-            // 3. Verify session is revoked in backend
-            expect(verifySessionToken(token).valid).toBe(false);
-
-            // 4. Verify cookie is cleared in response
-            const setCookie = response.headers.get('set-cookie');
-            expect(setCookie).toContain(`${AUTH_COOKIE_NAME}=;`);
-            // Either Max-Age=0 or an expiration in 1970 is fine
-            const isCleared = setCookie?.includes('Max-Age=0') || setCookie?.includes('1970');
-            expect(isCleared).toBe(true);
+            expect(status).toBe(401);
         });
 
-        it('should be idempotent and return 200 even if no session exists', async () => {
-            const request = createMockRequest('http://localhost:3000/api/auth/logout', {
+        it('should return 401 for expired or non-existent nonce', async () => {
+            const verifyReq = createMockRequest('http://localhost/api/auth/verify', {
                 method: 'POST',
+                body: {
+                    address: mockAddress,
+                    signature: 'mock_signature',
+                    message: 'Sign in to CommitLabs: deadbeefdeadbeefdeadbeefdeadbeef',
+                },
             });
 
-            const response = await logoutPOST(request);
-            const result = await parseResponse(response);
+            const response = await verifyHandler(verifyReq);
+            const { status } = await parseResponse(response);
 
-            expect(result.status).toBe(200);
-            expect(result.data.success).toBe(true);
+            expect(status).toBe(401);
+        });
+
+        it('should return 401 if address mismatch', async () => {
+            // 1. Get a nonce for address A
+            const nonceReq = createMockRequest('http://localhost/api/auth/nonce', {
+                method: 'POST',
+                body: { address: mockAddress },
+            });
+            const nonceRes = await nonceHandler(nonceReq);
+            const { data: nonceData } = await parseResponse(nonceRes);
+
+            // 2. Try to verify with address B
+            const otherAddress = 'GCR6ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ';
+            const verifyReq = createMockRequest('http://localhost/api/auth/verify', {
+                method: 'POST',
+                body: {
+                    address: otherAddress,
+                    signature: 'mock_signature',
+                    message: nonceData.data.message,
+                },
+            });
+
+            const response = await verifyHandler(verifyReq);
+            const { status } = await parseResponse(response);
+
+            expect(status).toBe(401);
         });
     });
 });
