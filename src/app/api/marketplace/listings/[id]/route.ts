@@ -1,8 +1,10 @@
 import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
-import { ValidationError } from '@/lib/backend/errors';
+import { ok } from '@/lib/backend/apiResponse';
+import { ValidationError, UnauthorizedError, ForbiddenError, NotFoundError } from '@/lib/backend/errors';
 import { marketplaceService } from '@/lib/backend/services/marketplace';
+import { verifySessionToken } from '@/lib/backend/auth';
+import { logListingCancelled, logListingCancellationFailed } from '@/lib/backend/logger';
 import type { CancelListingResponse } from '@/types/marketplace';
 
 /**
@@ -10,8 +12,8 @@ import type { CancelListingResponse } from '@/types/marketplace';
  *
  * Cancel an existing marketplace listing
  *
- * Query parameters:
- *   sellerAddress: string (required) - Address of the seller cancelling the listing
+ * Headers:
+ *   Authorization: Bearer <token> (required)
  */
 export const DELETE = withApiHandler(
   async (req: NextRequest, { params }: { params: Record<string, string> }) => {
@@ -21,16 +23,41 @@ export const DELETE = withApiHandler(
       throw new ValidationError('Listing ID is required');
     }
 
-    // Get sellerAddress from query params
-    const { searchParams } = new URL(req.url);
-    const sellerAddress = searchParams.get('sellerAddress');
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedError('Missing or invalid authorization header');
+    }
 
-    if (!sellerAddress) {
-      throw new ValidationError('sellerAddress query parameter is required');
+    const token = authHeader.substring(7);
+    const session = verifySessionToken(token);
+
+    if (!session.valid || !session.address) {
+      throw new UnauthorizedError('Invalid or expired session token');
+    }
+
+    const sellerAddress = session.address;
+
+    const listing = await marketplaceService.getListing(listingId);
+    if (!listing) {
+      throw new NotFoundError('Listing', { listingId });
+    }
+
+    if (listing.sellerAddress !== sellerAddress) {
+      logListingCancellationFailed({
+        listingId,
+        sellerAddress,
+        reason: 'Unauthorized seller attempt'
+      });
+      throw new ForbiddenError('Only the seller can cancel this listing.');
     }
 
     // Cancel listing via service
     await marketplaceService.cancelListing(listingId, sellerAddress);
+
+    logListingCancelled({
+      listingId,
+      sellerAddress
+    });
 
     const response: CancelListingResponse = {
       listingId,

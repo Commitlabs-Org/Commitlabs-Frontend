@@ -399,6 +399,137 @@
   transform: translateX(2px);
 }
 
+/* Advanced Risk Settings */
+.advancedToggleContainer {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0.5rem 0 0 0;
+}
+
+.advancedToggleButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #00d4aa;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  border-radius: 8px;
+  transition: opacity 0.2s;
+}
+
+.advancedToggleButton:hover {
+  opacity: 0.8;
+}
+
+.advancedToggleIcon {
+  transition: transform 0.3s ease;
+}
+
+.advancedToggleIcon.expanded {
+  transform: rotate(180deg);
+}
+
+.advancedSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, padding 0.3s ease-in-out;
+  padding: 0;
+}
+
+.advancedSectionOpen {
+  max-height: 600px;
+  opacity: 1;
+  padding: 0.5rem 0;
+}
+
+/* Risk Score Banner */
+.riskScoreBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 30, 30, 0.5);
+  position: relative;
+}
+
+.riskScoreBanner.safe {
+  border-color: rgba(0, 212, 170, 0.4);
+  background: rgba(0, 212, 170, 0.05);
+}
+.riskScoreBanner.safe .riskScoreIcon {
+  color: #00d4aa;
+}
+
+.riskScoreBanner.standard {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(40, 40, 40, 0.5);
+}
+.riskScoreBanner.standard .riskScoreIcon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.riskScoreBanner.high {
+  border-color: rgba(245, 166, 35, 0.4);
+  background: rgba(245, 166, 35, 0.05);
+}
+.riskScoreBanner.high .riskScoreIcon {
+  color: #f5a623;
+}
+
+.riskScoreIcon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.riskScoreContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  padding-right: 3rem; /* Space for reset button */
+}
+
+.riskScoreTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.riskScoreDescription {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.resetDefaultsButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.resetDefaultsButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .contentWrapper {
