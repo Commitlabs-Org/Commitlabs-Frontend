@@ -1,15 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST, PUT, PATCH, DELETE } from './route';
 import { NextRequest } from 'next/server';
-import { marketplaceService } from '@/lib/backend/services/marketplace';
+import { marketplaceService, listMarketplaceListings, isMarketplaceSortBy } from '@/lib/backend/services/marketplace';
 import { ValidationError, ConflictError } from '@/lib/backend/errors';
-import type { MarketplaceListing } from '@/lib/types/domain';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
+import type { MarketplaceListing, MarketplacePublicListing } from '@/lib/types/domain';
 
-// Mock the marketplace service
+// Mock the marketplace service and related functions
 vi.mock('@/lib/backend/services/marketplace', () => ({
   marketplaceService: {
     createListing: vi.fn(),
   },
+  listMarketplaceListings: vi.fn(),
+  isMarketplaceSortBy: vi.fn(),
+  getMarketplaceSortKeys: vi.fn(() => ['price', 'amount']),
+}));
+
+// Mock rate limiting
+vi.mock('@/lib/backend/rateLimit', () => ({
+  checkRateLimit: vi.fn(),
 }));
 
 describe('POST /api/marketplace/listings', () => {
