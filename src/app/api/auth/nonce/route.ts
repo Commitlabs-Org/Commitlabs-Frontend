@@ -4,6 +4,7 @@ import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
+import { validationErrorFromZod } from '@/lib/backend/validationErrors';
 import { generateNonce, storeNonce, generateChallengeMessage } from '@/lib/backend/auth';
 import { getClientIp } from '@/lib/backend/getClientIp';
 
