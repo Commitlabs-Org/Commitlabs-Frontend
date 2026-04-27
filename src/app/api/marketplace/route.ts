@@ -1,5 +1,6 @@
 // src/app/api/marketplace/route.ts
 import { NextRequest } from "next/server";
+import { methodNotAllowed } from "@/lib/backend/apiResponse";
 import {
   applyCorsPolicy,
   createCorsOptionsHandler,
@@ -113,3 +114,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+const _405 = methodNotAllowed(['GET', 'POST']);
+export { _405 as PUT, _405 as PATCH, _405 as DELETE };

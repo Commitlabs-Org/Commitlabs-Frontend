@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { methodNotAllowed } from '@/lib/backend/apiResponse';
 import {
   ChainCommitment,
   getUserCommitmentsFromChain
@@ -140,3 +141,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+const _405 = methodNotAllowed(['GET']);
+export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

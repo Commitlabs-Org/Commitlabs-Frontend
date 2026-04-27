@@ -1,12 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { methodNotAllowed } from '@/lib/backend/apiResponse';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { logger } from '@/lib/backend';
-import {
-  applyCorsPolicy,
-  createCorsOptionsHandler,
-  enforceCorsRequestPolicy,
-  toCorsErrorResponse,
-  type CorsRoutePolicy,
-} from '@/lib/backend/cors';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
 
 const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL;
 const READY_CORS_POLICY = {
@@ -21,12 +17,11 @@ async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: numb
 
   const start = Date.now();
   try {
-    // Lightweight JSON-RPC ping — getHealth is the canonical no-op probe
     const response = await fetch(SOROBAN_RPC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getHealth', params: [] }),
-      signal: AbortSignal.timeout(5_000), // 5 s hard timeout
+      signal: AbortSignal.timeout(5_000),
     });
 
     const latencyMs = Date.now() - start;
@@ -48,30 +43,22 @@ async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: numb
 
 export const OPTIONS = createCorsOptionsHandler(READY_CORS_POLICY);
 
-export async function GET(request: NextRequest) {
-  try {
-    enforceCorsRequestPolicy(request, READY_CORS_POLICY);
-  } catch (error) {
-    return toCorsErrorResponse(error);
-  }
-
+export const GET = withApiHandler(async () => {
   logger.info('Readiness check requested');
 
   const rpc = await checkSorobanRpc();
-  const ready = rpc.reachable || !SOROBAN_RPC_URL; // still ready if RPC is simply not configured
-
+  const ready = rpc.reachable || !SOROBAN_RPC_URL;
   const body = {
     status: ready ? 'ready' : 'not_ready',
     timestamp: new Date().toISOString(),
     checks: {
-      sorobanRpc: SOROBAN_RPC_URL
-        ? { ...rpc }
-        : { reachable: null, note: 'not configured' },
+      sorobanRpc: SOROBAN_RPC_URL ? { ...rpc } : { reachable: null, note: 'not configured' },
     },
   };
 
   logger.info('Readiness check complete', { ready, rpc });
+  return NextResponse.json(body, { status: ready ? 200 : 503 });
+}, { cors: READY_CORS_POLICY });
 
-  const response = NextResponse.json(body, { status: ready ? 200 : 503 });
-  return applyCorsPolicy(request, response, READY_CORS_POLICY);
-}
+const _405 = methodNotAllowed(['GET']);
+export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

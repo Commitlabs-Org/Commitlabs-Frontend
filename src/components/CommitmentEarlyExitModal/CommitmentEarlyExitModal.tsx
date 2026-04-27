@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, X, ChevronRight, Info } from 'lucide-react';
+import { AlertTriangle, X, Info } from 'lucide-react';
 
 export interface CommitmentEarlyExitModalProps {
   isOpen: boolean;
@@ -39,9 +39,9 @@ export default function CommitmentEarlyExitModal({
     return () => setMounted(false);
   }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     (onClose ?? onCancel)();
-  };
+  }, [onClose, onCancel]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -74,7 +74,7 @@ export default function CommitmentEarlyExitModal({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen || !mounted) return null;
 

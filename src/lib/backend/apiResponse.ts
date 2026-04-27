@@ -1,46 +1,48 @@
-import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
 
-// ─── Success shape ────────────────────────────────────────────────────────────
+type NextRouteHandler = (
+  req: NextRequest,
+  ctx?: unknown,
+) => NextResponse | Promise<NextResponse>;
 
 export interface OkResponse<T> {
   success: true;
   data: T;
-  meta?: Record<string, unknown>;
+  meta?: {
+    correlationId?: string;
+    timestamp?: string;
+    [key: string]: unknown;
+  };
 }
-
-// ─── Error shape ──────────────────────────────────────────────────────────────
 
 export interface FailResponse {
   success: false;
   error: {
     code: string;
     message: string;
+    correlationId?: string;
+    timestamp?: string;
     details?: unknown;
+    retryAfterSeconds?: number;
   };
 }
 
 export type ApiResponse<T> = OkResponse<T> | FailResponse;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+export function getCorrelationId(req: NextRequest): string {
+  return (
+    req.headers.get("x-correlation-id") ??
+    req.headers.get("x-request-id") ??
+    randomBytes(16).toString("hex")
+  );
+}
 
-/**
- * Returns a standard JSON success response.
- *
- * @example
- * return ok({ status: 'healthy' });
- * // { ok: true, data: { status: 'healthy' } }
- *
- * @example
- * return ok(items, { total: 42, page: 1 });
- * // { ok: true, data: [...], meta: { total: 42, page: 1 } }
- *
- * @example
- * return ok(data, 201);  // custom HTTP status, no meta
- */
 export function ok<T>(
   data: T,
   metaOrStatus?: Record<string, unknown> | number,
   status = 200,
+  correlationId?: string,
 ): NextResponse<OkResponse<T>> {
   let resolvedMeta: Record<string, unknown> | undefined;
   let resolvedStatus = status;
@@ -51,38 +53,92 @@ export function ok<T>(
     resolvedMeta = metaOrStatus;
   }
 
-  const body: OkResponse<T> =
-    resolvedMeta !== undefined
-      ? { success: true, data, meta: resolvedMeta }
-      : { success: true, data };
-  return NextResponse.json(body, { status: resolvedStatus });
+  const meta =
+    correlationId || resolvedMeta
+      ? {
+          ...(correlationId ? { correlationId } : {}),
+          timestamp: new Date().toISOString(),
+          ...(resolvedMeta ?? {}),
+        }
+      : undefined;
+
+  const response = NextResponse.json<OkResponse<T>>(
+    {
+      success: true,
+      data,
+      ...(meta ? { meta } : {}),
+    },
+    { status: resolvedStatus },
+  );
+
+  if (correlationId) {
+    response.headers.set("x-correlation-id", correlationId);
+    response.headers.set("x-request-id", correlationId);
+  }
+
+  return response;
 }
 
-/**
- * Returns a standard JSON error response.
- *
- * @param code    - Short machine-readable error code, e.g. 'NOT_FOUND'
- * @param message - Human-readable description safe for UI display
- * @param details - Optional extra context (omit in production for sensitive errors)
- * @param status  - HTTP status code (default 500)
- *
- * @example
- * return fail('NOT_FOUND', 'Commitment not found.', undefined, 404);
- * // { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
- */
+export function methodNotAllowed(allowed: string[]): NextRouteHandler {
+  const allowHeader = allowed.join(", ");
+  return (): NextResponse<FailResponse> =>
+    NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "METHOD_NOT_ALLOWED",
+          message: `Method Not Allowed. Supported methods: ${allowHeader}`,
+        },
+      },
+      {
+        status: 405,
+        headers: { Allow: allowHeader },
+      },
+    );
+}
+
 export function fail(
   code: string,
   message: string,
   details?: unknown,
   status = 500,
+  retryAfterOrCorrelationId?: number | string,
+  correlationIdArg?: string,
 ): NextResponse<FailResponse> {
-  const body: FailResponse = {
-    success: false,
-    error: {
-      code,
-      message,
-      ...(details !== undefined ? { details } : {}),
+  const retryAfterSeconds =
+    typeof retryAfterOrCorrelationId === "number"
+      ? retryAfterOrCorrelationId
+      : undefined;
+  const correlationId =
+    typeof retryAfterOrCorrelationId === "string"
+      ? retryAfterOrCorrelationId
+      : correlationIdArg;
+
+  const response = NextResponse.json<FailResponse>(
+    {
+      success: false,
+      error: {
+        code,
+        message,
+        ...(correlationId ? { correlationId } : {}),
+        timestamp: new Date().toISOString(),
+        ...(details !== undefined ? { details } : {}),
+        ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
+      },
     },
-  };
-  return NextResponse.json(body, { status });
+    {
+      status,
+      headers:
+        retryAfterSeconds !== undefined
+          ? { "Retry-After": String(retryAfterSeconds) }
+          : undefined,
+    },
+  );
+
+  if (correlationId) {
+    response.headers.set("x-correlation-id", correlationId);
+    response.headers.set("x-request-id", correlationId);
+  }
+
+  return response;
 }

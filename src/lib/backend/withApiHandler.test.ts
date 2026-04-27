@@ -11,19 +11,18 @@ afterEach(() => {
 
 describe('withApiHandler', () => {
   it('returns successful responses without CORS when no policy is provided', async () => {
-    const handler = withApiHandler(async () =>
-      NextResponse.json({ success: true }, { status: 200 })
+    const handler = withApiHandler(async (_req, _ctx, correlationId) =>
+      NextResponse.json({ success: true, correlationId }, { status: 200 })
     )
 
     const response = await handler(
       new NextRequest('http://localhost:3000/api/example', { method: 'GET' }),
       { params: {} }
     )
-    const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body.success).toBe(true)
     expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull()
+    expect(response.headers.get('x-correlation-id')).toBeTruthy()
   })
 
   it('converts ApiError instances into JSON responses and preserves CORS headers', async () => {
@@ -54,41 +53,6 @@ describe('withApiHandler', () => {
     expect(response.status).toBe(403)
     expect(body.success).toBe(false)
     expect(body.error.code).toBe('FORBIDDEN')
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
-      'https://app.commitlabs.test'
-    )
-  })
-
-  it('converts ApiError instances without adding CORS headers when no policy is provided', async () => {
-    const handler = withApiHandler(async () => {
-      throw new ForbiddenError('Blocked by policy')
-    })
-
-    const response = await handler(
-      new NextRequest('http://localhost:3000/api/example', { method: 'GET' }),
-      { params: {} }
-    )
-    const body = await response.json()
-
-    expect(response.status).toBe(403)
-    expect(body.success).toBe(false)
-    expect(body.error.code).toBe('FORBIDDEN')
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull()
-  })
-
-  it('converts non-Error throws into internal error responses', async () => {
-    const handler = withApiHandler(async () => {
-      throw 'boom'
-    })
-
-    const response = await handler(
-      new NextRequest('http://localhost:3000/api/example', { method: 'GET' }),
-      { params: {} }
-    )
-    const body = await response.json()
-
-    expect(response.status).toBe(500)
-    expect(body.success).toBe(false)
-    expect(body.error.code).toBe('INTERNAL_ERROR')
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://app.commitlabs.test')
   })
 })

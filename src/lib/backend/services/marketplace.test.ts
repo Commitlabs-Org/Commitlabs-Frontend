@@ -1,14 +1,75 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { marketplaceService } from './marketplace';
+import { describe, it, expect } from 'vitest';
+import {
+  FEATURED_MARKETPLACE_CONFIG,
+  marketplaceService,
+  selectFeaturedMarketplaceListings,
+  type MarketplacePublicListing,
+} from './marketplace';
 import { ValidationError, ConflictError, NotFoundError } from '../errors';
-import type { CreateListingRequest } from '@/types/marketplace';
+import type { CreateListingRequest } from '@/lib/types/domain';
+
+describe('Marketplace Functions', () => {
+  describe('isMarketplaceSortBy', () => {
+    it('should return true for valid sort keys', () => {
+      expect(isMarketplaceSortBy('price')).toBe(true);
+      expect(isMarketplaceSortBy('amount')).toBe(true);
+    });
+
+    it('should return false for invalid sort keys', () => {
+      expect(isMarketplaceSortBy('invalid')).toBe(false);
+    });
+  });
+
+  describe('getMarketplaceSortKeys', () => {
+    it('should return all valid sort keys', () => {
+      const keys = getMarketplaceSortKeys();
+      expect(keys).toContain('price');
+      expect(keys).toContain('amount');
+      expect(keys).toContain('complianceScore');
+    });
+  });
+
+  describe('listMarketplaceListings', () => {
+    it('should return all listings by default', async () => {
+      const listings = await listMarketplaceListings({});
+      expect(listings.length).toBeGreaterThan(0);
+    });
+
+    it('should filter by type', async () => {
+      const listings = await listMarketplaceListings({ type: 'Safe' });
+      listings.forEach(l => expect(l.type).toBe('Safe'));
+    });
+
+    it('should filter by minCompliance', async () => {
+      const listings = await listMarketplaceListings({ minCompliance: 90 });
+      listings.forEach(l => expect(l.complianceScore).toBeGreaterThanOrEqual(90));
+    });
+
+    it('should filter by maxLoss', async () => {
+      const listings = await listMarketplaceListings({ maxLoss: 5 });
+      listings.forEach(l => expect(l.maxLoss).toBeLessThanOrEqual(5));
+    });
+
+    it('should filter by minAmount', async () => {
+      const listings = await listMarketplaceListings({ minAmount: 100000 });
+      listings.forEach(l => expect(l.amount).toBeGreaterThanOrEqual(100000));
+    });
+
+    it('should filter by maxAmount', async () => {
+      const listings = await listMarketplaceListings({ maxAmount: 100000 });
+      listings.forEach(l => expect(l.amount).toBeLessThanOrEqual(100000));
+    });
+
+    it('should sort by remainingDays ascending', async () => {
+      const listings = await listMarketplaceListings({ sortBy: 'remainingDays' });
+      for (let i = 0; i < listings.length - 1; i++) {
+        expect(listings[i].remainingDays).toBeLessThanOrEqual(listings[i+1].remainingDays);
+      }
+    });
+  });
+});
 
 describe('MarketplaceService', () => {
-  // Reset service state before each test
-  beforeEach(() => {
-    // Clear internal state by creating listings and then accessing private members
-    // Since we can't directly access private members, we'll work with the public API
-  });
 
   describe('createListing', () => {
     it('should create a valid listing', async () => {
@@ -218,6 +279,104 @@ describe('MarketplaceService', () => {
     it('should return null when listing does not exist', async () => {
       const listing = await marketplaceService.getListing('nonexistent_id');
       expect(listing).toBeNull();
+    });
+  });
+
+  describe('selectFeaturedMarketplaceListings', () => {
+    const sampleListings: MarketplacePublicListing[] = [
+      {
+        listingId: 'LST-010',
+        commitmentId: 'CMT-010',
+        type: 'Balanced',
+        amount: 90000,
+        remainingDays: 30,
+        maxLoss: 8,
+        currentYield: 11.1,
+        complianceScore: 90,
+        price: 91000,
+      },
+      {
+        listingId: 'LST-002',
+        commitmentId: 'CMT-002',
+        type: 'Safe',
+        amount: 80000,
+        remainingDays: 20,
+        maxLoss: 2,
+        currentYield: 5.5,
+        complianceScore: 95,
+        price: 83000,
+      },
+      {
+        listingId: 'LST-001',
+        commitmentId: 'CMT-001',
+        type: 'Safe',
+        amount: 70000,
+        remainingDays: 18,
+        maxLoss: 2,
+        currentYield: 5.5,
+        complianceScore: 95,
+        price: 83000,
+      },
+      {
+        listingId: 'LST-011',
+        commitmentId: 'CMT-011',
+        type: 'Aggressive',
+        amount: 120000,
+        remainingDays: 35,
+        maxLoss: 12,
+        currentYield: 15.2,
+        complianceScore: 93,
+        price: 124000,
+      },
+      {
+        listingId: 'LST-012',
+        commitmentId: 'CMT-012',
+        type: 'Balanced',
+        amount: 110000,
+        remainingDays: 28,
+        maxLoss: 8,
+        currentYield: 10.4,
+        complianceScore: 84,
+        price: 112000,
+      },
+    ];
+
+    it('applies the featured criteria before returning listings', () => {
+      const featured = selectFeaturedMarketplaceListings(sampleListings);
+
+      expect(featured).toHaveLength(3);
+      expect(featured.every((listing) => listing.complianceScore >= FEATURED_MARKETPLACE_CONFIG.minComplianceScore)).toBe(true);
+      expect(featured.every((listing) => listing.maxLoss <= FEATURED_MARKETPLACE_CONFIG.maxLoss)).toBe(true);
+      expect(featured.map((listing) => listing.listingId)).toEqual([
+        'LST-001',
+        'LST-002',
+        'LST-010',
+      ]);
+    });
+
+    it('returns a deterministic order for identical inputs', () => {
+      const first = selectFeaturedMarketplaceListings(sampleListings);
+      const second = selectFeaturedMarketplaceListings(sampleListings);
+
+      expect(first).toEqual(second);
+    });
+
+    it('returns an empty array when no listings satisfy the featured criteria', () => {
+      const featured = selectFeaturedMarketplaceListings([
+        {
+          listingId: 'LST-099',
+          commitmentId: 'CMT-099',
+          type: 'Aggressive',
+          amount: 150000,
+          remainingDays: 60,
+          maxLoss: 25,
+          currentYield: 19.5,
+          complianceScore: 70,
+          price: 160000,
+        },
+      ]);
+
+      expect(featured).toEqual([]);
     });
   });
 });

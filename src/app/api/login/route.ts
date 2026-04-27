@@ -7,6 +7,7 @@ import {
   type CorsRoutePolicy,
 } from '@/lib/backend/cors';
 import { attachSecurityHeaders } from '@/utils/response';
+import { methodNotAllowed } from '@/lib/backend/apiResponse';
 
 const LOGIN_CORS_POLICY = {
   POST: { access: 'first-party' },
@@ -30,3 +31,6 @@ export async function POST(request: NextRequest) {
   attachSecurityHeaders(response, "default-src 'self'; script-src 'self' 'unsafe-inline'");
   return applyCorsPolicy(request, response, LOGIN_CORS_POLICY);
 }
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

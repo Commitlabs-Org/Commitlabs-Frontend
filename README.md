@@ -159,6 +159,9 @@ trusted first-party origins with `COMMITLABS_FIRST_PARTY_ORIGINS` and public
 browser origins with `COMMITLABS_PUBLIC_API_ORIGINS`. See
 [docs/backend-cors-policy.md](docs/backend-cors-policy.md) for the route
 strategy and allowed methods.
+Backend API storage uses a provider-agnostic adapter. Configure
+`COMMITLABS_STORAGE_PROVIDER=memory` by default and see
+[docs/backend-storage.md](docs/backend-storage.md) for adapter details.
 
 ## 📂 Project Structure
 
@@ -225,6 +228,7 @@ A description of the backend endpoints exposed under `/api` can be found in:
 
 - [docs/backend-api-reference.md](./docs/backend-api-reference.md)
 - [docs/backend-cors-policy.md](./docs/backend-cors-policy.md)
+- [docs/backend-storage.md](./docs/backend-storage.md)
 
 This document includes available routes, required parameters, and example
 requests/responses.  It is intended for developers building against or testing

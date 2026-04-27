@@ -19,14 +19,68 @@ origin configuration and route classification.
 
 ---
 
+## Standard Response Conventions
+
+All endpoints follow these conventions.
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": { ... }       // optional pagination / additional metadata
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TOO_MANY_REQUESTS",
+    "message": "Too many requests. Please try again later.",
+    "retryAfterSeconds": 60  // present on 429 and 503 only
+  }
+}
+```
+
+### Rate Limited Responses (429 / 503)
+
+When a request is rate-limited, the response includes the `Retry-After` HTTP header:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
+
+| Status | `retryAfterSeconds` default | Meaning |
+|--------|---------------------------|---------|
+| 429 | 60 s | Client exceeded rate limit |
+| 503 | 30 s | Service temporarily unavailable |
+
+Clients should wait the indicated seconds before retrying. See [error-handling.md](./error-handling.md) for the full client retry strategy (exponential backoff + jitter).
+
+---
+
 ## `POST /api/commitments`
 
-Creates a new commitment.  In the stub implementation, no persistence occurs;
-this route is mainly used to log `CommitmentCreated` analytics events.
+Creates a new commitment on the Stellar network.
 
-- **Request body**: arbitrary JSON with commitment parameters (amount, term,
-etc.)
-- **Response**: stub message with the requester IP.
+- **Headers**:
+    - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Recommended for safe retries.
+- **Request body**:
+    - `ownerAddress`: (string, required) The Stellar address of the owner.
+    - `asset`: (string, required) The asset code.
+    - `amount`: (string, required) The amount to commit.
+    - `durationDays`: (number, required) The duration of the commitment in days.
+    - `maxLossBps`: (number, required) Maximum loss in basis points.
+    - `metadata`: (object, optional) Additional metadata.
+- **Response**:
+    - `201 Created`: The commitment was successfully created.
+    - `409 Conflict`: A request with the same `Idempotency-Key` is already in progress.
+    - `429 Too Many Requests`: Rate limit exceeded.
 
 ### Example
 
@@ -118,6 +172,35 @@ curl -X POST http://localhost:3000/api/attestations \
 {
   "message": "Attestations recording endpoint stub - rate limiting applied",
   "ip": "::1"
+}
+```
+
+---
+
+## `GET /api/protocol/constants`
+
+Returns the public protocol constants used by UX copy and calculations, including fee parameters, penalty tiers, and commitment limits. This endpoint is public and includes caching headers.
+
+### Example
+
+```bash
+curl http://localhost:3000/api/protocol/constants
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "protocolVersion": "v1",
+    "network": "Test SDF Network ; September 2015",
+    "fees": {
+      "networkBaseFeeStroops": 100,
+      "platformFeePercent": 0
+    },
+    "penalties": [...],
+    "commitmentLimits": { ... },
+    "cachedAt": "2026-02-25T00:00:00.000Z"
+  }
 }
 ```
 
