@@ -5,6 +5,13 @@ import {
   getUserCommitmentsFromChain
 } from '@/lib/backend/services/contracts';
 import {
+  applyCorsPolicy,
+  createCorsOptionsHandler,
+  enforceCorsRequestPolicy,
+  toCorsErrorResponse,
+  type CorsRoutePolicy,
+} from '@/lib/backend/cors';
+import {
   BackendError,
   normalizeBackendError,
   toBackendErrorResponse
@@ -20,6 +27,12 @@ interface UserAnalyticsResponse {
   averageComplianceScore: number;
   violationCount: number;
 }
+
+const ANALYTICS_USER_CORS_POLICY = {
+  GET: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
+
+export const OPTIONS = createCorsOptionsHandler(ANALYTICS_USER_CORS_POLICY);
 
 function sumNumericStringField(
   commitments: ChainCommitment[],
@@ -65,6 +78,12 @@ function buildUserAnalytics(
 }
 
 export async function GET(req: NextRequest) {
+  try {
+    enforceCorsRequestPolicy(req, ANALYTICS_USER_CORS_POLICY);
+  } catch (error) {
+    return toCorsErrorResponse(error);
+  }
+
   if (!isFeatureEnabled('analyticsUser')) {
     const error = new BackendError({
       code: 'NOT_FOUND',
@@ -73,9 +92,13 @@ export async function GET(req: NextRequest) {
       details: { feature: 'analyticsUser' }
     });
 
-    return NextResponse.json(toBackendErrorResponse(error), {
-      status: error.status
-    });
+    return applyCorsPolicy(
+      req,
+      NextResponse.json(toBackendErrorResponse(error), {
+        status: error.status
+      }),
+      ANALYTICS_USER_CORS_POLICY
+    );
   }
 
   const ownerAddress = req.nextUrl.searchParams.get('ownerAddress')?.trim();
@@ -86,14 +109,22 @@ export async function GET(req: NextRequest) {
       message: 'Query param ownerAddress is required.',
       status: 400
     });
-    return NextResponse.json(toBackendErrorResponse(error), {
-      status: error.status
-    });
+    return applyCorsPolicy(
+      req,
+      NextResponse.json(toBackendErrorResponse(error), {
+        status: error.status
+      }),
+      ANALYTICS_USER_CORS_POLICY
+    );
   }
 
   try {
     const commitments = await getUserCommitmentsFromChain(ownerAddress);
-    return NextResponse.json(buildUserAnalytics(ownerAddress, commitments));
+    return applyCorsPolicy(
+      req,
+      NextResponse.json(buildUserAnalytics(ownerAddress, commitments)),
+      ANALYTICS_USER_CORS_POLICY
+    );
   } catch (error) {
     const normalized = normalizeBackendError(error, {
       code: 'INTERNAL_ERROR',
@@ -101,9 +132,13 @@ export async function GET(req: NextRequest) {
       status: 500
     });
 
-    return NextResponse.json(toBackendErrorResponse(normalized), {
-      status: normalized.status
-    });
+    return applyCorsPolicy(
+      req,
+      NextResponse.json(toBackendErrorResponse(normalized), {
+        status: normalized.status
+      }),
+      ANALYTICS_USER_CORS_POLICY
+    );
   }
 }
 

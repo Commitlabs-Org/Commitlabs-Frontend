@@ -1,0 +1,48 @@
+{
+  "name": "commitlabs-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "seed:mock": "tsx scripts/seed-backend-mock.ts"
+  },
+  "dependencies": {
+    "@stellar/freighter-api": "^1.6.0",
+    "@stellar/stellar-sdk": "^11.2.2",
+    "@tailwindcss/postcss": "^4.1.18",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.29.2",
+    "lucide-react": "^0.563.0",
+    "next": "^14.0.0",
+    "postcss": "^8.5.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.1.18",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20.19.33",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/ui": "^4.0.18",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0",
+    "happy-dom": "^20.7.0",
+    "node-fetch": "^3.3.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.18"
+  }
+}

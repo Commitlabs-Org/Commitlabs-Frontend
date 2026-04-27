@@ -1,14 +1,15 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod';
-import { checkRateLimit } from "@/lib/backend/rateLimit";
-import { withApiHandler } from "@/lib/backend/withApiHandler";
-import { ok, fail, methodNotAllowed } from "@/lib/backend/apiResponse";
-import { TooManyRequestsError } from "@/lib/backend/errors";
+import { fail, ok, methodNotAllowed } from "@/lib/backend/apiResponse";
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { TooManyRequestsError, ValidationError } from "@/lib/backend/errors";
+import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from "@/lib/backend/jsonBodyLimit";
+import { checkRateLimit } from "@/lib/backend/rateLimit";
 import { getUserCommitmentsFromChain, createCommitmentOnChain } from "@/lib/backend/services/contracts";
 import { validateStellarAddress } from "@/lib/backend/validation";
+import { withApiHandler } from "@/lib/backend/withApiHandler";
 
-// Query validation schema
 const CommitmentsQuerySchema = z.object({
   ownerAddress: z.string().min(1, "ownerAddress is required"),
   page: z.coerce.number().min(1).default(1),
@@ -27,118 +28,83 @@ interface CreateCommitmentRequestBody {
   metadata?: Record<string, unknown>;
 }
 
+const COMMITMENTS_CORS_POLICY = {
+  GET: { access: 'first-party' },
+  POST: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
 
-export const GET = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
+export const OPTIONS = createCorsOptionsHandler(COMMITMENTS_CORS_POLICY);
+
+export const GET = withApiHandler(async (req: NextRequest, _context, correlationId) => {
   const { searchParams } = new URL(req.url);
-
-  // Validate query parameters using Zod
   const queryResult = CommitmentsQuerySchema.safeParse(Object.fromEntries(searchParams.entries()));
 
   if (!queryResult.success) {
-    throw new ValidationError("Invalid query parameters", queryResult.error.errors);
+    throw new ValidationError("Invalid query parameters", queryResult.error.issues);
   }
 
   const { ownerAddress, page, pageSize, status, type, minCompliance } = queryResult.data;
-
   const ip = getClientIp(req);
-
-  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, "api/commitments");
-  if (!allowed) {
-    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
+  if (!(await checkRateLimit(ip, "api/commitments"))) {
+    throw new TooManyRequestsError();
   }
 
   const commitments = await getUserCommitmentsFromChain(ownerAddress);
-
-  // Map and add derived/placeholder fields if needed
-  let mapped = commitments.map((c) => ({
-    commitmentId: String(c.id),
+  let mapped = commitments.map((c: any) => ({
+    commitmentId: String(c.id ?? c.commitmentId),
     ownerAddress: c.ownerAddress,
     asset: c.asset,
     amount: typeof c.amount === 'bigint' ? String(c.amount) : c.amount,
     status: c.status,
     complianceScore: c.complianceScore,
-    // Note: 'type' is not natively on chain, using a placeholder or metadata if available
-    type: 'Safe', // Placeholder: in a real app, this would be derived or stored in metadata
-    currentValue:
-      typeof c.currentValue === "bigint"
-        ? c.currentValue
-        : c.currentValue,
+    type: 'Safe',
+    currentValue: typeof c.currentValue === "bigint" ? String(c.currentValue) : c.currentValue,
     feeEarned: c.feeEarned,
     violationCount: c.violationCount,
     createdAt: c.createdAt,
     expiresAt: c.expiresAt,
   }));
 
-  // Apply Filters
-  if (status) {
-    mapped = mapped.filter(c => c.status === status);
-  }
+  if (status) mapped = mapped.filter((c) => c.status === status);
+  if (type) mapped = mapped.filter((c) => c.type.toLowerCase() === type.toLowerCase());
+  if (minCompliance !== undefined) mapped = mapped.filter((c) => c.complianceScore >= minCompliance);
 
-  if (type) {
-    mapped = mapped.filter(c => c.type.toLowerCase() === type.toLowerCase());
-  }
-
-  if (minCompliance !== undefined) {
-    mapped = mapped.filter(c => c.complianceScore >= minCompliance);
-  }
-
-  // Apply Pagination
   const total = mapped.length;
   const start = (page - 1) * pageSize;
   const items = mapped.slice(start, start + pageSize);
 
-  return ok({
-    items,
-    page,
-    pageSize,
-    total,
-  });
-});
+  return ok({ items, page, pageSize, total }, undefined, 200, correlationId);
+}, { cors: COMMITMENTS_CORS_POLICY });
 
-export const POST = withApiHandler(async (req: NextRequest) => {
+export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
   const ip = getClientIp(req);
-
-  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, "api/commitments");
-  if (!allowed) {
-    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
+  if (!(await checkRateLimit(ip, "api/commitments"))) {
+    throw new TooManyRequestsError();
   }
 
   const parsed = await parseJsonWithLimit(req, {
     limitBytes: JSON_BODY_LIMITS.commitmentsCreate,
   });
   const body = (parsed ?? {}) as Partial<CreateCommitmentRequestBody>;
-
-  const {
-    ownerAddress,
-    asset,
-    amount,
-    durationDays,
-    maxLossBps,
-    metadata,
-  } = body;
+  const { ownerAddress, asset, amount, durationDays, maxLossBps, metadata } = body;
 
   if (!ownerAddress || typeof ownerAddress !== "string") {
     return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400, correlationId);
   }
-
   try {
     validateStellarAddress(ownerAddress, "ownerAddress");
   } catch {
-    return fail("Invalid ownerAddress: must be a valid Stellar address (G... format).", "BAD_REQUEST", 400);
+    return fail("BAD_REQUEST", "Invalid ownerAddress: must be a valid Stellar address (G... format).", undefined, 400, correlationId);
   }
-
   if (!asset || typeof asset !== "string") {
     return fail("BAD_REQUEST", "Invalid asset", undefined, 400, correlationId);
   }
-
   if (!amount || isNaN(Number(amount))) {
     return fail("BAD_REQUEST", "Invalid amount", undefined, 400, correlationId);
   }
-
   if (!durationDays || durationDays <= 0) {
     return fail("BAD_REQUEST", "Invalid durationDays", undefined, 400, correlationId);
   }
-
   if (maxLossBps == null || maxLossBps < 0) {
     return fail("BAD_REQUEST", "Invalid maxLossBps", undefined, 400, correlationId);
   }
@@ -146,14 +112,14 @@ export const POST = withApiHandler(async (req: NextRequest) => {
   const result = await createCommitmentOnChain({
     ownerAddress,
     asset,
-    amount: parsedAmount,
-    durationDays: parsedDuration,
-    maxLossBps: parsedMaxLossBps,
+    amount,
+    durationDays,
+    maxLossBps,
     metadata,
   });
 
   return ok(result, undefined, 201, correlationId);
-});
+}, { cors: COMMITMENTS_CORS_POLICY });
 
 const _405 = methodNotAllowed(['GET', 'POST']);
 export { _405 as PUT, _405 as PATCH, _405 as DELETE };

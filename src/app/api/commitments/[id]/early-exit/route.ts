@@ -1,36 +1,43 @@
 import { NextRequest } from 'next/server';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { TooManyRequestsError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { logEarlyExit } from '@/lib/backend/logger';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError } from '@/lib/backend/errors';
 
-export const POST = withApiHandler(async (req: NextRequest, context: { params: Record<string, string> }) => {
-  assertMutationCsrf(req);
+const COMMITMENT_EARLY_EXIT_CORS_POLICY = {
+  POST: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
 
-export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
-    const { id } = params;
-    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+export const OPTIONS = createCorsOptionsHandler(COMMITMENT_EARLY_EXIT_CORS_POLICY);
 
-    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(ip, 'api/commitments/early-exit'))) {
+    throw new TooManyRequestsError();
+  }
 
-    const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/commitments/early-exit');
-    if (!allowed) {
-        throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
-    }
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
 
-    let body: Record<string, unknown> = {};
-    try {
-        body = await req.json();
-    } catch {
-        // non-fatal - log and continue
-    }
+  logEarlyExit({ ip, commitmentId: params.id, ...body });
 
-    logEarlyExit({ ip, commitmentId: id, ...body });
+  return ok(
+    {
+      message: `Stub early-exit endpoint for commitment ${params.id}`,
+      commitmentId: params.id,
+    },
+    undefined,
+    200,
+    correlationId,
+  );
+}, { cors: COMMITMENT_EARLY_EXIT_CORS_POLICY });
 
-    return ok({
-        message: `Stub early-exit endpoint for commitment ${id}`,
-        commitmentId: id,
-    });
-});
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

@@ -2,6 +2,13 @@
 import { NextRequest } from "next/server";
 import { methodNotAllowed } from "@/lib/backend/apiResponse";
 import {
+  applyCorsPolicy,
+  createCorsOptionsHandler,
+  enforceCorsRequestPolicy,
+  toCorsErrorResponse,
+  type CorsRoutePolicy,
+} from "@/lib/backend/cors";
+import {
   validatePagination,
   validateFilters,
   validateAmount,
@@ -9,7 +16,20 @@ import {
   createMarketplaceListingSchema,
 } from "@/lib/backend/validation";
 
+const MARKETPLACE_CORS_POLICY = {
+  GET: { access: 'public' },
+  POST: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
+
+export const OPTIONS = createCorsOptionsHandler(MARKETPLACE_CORS_POLICY);
+
 export async function GET(request: NextRequest) {
+  try {
+    enforceCorsRequestPolicy(request, MARKETPLACE_CORS_POLICY);
+  } catch (error) {
+    return toCorsErrorResponse(error);
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") ?? undefined;
@@ -38,18 +58,32 @@ export async function GET(request: NextRequest) {
       // ... more
     ];
 
-    return Response.json({
-      listings,
-      pagination,
-      filters,
-      total: listings.length,
-    });
+    return applyCorsPolicy(
+      request,
+      Response.json({
+        listings,
+        pagination,
+        filters,
+        total: listings.length,
+      }),
+      MARKETPLACE_CORS_POLICY
+    );
   } catch (error) {
-    return handleValidationError(error);
+    return applyCorsPolicy(
+      request,
+      handleValidationError(error),
+      MARKETPLACE_CORS_POLICY
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    enforceCorsRequestPolicy(request, MARKETPLACE_CORS_POLICY);
+  } catch (error) {
+    return toCorsErrorResponse(error);
+  }
+
   try {
     const body = await request.json();
 
@@ -67,9 +101,17 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    return Response.json(newListing, { status: 201 });
+    return applyCorsPolicy(
+      request,
+      Response.json(newListing, { status: 201 }),
+      MARKETPLACE_CORS_POLICY
+    );
   } catch (error) {
-    return handleValidationError(error);
+    return applyCorsPolicy(
+      request,
+      handleValidationError(error),
+      MARKETPLACE_CORS_POLICY
+    );
   }
 }
 

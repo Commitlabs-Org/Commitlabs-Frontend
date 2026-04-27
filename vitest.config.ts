@@ -7,14 +7,18 @@ export default defineConfig({
     globals: true,
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
+      all: true,
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: [
-        'src/app/api/health/**',
-        'src/app/api/commitments/**',
-        'src/utils/response.ts',
+        'src/lib/backend/cors.ts',
         'src/lib/backend/withApiHandler.ts',
         'src/lib/backend/apiResponse.ts',
+        'src/app/api/health/route.ts',
+        'src/app/api/metrics/route.ts',
+        'src/app/api/marketplace/listings/route.ts',
+        'src/app/api/marketplace/listings/[id]/route.ts',
+        'src/app/api/commitments/route.ts',
       ],
       exclude: [
         'node_modules/',

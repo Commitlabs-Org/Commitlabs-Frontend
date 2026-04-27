@@ -7,6 +7,16 @@ base; they exist primarily for analytics hooks and development/testing.
 Each entry includes the HTTP method, path, expected request body (if any), and
 an example response.  All endpoints return JSON.
 
+## CORS Summary
+
+- Public browser routes return wildcard CORS without credentials.
+- First-party browser routes echo only trusted Commitlabs origins and may allow
+  credentials.
+- Implemented routes answer `OPTIONS` preflight requests automatically.
+
+See [docs/backend-cors-policy.md](./backend-cors-policy.md) for the full
+origin configuration and route classification.
+
 ---
 
 ## Standard Response Conventions

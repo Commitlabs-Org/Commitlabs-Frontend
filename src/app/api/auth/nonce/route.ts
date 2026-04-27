@@ -1,57 +1,63 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { generateChallengeMessage, generateNonce, storeNonce } from '@/lib/backend/auth';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
+import { getClientIp } from '@/lib/backend/getClientIp';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
-import { validationErrorFromZod } from '@/lib/backend/validationErrors';
-import { generateNonce, storeNonce, generateChallengeMessage } from '@/lib/backend/auth';
-import { getClientIp } from '@/lib/backend/getClientIp';
 
 const NonceRequestSchema = z.object({
-  address: z.string().min(1, "Address is required"),
+  address: z.string().min(1, 'Address is required'),
 });
 
-export const POST = withApiHandler(async (req: NextRequest) => {
-    const ip = getClientIp(req);
+const AUTH_NONCE_CORS_POLICY = {
+  POST: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
 
-    // Rate limiting by IP
-    const isIpAllowed = await checkRateLimit(ip, 'api/auth/nonce');
-    if (!isIpAllowed) {
-        throw new TooManyRequestsError('Rate limit exceeded for your IP. Please try again later.');
-    }
+export const OPTIONS = createCorsOptionsHandler(AUTH_NONCE_CORS_POLICY);
 
-    let body;
-    try {
-        body = await req.json();
-    } catch {
-        throw new ValidationError('Invalid JSON in request body');
-    }
+export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  const ip = getClientIp(req);
 
-    const validation = NonceRequestSchema.safeParse(body);
-    if (!validation.success) {
-        throw new ValidationError('Invalid request data', validation.error.issues);
-    }
+  if (!(await checkRateLimit(ip, 'api/auth/nonce'))) {
+    throw new TooManyRequestsError('Rate limit exceeded for your IP. Please try again later.');
+  }
 
-    const { address } = validation.data;
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    throw new ValidationError('Invalid JSON in request body');
+  }
 
-    // Rate limiting by Stellar Address
-    const isAddressAllowed = await checkRateLimit(address, 'auth:nonce:address');
-    if (!isAddressAllowed) {
-        throw new TooManyRequestsError('Too many nonce requests for this address. Please try again later.');
-    }
+  const validation = NonceRequestSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Invalid request data', validation.error.issues);
+  }
 
-    // Generate and store nonce (async)
-    const nonce = generateNonce();
-    const nonceRecord = await storeNonce(address, nonce);
-    const challengeMessage = generateChallengeMessage(nonce);
+  const { address } = validation.data;
 
-    return ok({
-        nonce,
-        message: challengeMessage,
-        expiresAt: nonceRecord.expiresAt.toISOString(),
-    }, undefined, 200, correlationId);
-});
+  if (!(await checkRateLimit(address, 'auth:nonce:address'))) {
+    throw new TooManyRequestsError('Too many nonce requests for this address. Please try again later.');
+  }
 
-const _405 = methodNotAllowed(["POST"]);
+  const nonce = generateNonce();
+  const nonceRecord = await storeNonce(address, nonce);
+  const challengeMessage = generateChallengeMessage(nonce);
+
+  return ok(
+    {
+      nonce,
+      message: challengeMessage,
+      expiresAt: nonceRecord.expiresAt.toISOString(),
+    },
+    undefined,
+    200,
+    correlationId,
+  );
+}, { cors: AUTH_NONCE_CORS_POLICY });
+
+const _405 = methodNotAllowed(['POST']);
 export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };
