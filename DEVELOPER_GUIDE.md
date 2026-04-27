@@ -40,6 +40,20 @@ Welcome to the CommitLabs Frontend developer guide. This document provides guide
 -   The resolved request id is included in structured backend logs and returned
     to the client via the `x-request-id` response header.
 
+### Backend Breaking Change Checklist
+
+If your change introduces a backend contract break that can impact frontend
+clients, complete this checklist in the same PR:
+
+-   [ ] Update OpenAPI docs/spec so the contract change is explicit and reviewable.
+-   [ ] Add an entry to `docs/backend-changelog.md` using the template in that file.
+-   [ ] Update or add contract tests that validate the new request/response shape.
+-   [ ] Add UI migration notes that describe impacted pages/components and required
+    frontend changes.
+
+Treat this checklist as required for all endpoint, payload, auth, and error
+shape breaking changes.
+
 ### React & Next.js
 
 -   **Functional Components**: Use functional components with hooks.
