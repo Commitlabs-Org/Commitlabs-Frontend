@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, TrendingUp, Flame, AlertCircle, CheckCircle2, Check, ArrowLeft, Loader2 } from 'lucide-react';
+import { Shield, TrendingUp, Flame, AlertCircle, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
+import WizardStepper from './WizardStepper';
 import styles from './CreateCommitmentStepReview.module.css';
 
 interface CreateCommitmentStepReviewProps {
@@ -42,77 +43,45 @@ export default function CreateCommitmentStepReview({
 
   const canSubmit = acceptedTerms && acknowledgedRisks && !isSubmitting;
 
-  // Determine icon based on label (naive matching, but effective for this context)
   const getIconAndStyle = () => {
-    const labelLower = typeLabel.toLowerCase();
-    if (labelLower.includes('safe')) return { Icon: Shield, styleClass: styles.iconSafe };
-    if (labelLower.includes('aggressive')) return { Icon: Flame, styleClass: styles.iconAggressive };
+    const l = typeLabel.toLowerCase();
+    if (l.includes('safe')) return { Icon: Shield, styleClass: styles.iconSafe };
+    if (l.includes('aggressive')) return { Icon: Flame, styleClass: styles.iconAggressive };
     return { Icon: TrendingUp, styleClass: styles.iconBalanced };
   };
 
   const { Icon, styleClass } = getIconAndStyle();
 
+  const maxLossDisplay = maxLossPercent >= 100 ? 'No protection (100%)' : `${maxLossPercent}%`;
+
   return (
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
-        {/* Back Button */}
         <button onClick={onBack} className={styles.backButton}>
           <ArrowLeft size={16} />
           Back
         </button>
 
-        {/* Header */}
         <div className={styles.header}>
           <h1 className={styles.title}>Create Commitment</h1>
           <p className={styles.subtitle}>
             Define your liquidity commitment with explicit rules and guarantees
           </p>
         </div>
-        <hr className="mb-6 lg:mb-8" />
 
-        {/* Stepper */}
-        <div className={styles.stepIndicator}>
-          <div className={styles.stepsContainer}>
-            {/* Step 1 - Completed */}
-            <div className={styles.step}>
-              <div className={`${styles.stepCircle} ${styles.stepCircleCompleted}`}>
-                <Check size={16} />
-              </div>
-              <span className={`${styles.stepLabel} ${styles.stepLabelCompleted}`}>Select Type</span>
-            </div>
-            <div className={`${styles.line} ${styles.lineCompleted}`}></div>
+        <WizardStepper currentStep={3} />
 
-            {/* Step 2 - Completed */}
-            <div className={styles.step}>
-              <div className={`${styles.stepCircle} ${styles.stepCircleCompleted}`}>
-                <Check size={16} />
-              </div>
-              <span className={`${styles.stepLabel} ${styles.stepLabelCompleted}`}>Configure</span>
-            </div>
-            <div className={`${styles.line} ${styles.lineCompleted}`}></div>
-
-            {/* Step 3 - Active */}
-            <div className={styles.step}>
-              <div className={`${styles.stepCircle} ${styles.stepCircleActive}`}>
-                3
-              </div>
-              <span className={`${styles.stepLabel} ${styles.stepLabelActive}`}>Review</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Review Headings */}
         <div className={styles.reviewHeading}>
           <h2 className={styles.reviewTitle}>Review & Confirm</h2>
           <p className={styles.reviewSubtitle}>
-            Please review your commitment details before confirming
+            Please review your commitment details carefully — these parameters are enforced on-chain and cannot be changed after creation.
           </p>
         </div>
 
         {/* Summary Card */}
         <div className={styles.summaryCard}>
           <div className={styles.cardHeader}>
-            <div className={`${styles.typeIconContainer}`}>
+            <div className={styles.typeIconContainer}>
               <Icon size={28} className={styleClass} />
             </div>
             <div className={styles.typeInfo}>
@@ -125,7 +94,7 @@ export default function CreateCommitmentStepReview({
             <div className={styles.dataItem}>
               <span className={styles.dataLabel}>Amount</span>
               <div className={styles.dataValue}>
-                {amount} <span style={{ fontSize: '0.8em', color: '#6b7280' }}>{asset}</span>
+                {amount} <span className={styles.assetTag}>{asset}</span>
               </div>
             </div>
             <div className={styles.dataItem}>
@@ -134,7 +103,9 @@ export default function CreateCommitmentStepReview({
             </div>
             <div className={styles.dataItem}>
               <span className={styles.dataLabel}>Max Loss</span>
-              <div className={styles.dataValue}>{maxLossPercent !== undefined ? `${maxLossPercent}%` : 'N/A'}</div>
+              <div className={`${styles.dataValue} ${maxLossPercent >= 100 ? styles.dataValueRisk : ''}`}>
+                {maxLossDisplay}
+              </div>
             </div>
             <div className={styles.dataItem}>
               <span className={styles.dataLabel}>Early Exit Penalty</span>
@@ -164,38 +135,36 @@ export default function CreateCommitmentStepReview({
 
         {/* Checkboxes */}
         <div className={styles.checkboxSection}>
-          <div className={styles.checkboxRow}
-              onClick={() => setAcceptedTerms(!acceptedTerms)}>
+          <div className={styles.checkboxRow} onClick={() => setAcceptedTerms(!acceptedTerms)}>
             <CheckCircle2
-              id='terms'
-              className={`animate-in mt-1 text-[#0FF0FC] drop-shadow-[0_0_10px_rgba(15,240,252,0.5)] ${acceptedTerms ? 'fade-in opacity-100' : 'opacity-0'}`}
-              aria-checked={acceptedTerms}
-              size={16}
+              className={`${styles.checkIcon} ${acceptedTerms ? styles.checkIconActive : ''}`}
+              size={18}
+              aria-hidden="true"
             />
             <div className={styles.checkboxContent}>
-              <label htmlFor="terms">
+              <label>
                 <h4>I agree to the terms and conditions</h4>
               </label>
               <p>
-                I have read and understand the <a href="#" className={styles.link}>terms of service</a> and smart contract exit conditions.
+                I have read and understand the{' '}
+                <a href="#" className={styles.link}>terms of service</a> and smart contract exit conditions.
               </p>
             </div>
           </div>
 
-          <div className={styles.checkboxRow}
-              onClick={() => setAcknowledgedRisks(!acknowledgedRisks)}>
+          <div className={styles.checkboxRow} onClick={() => setAcknowledgedRisks(!acknowledgedRisks)}>
             <CheckCircle2
-              id='risks'
-              className={`animate-in mt-1 text-[#0FF0FC] drop-shadow-[0_0_10px_rgba(15,240,252,0.5)] ${acknowledgedRisks ? 'fade-in opacity-100' : 'opacity-0'}`}
-              aria-checked={acknowledgedRisks}
-              size={16}
+              className={`${styles.checkIcon} ${acknowledgedRisks ? styles.checkIconActive : ''}`}
+              size={18}
+              aria-hidden="true"
             />
             <div className={styles.checkboxContent}>
-              <label htmlFor="risks">
+              <label>
                 <h4>I acknowledge the risks</h4>
               </label>
               <p>
-                I understand that DeFi protocols carry inherent risks including smart contract vulnerabilities, market volatility, and potential loss of funds. I accept these risks.
+                I understand that DeFi protocols carry inherent risks including smart contract vulnerabilities,
+                market volatility, and potential loss of funds up to the max loss threshold I configured.
               </p>
             </div>
           </div>
@@ -207,25 +176,26 @@ export default function CreateCommitmentStepReview({
           <div className={styles.noticeContent}>
             <h4>Important Notice</h4>
             <p>
-              Once created, this commitment cannot be modified. Early exits will incur the penalty shown above. Make sure all details are correct before proceeding.
+              Once created, this commitment cannot be modified. Early exits before {durationDays} days will
+              incur the penalty of {earlyExitPenalty}. Make sure all details are correct before proceeding.
             </p>
           </div>
         </div>
 
-        {/* Footer Actions */}
+        {/* Footer */}
         <div className={styles.footer}>
           {submitError && (
-            <p className="text-red-500 mb-4 text-sm">{submitError}</p>
+            <p className={styles.submitError}>{submitError}</p>
           )}
-
           <button
             onClick={onSubmit}
             disabled={!canSubmit}
             className={styles.createButton}
+            aria-disabled={!canSubmit}
           >
             {isSubmitting ? (
               <>
-                <Loader2 size={20} className="animate-spin" />
+                <Loader2 size={20} className={styles.spinner} />
                 Processing Transaction...
               </>
             ) : (
@@ -235,7 +205,6 @@ export default function CreateCommitmentStepReview({
               </>
             )}
           </button>
-
           <div className={styles.disclaimer}>
             <AlertCircle size={14} />
             <span>This will initiate a blockchain transaction</span>

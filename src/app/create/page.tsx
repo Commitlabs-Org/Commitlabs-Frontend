@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import styles from './page.module.css'
 import CreateCommitmentStepSelectType from '@/components/CreateCommitmentStepSelectType'
 import CreateCommitmentStepConfigure from '@/components/CreateCommitmentStepConfigure'
 import CreateCommitmentStepReview from '@/components/CreateCommitmentStepReview'
@@ -34,64 +32,33 @@ export default function CreateCommitment() {
   const [commitmentId, setCommitmentId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Mock data based on selected type
-  // TODO: This should be replaced with real-time data fetching from the blockchain
-  // or a backend service that calculates these values based on current market conditions.
-  const getMockData = () => {
-    switch (selectedType) {
-      case 'safe':
-        return {
-          typeLabel: 'Safe Commitment',
-          amount: '500 XLM',
-          asset: 'XLM',
-          durationDays: 30,
-          maxLossPercent: 2,
-          earlyExitPenalty: '5.00 XLM',
-          estimatedFees: '0.10 XLM',
-          estimatedYield: '5.2% APY',
-          commitmentStart: 'Immediately',
-          commitmentEnd: '2/28/2026'
-        };
-      case 'balanced':
-        return {
-          typeLabel: 'Balanced Commitment',
-          amount: '1000 XLM',
-          asset: 'XLM',
-          durationDays: 60,
-          maxLossPercent: 8,
-          earlyExitPenalty: '20.00 XLM',
-          estimatedFees: '0.50 XLM',
-          estimatedYield: '12.5% APY',
-          commitmentStart: 'Immediately',
-          commitmentEnd: '3/30/2026'
-        };
-      case 'aggressive':
-        return {
-          typeLabel: 'Aggressive Commitment',
-          amount: '2000 XLM',
-          asset: 'XLM',
-          durationDays: 90,
-          maxLossPercent: 100, // Should probably handle "No protection" or similar logic in presentation if needed, but number is simpler
-          earlyExitPenalty: '100.00 XLM',
-          estimatedFees: '1.20 XLM',
-          estimatedYield: '45.0% APY',
-          commitmentStart: 'Immediately',
-          commitmentEnd: '4/30/2026'
-        };
-      default:
-        return {
-          typeLabel: 'Unknown',
-          amount: '0 XLM',
-          asset: 'XLM',
-          durationDays: 0,
-          maxLossPercent: 0,
-          earlyExitPenalty: '0 XLM',
-          estimatedFees: '0 XLM',
-          estimatedYield: '0%',
-          commitmentStart: '-',
-          commitmentEnd: '-'
-        };
-    }
+  // Build review data from actual configured values
+  const getReviewData = () => {
+    const typeLabelMap: Record<string, string> = {
+      safe: 'Safe Commitment',
+      balanced: 'Balanced Commitment',
+      aggressive: 'Aggressive Commitment',
+    };
+    const yieldMap: Record<string, string> = {
+      safe: '5.2% APY',
+      balanced: '12.5% APY',
+      aggressive: '45.0% APY',
+    };
+    const start = new Date();
+    const end = new Date(start);
+    end.setDate(end.getDate() + durationDays);
+    return {
+      typeLabel: typeLabelMap[selectedType ?? 'balanced'] ?? 'Commitment',
+      amount: amount || '0',
+      asset,
+      durationDays,
+      maxLossPercent,
+      earlyExitPenalty,
+      estimatedFees,
+      estimatedYield: yieldMap[selectedType ?? 'balanced'] ?? '—',
+      commitmentStart: 'Immediately',
+      commitmentEnd: end.toLocaleDateString(),
+    };
   };
 
   // Mock available balance - in real app, this would come from wallet/API
@@ -198,69 +165,30 @@ export default function CreateCommitment() {
       )}
 
       {step === 2 && (
-        <main id="main-content" className={styles.container}>
-          <header className={styles.header}>
-            <Link href="/" className={styles.backLink} aria-label="Back to Home">
-              ← Back
-            </Link>
-            <h1 className={styles.pageTitle}>Create Commitment</h1>
-            <p className={styles.pageSubtitle}>
-              Define your liquidity commitment with explicit rules and guarantees
-            </p>
-          </header>
-
-          <nav className={styles.stepper} aria-label="Progress">
-            <div className={styles.stepperTrack}>
-              <div className={`${styles.step} ${styles.completed}`}>
-                <div className={styles.stepCircle}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-                <span className={styles.stepLabel}>Select Type</span>
-              </div>
-
-              <div className={`${styles.stepConnector} ${step > 1 ? styles.completedConnector : ''}`} />
-
-              <div className={`${styles.step} ${styles.active}`}>
-                <div className={styles.stepCircle}>2</div>
-                <span className={styles.stepLabel}>Configure</span>
-              </div>
-
-              <div className={styles.stepConnector} />
-
-              <div className={styles.step}>
-                <div className={styles.stepCircle}>3</div>
-                <span className={styles.stepLabel}>Review</span>
-              </div>
-            </div>
-          </nav>
-
-          <CreateCommitmentStepConfigure
-            amount={amount}
-            asset={asset}
-            availableBalance={availableBalance}
-            durationDays={durationDays}
-            maxLossPercent={maxLossPercent}
-            earlyExitPenalty={earlyExitPenalty}
-            estimatedFees={estimatedFees}
-            isValid={isStep2Valid}
-            onChangeAmount={setAmount}
-            onChangeAsset={setAsset}
-            onChangeDuration={setDurationDays}
-            onChangeMaxLoss={setMaxLossPercent}
-            onBack={handleBack}
-            onNext={handleNextStep}
-            amountError={amountError}
-            maxLossWarning={maxLossWarning}
-          />
-        </main>
+        <CreateCommitmentStepConfigure
+          amount={amount}
+          asset={asset}
+          availableBalance={availableBalance}
+          durationDays={durationDays}
+          maxLossPercent={maxLossPercent}
+          earlyExitPenalty={earlyExitPenalty}
+          estimatedFees={estimatedFees}
+          isValid={isStep2Valid}
+          onChangeAmount={setAmount}
+          onChangeAsset={setAsset}
+          onChangeDuration={setDurationDays}
+          onChangeMaxLoss={setMaxLossPercent}
+          onBack={handleBack}
+          onNext={handleNextStep}
+          amountError={amountError}
+          maxLossWarning={maxLossWarning}
+        />
       )}
 
       {step === 3 && selectedType && (
         <>
           <CreateCommitmentStepReview
-            {...getMockData()}
+            {...getReviewData()}
             isSubmitting={isSubmitting}
             onBack={handleBack}
             onSubmit={handleSubmit}

@@ -1,12 +1,49 @@
 .configureContainer {
   width: 100%;
+  min-height: 100vh;
+  background: #0a0a0a;
   display: flex;
   justify-content: center;
+  padding: 2rem 1.5rem;
 }
 
 .contentWrapper {
   width: 100%;
   max-width: 560px;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.backButton:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.pageTitle {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.pageSubtitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .sectionHeader {
@@ -348,7 +385,7 @@
   margin-top: 2rem;
 }
 
-.backButton {
+.footerBackButton {
   padding: 0.875rem 2rem;
   font-size: 0.95rem;
   font-weight: 500;
@@ -360,7 +397,7 @@
   transition: background 0.2s, border-color 0.2s;
 }
 
-.backButton:hover {
+.footerBackButton:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
 }
@@ -397,6 +434,37 @@
 
 .continueButton:hover:not(:disabled) svg {
   transform: translateX(2px);
+}
+
+/* Constraint hint copy */
+.constraintHint {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.warningHint {
+  font-size: 0.78rem;
+  color: #f5a623;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Error state for number inputs */
+.inputError {
+  border-color: #ff4444 !important;
+  box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.15) !important;
+}
+
+.errorSlider::-webkit-slider-thumb {
+  background: #ff4444;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+}
+
+.errorSlider::-moz-range-thumb {
+  background: #ff4444;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
 }
 
 /* Advanced Risk Settings */
@@ -569,7 +637,7 @@
     flex-direction: column-reverse;
   }
 
-  .backButton,
+  .footerBackButton,
   .continueButton {
     width: 100%;
     justify-content: center;
