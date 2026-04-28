@@ -39,6 +39,10 @@ export default function CommitmentEarlyExitModal({
     return () => setMounted(false);
   }, []);
 
+  const [confirmationInput, setConfirmationInput] = useState('')
+  const hasTypedConfirmation = confirmationInput.trim() === commitmentId
+  const canConfirm = hasAcknowledged && hasTypedConfirmation
+
   const handleClose = useCallback(() => {
     (onClose ?? onCancel)();
   }, [onClose, onCancel]);
@@ -144,10 +148,10 @@ export default function CommitmentEarlyExitModal({
             </div>
             <ul className="space-y-2.5">
               {[
-                'Loss of a percentage of your committed amount',
-                'On-chain recording as an early exit',
-                'Compliance score impact',
-                'Loss of full yield potential'
+                'You will lose the penalty amount shown above immediately.',
+                'The commitment will be recorded as an Early Exit on-chain.',
+                'This action cannot be reversed or modified.',
+                'You forfeit future yield and continue to hold reduced value.'
               ].map((text, i) => (
                 <li key={i} className="flex items-start gap-2.5 leading-snug">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#FF8A04]/40 mt-1.5 shrink-0" />
@@ -158,7 +162,7 @@ export default function CommitmentEarlyExitModal({
           </div>
 
           {/* Acknowledgment Checkbox */}
-          <label className="flex items-start gap-4 p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl cursor-pointer hover:bg-white/[0.04] transition-all group active:scale-[0.99] mb-8">
+          <label className="flex items-start gap-4 p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl cursor-pointer hover:bg-white/[0.04] transition-all group active:scale-[0.99] mb-4">
             <div className="relative flex items-center">
               <input
                 type="checkbox"
@@ -169,9 +173,27 @@ export default function CommitmentEarlyExitModal({
               <X className="absolute h-3.5 w-3.5 text-black opacity-0 peer-checked:opacity-100 left-0.5 top-0.5 pointer-events-none" strokeWidth={4} />
             </div>
             <span className="text-[14px] text-white/70 font-medium leading-snug select-none group-hover:text-white transition-colors">
-              I understand the consequences and want to proceed with early exit.
+              I understand this will record an early exit on-chain and deduct {penaltyPercent} from the committed amount.
             </span>
           </label>
+
+          <div className="mb-6 rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4">
+            <label htmlFor="confirmation-input" className="block text-[13px] font-semibold text-white/60 mb-2">
+              Type the commitment ID to confirm
+            </label>
+            <input
+              id="confirmation-input"
+              type="text"
+              value={confirmationInput}
+              onChange={(e) => setConfirmationInput(e.target.value)}
+              className="w-full rounded-2xl border border-white/10 bg-[#050505] px-4 py-3 text-white placeholder:text-white/30 outline-none focus:border-[#FF8A04] focus:ring-2 focus:ring-[#FF8A04]/20"
+              placeholder="Enter commitment ID exactly"
+              autoComplete="off"
+            />
+            <p className="mt-2 text-[12px] text-white/40">
+              Confirming this action requires the exact commitment ID: <span className="font-mono text-[#0FF0FC]">{commitmentId}</span>
+            </p>
+          </div>
 
           {/* Action Buttons - Standardized placement */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -182,7 +204,7 @@ export default function CommitmentEarlyExitModal({
               Cancel
             </button>
             <button
-              disabled={!hasAcknowledged}
+              disabled={!canConfirm}
               onClick={onConfirm}
               className="flex-[1.5] bg-[#FF8A04] disabled:grayscale disabled:opacity-30 hover:bg-[#FF8A04]/90 text-black rounded-[18px] py-4 text-[15px] font-bold transition-all order-1 sm:order-2 shadow-[0_0_30px_rgba(255,138,4,0.25)] active:scale-[0.98]"
             >
