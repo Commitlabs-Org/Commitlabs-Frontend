@@ -230,7 +230,16 @@
   color: white;
   font-size: 1.1rem;
   font-weight: 600;
-  font-family: monospace; /* Giving it a slight tech feel */
+  font-family: monospace;
+}
+
+.dataValueRisk {
+  color: #f97316;
+}
+
+.assetTag {
+  font-size: 0.8em;
+  color: #6b7280;
 }
 
 /* Secondary Details */
@@ -287,12 +296,16 @@
   border-color: #333;
 }
 
-.checkbox {
-  margin-top: 0.25rem;
-  width: 1.25rem;
-  height: 1.25rem;
-  accent-color: #0FF0FC;
-  cursor: pointer;
+.checkIcon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: rgba(255, 255, 255, 0.2);
+  transition: color 0.2s;
+}
+
+.checkIconActive {
+  color: #0FF0FC;
+  filter: drop-shadow(0 0 6px rgba(15, 240, 252, 0.5));
 }
 
 .checkboxContent h4 {
@@ -349,6 +362,21 @@
 /* Footer Actions */
 .footer {
   text-align: center;
+}
+
+.submitError {
+  color: #ff4444;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .createButton {
