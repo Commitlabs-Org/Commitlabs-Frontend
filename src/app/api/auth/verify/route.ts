@@ -1,63 +1,63 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
+import { getClientIp } from '@/lib/backend/getClientIp';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
-import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
 
-// Request validation schema
 const VerifyRequestSchema = z.object({
-    address: z.string().min(1, 'Address is required'),
-    signature: z.string().min(1, 'Signature is required'),
-    message: z.string().min(1, 'Message is required'),
+  address: z.string().min(1, 'Address is required'),
+  signature: z.string().min(1, 'Signature is required'),
+  message: z.string().min(1, 'Message is required'),
 });
 
-export const POST = withApiHandler(async (req: NextRequest) => {
-    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+const AUTH_VERIFY_CORS_POLICY = {
+  POST: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
 
-    // Rate limiting
-    const isAllowed = await checkRateLimit(ip, 'api/auth/verify');
-    if (!isAllowed) {
-        throw new TooManyRequestsError();
-    }
+export const OPTIONS = createCorsOptionsHandler(AUTH_VERIFY_CORS_POLICY);
 
-    // Parse and validate request body
-    let body;
-    try {
-        body = await req.json();
-    } catch (error) {
-        throw new ValidationError('Invalid JSON in request body');
-    }
+export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  const ip = getClientIp(req);
 
-    const validation = VerifyRequestSchema.safeParse(body);
-    if (!validation.success) {
-        throw new ValidationError('Invalid request data', validation.error.errors);
-    }
+  if (!(await checkRateLimit(ip, 'api/auth/verify'))) {
+    throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
+  }
 
-    const { address, signature, message } = validation.data;
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    throw new ValidationError('Invalid JSON in request body');
+  }
 
-    // Verify the signature and nonce
-    const verificationResult = verifySignatureWithNonce({
-        address,
-        signature,
-        message,
-    });
+  const validation = VerifyRequestSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Invalid request data', validation.error.issues);
+  }
 
-    if (!verificationResult.valid) {
-        throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
-    }
+  const verificationResult = await verifySignatureWithNonce(validation.data);
+  if (!verificationResult.valid) {
+    throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
+  }
 
-    // TODO: Create a proper session token (JWT or similar)
-    const sessionToken = createSessionToken(address);
+  const sessionToken = createSessionToken(validation.data.address);
 
-    // Return success response with session token
-    return ok({
-        verified: true,
-        address: verificationResult.address,
-        message: 'Signature verified successfully',
-        // TODO: Replace with proper JWT/session management
-        sessionToken,
-        sessionType: 'placeholder', // Indicates this is a placeholder implementation
-    });
-});
+  return ok(
+    {
+      verified: true,
+      address: verificationResult.address,
+      message: 'Signature verified successfully',
+      sessionToken,
+    },
+    undefined,
+    200,
+    correlationId,
+  );
+}, { cors: AUTH_VERIFY_CORS_POLICY });
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

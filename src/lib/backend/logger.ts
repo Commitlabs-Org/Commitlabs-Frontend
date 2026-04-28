@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { randomUUID } from 'crypto';
+import { redact } from './redact';
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 /**
@@ -57,11 +58,21 @@ export function getRequestId(req?: Request | NextRequest): string {
         rid = randomUUID();
         requestIds.set(req, rid);
     }
-    return rid;
+    return rid || '';
+}
+
+export function getOrCreateRequestId(req?: Request | NextRequest): string {
+    return getRequestId(req);
 }
 
 function formatEntry(entry: LogEntry): string {
-    return JSON.stringify(entry);
+    // Redact sensitive information from log entries
+    const redactedEntry = {
+        ...entry,
+        context: entry.context ? redact(entry.context) : undefined,
+        error: entry.error ? redact(entry.error) : undefined
+    };
+    return JSON.stringify(redactedEntry);
 }
 
 function createLogEntry(
@@ -124,7 +135,13 @@ function emit(event: AnalyticsEvent) {
     // In development we use console.log; in production this might be a call
     // to an external service or to a logging library that understands
     // structured events.
-    console.log(JSON.stringify(event));
+    const redactedEvent = {
+        ...event,
+        context: event.context ? redact(event.context) : undefined,
+        payload: event.payload ? redact(event.payload) : undefined,
+        error: event.error ? redact(event.error) : undefined
+    };
+    console.log(JSON.stringify(redactedEvent));
 }
 
 export function logCommitmentCreated(payload: AnalyticsPayload = {}) {
@@ -154,6 +171,22 @@ export function logEarlyExit(payload: AnalyticsPayload = {}) {
 export function logAttestation(payload: AnalyticsPayload = {}) {
     emit({
         event: 'AttestationReceived',
+        timestamp: new Date().toISOString(),
+        payload
+    });
+}
+
+export function logListingCancelled(payload: AnalyticsPayload = {}) {
+    emit({
+        event: 'ListingCancelled',
+        timestamp: new Date().toISOString(),
+        payload
+    });
+}
+
+export function logListingCancellationFailed(payload: AnalyticsPayload = {}) {
+    emit({
+        event: 'ListingCancellationFailed',
         timestamp: new Date().toISOString(),
         payload
     });

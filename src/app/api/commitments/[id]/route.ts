@@ -1,115 +1,78 @@
-import { NextRequest } from 'next/server';
-import { ok } from '@/lib/backend/apiResponse';
-import { NotFoundError } from '@/lib/backend/errors';
+import { NextRequest, NextResponse } from 'next/server';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { BackendError, normalizeBackendError, NotFoundError, toBackendErrorResponse } from '@/lib/backend/errors';
+import { getCommitmentFromChain } from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { contractAddresses } from '@/utils/soroban';
 
-interface CommitmentRules {
-    maxLossPercent?: number;
-    [key: string]: unknown;
+function getDaysRemaining(expiresAt: string | undefined): number | null {
+  if (!expiresAt) return null;
+  const expiresAtMs = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiresAtMs)) return null;
+  return Math.max(0, Math.ceil((expiresAtMs - Date.now()) / (24 * 60 * 60 * 1000)));
 }
 
-interface ChainCommitment {
-    commitmentId: string;
-    owner: string;
-    rules: CommitmentRules;
-    amount: string;
-    asset: string;
-    createdAt: string;
-    expiresAt: string;
-    currentValue: string;
-    status: string;
-    drawdownPercent?: number;
-    tokenId?: string;
+function getNftMetadataLink(commitmentId: string): string | null {
+  const nftContract = contractAddresses.commitmentNFT;
+  return nftContract ? `${nftContract}/metadata/${commitmentId}` : null;
 }
 
-const MOCK_CHAIN_COMMITMENTS: Record<string, ChainCommitment> = {
-    '1': {
-        commitmentId: '1',
-        owner: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-        rules: {
-            strategy: 'balanced',
-            maxLossPercent: 8,
-            earlyExitPenaltyPercent: 3,
-        },
-        amount: '100000',
-        asset: 'USDC',
-        createdAt: '2026-01-10T00:00:00.000Z',
-        expiresAt: '2026-03-11T00:00:00.000Z',
-        currentValue: '112500',
-        status: 'Active',
-        drawdownPercent: 3.2,
-        tokenId: '123456789',
-    },
-    '2': {
-        commitmentId: '2',
-        owner: '0xA3d5D8e7b1eAa2f9B26D109fE3bD7cA6f0D9d987',
-        rules: {
-            strategy: 'safe',
-            maxLossPercent: 2,
-            earlyExitPenaltyPercent: 2,
-        },
-        amount: '50000',
-        asset: 'XLM',
-        createdAt: '2026-02-01T00:00:00.000Z',
-        expiresAt: '2026-03-03T00:00:00.000Z',
-        currentValue: '52600',
-        status: 'Active',
-        tokenId: '987654321',
-    },
-};
+const COMMITMENT_DETAIL_CORS_POLICY = {
+  GET: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
 
-async function getCommitmentFromChain(commitmentId: string): Promise<ChainCommitment | null> {
-    // TODO: Replace this with real contract reads from commitmentCore + commitmentNFT.
-    return MOCK_CHAIN_COMMITMENTS[commitmentId] ?? null;
-}
+export const OPTIONS = createCorsOptionsHandler(COMMITMENT_DETAIL_CORS_POLICY);
 
-function getNftMetadataLink(tokenId?: string): string | undefined {
-    if (!tokenId || !contractAddresses.commitmentNFT) {
-        return undefined;
+export const GET = withApiHandler(async (_req: NextRequest, context, correlationId) => {
+  const commitmentId = context.params.id;
+
+  let commitment: any;
+  try {
+    commitment = await getCommitmentFromChain(commitmentId);
+  } catch (err) {
+    if (err instanceof BackendError && err.code === 'NOT_FOUND') {
+      throw new NotFoundError('Commitment', { commitmentId });
     }
 
-    return `${contractAddresses.commitmentNFT}/metadata/${tokenId}`;
-}
+    const normalized = normalizeBackendError(err, {
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to fetch commitment from chain.',
+      status: 502,
+      details: { commitmentId },
+    });
+    return NextResponse.json(toBackendErrorResponse(normalized), { status: normalized.status });
+  }
 
-function getDaysRemaining(expiresAt: string): number {
-    const expiresAtMs = new Date(expiresAt).getTime();
-    const nowMs = Date.now();
-    const msPerDay = 24 * 60 * 60 * 1000;
+  if (!commitment || !(commitment.id ?? commitment.commitmentId)) {
+    throw new NotFoundError('Commitment', { commitmentId });
+  }
 
-    return Math.max(0, Math.ceil((expiresAtMs - nowMs) / msPerDay));
-}
+  return ok(
+    {
+      commitmentId: String(commitment.id ?? commitment.commitmentId),
+      owner: commitment.ownerAddress ?? commitment.owner,
+      rules: commitment.rules ?? null,
+      amount: typeof commitment.amount === 'bigint' ? String(commitment.amount) : commitment.amount,
+      asset: commitment.asset,
+      createdAt: commitment.createdAt,
+      expiresAt: commitment.expiresAt,
+      currentValue:
+        typeof commitment.currentValue === 'bigint'
+          ? String(commitment.currentValue)
+          : commitment.currentValue,
+      status: commitment.status,
+      daysRemaining: getDaysRemaining(commitment.expiresAt),
+      drawdownPercent: commitment.drawdownPercent ?? null,
+      maxLossPercent: commitment.rules?.maxLossPercent ?? null,
+      tokenId: commitment.tokenId ?? null,
+      nftMetadataLink: getNftMetadataLink(String(commitment.id ?? commitment.commitmentId)),
+    },
+    undefined,
+    200,
+    correlationId,
+  );
+}, { cors: COMMITMENT_DETAIL_CORS_POLICY });
 
-export const GET = withApiHandler(async (
-    _req: NextRequest,
-    context: { params: Record<string, string> }
-) => {
-    const commitmentId = context.params.id;
-    const commitment = await getCommitmentFromChain(commitmentId);
-
-    if (!commitment) {
-        throw new NotFoundError('Commitment', { commitmentId });
-    }
-
-    const response = {
-        commitmentId: commitment.commitmentId,
-        owner: commitment.owner,
-        rules: commitment.rules,
-        amount: commitment.amount,
-        asset: commitment.asset,
-        createdAt: commitment.createdAt,
-        expiresAt: commitment.expiresAt,
-        currentValue: commitment.currentValue,
-        status: commitment.status,
-        daysRemaining: getDaysRemaining(commitment.expiresAt),
-        drawdownPercent: commitment.drawdownPercent,
-        maxLossPercent:
-            typeof commitment.rules.maxLossPercent === 'number'
-                ? commitment.rules.maxLossPercent
-                : null,
-        tokenId: commitment.tokenId,
-        nftMetadataLink: getNftMetadataLink(commitment.tokenId),
-    };
-
-    return ok(response);
-});
+const _405 = methodNotAllowed(['GET']);
+export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

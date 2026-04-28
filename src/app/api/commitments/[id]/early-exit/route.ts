@@ -1,30 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { NextRequest } from 'next/server';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { TooManyRequestsError } from '@/lib/backend/errors';
+import { getClientIp } from '@/lib/backend/getClientIp';
 import { logEarlyExit } from '@/lib/backend/logger';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
 
-interface Params {
-    params: { id: string };
-}
+const COMMITMENT_EARLY_EXIT_CORS_POLICY = {
+  POST: { access: 'first-party' },
+} satisfies CorsRoutePolicy;
 
-export async function POST(req: NextRequest, { params }: Params) {
-    const { id } = params;
+export const OPTIONS = createCorsOptionsHandler(COMMITMENT_EARLY_EXIT_CORS_POLICY);
 
-    const ip = req.ip || req.headers.get('x-forwarded-for') || 'anonymous';
-    const isAllowed = await checkRateLimit(ip, 'api/commitments/early-exit');
-    if (!isAllowed) {
-        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-    }
+export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(ip, 'api/commitments/early-exit'))) {
+    throw new TooManyRequestsError();
+  }
 
-    // TODO: perform early exit processing (penalty calculation, contract call, etc.)
-    try {
-        const body = await req.json();
-        logEarlyExit({ ip, commitmentId: id, ...body });
-    } catch {
-        logEarlyExit({ ip, commitmentId: id, error: 'failed to parse request body' });
-    }
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
 
-    return NextResponse.json({
-        message: `Stub early-exit endpoint for commitment ${id}`,
-        commitmentId: id
-    });
-}
+  logEarlyExit({ ip, commitmentId: params.id, ...body });
+
+  return ok(
+    {
+      message: `Stub early-exit endpoint for commitment ${params.id}`,
+      commitmentId: params.id,
+    },
+    undefined,
+    200,
+    correlationId,
+  );
+}, { cors: COMMITMENT_EARLY_EXIT_CORS_POLICY });
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

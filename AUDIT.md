@@ -9,6 +9,7 @@
 
 ## 1. TODO Comments Found
 
+## Frontend TODOs
 | # | File | Line | TODO Comment | Action |
 |---|------|------|--------------|--------|
 | 1 | `src/components/AttestationHistory.tsx` | 11 | `TODO: Implement attestation history with:` | → Open GitHub Issue |

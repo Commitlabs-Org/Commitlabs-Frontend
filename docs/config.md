@@ -51,3 +51,18 @@ Common misconfiguration errors and fixes
 Notes
 - The runtime accessor lives at `src/lib/backend/config.ts` and provides `getActiveContracts()` and `getContractAddress(key)`.
 - Legacy single-variable env configuration is still supported and automatically mapped to `v1` to avoid breaking changes.
+
+# Backend CORS Configuration
+
+Browser-facing API routes use an explicit CORS policy helper.
+
+Environment variables
+- `COMMITLABS_FIRST_PARTY_ORIGINS`: comma-separated allowlist for trusted app origins that can call first-party routes with credentials.
+- `COMMITLABS_PUBLIC_API_ORIGINS`: comma-separated allowlist for public browser routes, or `*`. Default: `*`.
+
+Notes
+- `COMMITLABS_FIRST_PARTY_ORIGINS` must never be `*`.
+- Development always allows `http://localhost:3000` and `http://127.0.0.1:3000`.
+- If present, `APP_URL`, `NEXT_PUBLIC_APP_URL`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, and `VERCEL_URL` are folded into the first-party allowlist.
+
+See `docs/backend-cors-policy.md` for the route classification and allowed methods.

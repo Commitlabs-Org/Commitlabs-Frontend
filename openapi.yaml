@@ -1,0 +1,296 @@
+openapi: 3.0.0
+info:
+  title: CommitLabs API
+  description: API for the CommitLabs protocol, managing liquidity commitments on the Stellar network.
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Local development server
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    # Standard Success Envelope
+    SuccessEnvelope:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+        meta:
+          type: object
+          description: Optional pagination or extra context
+
+    # Standard Error Envelope
+    ErrorEnvelope:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code (e.g., NOT_FOUND, VALIDATION_ERROR)
+            message:
+              type: string
+              description: Human-readable message safe for UI display
+            details:
+              type: object
+              description: Extra context (only included in development)
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            ok: false
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Invalid parameters provided."
+    Unauthorized:
+      description: Authentication failed or missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+paths:
+  /api/health:
+    get:
+      summary: Health Check
+      description: Returns the current status and version of the API.
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/metrics:
+    get:
+      summary: System Metrics
+      description: Returns health metrics including uptime and request counts.
+      responses:
+        '200':
+          description: Metrics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments:
+    get:
+      summary: List Commitments
+      description: Fetch a list of commitments with optional filtering and pagination.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of commitments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+    post:
+      summary: Create Commitment
+      description: Initializes a new liquidity commitment (Stub).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset:
+                  type: string
+                  example: "XLM"
+                amount:
+                  type: number
+                  example: 100
+      responses:
+        '201':
+          description: Commitment created (stubbed).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/commitments/{id}/settle:
+    post:
+      summary: Settle Commitment
+      description: Marks a specific commitment as settled (Stub).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                finalValue:
+                  type: number
+                  example: 105
+      responses:
+        '200':
+          description: Settlement recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/commitments/{id}/early-exit:
+    post:
+      summary: Early Exit
+      description: Triggers an early exit for a commitment with potential penalties (Stub).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: "user-request"
+      responses:
+        '200':
+          description: Early exit processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/attestations:
+    get:
+      summary: List Attestations
+      description: Returns a paginated list of attestations, optionally filtered by commitmentId.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: commitmentId
+          in: query
+          schema:
+            type: string
+          description: Filter attestations by a specific commitment ID.
+      responses:
+        '200':
+          description: A paginated list of attestations.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                          meta:
+                            type: object
+                            properties:
+                              totalItems: { type: integer }
+                              itemCount: { type: integer }
+                              itemsPerPage: { type: integer }
+                              totalPages: { type: integer }
+                              currentPage: { type: integer }
+    post:
+      summary: Record Attestation
+      description: Logs an attestation event for a commitment (Stub).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commitmentId:
+                  type: string
+                status:
+                  type: string
+                  example: "valid"
+      responses:
+        '200':
+          description: Attestation logged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'

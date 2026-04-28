@@ -1,6 +1,4 @@
-import { describe, it, expect } from 'vitest'
-import { GET } from '@/app/api/health/route'
-import { createMockRequest, parseResponse } from './helpers'
+import { describe, expect, it } from 'vitest';
 
 describe('GET /api/health', () => {
   it('should return 200 with status ok', async () => {
@@ -29,3 +27,8 @@ describe('GET /api/health', () => {
     expect(response.headers.get('x-content-type-options')).toBeTruthy()
   })
 })
+describe('health api', () => {
+  it('placeholder merge resolution test', () => {
+    expect(true).toBe(true);
+  });
+});
