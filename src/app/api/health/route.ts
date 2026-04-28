@@ -1,3 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { logInfo } from "@/lib/backend/logger";
+import { attachSecurityHeaders } from "@/utils/response";
 import { NextRequest } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
