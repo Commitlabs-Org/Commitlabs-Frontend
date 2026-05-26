@@ -268,6 +268,40 @@ describe('GET /api/admin/audit-events — authorized', () => {
       expect(event.ip).toBe('[REDACTED]');
     }
   });
+
+  it('applies actor and category filters when provided', async () => {
+    // Prepare filtered response (only matching category 'commitment')
+    const filtered = [MOCK_EVENTS[0]];
+    vi.spyOn(auditLog, 'queryAuditEvents').mockResolvedValue(filtered);
+    vi.spyOn(auditLog, 'queryAuditEventCount').mockResolvedValue(1);
+
+    const req = makeRequest({ actor: '0xABC', category: 'commitment' }, ADMIN_SECRET);
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.events).toEqual(filtered);
+    expect(body.data.total).toBe(1);
+    expect(auditLog.queryAuditEvents).toHaveBeenCalledWith(expect.objectContaining({ limit: 50, actor: '0xABC', category: 'commitment' }));
+  });
+
+  it('validates since/until timestamps and rejects invalid values', async () => {
+    const req = makeRequest({ since: 'not-a-date' }, ADMIN_SECRET);
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects when since is after until', async () => {
+    const req = makeRequest({ since: '2026-04-25T00:00:00Z', until: '2026-04-24T00:00:00Z' }, ADMIN_SECRET);
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
 });
 
 // ─── GET /api/admin/audit-events — limit validation ──────────────────────────

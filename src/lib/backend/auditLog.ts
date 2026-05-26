@@ -24,6 +24,8 @@ export type AuditEventCategory =
   | 'auth'
   | 'admin';
 
+export const AUDIT_EVENT_CATEGORIES: AuditEventCategory[] = ['commitment','attestation','marketplace','auth','admin'];
+
 export type AuditEventSeverity = 'info' | 'warn' | 'error';
 
 /**
@@ -215,6 +217,57 @@ export async function getRecentAuditEvents(
 
   const events = await activeStore.recent(limit);
   return events.map(redactAuditEvent);
+}
+
+/**
+ * Simple in-memory filtering/query helpers. These are intentionally implemented
+ * in the auditLog module so tests and the in-memory store can retain a small
+ * surface area while providing basic filtering for admin queries. In
+ * production, a durable store should implement efficient server-side queries.
+ */
+export interface AuditQuery {
+  limit: number;
+  actor?: string;
+  action?: string;
+  category?: AuditEventCategory;
+  /** ISO timestamp strings (inclusive) */
+  since?: string;
+  until?: string;
+}
+
+function matchesFilter(event: AuditEvent, q: AuditQuery): boolean {
+  if (q.actor && event.actor !== q.actor) return false;
+  if (q.action && event.action !== q.action) return false;
+  if (q.category && event.category !== q.category) return false;
+  if (q.since) {
+    if (Date.parse(event.timestamp) < Date.parse(q.since)) return false;
+  }
+  if (q.until) {
+    if (Date.parse(event.timestamp) > Date.parse(q.until)) return false;
+  }
+  return true;
+}
+
+/**
+ * Query events with basic filtering. Returns redacted events newest-first.
+ */
+export async function queryAuditEvents(q: AuditQuery): Promise<RedactedAuditEvent[]> {
+  if (!isAuditLogEnabled()) return [];
+
+  // Read the full buffer (bounded by MAX_BUFFER_SIZE) and filter in-memory.
+  const all = await activeStore.recent(MAX_BUFFER_SIZE);
+  const filtered = all.filter((e) => matchesFilter(e, q));
+  return filtered.slice(0, q.limit).map(redactAuditEvent);
+}
+
+/**
+ * Count events matching the provided filter.
+ */
+export async function queryAuditEventCount(q?: Omit<AuditQuery, 'limit'>): Promise<number> {
+  if (!isAuditLogEnabled()) return 0;
+  if (!q) return activeStore.size();
+  const all = await activeStore.recent(MAX_BUFFER_SIZE);
+  return all.filter((e) => matchesFilter(e, q as AuditQuery)).length;
 }
 
 /**

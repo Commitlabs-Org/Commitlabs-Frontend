@@ -61,6 +61,73 @@ Stable numeric error codes (`#[contracterror]`) are surfaced so the backend
 `InvalidAmount`, `InvalidState`, `NotMatured`, `InvalidDuration`,
 `PenaltyTooHigh`.
 
+#### Error codes (stable)
+
+| Variant | Numeric code |
+| --- | ---: |
+| `AlreadyInitialized` | 1 |
+| `NotInitialized` | 2 |
+| `NotFound` | 3 |
+| `Unauthorized` | 4 |
+| `InvalidAmount` | 5 |
+| `InvalidState` | 6 |
+| `NotMatured` | 7 |
+| `InvalidDuration` | 8 |
+| `PenaltyTooHigh` | 9 |
+
+
+### Escrow state machine
+
+The following state machine documents `EscrowStatus` transitions and the
+entrypoints that cause them. Use this to reason about lifecycle guarantees
+in `contracts/escrow/src/lib.rs`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created
+    Created --> Funded : fund_escrow(commitment_id)
+    Funded --> Released : release(commitment_id, caller)\nresolve_dispute(commitment_id, release_to_owner=true)
+    Funded --> Refunded : refund(commitment_id)\nresolve_dispute(commitment_id, release_to_owner=false)
+    Funded --> Disputed : dispute(commitment_id, caller, reason)
+    Disputed --> Released : resolve_dispute(commitment_id, true)
+    Disputed --> Refunded : resolve_dispute(commitment_id, false)
+```
+
+#### State transitions (compact)
+
+- `Created` -> `Funded`: `fund_escrow(commitment_id)` — authorized: *owner*.
+- `Funded` -> `Released`: `release(commitment_id, caller)` — authorized: *any authenticated caller* (must pass ledger maturity); or `resolve_dispute(..., true)` — *admin*.
+- `Funded` -> `Refunded`: `refund(commitment_id)` — authorized: *owner*; or `resolve_dispute(..., false)` — *admin*.
+- `Funded` -> `Disputed`: `dispute(commitment_id, caller, reason)` — authorized: *owner* or *admin*.
+- `Disputed` -> `Released` / `Refunded`: `resolve_dispute(commitment_id, release_to_owner)` — authorized: *admin*.
+
+### Authorization matrix
+
+| Entrypoint | Admin | Owner | Attestor | Any (authenticated) | Notes / Error codes |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `initialize(admin, token, fee_recipient)` | yes (signs as `admin`) | no | no | no | Errors: `AlreadyInitialized` |
+| `create_commitment(owner, asset, amount, risk, duration_days, penalty_bps)` | no | yes (must sign as `owner`) | no | no | Errors: `NotInitialized`, `InvalidAmount`, `InvalidDuration`, `PenaltyTooHigh` |
+| `fund_escrow(commitment_id)` | no | yes (must sign as stored `owner`) | no | no | Errors: `NotInitialized`, `NotFound`, `InvalidState` |
+| `release(commitment_id, caller)` | no | no (owner needn't be caller) | no | yes (any signer allowed) | Errors: `NotInitialized`, `NotFound`, `InvalidState`, `NotMatured` |
+| `refund(commitment_id)` | no | yes (must sign as `owner`) | no | no | Errors: `NotInitialized`, `NotFound`, `InvalidState` |
+| `dispute(commitment_id, caller, reason)` | yes (admin allowed) | yes (owner allowed) | no | no | Errors: `NotInitialized`, `NotFound`, `Unauthorized`, `InvalidState` |
+| `resolve_dispute(commitment_id, release_to_owner)` | yes (must sign as `admin`) | no | no | no | Errors: `NotInitialized`, `NotFound`, `InvalidState` |
+| `record_attestation(commitment_id, attestor, compliance_score)` | no | no | yes (attestor must sign) | no | Errors: `NotInitialized`, `NotFound` |
+| `get_commitment(commitment_id)` | read-only | read-only | read-only | read-only | Errors: `NotFound` |
+| `get_owner_commitments(owner)` | read-only | read-only | read-only | read-only | Returns empty list if none |
+
+### Contract error cross-reference
+
+The stable `#[contracterror]` variants used by the contract are referenced
+above per-entrypoint. Keep this list in sync with `contracts/escrow/src/lib.rs`.
+
+### Doc-consistency / tests
+
+Unit tests that exercise the lifecycle and authorization expectations live in
+[contracts/escrow/src/test.rs](contracts/escrow/src/test.rs#L1-L200). When updating
+the contract logic, update these tests and this README to keep behavior and
+documentation aligned.
+
 ## Build & test
 
 Requires the `stellar` CLI (v23) and the `wasm32v1-none` / `wasm32-unknown-unknown`

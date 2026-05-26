@@ -40,12 +40,16 @@ import {
   isAuditLogEnabled,
   getRecentAuditEvents,
   getAuditEventCount,
+  queryAuditEvents,
+  queryAuditEventCount,
+  AUDIT_EVENT_CATEGORIES,
 } from '@/lib/backend/auditLog';
 import {
   ForbiddenError,
   TooManyRequestsError,
   ValidationError,
 } from '@/lib/backend/errors';
+import { parseEnumFilter } from '@/lib/backend/pagination';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -126,10 +130,40 @@ export const GET = withApiHandler(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const limit = parseLimit(searchParams);
 
-  // 5. Fetch and return redacted events
+  // Optional filters: actor, action, category, since, until
+  const actor = searchParams.get('actor') ?? undefined;
+  const action = searchParams.get('action') ?? undefined;
+  const category = parseEnumFilter(searchParams, 'category', AUDIT_EVENT_CATEGORIES) as
+    | typeof AUDIT_EVENT_CATEGORIES[number]
+    | undefined;
+
+  const sinceRaw = searchParams.get('since');
+  const untilRaw = searchParams.get('until');
+  let since: string | undefined;
+  let until: string | undefined;
+  if (sinceRaw) {
+    const t = Date.parse(sinceRaw);
+    if (isNaN(t)) {
+      throw new ValidationError("'since' must be a valid ISO-8601 timestamp.", { field: 'since', received: sinceRaw });
+    }
+    since = new Date(t).toISOString();
+  }
+  if (untilRaw) {
+    const t = Date.parse(untilRaw);
+    if (isNaN(t)) {
+      throw new ValidationError("'until' must be a valid ISO-8601 timestamp.", { field: 'until', received: untilRaw });
+    }
+    until = new Date(t).toISOString();
+  }
+  if (since && until && Date.parse(since) > Date.parse(until)) {
+    throw new ValidationError("'since' must be before or equal to 'until'.", { field: 'since_until' });
+  }
+
+  // 5. Fetch and return redacted events. Use filtered query when any filter present.
+  const hasFilters = !!(actor || action || category || since || until);
   const [events, total] = await Promise.all([
-    getRecentAuditEvents(limit),
-    getAuditEventCount(),
+    hasFilters ? queryAuditEvents({ limit, actor, action, category, since, until }) : getRecentAuditEvents(limit),
+    hasFilters ? queryAuditEventCount({ actor, action, category, since, until }) : getAuditEventCount(),
   ]);
 
   return ok({ events, total }, { limit });
