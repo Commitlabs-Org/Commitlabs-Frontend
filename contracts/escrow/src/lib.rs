@@ -156,7 +156,13 @@ impl EscrowContract {
 
         let id = Self::next_id(&env);
         let now = env.ledger().timestamp();
-        let maturity = now + (duration_days as u64) * SECONDS_PER_DAY;
+        // Compute maturity using checked arithmetic to avoid overflow from
+        // extremely large `duration_days`. If the computed maturity would
+        // overflow the u64 range, treat it as an invalid duration.
+        let days_secs = (duration_days as u64)
+            .checked_mul(SECONDS_PER_DAY)
+            .ok_or(Error::InvalidDuration)?;
+        let maturity = now.checked_add(days_secs).ok_or(Error::InvalidDuration)?;
 
         let commitment = Commitment {
             id,
@@ -208,20 +214,35 @@ impl EscrowContract {
     }
 
     /// Release the escrowed funds back to the owner once the commitment has
-    /// matured. Only callable on a `Funded` commitment at/after maturity.
-    pub fn release(env: Env, commitment_id: u64, caller: Address) -> Result<i128, Error> {
+    /// matured.
+    ///
+    /// Authorization rationale:
+    /// - Post-maturity this call is permissionless: any actor (including a
+    ///   third party) may invoke `release` to move funds out of the contract.
+    /// - This design avoids liveness issues where the owner cannot trigger
+    ///   release (e.g. lost key) while still protecting funds against
+    ///   diversion. To prevent an invoker from capturing funds, the transfer
+    ///   ALWAYS targets the stored `owner` recorded on the `Commitment`.
+    ///   The invoker never receives the escrowed asset.
+    pub fn release(env: Env, commitment_id: u64) -> Result<i128, Error> {
         Self::require_init(&env)?;
-        caller.require_auth();
         let mut c = Self::load(&env, commitment_id)?;
 
         if c.status != EscrowStatus::Funded {
             return Err(Error::InvalidState);
         }
+        // Enforce maturity: release is only allowed once the duration has
+        // elapsed. If the ledger timestamp is still before maturity we return
+        // the explicit `NotMatured` error so callers can handle that case.
         if env.ledger().timestamp() < c.maturity {
             return Err(Error::NotMatured);
         }
 
         let token = Self::token_client(&env);
+        // Transfer funds strictly to the owner recorded on the commitment.
+        // Do NOT forward funds to the invoker (`env.invoker()` /
+        // `env.current_contract_address()`); the contract's internal owner
+        // field is the canonical recipient.
         token.transfer(&env.current_contract_address(), &c.owner, &c.amount);
 
         c.status = EscrowStatus::Released;

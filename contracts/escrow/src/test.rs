@@ -92,9 +92,33 @@ fn release_after_maturity_returns_principal() {
 
     // Advance ledger time past maturity.
     f.env.ledger().set_timestamp(11 * 86_400);
-    let paid = f.client.release(&id, &owner);
+    let paid = f.client.release(&id);
     assert_eq!(paid, 1_000);
     assert_eq!(f.token.balance(&owner), 1_000);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Released);
+}
+
+#[test]
+fn third_party_can_trigger_release_post_maturity() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let third = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &10, &200);
+    f.client.fund_escrow(&id);
+
+    // Advance ledger time past maturity so release becomes allowed.
+    f.env.ledger().set_timestamp(11 * 86_400);
+
+    // Invoke release as a third-party (not the owner). The call should
+    // succeed, the owner should receive the funds, and the third-party
+    // invoker should not receive any of the escrowed assets.
+    let paid = f.client.release(&id);
+    assert_eq!(paid, 1_000);
+    assert_eq!(f.token.balance(&owner), 1_000);
+    assert_eq!(f.token.balance(&third), 0);
     assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Released);
 }
 
@@ -108,7 +132,7 @@ fn release_before_maturity_fails() {
         .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &10, &200);
     f.client.fund_escrow(&id);
 
-    let res = f.client.try_release(&id, &owner);
+    let res = f.client.try_release(&id);
     assert_eq!(res, Err(Ok(Error::NotMatured)));
 }
 

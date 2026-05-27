@@ -38,7 +38,7 @@ create_commitment ──► fund_escrow ──► release            (matured: p
 | `initialize(admin, token, fee_recipient)` | One-time setup of admin, escrow token (SAC) and penalty fee recipient. |
 | `create_commitment(owner, asset, amount, risk, duration_days, penalty_bps)` | Create an unfunded commitment; returns its `id`. |
 | `fund_escrow(commitment_id)` | Transfer `amount` from owner into the contract (`Created → Funded`). |
-| `release(commitment_id, caller)` | Return principal to owner once matured (`Funded → Released`). |
+| `release(commitment_id)` | Authorization: Permissionless (Post-Maturity). Return principal to the stored contract `owner` once matured (`Funded → Released`). Funds are forwarded strictly to the internal `owner` recorded on the commitment; the invoker never receives the escrowed asset. |
 | `refund(commitment_id)` | Early-exit refund of principal minus `penalty_bps` (`Funded → Refunded`). |
 | `dispute(commitment_id, caller, reason)` | Freeze a funded commitment pending admin resolution. |
 | `resolve_dispute(commitment_id, release_to_owner)` | Admin-only settlement of a disputed commitment. |
