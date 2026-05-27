@@ -60,7 +60,42 @@ Copy this block for each new change:
 
 ---
 
+## 2026-05-27 — Fix compliance-score round-trip scaling inconsistency
+
+- **Status:** Released
+- **Effective Date:** 2026-05-27
+- **API Surface:** `POST /api/attestations` → contracts service (`recordAttestationOnChain`, `parseChainCommitment`, `parseAttestationResult`)
+- **Change Type:** Breaking (on-chain data format)
+- **Owner:** Backend / Contracts
+- **Tracking:** docs/backend-changelog.md
+
+### What Changed
+
+- **Before:** `recordAttestationOnChain` divided `complianceScore` by `ANALYTICS_SCALE` (100) before writing on-chain, but `parseChainCommitment` and `parseAttestationResult` read the value back *without* re-multiplying. A score of `85` was stored as `0.85` and displayed as `0.85`.
+- **After:** The write path now stores scores as **integers 0–100** (via `Math.round(score)`) — no division. The read paths continue to return the value as-is. The round-trip is now lossless for all integer scores.
+- Added `Math.round()` guard on write to prevent float precision issues from non-integer input.
+- Added inline documentation on `ANALYTICS_SCALE` and both read/write paths.
+
+### Frontend Impact
+
+- Any UI that previously applied its own `× 100` correction to compensate for the bug will now show inflated scores (e.g. `8500` instead of `85`). Remove such workarounds.
+- Scores already stored on-chain under the old convention (`0.xx`) will read back as fractional values until they are re-attested.
+
+### Required Frontend Action
+
+- [ ] Remove any client-side `× 100` multiplication used to work around the old bug.
+- [ ] Verify displayed compliance scores on the commitments detail and attestation history views.
+
+### Migration Notes
+
+- **New on-chain format:** integer 0–100 (whole-number percentage).
+- **Old on-chain format:** float 0.00–1.00 (divided by 100). Existing records are NOT retroactively migrated.
+- Tests cover boundary values 0, 50, and 100 plus fractional-rounding edge cases.
+
+---
+
 ## 2026-02-25 — Backend API changelog process introduced
+
 
 - **Status:** Released
 - **Effective Date:** 2026-02-25

@@ -34,6 +34,7 @@ export const CommitmentItemSchema = z.object({
   asset: z.string(),
   amount: z.union([z.string(), z.number()]),
   status: z.string(),
+  /** Compliance score as integer 0-100 (percentage). */
   complianceScore: z.number().optional(),
   currentValue: z.union([z.string(), z.number(), z.bigint()]).optional(),
   feeEarned: z.unknown().optional(),
@@ -133,6 +134,7 @@ export const MarketplaceListingsResponseSchema = OkBodySchema(
 export const AttestationSummarySchema = z.object({
   attestationId: z.string(),
   commitmentId: z.string(),
+  /** Compliance score as integer 0-100 (percentage). */
   complianceScore: z.number(),
   violation: z.boolean(),
   feeEarned: z.string().optional(),
