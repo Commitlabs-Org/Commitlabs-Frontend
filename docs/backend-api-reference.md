@@ -99,6 +99,143 @@ curl -X POST http://localhost:3000/api/commitments \
 
 ---
 
+## `GET /api/commitments/[id]`
+
+Returns the full details of a single commitment, including a computed fee breakdown.
+
+- **Path parameter**: `id` (string) — the commitment identifier.
+- **Response**:
+  - `200 OK`: Commitment found; body contains the commitment data and `feeBreakdown`.
+  - `404 Not Found`: No commitment exists for the given `id`.
+  - `500 Internal Server Error`: Protocol constants could not be loaded or fee calculation failed.
+
+### Response Shape
+
+```typescript
+{
+  success: true,
+  data: {
+    // Core commitment fields (unchanged)
+    commitmentId: string;
+    owner: string;
+    rules: object | null;
+    amount: string;           // base-asset units, integer string
+    asset: string;
+    createdAt: string;        // ISO 8601
+    expiresAt: string;        // ISO 8601
+    currentValue: string;
+    status: string;
+    daysRemaining: number | null;
+    drawdownPercent: number | null;
+    maxLossPercent: number | null;
+    tokenId: string | null;
+    nftMetadataLink: string | null;
+
+    // New field
+    feeBreakdown: {
+      creationFee: {
+        platformFeeAmount: string;   // integer string, truncated (no decimal point)
+        networkFeeAmount: string;    // exactly 7 decimal places
+        totalFeeAmount: string;      // string sum of platform + network
+      };
+      settlementFee: {
+        platformFeeAmount: string;   // same formula as creationFee
+        networkFeeAmount: string;    // same formula as creationFee
+        totalFeeAmount: string;
+      };
+      rateSnapshot: {
+        platformFeePercent: number;       // number, not string
+        networkBaseFeeStroops: number;    // number, not string
+      };
+    };
+  },
+  meta: {
+    correlationId: string;
+    timestamp: string;
+  }
+}
+```
+
+### `feeBreakdown` Field Details
+
+#### `creationFee` and `settlementFee`
+
+Both sub-objects use the same formula and will always be equal for a given commitment amount and protocol constants.
+
+| Field | Type | Description |
+|---|---|---|
+| `platformFeeAmount` | `string` | Platform fee in base-asset units. Computed as `Math.trunc(amount × platformFeePercent / 100)`. Truncated to zero decimal places (floor toward zero). |
+| `networkFeeAmount` | `string` | Stellar network fee in XLM. Computed as `networkBaseFeeStroops / 10,000,000`, expressed to exactly seven decimal places. |
+| `totalFeeAmount` | `string` | String representation of the numeric sum of `platformFeeAmount` and `networkFeeAmount`. |
+
+> **All monetary values are strings** (`platformFeeAmount`, `networkFeeAmount`, `totalFeeAmount`) to prevent floating-point drift.
+
+#### `rateSnapshot`
+
+| Field | Type | Description |
+|---|---|---|
+| `platformFeePercent` | `number` | The platform fee percentage used for this calculation. |
+| `networkBaseFeeStroops` | `number` | The Stellar network base fee in stroops used for this calculation. |
+
+> **`rateSnapshot` fields are numbers, not strings.**
+
+> **Important:** `rateSnapshot` reflects the protocol constants at the time of the request, not at the time the commitment was originally created. If protocol constants change between commitment creation and a later request, `rateSnapshot` will reflect the current constants.
+
+### Rounding Rules
+
+- **Platform fee** (`platformFeeAmount`): Truncated to zero decimal places using integer truncation (floor toward zero). For example, `101 × 1% = 1.01` → `"1"`, not `"2"`.
+- **Network fee** (`networkFeeAmount`): Expressed to exactly seven decimal places (stroop ÷ 10,000,000). For example, `100 stroops` → `"0.0000100"`.
+
+### Example
+
+Given a commitment with `amount = "10000"` and current protocol constants `platformFeePercent = 1`, `networkBaseFeeStroops = 100`:
+
+```bash
+curl http://localhost:3000/api/commitments/abc123
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "commitmentId": "abc123",
+    "owner": "GABC...XYZ",
+    "amount": "10000",
+    "asset": "XLM",
+    "status": "active",
+    "daysRemaining": 30,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "feeBreakdown": {
+      "creationFee": {
+        "platformFeeAmount": "100",
+        "networkFeeAmount": "0.0000100",
+        "totalFeeAmount": "100.00001"
+      },
+      "settlementFee": {
+        "platformFeeAmount": "100",
+        "networkFeeAmount": "0.0000100",
+        "totalFeeAmount": "100.00001"
+      },
+      "rateSnapshot": {
+        "platformFeePercent": 1,
+        "networkBaseFeeStroops": 100
+      }
+    }
+  },
+  "meta": {
+    "correlationId": "req_abc123",
+    "timestamp": "2026-06-01T12:00:00.000Z"
+  }
+}
+```
+
+**Calculation breakdown for this example:**
+- Platform fee: `Math.trunc(10000 × 1 / 100)` = `Math.trunc(100)` = `"100"`
+- Network fee: `(100 / 10,000,000).toFixed(7)` = `"0.0000100"`
+- Total fee: `100 + 0.0000100` = `"100.00001"`
+
+---
+
 ## `POST /api/commitments/[id]/settle`
 
 Marks the commitment identified by `id` as settled.  Currently a stub that emits

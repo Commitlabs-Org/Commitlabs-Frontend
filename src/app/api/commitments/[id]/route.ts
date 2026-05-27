@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { BackendError, normalizeBackendError, NotFoundError, toBackendErrorResponse } from '@/lib/backend/errors';
+import { calculateFeeBreakdown } from '@/lib/backend/feeCalculator';
 import { getCommitmentFromChain } from '@/lib/backend/services/contracts';
+import { getProtocolConstants } from '@/lib/backend/services/protocolConstants';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { contractAddresses } from '@/utils/soroban';
 
@@ -48,12 +50,16 @@ export const GET = withApiHandler(async (_req: NextRequest, context, correlation
     throw new NotFoundError('Commitment', { commitmentId });
   }
 
+  const constants = getProtocolConstants();
+  const amount = typeof commitment.amount === 'bigint' ? String(commitment.amount) : commitment.amount;
+  const feeBreakdown = calculateFeeBreakdown(amount, constants);
+
   return ok(
     {
       commitmentId: String(commitment.id ?? commitment.commitmentId),
       owner: commitment.ownerAddress ?? commitment.owner,
       rules: commitment.rules ?? null,
-      amount: typeof commitment.amount === 'bigint' ? String(commitment.amount) : commitment.amount,
+      amount,
       asset: commitment.asset,
       createdAt: commitment.createdAt,
       expiresAt: commitment.expiresAt,
@@ -67,6 +73,7 @@ export const GET = withApiHandler(async (_req: NextRequest, context, correlation
       maxLossPercent: commitment.rules?.maxLossPercent ?? null,
       tokenId: commitment.tokenId ?? null,
       nftMetadataLink: getNftMetadataLink(String(commitment.id ?? commitment.commitmentId)),
+      feeBreakdown,
     },
     undefined,
     200,

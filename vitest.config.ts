@@ -19,6 +19,8 @@ export default defineConfig({
         'src/app/api/marketplace/listings/route.ts',
         'src/app/api/marketplace/listings/[id]/route.ts',
         'src/app/api/commitments/route.ts',
+        'src/lib/backend/feeCalculator.ts',
+        'src/app/api/commitments/[id]/route.ts',
       ],
       exclude: [
         'node_modules/',
@@ -33,6 +35,18 @@ export default defineConfig({
         functions: 14,
         branches: 14,
         statements: 19,
+        'src/lib/backend/feeCalculator.ts': {
+          lines: 95,
+          branches: 95,
+          functions: 95,
+          statements: 95,
+        },
+        'src/app/api/commitments/[id]/route.ts': {
+          lines: 95,
+          branches: 95,
+          functions: 95,
+          statements: 95,
+        },
       },
     },
   },
