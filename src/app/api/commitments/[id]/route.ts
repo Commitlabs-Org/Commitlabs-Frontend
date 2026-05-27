@@ -67,6 +67,7 @@ export const GET = withApiHandler(async (_req: NextRequest, context, correlation
       maxLossPercent: commitment.rules?.maxLossPercent ?? null,
       tokenId: commitment.tokenId ?? null,
       nftMetadataLink: getNftMetadataLink(String(commitment.id ?? commitment.commitmentId)),
+      contractVersion: commitment.contractVersion,
     },
     undefined,
     200,

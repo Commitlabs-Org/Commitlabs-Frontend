@@ -64,6 +64,46 @@ Clients should wait the indicated seconds before retrying. See [error-handling.m
 
 ---
 
+## `POST /api/marketplace/listings/[id]/purchase`
+
+Purchases a marketplace listing. Requires an active session cookie. Runs
+preflight eligibility checks, triggers on-chain ownership transfer, and records
+the event in the audit log.
+
+- **Authentication**: session cookie (`requireAuth`)
+- **Path parameter**: `id` — the marketplace listing ID
+- **Request body**: none
+- **Response**:
+  - `200 OK`: Purchase completed.
+  - `401 Unauthorized`: Missing or invalid session.
+  - `404 Not Found`: Listing does not exist.
+  - `409 Conflict`: Preflight failed (e.g. listing inactive, buyer is seller).
+  - `502 Bad Gateway`: On-chain transfer failed.
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/marketplace/listings/listing_1/purchase \
+     -H 'Cookie: session=<token>'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "listingId": "listing_1",
+    "commitmentId": "cm_abc",
+    "buyerAddress": "GBUYER...",
+    "price": "52000",
+    "currencyAsset": "USDC",
+    "txHash": null,
+    "reference": "TODO_CHAIN_CALL_TRANSFER_OWNERSHIP"
+  }
+}
+```
+
+---
+
 ## `POST /api/commitments`
 
 Creates a new commitment on the Stellar network.
@@ -101,10 +141,11 @@ curl -X POST http://localhost:3000/api/commitments \
 
 ## `POST /api/commitments/[id]/settle`
 
-Marks the commitment identified by `id` as settled.  Currently a stub that emits
-`CommitmentSettled` events.
+Marks the commitment identified by `id` as settled.  Currently a stub that emits `CommitmentSettled` events.
 
 - **Path parameter**: `id` (string)
+- **Headers**:
+    - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Replayed requests within the 24-hour replay window return the original prior result.
 - **Request body**: optional JSON payload with additional details.
 - **Response**: stub confirmation message.
 
@@ -127,10 +168,11 @@ curl -X POST http://localhost:3000/api/commitments/abc123/settle \
 
 ## `POST /api/commitments/[id]/early-exit`
 
-Triggers an early exit (with penalty) for the named commitment.  Emits
-`CommitmentEarlyExit` events.
+Triggers an early exit (with penalty) for the named commitment.  Emits `CommitmentEarlyExit` events.
 
 - **Path parameter**: `id` (string)
+- **Headers**:
+    - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Replayed requests within the 24-hour replay window return the original prior result.
 - **Request body**: optional JSON with penalty or reason.
 - **Response**: stub message.
 
@@ -147,6 +189,57 @@ curl -X POST http://localhost:3000/api/commitments/abc123/early-exit \
   "message": "Stub early-exit endpoint for commitment abc123",
   "commitmentId": "abc123"
 }
+```
+
+---
+
+## `GET /api/attestations/recent`
+
+Returns the most recent attestations sorted by `observedAt` descending, with
+page-based pagination metadata.
+
+- **Query parameters**:
+    - `page`: (integer, optional) Page number (1-based). Must be ≥ 1. Defaults to 1.
+    - `pageSize`: (integer, optional) Items per page. Must be 1–100. Defaults to 10.
+    - `ownerAddress`: (string, optional) Filter by commitment owner address. Requires a valid `Authorization: Bearer <token>` header.
+- **Response**: `200 OK` with attestation list and pagination meta.
+- **Error codes**:
+    - `400 VALIDATION_ERROR` — `page` or `pageSize` out of range, or `ownerAddress` is blank.
+    - `401 UNAUTHORIZED` — `ownerAddress` provided without a valid Bearer token.
+    - `429 TOO_MANY_REQUESTS` — Rate limit exceeded.
+
+### Example
+
+```bash
+curl 'http://localhost:3000/api/attestations/recent?page=1&pageSize=2'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "attestations": [
+      { "id": "ATT-005", "commitmentId": "CMT-005", "observedAt": "2026-04-24T10:00:00Z" },
+      { "id": "ATT-004", "commitmentId": "CMT-004", "observedAt": "2026-04-23T10:00:00Z" }
+    ],
+    "total": 5
+  },
+  "meta": {
+    "page": 1,
+    "pageSize": 2,
+    "total": 5,
+    "totalPages": 3,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}
+```
+
+Filtered by owner (requires authentication):
+
+```bash
+curl 'http://localhost:3000/api/attestations/recent?ownerAddress=GAAA...WHF' \
+     -H 'Authorization: Bearer <token>'
 ```
 
 ---
@@ -172,6 +265,67 @@ curl -X POST http://localhost:3000/api/attestations \
 {
   "message": "Attestations recording endpoint stub - rate limiting applied",
   "ip": "::1"
+}
+```
+
+---
+
+## `GET /api/notifications`
+
+Returns the authenticated owner's derived notification feed. Notifications are
+derived on-read from the owner's commitments and attestations (expiry warnings,
+violations, attestation health checks); they are not persisted.
+
+The feed is filtered by the owner's **notification delivery preferences**. Each
+notification has a `type` (`expiry`, `violation`, `health_check`), and only
+types the owner has opted into are returned. Preferences are read from stored
+user preferences (the `notificationCategories` field) and updated via the
+`PUT /api/user/preferences` endpoint.
+
+- **Query parameters**:
+    - `ownerAddress`: (string, required) The Stellar address whose feed to return.
+    - `page`: (number, optional, default `1`) 1-indexed page number. Must be `>= 1`.
+    - `pageSize`: (number, optional, default `10`) Items per page. Must be `1`–`100`.
+- **Preference filtering**:
+    - Notification categories the owner has set to `false` in
+      `notificationCategories` are excluded from the feed.
+    - When no preferences are stored, or a category key is absent, the category
+      is **delivered by default** (safe opt-in). An owner only stops receiving a
+      category by explicitly opting out.
+    - Filtering is applied **before pagination**, so `total` reflects the count
+      of notifications the owner can actually see — not the raw derived count.
+- **Response**:
+    - `200 OK`: Paginated, preference-filtered feed.
+    - `400 Bad Request`: `ownerAddress` is missing, or pagination params are out of range.
+    - `429 Too Many Requests`: Rate limit exceeded.
+
+### Example
+
+```bash
+curl 'http://localhost:3000/api/notifications?ownerAddress=0x123&page=1&pageSize=10'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "ownerAddress": "0x123",
+        "title": "Commitment Nearing Expiry",
+        "message": "Your commitment CMT-1 for XLM expires in 5 days.",
+        "severity": "warning",
+        "type": "expiry",
+        "read": false,
+        "createdAt": "2026-02-25T00:00:00.000Z",
+        "relatedCommitmentId": "CMT-1"
+      }
+    ],
+    "page": 1,
+    "pageSize": 10,
+    "total": 1
+  }
 }
 ```
 
@@ -203,6 +357,42 @@ curl http://localhost:3000/api/protocol/constants
   }
 }
 ```
+
+---
+
+## `GET /api/commitments/[id]/events`
+
+Server-Sent Events (SSE) stream that pushes real-time commitment status updates and transitions (Active, Settled, Early Exit, Violated).
+
+- **Path parameter**: `id` (string)
+- **Headers**:
+    - `Accept`: `text/event-stream` (required)
+- **Security**: Requires an authenticated session via browser cookies.
+- **Protocol Details**:
+    - **Snapshot**: The server emits a `snapshot` event immediately upon connection carrying the current status.
+    - **Transitions**: The server emits a `status_change` event only when a status transition is detected on-chain.
+    - **Heartbeat**: The server enqueues a comment heartbeat (`: keepalive`) every 20 seconds to prevent intermediates (proxies, load balancers) from dropping the idle connection.
+
+### Example Event Output
+
+```text
+event: snapshot
+data: {"commitmentId":"abc123","status":"Active","timestamp":"2026-05-27T01:30:00.000Z"}
+
+: keepalive
+
+event: status_change
+data: {"commitmentId":"abc123","status":"Settled","timestamp":"2026-05-27T01:30:15.000Z"}
+```
+
+### Client Reconnection & Backoff Guidelines
+
+- **Automatic Reconnection**: Standard browser `EventSource` handles connection drops and reconnection attempts automatically.
+- **Exponential Backoff**: For non-browser clients or custom connection wrappers, implement exponential backoff on reconnection failures:
+  1. Start with an initial delay of `1 second`.
+  2. Double the delay on each consecutive failure (`2s`, `4s`, `8s`, `16s`).
+  3. Cap the maximum delay at `30 seconds` to protect server resources.
+- **Graceful Fallback**: When SSE is unsupported or fails repeatedly, clients should fall back to polling the lightweight `/api/commitments/[id]/status` route at a standard, low-frequency interval (e.g., every 10–30 seconds).
 
 ---
 

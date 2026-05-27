@@ -283,7 +283,6 @@ export type CreateCommitmentInput = z.infer<typeof createCommitmentSchema>;
 export type CreateMarketplaceListingInput = z.infer<
   typeof createMarketplaceListingSchema
 >;
-export type CreateAttestationInput = z.infer<typeof createAttestationSchema>;
 
 // Validate Stellar address
 export function validateAddress(address: string): string {

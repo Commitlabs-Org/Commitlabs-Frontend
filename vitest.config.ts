@@ -1,9 +1,8 @@
-import { defineConfig } from 'vitest/config'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
     globals: true,
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
@@ -19,6 +18,7 @@ export default defineConfig({
         'src/app/api/marketplace/listings/route.ts',
         'src/app/api/marketplace/listings/[id]/route.ts',
         'src/app/api/commitments/route.ts',
+        'src/app/api/commitments/search/route.ts',
       ],
       exclude: [
         'node_modules/',
@@ -41,4 +41,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-})
+});

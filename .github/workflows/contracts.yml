@@ -1,0 +1,45 @@
+name: Contracts CI
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts.yml'
+
+jobs:
+  test-build:
+    name: Rust & Soroban CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown, wasm32v1-none
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts
+
+      - name: Install Stellar CLI
+        uses: stellar/stellar-cli@v23.0.0
+
+      - name: Run Cargo Tests
+        working-directory: contracts
+        run: cargo test
+
+      - name: Build Soroban Smart Contracts
+        working-directory: contracts
+        run: stellar contract build

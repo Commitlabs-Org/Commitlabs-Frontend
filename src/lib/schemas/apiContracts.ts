@@ -40,6 +40,7 @@ export const CommitmentItemSchema = z.object({
   violationCount: z.number().optional(),
   createdAt: z.string(),
   expiresAt: z.string(),
+  contractVersion: z.string().optional(),
 });
 
 export const CommitmentsListResponseSchema = OkBodySchema(
@@ -48,6 +49,45 @@ export const CommitmentsListResponseSchema = OkBodySchema(
     page: z.number().int().positive(),
     pageSize: z.number().int().positive(),
     total: z.number().int().nonnegative(),
+  }),
+);
+
+export const CommitmentSearchItemSchema = z.object({
+  commitmentId: z.string(),
+  ownerAddress: z.string(),
+  asset: z.string(),
+  amount: z.string(),
+  status: z.enum(['ACTIVE', 'SETTLED', 'VIOLATED', 'EARLY_EXIT', 'UNKNOWN']),
+  riskType: z.string(),
+  complianceScore: z.number(),
+  currentValue: z.string(),
+  feeEarned: z.string(),
+  violationCount: z.number(),
+  createdAt: z.string(),
+  expiresAt: z.string(),
+});
+
+export const CommitmentSearchFiltersSchema = z.object({
+  asset: z.string().nullable(),
+  status: z.string().nullable(),
+  riskType: z.string().nullable(),
+  minCompliance: z.number().nullable(),
+  sortBy: z.string(),
+  sortOrder: z.enum(['asc', 'desc']),
+});
+
+export const CommitmentSearchResponseSchema = OkBodySchema(
+  z.object({
+    data: z.array(CommitmentSearchItemSchema),
+    meta: z.object({
+      page: z.number().int().positive(),
+      pageSize: z.number().int().positive(),
+      total: z.number().int().nonnegative(),
+      totalPages: z.number().int().positive(),
+      hasNextPage: z.boolean(),
+      hasPrevPage: z.boolean(),
+    }),
+    filters: CommitmentSearchFiltersSchema,
   }),
 );
 
@@ -66,6 +106,7 @@ export const CommitmentDetailSchema = z.object({
   maxLossPercent: z.number().nullable(),
   tokenId: z.string().optional(),
   nftMetadataLink: z.string().optional(),
+  contractVersion: z.string().optional(),
 });
 
 export const CommitmentDetailResponseSchema = OkBodySchema(CommitmentDetailSchema);
@@ -96,6 +137,7 @@ export const AttestationSummarySchema = z.object({
   violation: z.boolean(),
   feeEarned: z.string().optional(),
   recordedAt: z.string(),
+  contractVersion: z.string().optional(),
 });
 
 export const AttestationPostResponseSchema = OkBodySchema(
