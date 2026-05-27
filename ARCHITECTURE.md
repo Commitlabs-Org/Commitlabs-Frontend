@@ -21,6 +21,7 @@ graph TD
     end
     
     subgraph "Integration Layer"
+        BackendServices[Backend Services (src/lib/backend/services)]
         SorobanUtils[Soroban Utils (src/utils/soroban.ts)]
         Wallet[Wallet Adapter (Freighter)]
     end
@@ -33,9 +34,9 @@ graph TD
     User -->|Interacts| Page
     Page -->|Renders| Comp
     Comp -->|Uses| Hooks
-    Hooks -->|Calls| SorobanUtils
-    SorobanUtils -->|Connects| Wallet
-    SorobanUtils -->|RPC Calls| Stellar
+    Hooks -->|Calls| BackendServices
+    BackendServices -->|RPC Calls| Stellar
+    SorobanUtils -->|Config & Addresses| BackendServices
     Wallet -->|Signs Tx| Stellar
     Stellar -->|Executes| Contracts
 ```
@@ -84,20 +85,21 @@ A secondary market for trading active commitments.
 sequenceDiagram
     participant User
     participant UI as Create Page
-    participant Utils as Soroban Utils
+    participant Backend as Backend Services
     participant Wallet as Freighter Wallet
     participant Chain as Stellar Network
 
     User->>UI: Select Commitment Type
     User->>UI: Configure Amount & Duration
     User->>UI: Click "Create Commitment"
-    UI->>Utils: Prepare Transaction (create_commitment)
-    Utils->>Wallet: Request Signature
+    UI->>Backend: POST /api/commitments (create_commitment)
+    Backend->>Chain: Prepare & Simulate Transaction
+    Backend->>Wallet: Request Signature (via Client)
     Wallet->>User: Prompt Approval
     User->>Wallet: Approve Transaction
     Wallet->>Chain: Submit Signed Transaction
-    Chain-->>Utils: Transaction Hash
-    Utils-->>UI: Success / Failure
+    Chain-->>Backend: Transaction Hash
+    Backend-->>UI: Success / Failure
     UI->>User: Show Success Modal
 ```
 
@@ -114,7 +116,7 @@ The application interacts with three primary contracts:
 
 -   **Provider**: `@stellar/freighter-api`
 -   **Usage**: Used to sign transactions for creating commitments and listing items on the marketplace.
--   **Status**: Currently in development (see `src/utils/soroban.ts`).
+-   **Status**: Integrated via the backend service layer (see `src/lib/backend/services/contracts.ts`). Client-side stubs in `src/utils/soroban.ts` have been removed in favor of the single source of truth in the backend.
 
 ## 🛡 Security & Performance
 

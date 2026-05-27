@@ -94,6 +94,16 @@ interface ContractInvocationResult {
   txHash?: string;
 }
 
+/**
+ * Compliance-score scaling factor.
+ *
+ * Convention: compliance scores are stored on-chain as **integers 0-100**
+ * (i.e. whole-number percentages).  Both the write path
+ * (`recordAttestationOnChain`) and the read paths (`parseChainCommitment`,
+ * `parseAttestationResult`) use this same integer representation, so no
+ * runtime scaling is applied.  The constant is retained for documentation
+ * and any future analytics layer that needs a different base.
+ */
 const ANALYTICS_SCALE = 100;
 
 function getRpcUrl(): string {
@@ -275,6 +285,8 @@ function parseChainCommitment(value: unknown): ChainCommitment {
     });
   }
 
+  // Compliance score is stored on-chain as an integer 0-100 (see ANALYTICS_SCALE).
+  // No re-scaling is needed on read because the write path stores the raw integer.
   return {
     id,
     ownerAddress: asString(raw.ownerAddress ?? raw.owner_address),
@@ -342,6 +354,7 @@ function parseAttestationResult(
     });
   }
 
+  // Compliance score read back as integer 0-100 — no re-scaling (see ANALYTICS_SCALE).
   return {
     attestationId,
     commitmentId,
@@ -666,7 +679,10 @@ export async function recordAttestationOnChain(
       [
         nativeToScVal(params.commitmentId),
         new Address(params.attestorAddress).toScVal(),
-        nativeToScVal(params.complianceScore / ANALYTICS_SCALE),
+        // Store compliance score as integer 0-100 on-chain (no division).
+        // The read paths (parseChainCommitment, parseAttestationResult) expect
+        // the same integer scale (see ANALYTICS_SCALE), so the round-trip is lossless.
+        nativeToScVal(Math.round(params.complianceScore)),
         nativeToScVal(params.violation),
         nativeToScVal(params.feeEarned ?? "0"),
         nativeToScVal(params.timestamp ?? new Date().toISOString()),

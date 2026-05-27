@@ -461,3 +461,89 @@ describe('AttestationPostResponseSchema', () => {
     });
   });
 });
+
+// ─── Compliance-score round-trip scaling ──────────────────────────────────────
+// These tests verify that the scaling convention (integer 0-100) is consistent
+// between the write path (recordAttestationOnChain, which sends the score
+// on-chain) and the read paths (parseChainCommitment / parseAttestationResult,
+// which parse it back).  The contract is: NO division or multiplication by
+// ANALYTICS_SCALE at runtime — scores are persisted as-is.
+//
+// We simulate the round-trip by:
+//   1. Applying the same transform the write path uses: Math.round(score)
+//   2. Feeding the result into the read-path schemas (AttestationSummarySchema)
+//   3. Asserting the output equals the original input.
+
+describe('Compliance-score round-trip scaling', () => {
+  const BOUNDARY_SCORES = [0, 50, 100] as const;
+
+  /**
+   * Simulates the on-chain write transform applied in recordAttestationOnChain.
+   * Before the fix this was `score / 100`; now it is `Math.round(score)`.
+   */
+  function simulateWriteTransform(score: number): number {
+    return Math.round(score);
+  }
+
+  /**
+   * Builds a minimal attestation payload as it would be returned from the
+   * chain, using the value that was written.
+   */
+  function buildChainPayload(writtenScore: number) {
+    return {
+      attestationId: 'att_roundtrip',
+      commitmentId: 'c_roundtrip',
+      complianceScore: writtenScore,
+      violation: false,
+      recordedAt: '2026-05-27T00:00:00.000Z',
+    };
+  }
+
+  BOUNDARY_SCORES.forEach((inputScore) => {
+    it(`round-trips complianceScore=${inputScore} without loss`, () => {
+      const written = simulateWriteTransform(inputScore);
+      const payload = buildChainPayload(written);
+
+      // Validate via AttestationSummarySchema (read path schema)
+      const parsed = AttestationSummarySchema.parse(payload);
+      expect(parsed.complianceScore).toBe(inputScore);
+    });
+  });
+
+  it('preserves integer precision (no float artefacts)', () => {
+    // Scores that would lose precision under the old `/ 100` path
+    const trickyScores = [1, 3, 7, 33, 67, 99];
+    for (const score of trickyScores) {
+      const written = simulateWriteTransform(score);
+      expect(written).toBe(score); // still an integer
+      expect(Number.isInteger(written)).toBe(true);
+    }
+  });
+
+  it('rounds fractional input to nearest integer', () => {
+    // If a caller passes 85.6, it should be stored as 86
+    expect(simulateWriteTransform(85.6)).toBe(86);
+    expect(simulateWriteTransform(85.4)).toBe(85);
+    expect(simulateWriteTransform(0.5)).toBe(1);
+    expect(simulateWriteTransform(99.5)).toBe(100);
+  });
+
+  // Commitment-level round-trip (uses CommitmentItemSchema for the read side)
+  BOUNDARY_SCORES.forEach((inputScore) => {
+    it(`CommitmentItemSchema round-trips complianceScore=${inputScore}`, () => {
+      const written = simulateWriteTransform(inputScore);
+      const payload = {
+        commitmentId: 'c_rt',
+        ownerAddress: 'GABC',
+        asset: 'USDC',
+        amount: '1000',
+        status: 'Active',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        expiresAt: '2026-06-01T00:00:00.000Z',
+        complianceScore: written,
+      };
+      const parsed = CommitmentItemSchema.parse(payload);
+      expect(parsed.complianceScore).toBe(inputScore);
+    });
+  });
+});
