@@ -154,3 +154,13 @@ stellar contract build
 
 > Note: this workspace is scaffolded to ground the contract issue backlog.
 > Verify a local toolchain before deploying to testnet/mainnet.
+
+## Continuous Integration
+
+A GitHub Actions CI workflow is configured in `.github/workflows/contracts.yml`.
+On every push and pull request touching the `contracts/` directory or the workflow file, the CI will:
+1. Set up the stable Rust toolchain with the `wasm32-unknown-unknown` target.
+2. Cache Cargo registries and dependency builds via `Swatinem/rust-cache` to ensure fast execution.
+3. Install the required version of the `stellar-cli` (v23.0.0).
+4. Run `cargo test --locked` to execute the escrow contract unit tests.
+5. Execute `stellar contract build` to verify smart contract compilation to WebAssembly.
