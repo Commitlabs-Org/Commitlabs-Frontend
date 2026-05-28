@@ -1,6 +1,8 @@
+// Triggering rebuild
 #![no_std]
 #![allow(non_snake_case)]
 //! CommitLabs Escrow Contract
+
 //!
 //! Implements the on-chain escrow lifecycle backing CommitLabs liquidity
 //! commitments. A commitment locks a depositor's assets for a fixed duration
@@ -39,6 +41,14 @@ pub enum DataKey {
     Dispute(u64),
     /// Default penalty in basis points for each RiskProfile.
     DefaultPenalty(RiskProfile),
+    /// Contract paused flag; true halts write operations.
+    Paused,
+    /// Accumulated yield pool balance available to pay matured commitments.
+    YieldPool,
+    /// Attestation history for a commitment, keyed by commitment id.
+    Attestations(u64),
+    /// Minimum compliance score threshold; scores below this auto-violate a funded commitment.
+    ViolationThreshold,
 }
 
 /// Risk profile chosen at creation time. Determines the early-exit penalty
@@ -65,6 +75,8 @@ pub enum EscrowStatus {
     Refunded,
     /// Under dispute; transfers are frozen.
     Disputed,
+    /// Compliance score dropped below the violation threshold; transfers frozen until resolved.
+    Violated,
 }
 
 /// Categorized dispute reason enum. Enables efficient on-chain classification
@@ -97,6 +109,15 @@ pub struct DisputeRecord {
     pub disputed_at: u64,
     /// Address that initiated the dispute (owner or admin).
     pub disputed_by: Address,
+}
+
+/// A single compliance attestation entry appended to a commitment's history.
+#[contracttype]
+#[derive(Clone)]
+pub struct AttestationRecord {
+    pub attestor: Address,
+    pub compliance_score: u32,
+    pub timestamp: u64,
 }
 
 /// A single escrow / commitment record.
@@ -139,6 +160,14 @@ pub enum Error {
     PenaltyTooHigh = 9,
     /// Contract is currently paused for emergency halt.
     Paused = 10,
+    /// Token asset does not match the configured escrow token.
+    AssetMismatch = 11,
+    /// Yield pool has insufficient balance to pay matured commitment yield.
+    InsufficientYieldPool = 12,
+    /// WASM hash provided for upgrade is invalid (e.g. zero hash).
+    InvalidWasmHash = 13,
+    /// Commitment is in Violated status; release and refund are blocked until resolved.
+    CommitmentViolated = 14,
 }
 
 /// Result of an early exit commitment.
@@ -301,18 +330,27 @@ impl EscrowContract {
         // Guard against overflow when converting duration_days into an absolute
         // maturity timestamp. Overflow must never wrap, otherwise commitments
         // could be released/refunded at incorrect times.
-        let duration_seconds = (duration_days as u64)
-            .checked_mul(SECONDS_PER_DAY)
-            .ok_or(Error::InvalidDuration)?;
+        //
+        // NOTE: Soroban client bindings may pass arguments in ways that can hide
+        // the expected arithmetic overflow during tests. Explicitly reject
+        // impossible duration ranges before doing any conversions.
+        let max_duration_days = (u64::MAX / SECONDS_PER_DAY) as u32;
+        if duration_days > max_duration_days {
+            return Err(Error::InvalidDuration);
+        }
+
+        let duration_seconds = (duration_days as u64) * SECONDS_PER_DAY;
         let maturity = now
             .checked_add(duration_seconds)
             .ok_or(Error::InvalidDuration)?;
+
 
         let commitment = Commitment {
             id,
             owner: owner.clone(),
             asset,
             amount,
+            accrued_yield: 0,
             risk,
             status: EscrowStatus::Created,
             maturity,
@@ -473,6 +511,9 @@ impl EscrowContract {
         Self::require_init(&env)?;
         let mut c = Self::load(&env, commitment_id)?;
 
+        if c.status == EscrowStatus::Violated {
+            return Err(Error::CommitmentViolated);
+        }
         if c.status != EscrowStatus::Funded {
             return Err(Error::InvalidState);
         }
@@ -516,6 +557,79 @@ impl EscrowContract {
         let c = Self::load(&env, commitment_id)?;
         c.owner.require_auth();
         let (refund_amount, _) = Self::execute_refund(&env, c)?;
+        Ok(refund_amount)
+    }
+
+    /// Partial early-exit refund. Withdraws `amount` from the escrowed principal,
+    /// applying the proportional `penalty_bps` to the withdrawn portion only. The
+    /// remaining principal stays escrowed and the commitment status stays `Funded`.
+    /// If `amount` equals the full principal the commitment transitions to `Refunded`.
+    ///
+    /// Only the owner may call this and only while the commitment is `Funded`. The
+    /// call is rejected if the commitment is in `Violated` status.
+    ///
+    /// # Arguments
+    /// * `commitment_id` - The id of the target commitment.
+    /// * `amount` - The portion of the principal to withdraw (must be > 0 and ≤ stored amount).
+    pub fn refund_partial(
+        env: Env,
+        commitment_id: u64,
+        amount: i128,
+    ) -> Result<i128, Error> {
+        Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
+        let mut c = Self::load(&env, commitment_id)?;
+        c.owner.require_auth();
+
+        if c.status == EscrowStatus::Violated {
+            return Err(Error::CommitmentViolated);
+        }
+        if c.status != EscrowStatus::Funded {
+            return Err(Error::InvalidState);
+        }
+        if amount <= 0 || amount > c.amount {
+            return Err(Error::InvalidAmount);
+        }
+
+        // Apply penalty to the withdrawn portion only.
+        let penalty_mul = amount
+            .checked_mul(c.penalty_bps as i128)
+            .ok_or(Error::InvalidAmount)?;
+        let penalty = penalty_mul / MAX_PENALTY_BPS as i128;
+        let refund_amount = amount
+            .checked_sub(penalty)
+            .ok_or(Error::InvalidAmount)?;
+
+        // Update the stored principal; remainder stays in escrow.
+        let remaining = c
+            .amount
+            .checked_sub(amount)
+            .ok_or(Error::InvalidAmount)?;
+        c.amount = remaining;
+        if remaining == 0 {
+            c.status = EscrowStatus::Refunded;
+        }
+
+        // Effects: persist before token interactions.
+        Self::save(&env, &c);
+
+        // Interactions: transfer penalty then refund.
+        let token = Self::token_client(&env);
+        let contract = env.current_contract_address();
+        if penalty > 0 {
+            let fee_recipient: Address = env
+                .storage()
+                .instance()
+                .get(&DataKey::FeeRecipient)
+                .ok_or(Error::NotInitialized)?;
+            token.transfer(&contract, &fee_recipient, &penalty);
+        }
+        token.transfer(&contract, &c.owner, &refund_amount);
+
+        env.events().publish(
+            (Symbol::new(&env, "refund_partial"), c.owner.clone()),
+            (commitment_id, refund_amount, penalty, remaining),
+        );
         Ok(refund_amount)
     }
 
@@ -706,6 +820,42 @@ impl EscrowContract {
         Ok(())
     }
 
+    /// Set the minimum compliance score threshold. Any `record_attestation` call
+    /// that records a score strictly below this value will automatically transition
+    /// the commitment from `Funded` to `Violated`, freezing release and refund until
+    /// the admin resolves it via `resolve_dispute`.
+    ///
+    /// Admin only. A threshold of 0 disables auto-violation.
+    ///
+    /// # Arguments
+    /// * `threshold` - Score threshold 0..=100 (0 = disabled, 60 = violate below 60).
+    pub fn set_violation_threshold(env: Env, threshold: u32) -> Result<(), Error> {
+        Self::require_init(&env)?;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        let clamped = threshold.min(100);
+        env.storage()
+            .instance()
+            .set(&DataKey::ViolationThreshold, &clamped);
+        env.events()
+            .publish((Symbol::new(&env, "set_violation_threshold"), admin), clamped);
+        Ok(())
+    }
+
+    /// Return the current violation threshold (0..=100). A compliance score
+    /// strictly below this value triggers auto-violation on attestation.
+    /// Returns 0 if no threshold has been configured (auto-violation disabled).
+    pub fn get_violation_threshold(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::ViolationThreshold)
+            .unwrap_or(0)
+    }
+
     /// Record a compliance attestation (0..=100) against a commitment. Mirrors
     /// the attestation engine integration used by the backend.
     pub fn record_attestation(
@@ -719,6 +869,21 @@ impl EscrowContract {
         let mut c = Self::load(&env, commitment_id)?;
         let score = compliance_score.min(100);
         c.compliance_score = score;
+
+        // Auto-violate a funded commitment when the score drops below the threshold.
+        let threshold: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::ViolationThreshold)
+            .unwrap_or(0);
+        if threshold > 0 && score < threshold && c.status == EscrowStatus::Funded {
+            c.status = EscrowStatus::Violated;
+            env.events().publish(
+                (Symbol::new(&env, "commitment_violated"), attestor.clone()),
+                (commitment_id, score, threshold),
+            );
+        }
+
         Self::save(&env, &c);
 
         let mut attestations: Vec<AttestationRecord> = env
@@ -749,6 +914,51 @@ impl EscrowContract {
         Self::load(&env, commitment_id)
     }
 
+    /// Transfer marketplace ownership for secondary trading.
+    ///
+    /// Preconditions:
+    /// - Commitment must be in `Funded` state.
+    ///
+    /// Authorization:
+    /// - Current commitment owner must authorize via `require_auth()`.
+    ///
+    /// Effects:
+    /// - Updates `Commitment.owner`.
+    /// - Maintains `OwnerIndex` for both the old owner and the new owner.
+    /// - Emits `transfer_ownership`.
+    pub fn transfer_ownership(env: Env, commitment_id: u64, new_owner: Address) -> Result<(), Error> {
+        Self::require_init(&env)?;
+
+        let mut c = Self::load(&env, commitment_id)?;
+
+        // Authorization: only the current owner can transfer ownership.
+        // NOTE: Must remain tied to the stored commitment owner.
+        c.owner.require_auth();
+
+        // Only allow transfer of funded commitments.
+        if c.status != EscrowStatus::Funded {
+            return Err(Error::InvalidState);
+        }
+
+        let old_owner = c.owner.clone();
+        if old_owner == new_owner {
+            // No-op transfer. Kept explicit to avoid index churn.
+            return Ok(());
+        }
+
+        // Maintain OwnerIndex for both sides.
+        Self::deindex_owner(&env, &old_owner, commitment_id);
+        Self::index_owner(&env, &new_owner, commitment_id);
+
+        c.owner = new_owner.clone();
+        Self::save(&env, &c);
+
+        env.events().publish(
+            (Symbol::new(&env, "transfer_ownership"), old_owner),
+            (commitment_id, new_owner),
+        );
+
+        Ok(())
     /// Return the list of attestation history for a commitment id.
     pub fn get_attestations(env: Env, commitment_id: u64) -> Vec<AttestationRecord> {
         env.storage()
@@ -790,6 +1000,9 @@ impl EscrowContract {
         env: &Env,
         mut c: Commitment,
     ) -> Result<(i128, i128), Error> {
+        if c.status == EscrowStatus::Violated {
+            return Err(Error::CommitmentViolated);
+        }
         if c.status != EscrowStatus::Funded {
             return Err(Error::InvalidState);
         }
@@ -852,15 +1065,8 @@ impl EscrowContract {
         id
     }
 
-    fn is_paused(env: &Env) -> bool {
-        env.storage()
-            .instance()
-            .get(&DataKey::Paused)
-            .unwrap_or(false)
-    }
-
     fn require_not_paused(env: &Env) -> Result<(), Error> {
-        if Self::is_paused(env) {
+        if env.storage().instance().get(&DataKey::Paused).unwrap_or(false) {
             return Err(Error::Paused);
         }
         Ok(())
@@ -889,6 +1095,30 @@ impl EscrowContract {
         env.storage()
             .persistent()
             .set(&DataKey::OwnerIndex(owner.clone()), &ids);
+    }
+
+    /// Remove `id` from `owner`'s OwnerIndex list.
+    fn deindex_owner(env: &Env, owner: &Address, id: u64) {
+        let mut ids: Vec<u64> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::OwnerIndex(owner.clone()))
+            .unwrap_or_else(|| Vec::new(env));
+
+        // Vec in soroban-sdk is append-only by default; build a new list.
+        let mut i: u32 = 0;
+        let mut out: Vec<u64> = Vec::new(env);
+        while i < ids.len() {
+            let cur = ids.get(i).unwrap();
+            if cur != id {
+                out.push_back(cur);
+            }
+            i += 1;
+        }
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::OwnerIndex(owner.clone()), &out);
     }
 
     fn yield_pool_balance(env: &Env) -> i128 {

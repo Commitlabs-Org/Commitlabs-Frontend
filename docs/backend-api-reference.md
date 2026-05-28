@@ -166,6 +166,39 @@ curl -X POST http://localhost:3000/api/commitments/abc123/settle \
 
 ---
 
+## `POST /api/commitments/[id]/fund`
+
+Funds an existing commitment that was previously created but not yet funded. The route validates ownership, enforces `CREATED` state, and submits the on-chain `fund_escrow` transaction.
+
+- **Path parameter**: `id` (string)
+- **Headers**:
+    - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Replayed requests within the 24-hour replay window return the original prior result.
+- **Request body**:
+    - `callerAddress` (string, optional) — Stellar address of the funding wallet. If omitted, the commitment owner is used.
+- **Response**: confirmation of the funded commitment with `txHash` and `reference`.
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/commitments/abc123/fund \
+     -H 'Content-Type: application/json' \
+     -d '{"callerAddress":"GOWNER..."}'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "commitmentId": "abc123",
+    "txHash": "tx-abc123",
+    "reference": "funded",
+    "fundedAt": "2026-05-27T00:00:00.000Z"
+  }
+}
+```
+
+---
+
 ## `POST /api/commitments/[id]/early-exit`
 
 Triggers an early exit (with penalty) for the named commitment.  Emits `CommitmentEarlyExit` events.

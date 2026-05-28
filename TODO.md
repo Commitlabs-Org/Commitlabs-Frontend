@@ -1,14 +1,19 @@
-# TODO
+# TODO - transfer_ownership entrypoint
 
-## Contracts - Fix unchecked arithmetic in maturity calculation in create_commitment
-
-- [ ] Create branch `bug/checked-maturity-arithmetic` (if not already).
-- [x] Update `contracts/escrow/src/lib.rs` to compute `maturity` using `checked_mul` and `checked_add`.
-- [x] Return `InvalidDuration` on overflow.
-- [x] Add tests in `contracts/escrow/src/test.rs` covering overflow inputs for `duration_days` and timestamp.
-- [x] Document behavior in `contracts/README.md`.
-- [x] Add comments on the overflow guard.
-
-- [ ] Run tests / build (requires Rust toolchain / cargo available).
-- [ ] Commit with message like `fix: use checked arithmetic for maturity calculation`.
+- [x] Inspect escrow contract + tests + docs
+- [ ] Implement `transfer_ownership(commitment_id, new_owner)` in `contracts/escrow/src/lib.rs`
+  - [ ] Gate by current owner auth (`c.owner.require_auth()`)
+  - [ ] Allow only `Funded` commitments
+  - [ ] Update `Commitment.owner`
+  - [ ] Maintain `OwnerIndex` for both old + new owners (remove from old, add to new)
+  - [ ] Add internal helper(s) for index de-registration
+  - [ ] Add event + review-oriented comments
+- [ ] Add unit tests in `contracts/escrow/src/test.rs`
+  - [ ] Happy path: funded commitment index updates
+  - [ ] Fails when commitment not funded
+  - [ ] Fails when commitment disputed (still requires funded-only)
+  - [ ] Edge: transfer to self / duplicate handling
+- [ ] Document flow in `contracts/README.md`
+- [ ] Run `cargo test` and ensure coverage meets requirement
+- [ ] Commit changes on branch (feature/transfer-ownership-entrypoint)
 

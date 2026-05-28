@@ -36,6 +36,7 @@ import { createHash } from "crypto";
  * Maps user-facing values to the on-chain `ChainCommitmentStatus` type.
  */
 const COMMITMENT_STATUS_VALUES = [
+  "CREATED",
   "ACTIVE",
   "SETTLED",
   "VIOLATED",
@@ -68,7 +69,7 @@ const CommitmentSearchQuerySchema = z.object({
 
   /**
    * Filter by commitment status.
-   * Accepted values: ACTIVE, SETTLED, VIOLATED, EARLY_EXIT.
+   * Accepted values: CREATED, ACTIVE, SETTLED, VIOLATED, EARLY_EXIT.
    */
   status: z
     .enum(COMMITMENT_STATUS_VALUES)

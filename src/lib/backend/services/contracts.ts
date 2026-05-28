@@ -21,6 +21,7 @@ import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
 import { getCountersAdapter } from "@/lib/backend/counters/provider";
 
 export type ChainCommitmentStatus =
+  | "CREATED"
   | "ACTIVE"
   | "SETTLED"
   | "VIOLATED"
@@ -48,14 +49,12 @@ export interface ChainCommitment {
   violationCount: number;
   createdAt?: string;
   expiresAt?: string;
-  contractVersion?: string;
 }
 
 export interface CreateCommitmentOnChainResult {
   commitmentId: string;
   commitment: ChainCommitment;
   txHash?: string;
-  contractVersion?: string;
 }
 
 export interface RecordAttestationOnChainParams {
@@ -76,7 +75,6 @@ export interface RecordAttestationOnChainResult {
   feeEarned: string;
   recordedAt: string;
   txHash?: string;
-  contractVersion?: string;
 }
 
 export interface SettleCommitmentOnChainParams {
@@ -89,6 +87,17 @@ export interface SettleCommitmentOnChainResult {
   txHash?: string;
   reference?: string;
   finalStatus: string;
+}
+
+export interface FundEscrowOnChainParams {
+  commitmentId: string;
+  callerAddress?: string;
+}
+
+export interface FundEscrowOnChainResult {
+  commitmentId: string;
+  txHash?: string;
+  reference?: string;
   contractVersion?: string;
 }
 
@@ -96,68 +105,12 @@ type ContractCallMode = "read" | "write";
 interface ContractInvocationResult {
   value: unknown;
   txHash?: string;
-  version: string;
 }
 
 const ANALYTICS_SCALE = 100;
-const DEFAULT_RPC_TIMEOUT_MS = 30_000;
 
 function getRpcUrl(): string {
   return getBackendConfig().sorobanRpcUrl;
-}
-
-function getRpcTimeoutMs(): number {
-  const raw = process.env.SOROBAN_RPC_TIMEOUT_MS;
-  if (!raw) return DEFAULT_RPC_TIMEOUT_MS;
-  const parsed = parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RPC_TIMEOUT_MS;
-}
-
-/**
- * Races a Soroban RPC promise against an AbortSignal so that a controller-
- * level timeout can cancel all in-flight RPC work simultaneously.  When the
- * signal fires before the promise settles the rejection is mapped to a
- * GATEWAY_TIMEOUT BackendError with retryable: true.
- *
- * For write calls the timeout may fire after sendTransaction has already
- * broadcast the transaction; callers must treat GATEWAY_TIMEOUT responses as
- * "outcome unknown" and advise the user to verify on-chain using the txHash
- * surfaced in the error details.
- */
-function abortableRpc<T>(
-  call: Promise<T>,
-  signal: AbortSignal,
-  methodName: string,
-  timeoutMs: number,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () =>
-      reject(
-        normalizeContractError(new Error("aborted"), {
-          code: "GATEWAY_TIMEOUT",
-          message: `Soroban RPC timed out after ${timeoutMs}ms for ${methodName}. The operation may still be processing on-chain.`,
-          status: 504,
-          details: { methodName, timeoutMs, retryable: true },
-        }),
-      );
-
-    if (signal.aborted) {
-      onAbort();
-      return;
-    }
-
-    signal.addEventListener("abort", onAbort, { once: true });
-    call.then(
-      (value) => {
-        signal.removeEventListener("abort", onAbort);
-        resolve(value);
-      },
-      (error: unknown) => {
-        signal.removeEventListener("abort", onAbort);
-        reject(error);
-      },
-    );
-  });
 }
 
 function getNetworkPassphrase(): string {
@@ -226,6 +179,7 @@ function asNumber(value: unknown, fallback = 0): number {
 function normalizeStatus(value: unknown): ChainCommitmentStatus {
   const raw = asString(value, "UNKNOWN").toUpperCase();
   if (
+    raw === "CREATED" ||
     raw === "ACTIVE" ||
     raw === "SETTLED" ||
     raw === "VIOLATED" ||
@@ -322,10 +276,168 @@ function normalizeContractError(
   });
 }
 
-function parseChainCommitment(
-  value: unknown,
-  contractVersion?: string,
-): ChainCommitment {
+// ---------------------------------------------------------------------------
+// Retry-with-backoff for read-mode Soroban calls
+//
+// Transient RPC failures (429 / 503 / 504 / timeouts) on *read* calls are safe
+// to retry because reads are idempotent — re-running one cannot change on-chain
+// state. Write transactions are NEVER retried here: re-submitting a signed
+// transaction risks double execution. The retry path is therefore exposed only
+// through `invokeReadContractMethod`, whose call mode is hard-coded to "read".
+//
+// Both the attempt count and the cumulative backoff are bounded so that a flaky
+// endpoint cannot stall a request indefinitely.
+// ---------------------------------------------------------------------------
+
+/** Async sleep helper. Injectable so unit tests run without real timers. */
+export type SleepFn = (ms: number) => Promise<void>;
+
+const defaultSleep: SleepFn = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+/** Tunables for {@link retryWithBackoff}. */
+export interface RetryOptions {
+  /** Total attempts, including the first. Coerced to at least 1. */
+  maxAttempts: number;
+  /** Delay used to seed the first backoff, in milliseconds. */
+  baseDelayMs: number;
+  /** Hard ceiling for any single backoff delay, in milliseconds. */
+  maxDelayMs: number;
+  /** Hard ceiling for the sum of all backoff delays in a single call. */
+  maxTotalBackoffMs: number;
+  /** Growth factor applied to the delay ceiling after each failed attempt. */
+  backoffMultiplier: number;
+  /** Returns true when an error is a transient failure worth retrying. */
+  isRetryable: (error: unknown) => boolean;
+  /** Random source in [0, 1) used for jitter. Injectable for tests. */
+  random?: () => number;
+  /** Sleep implementation. Injectable for tests. */
+  sleep?: SleepFn;
+  /** Observability hook fired immediately before each backoff sleep. */
+  onRetry?: (info: {
+    attempt: number;
+    delayMs: number;
+    error: unknown;
+  }) => void;
+}
+
+/**
+ * Runs `operation` and retries it with bounded exponential backoff for as long
+ * as it keeps failing with a *retryable* error.
+ *
+ * Guarantees:
+ * - Bounded work: at most `maxAttempts` invocations and at most
+ *   `maxTotalBackoffMs` of cumulative sleeping, so a failing dependency can
+ *   never stall the caller indefinitely.
+ * - Non-retryable errors are re-thrown on first occurrence, untouched.
+ * - The error from the final attempt is re-thrown unchanged, so the caller's
+ *   existing error handling (normalization, failure metrics) is unaffected.
+ * - No side effects of its own: it does not log or emit metrics. The caller
+ *   decides what happens once retries are exhausted.
+ *
+ * Backoff uses "equal jitter" (half fixed, half random) so that many concurrent
+ * callers — e.g. parallel per-commitment reads — do not retry in lock-step and
+ * stampede the RPC endpoint.
+ */
+export async function retryWithBackoff<T>(
+  operation: (attempt: number) => Promise<T>,
+  options: RetryOptions,
+): Promise<T> {
+  const random = options.random ?? Math.random;
+  const sleep = options.sleep ?? defaultSleep;
+  const maxAttempts = Math.max(1, Math.floor(options.maxAttempts));
+
+  let totalBackoffMs = 0;
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      // The operation receives the 1-based attempt number so lower layers can
+      // enforce per-attempt invariants (see assertRetrySafe).
+      return await operation(attempt);
+    } catch (error) {
+      const isLastAttempt = attempt >= maxAttempts;
+      if (isLastAttempt || !options.isRetryable(error)) {
+        throw error;
+      }
+
+      // Exponential growth, capped per attempt, then jittered.
+      const ceiling = Math.min(
+        options.baseDelayMs * options.backoffMultiplier ** (attempt - 1),
+        options.maxDelayMs,
+      );
+      const delayMs = ceiling / 2 + random() * (ceiling / 2);
+
+      // Honour the cumulative backoff budget: rather than stalling, stop and
+      // surface the error if the next sleep would exceed it.
+      if (totalBackoffMs + delayMs > options.maxTotalBackoffMs) {
+        throw error;
+      }
+      totalBackoffMs += delayMs;
+
+      options.onRetry?.({ attempt, delayMs, error });
+      await sleep(delayMs);
+    }
+  }
+}
+
+/**
+ * Bounded retry policy applied to read-mode Soroban calls only. Worst-case
+ * added latency is roughly `maxTotalBackoffMs` on top of the time spent in the
+ * failed attempts themselves. These values are intentionally conservative:
+ * they absorb brief RPC hiccups, not sustained outages.
+ */
+const READ_RETRY_CONFIG = {
+  maxAttempts: 3,
+  baseDelayMs: 200,
+  maxDelayMs: 2_000,
+  maxTotalBackoffMs: 4_000,
+  backoffMultiplier: 2,
+} as const;
+
+/**
+ * Decides whether a failed Soroban call is a *transient* failure worth
+ * retrying. It reuses the retryable classification produced by
+ * {@link normalizeContractError} (429 / 503 / 504 / timeouts and generic
+ * gateway errors), so there is a single source of truth. Deterministic
+ * failures — 404 (not found) and 400 (validation) — are never retried.
+ */
+export function isRetryableContractError(error: unknown): boolean {
+  const normalized = normalizeContractError(error, {
+    code: "BLOCKCHAIN_CALL_FAILED",
+    message: "Soroban read call failed.",
+    status: 502,
+    details: {},
+  });
+  return asRecord(normalized.details).retryable === true;
+}
+
+/**
+ * Guard against retrying write transactions.
+ *
+ * Read calls are idempotent and may safely run multiple times. A write
+ * transaction must be submitted exactly once: retrying it (attempt > 1) risks
+ * a double submission. This invariant is enforced at the lowest level — inside
+ * {@link invokeContractMethod} — so it holds regardless of how a call is wired
+ * up. If the invariant is ever violated by a future change, this throws a
+ * non-retryable error *before* any transaction is submitted, converting a
+ * silent double-spend into a loud, safe failure.
+ *
+ * Exported so the guard can be unit tested directly.
+ */
+export function assertRetrySafe(mode: ContractCallMode, attempt: number): void {
+  if (attempt > 1 && mode !== "read") {
+    throw new BackendError({
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Internal error: write transactions must never be retried.",
+      status: 500,
+      details: { mode, attempt },
+    });
+  }
+}
+
+function parseChainCommitment(value: unknown): ChainCommitment {
   const raw = asRecord(value);
   const id = asString(raw.id ?? raw.commitmentId);
 
@@ -353,14 +465,12 @@ function parseChainCommitment(
     violationCount: asNumber(raw.violationCount ?? raw.violation_count),
     createdAt: asString(raw.createdAt ?? raw.created_at) || undefined,
     expiresAt: asString(raw.expiresAt ?? raw.expires_at) || undefined,
-    contractVersion,
   };
 }
 
 function parseCreateCommitmentResult(
   value: unknown,
   txHash?: string,
-  contractVersion?: string,
 ): CreateCommitmentOnChainResult {
   if (typeof value === "string") {
     return {
@@ -375,31 +485,24 @@ function parseCreateCommitmentResult(
         currentValue: "0",
         feeEarned: "0",
         violationCount: 0,
-        contractVersion,
       },
       txHash,
-      contractVersion,
     };
   }
 
   const raw = asRecord(value);
-  const parsedCommitment = parseChainCommitment(
-    raw.commitment ?? raw,
-    contractVersion,
-  );
+  const parsedCommitment = parseChainCommitment(raw.commitment ?? raw);
 
   return {
     commitmentId: parsedCommitment.id,
     commitment: parsedCommitment,
     txHash: asString(raw.txHash) || txHash,
-    contractVersion,
   };
 }
 
 function parseAttestationResult(
   value: unknown,
   txHash?: string,
-  contractVersion?: string,
 ): RecordAttestationOnChainResult {
   const raw = asRecord(value);
   const attestationId = asString(raw.attestationId ?? raw.id);
@@ -423,19 +526,15 @@ function parseAttestationResult(
     recordedAt:
       asString(raw.recordedAt ?? raw.recorded_at) || new Date().toISOString(),
     txHash: asString(raw.txHash) || txHash,
-    contractVersion,
   };
 }
 
-function parseCommitmentList(
-  value: unknown,
-  contractVersion?: string,
-): ChainCommitment[] {
+function parseCommitmentList(value: unknown): ChainCommitment[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.map((item) => parseChainCommitment(item, contractVersion));
+  return value.map((item) => parseChainCommitment(item));
 }
 
 async function waitForTransactionResult(
@@ -476,7 +575,14 @@ async function invokeContractMethod(
   methodName: string,
   params: unknown[],
   mode: ContractCallMode,
+  attempt = 1,
 ): Promise<ContractInvocationResult> {
+  // Guard: a write transaction must be submitted exactly once. Retrying one
+  // (attempt > 1) risks a double submission, so it is rejected before any
+  // network work is performed. Direct (non-retried) calls always pass
+  // attempt = 1 and are unaffected.
+  assertRetrySafe(mode, attempt);
+
   if (!contractId) {
     throw new BackendError({
       code: "BLOCKCHAIN_UNAVAILABLE",
@@ -496,98 +602,95 @@ async function invokeContractMethod(
     });
   }
 
-  const timeoutMs = getRpcTimeoutMs();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const server = getSorobanServer();
+  const contract = new Contract(contractId);
+  const account =
+    mode === "write"
+      ? await server.getAccount(sourcePublicKey)
+      : new Account(sourcePublicKey, "0");
+  const operation = contract.call(
+    methodName,
+    ...params.map((value) => nativeToScVal(value)),
+  );
 
-  try {
-    const server = getSorobanServer();
-    const contract = new Contract(contractId);
-    const account =
-      mode === "write"
-        ? await abortableRpc(
-            server.getAccount(sourcePublicKey),
-            controller.signal,
-            methodName,
-            timeoutMs,
-          )
-        : new Account(sourcePublicKey, "0");
+  const tx = new TransactionBuilder(account, {
+    fee: String(BASE_FEE),
+    networkPassphrase: getNetworkPassphrase(),
+  })
+    .addOperation(operation)
+    .setTimeout(30)
+    .build();
 
-    const operation = contract.call(
-      methodName,
-      ...params.map((value) => nativeToScVal(value)),
-    );
-
-    const tx = new TransactionBuilder(account, {
-      fee: String(BASE_FEE),
-      networkPassphrase: getNetworkPassphrase(),
-    })
-      .addOperation(operation)
-      .setTimeout(30)
-      .build();
-
-    const simulation = await abortableRpc(
-      server.simulateTransaction(tx),
-      controller.signal,
-      methodName,
-      timeoutMs,
-    );
-
-    if (SorobanRpc.Api.isSimulationError(simulation)) {
-      throw normalizeContractError(new Error(simulation.error), {
-        code: "BLOCKCHAIN_CALL_FAILED",
-        message: `Soroban simulation failed for ${methodName}.`,
-        status: 502,
-        details: { methodName },
-      });
-    }
-
-    if (mode === "read") {
-      return {
-        value: simulation.result ? scValToNative(simulation.result.retval) : null,
-      };
-    }
-
-    const sourceKeypair = getSourceKeypair();
-    if (!sourceKeypair) {
-      throw new BackendError({
-        code: "BLOCKCHAIN_UNAVAILABLE",
-        message: "Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.",
-        status: 500,
-        details: { methodName },
-      });
-    }
-
-    const preparedTx = await abortableRpc(
-      server.prepareTransaction(tx),
-      controller.signal,
-      methodName,
-      timeoutMs,
-    );
-    preparedTx.sign(sourceKeypair);
-
-    const sendResult = await abortableRpc(
-      server.sendTransaction(preparedTx),
-      controller.signal,
-      methodName,
-      timeoutMs,
-    );
-    const txHash = sendResult.hash;
-
-    // waitForTransactionResult has its own internal polling loop; we race it
-    // against the same abort signal so a slow confirmation also times out.
-    // A GATEWAY_TIMEOUT here means the tx was broadcast — callers should
-    // surface the txHash so users can verify the outcome on-chain.
-    const onChainValue = await abortableRpc(
-      waitForTransactionResult(server, txHash),
-      controller.signal,
-      methodName,
-      timeoutMs,
-    );
-    return { value: onChainValue, txHash };
-  } finally {
-    clearTimeout(timer);
+  const simulation = await server.simulateTransaction(tx);
+  if (SorobanRpc.Api.isSimulationError(simulation)) {
+    throw normalizeContractError(new Error(simulation.error), {
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: `Soroban simulation failed for ${methodName}.`,
+      status: 502,
+      details: { methodName },
+    });
   }
+
+  if (mode === "read") {
+    return {
+      value: simulation.result ? scValToNative(simulation.result.retval) : null,
+    };
+  }
+
+  const sourceKeypair = getSourceKeypair();
+  if (!sourceKeypair) {
+    throw new BackendError({
+      code: "BLOCKCHAIN_UNAVAILABLE",
+      message: "Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.",
+      status: 500,
+      details: { methodName },
+    });
+  }
+
+  const preparedTx = await server.prepareTransaction(tx);
+  preparedTx.sign(sourceKeypair);
+  const sendResult = await server.sendTransaction(preparedTx);
+  const txHash = sendResult.hash;
+
+  const onChainValue = await waitForTransactionResult(server, txHash);
+  return { value: onChainValue, txHash };
+}
+
+/**
+ * Read-only counterpart of {@link invokeContractMethod} that adds bounded
+ * retry-with-exponential-backoff for transient RPC failures.
+ *
+ * Use this for ALL read-mode contract calls. The call mode is hard-coded to
+ * "read", so a write transaction can never be submitted — let alone
+ * re-submitted — through this path. Write calls must keep calling
+ * `invokeContractMethod(..., "write")` directly so each runs exactly once.
+ *
+ * Only failures classified retryable by {@link isRetryableContractError} are
+ * retried; attempts and total backoff are capped by {@link READ_RETRY_CONFIG}.
+ * The final error is propagated unchanged, so a caller's `incrementChainFailures`
+ * runs exactly once, only after retries are exhausted.
+ */
+async function invokeReadContractMethod(
+  contractId: string,
+  methodName: string,
+  params: unknown[],
+): Promise<ContractInvocationResult> {
+  return retryWithBackoff(
+    (attempt) =>
+      invokeContractMethod(contractId, methodName, params, "read", attempt),
+    {
+      ...READ_RETRY_CONFIG,
+      isRetryable: isRetryableContractError,
+      onRetry: ({ attempt, delayMs, error }) => {
+        logInfo(undefined, "[soroban] retrying read after transient failure", {
+          methodName,
+          attempt,
+          delayMs: Math.round(delayMs),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      },
+    },
+  );
 }
 
 function validateOwnerAddress(ownerAddress: string): void {
@@ -626,11 +729,7 @@ export async function createCommitmentOnChain(
 
     void cache.delete(CacheKey.userCommitments(params.ownerAddress));
 
-    return parseCreateCommitmentResult(
-      invocation.value,
-      invocation.txHash,
-      invocation.version,
-    );
+    return parseCreateCommitmentResult(invocation.value, invocation.txHash);
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
@@ -665,25 +764,23 @@ export async function getCommitmentFromChain(
     }
     logInfo(undefined, "[cache] miss commitment", { commitmentId });
 
-    const invocation = await invokeContractMethod(
+    // Read call: wrapped with bounded retry-and-backoff for transient failures.
+    const invocation = await invokeReadContractMethod(
       getContractId("commitmentCore"),
       "get_commitment",
       [commitmentId],
-      "read",
     );
 
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
     void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
 
-    const commitment = parseChainCommitment(
-      invocation.value,
-      invocation.version,
-    );
+    const commitment = parseChainCommitment(invocation.value);
     await cache.set(cacheKey, commitment, CacheTTL.COMMITMENT_DETAIL);
     return commitment;
   } catch (error) {
-    // Increment chain failures counter on blockchain operation failures
+    // Increment chain failures counter on blockchain operation failures.
+    // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
     void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
 
@@ -713,16 +810,20 @@ export async function getUserCommitmentsFromChain(
     const contractId = getContractId("commitmentCore");
 
     try {
+      // Optimistic probe. `get_user_commitments` may not exist on every
+      // deployed contract, and its failure is expected and handled by the
+      // id-based fallback below — so it is deliberately NOT retried. Retrying
+      // an expected failure would only add latency. Genuine transient errors
+      // are still covered: the fallback `get_user_commitment_ids` read and the
+      // per-id `getCommitmentFromChain` reads each go through
+      // `invokeReadContractMethod` and so are retried.
       const directResult = await invokeContractMethod(
         contractId,
         "get_user_commitments",
         [ownerAddress],
         "read",
       );
-      const commitments = parseCommitmentList(
-        directResult.value,
-        directResult.version,
-      );
+      const commitments = parseCommitmentList(directResult.value);
       if (commitments.length > 0) {
         await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
         // Increment successful actions counter on successful chain read
@@ -736,11 +837,11 @@ export async function getUserCommitmentsFromChain(
       }
     }
 
-    const idsResult = await invokeContractMethod(
+    // Read call: wrapped with bounded retry-and-backoff for transient failures.
+    const idsResult = await invokeReadContractMethod(
       contractId,
       "get_user_commitment_ids",
       [ownerAddress],
-      "read",
     );
     const commitmentIds = Array.isArray(idsResult.value)
       ? idsResult.value.map((id) => asString(id)).filter(Boolean)
@@ -755,7 +856,8 @@ export async function getUserCommitmentsFromChain(
     void countersAdapter.incrementSuccessfulActions();
     return commitments;
   } catch (error) {
-    // Increment chain failures counter on blockchain operation failures
+    // Increment chain failures counter on blockchain operation failures.
+    // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
     void countersAdapter.incrementChainFailures();
 
@@ -812,11 +914,7 @@ export async function recordAttestationOnChain(
       );
     }
 
-    return parseAttestationResult(
-      invocation.value,
-      invocation.txHash,
-      invocation.version,
-    );
+    return parseAttestationResult(invocation.value, invocation.txHash);
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
@@ -904,7 +1002,6 @@ export async function settleCommitmentOnChain(
       settlementAmount,
       finalStatus,
       txHash: invocation.txHash,
-      contractVersion: invocation.version,
       reference: invocation.txHash
         ? undefined
         : "TODO_CHAIN_CALL_SETTLE_COMMITMENT",
@@ -920,6 +1017,92 @@ export async function settleCommitmentOnChain(
       status: 502,
       details: {
         method: "settle_commitment",
+        commitmentId: params.commitmentId,
+      },
+    });
+  }
+}
+
+export async function fundEscrowOnChain(
+  params: FundEscrowOnChainParams,
+): Promise<FundEscrowOnChainResult> {
+  try {
+    if (!params.commitmentId) {
+      throw new BackendError({
+        code: "BAD_REQUEST",
+        message: "Missing commitment id for funding.",
+        status: 400,
+      });
+    }
+
+    if (params.callerAddress) {
+      validateOwnerAddress(params.callerAddress);
+    }
+
+    const commitment = await getCommitmentFromChain(params.commitmentId);
+
+    if (!commitment) {
+      throw new BackendError({
+        code: "NOT_FOUND",
+        message: "Commitment not found.",
+        status: 404,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    if (commitment.status !== "CREATED") {
+      throw new BackendError({
+        code: "CONFLICT",
+        message: "Only created commitments can be funded.",
+        status: 409,
+        details: { commitmentId: params.commitmentId, status: commitment.status },
+      });
+    }
+
+    const callerAddress = params.callerAddress ?? commitment.ownerAddress;
+    if (!callerAddress || callerAddress !== commitment.ownerAddress) {
+      throw new BackendError({
+        code: "FORBIDDEN",
+        message: "Only the commitment owner may fund this commitment.",
+        status: 403,
+        details: { commitmentId: params.commitmentId, callerAddress },
+      });
+    }
+
+    const invocation = await invokeContractMethod(
+      getContractId("commitmentCore"),
+      "fund_escrow",
+      [
+        nativeToScVal(params.commitmentId),
+        new Address(callerAddress).toScVal(),
+      ],
+      "write",
+    );
+
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementSuccessfulActions();
+
+    void cache.delete(CacheKey.commitment(params.commitmentId));
+    if (commitment.ownerAddress) {
+      void cache.delete(CacheKey.userCommitments(commitment.ownerAddress));
+    }
+
+    return {
+      commitmentId: params.commitmentId,
+      txHash: invocation.txHash,
+      contractVersion: invocation.version,
+      reference: invocation.txHash ? undefined : "TODO_CHAIN_CALL_FUND_ESCROW",
+    };
+  } catch (error) {
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementChainFailures();
+
+    throw normalizeBackendError(error, {
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to fund escrow on chain.",
+      status: 502,
+      details: {
+        method: "fund_escrow",
         commitmentId: params.commitmentId,
       },
     });
@@ -981,7 +1164,6 @@ export async function earlyExitCommitmentOnChain(
       penaltyAmount,
       finalStatus,
       txHash: invocation.txHash,
-      contractVersion: invocation.version,
       reference: invocation.txHash ? undefined : `TODO_CHAIN_CALL_EARLY_EXIT`
     };
   } catch (error) {
@@ -990,71 +1172,6 @@ export async function earlyExitCommitmentOnChain(
       message: 'Unable to exit commitment early on chain.',
       status: 502,
       details: { method: 'early_exit_commitment', commitmentId: params.commitmentId }
-    });
-  }
-}
-
-export interface TransferOwnershipParams {
-  commitmentId: string;
-  fromAddress: string;
-  toAddress: string;
-}
-
-export interface TransferOwnershipResult {
-  commitmentId: string;
-  newOwner: string;
-  txHash?: string;
-  reference?: string;
-}
-
-export async function transferOwnership(
-  params: TransferOwnershipParams,
-): Promise<TransferOwnershipResult> {
-  try {
-    if (!params.commitmentId) {
-      throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for ownership transfer.",
-        status: 400,
-      });
-    }
-    validateOwnerAddress(params.fromAddress);
-    validateOwnerAddress(params.toAddress);
-
-    const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "transfer_ownership",
-      [
-        nativeToScVal(params.commitmentId),
-        new Address(params.fromAddress).toScVal(),
-        new Address(params.toAddress).toScVal(),
-      ],
-      "write",
-    );
-
-    const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
-
-    void cache.delete(CacheKey.commitment(params.commitmentId));
-    void cache.delete(CacheKey.userCommitments(params.fromAddress));
-    void cache.delete(CacheKey.userCommitments(params.toAddress));
-
-    const result = asRecord(invocation.value);
-    return {
-      commitmentId: params.commitmentId,
-      newOwner: asString(result.newOwner, params.toAddress),
-      txHash: invocation.txHash,
-      reference: invocation.txHash ? undefined : "TODO_CHAIN_CALL_TRANSFER_OWNERSHIP",
-    };
-  } catch (error) {
-    const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
-
-    throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to transfer commitment ownership on chain.",
-      status: 502,
-      details: { method: "transfer_ownership", commitmentId: params.commitmentId },
     });
   }
 }

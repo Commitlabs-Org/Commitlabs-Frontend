@@ -71,6 +71,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: The request is understood but refused due to policy or ownership.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
     NotFound:
       description: The requested resource was not found.
       content:
@@ -177,6 +183,44 @@ paths:
       description: >
         Search and filter commitments by asset, status, and risk type with
         stable sorting and pagination. Mirrors the marketplace filtering contract.
+  /api/commitments/{id}/fund:
+    post:
+      summary: Fund a Created Commitment
+      description: Submit the on-chain `fund_escrow` transaction for a previously created commitment.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Commitment identifier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callerAddress:
+                  type: string
+                  example: "GOWNER..."
+      responses:
+        '200':
+          description: Commitment funded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
         - name: ownerAddress
           in: query

@@ -1,7 +1,7 @@
 // src/lib/backend/validation.ts
 import { z } from "zod";
 import { StrKey } from "@stellar/stellar-sdk";
-import { PARAMETER_BOUNDS } from "./config";
+import { PARAMETER_BOUNDS, SUPPORTED_ASSETS } from "./config";
 
 // ─── Warning types ────────────────────────────────────────────────────────────
 
@@ -325,6 +325,42 @@ export function validateStellarAddress(
       field,
     );
   }
+  return trimmed;
+}
+
+/**
+ * Validates that an asset code is in the supported allowlist.
+ *
+ * @param assetCode - The asset code to validate (e.g., "XLM", "USDC")
+ * @param field     - Optional field name for error context (default: "asset")
+ * @returns The validated asset code
+ * @throws {ValidationError} if the asset is not supported
+ *
+ * @example
+ * validateSupportedAsset("XLM"); // returns "XLM"
+ * validateSupportedAsset("INVALID"); // throws ValidationError
+ */
+export function validateSupportedAsset(
+  assetCode: unknown,
+  field = "asset",
+): string {
+  if (typeof assetCode !== "string" || assetCode.trim() === "") {
+    throw new ValidationError(
+      `${field} is required and must be a non-empty string.`,
+      field,
+    );
+  }
+
+  const trimmed = assetCode.trim().toUpperCase();
+  const supported = SUPPORTED_ASSETS.map((a) => a.code);
+
+  if (!supported.includes(trimmed)) {
+    throw new ValidationError(
+      `${field} "${trimmed}" is not supported. Supported assets: ${supported.join(", ")}.`,
+      field,
+    );
+  }
+
   return trimmed;
 }
 

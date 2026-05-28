@@ -44,6 +44,8 @@ use soroban_sdk::{
     Address, Bytes, BytesN, Env, String,
 };
 
+// ── Test fixture ─────────────────────────────────────────────────────────────
+
 /// Spins up a test environment with a Stellar Asset Contract token and a
 /// deployed, initialized escrow contract. Returns the pieces tests need.
 struct Fixture<'a> {
@@ -54,6 +56,7 @@ struct Fixture<'a> {
     admin: Address,
     fee_recipient: Address,
     asset: Address,
+    contract_id: Address,
 }
 
 fn setup<'a>() -> Fixture<'a> {
@@ -95,12 +98,62 @@ fn setup<'a>() -> Fixture<'a> {
         admin,
         fee_recipient,
         asset,
+        contract_id,
     }
 }
 
 fn fund_owner(f: &Fixture, owner: &Address, amount: i128) {
     f.token_admin.mint(owner, &amount);
 }
+
+// ── Event assertion helper ────────────────────────────────────────────────────
+
+/// Asserts that the escrow contract emitted exactly one event whose first topic
+/// matches `event_name` and whose data converts to `expected_data`.
+///
+/// Soroban's `env.events().all()` returns a `Vec<(Address, Vec<Val>, Val)>`
+/// where each entry is `(contract_id, topics, data)`.  We filter to events
+/// emitted by the escrow contract and whose first topic is the expected symbol,
+/// then compare the data payload.
+///
+/// # Panics
+/// Panics with a descriptive message if no matching event is found or if the
+/// data does not match.
+fn assert_event<D: IntoVal<Env, Val>>(
+    env: &Env,
+    contract_id: &Address,
+    event_name: &str,
+    expected_data: D,
+) {
+    let all = env.events().all();
+    let sym = Symbol::new(env, event_name);
+    let expected_val: Val = expected_data.into_val(env);
+
+    let found = all.iter().any(|(id, topics, data)| {
+        if &id != contract_id {
+            return false;
+        }
+        // topics is soroban_sdk::Vec<Val>; first element is the Symbol
+        if topics.len() == 0 {
+            return false;
+        }
+        let first_val = topics.get(0).unwrap();
+        let first_topic = Symbol::try_from_val(env, &first_val)
+            .unwrap_or_else(|_| Symbol::new(env, "__none__"));
+        if first_topic != sym {
+            return false;
+        }
+        data == expected_val
+    });
+
+    assert!(
+        found,
+        "expected event '{}' with matching data not found in emitted events",
+        event_name
+    );
+}
+
+// ── Existing lifecycle tests (unchanged) ─────────────────────────────────────
 
 #[test]
 fn initialize_is_one_time() {
@@ -410,6 +463,53 @@ fn owner_index_tracks_commitments() {
 }
 
 #[test]
+fn transfer_ownership_updates_commitment_and_indices() {
+    let f = setup();
+    let old_owner = Address::generate(&f.env);
+    let new_owner = Address::generate(&f.env);
+
+    fund_owner(&f, &old_owner, 1_000);
+    let id = f
+        .client
+        .create_commitment(&old_owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    f.client.fund_escrow(&id);
+
+    let before_old = f.client.get_owner_commitments(&old_owner);
+    assert_eq!(before_old.len(), 1);
+    assert_eq!(before_old.get(0).unwrap(), id);
+
+    f.client.transfer_ownership(&id, &new_owner);
+
+    let c = f.client.get_commitment(&id);
+    assert_eq!(c.owner, new_owner);
+
+    let after_old = f.client.get_owner_commitments(&old_owner);
+    assert_eq!(after_old.len(), 0);
+
+    let after_new = f.client.get_owner_commitments(&new_owner);
+    assert_eq!(after_new.len(), 1);
+    assert_eq!(after_new.get(0).unwrap(), id);
+}
+
+#[test]
+fn transfer_ownership_rejects_non_funded_commitments() {
+    let f = setup();
+    let old_owner = Address::generate(&f.env);
+    let new_owner = Address::generate(&f.env);
+
+    fund_owner(&f, &old_owner, 1_000);
+    let id = f
+        .client
+        .create_commitment(&old_owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    // Intentionally do NOT call fund_escrow; status remains Created.
+
+    let res = f.client.try_transfer_ownership(&id, &new_owner);
+    assert_eq!(res, Err(Ok(Error::InvalidState)));
+}
+
+
+#[test]
+fn create_rejects_duration_seconds_overflow() {
 fn dispute_categorizes_value_mismatch() {
     let f = setup();
     let owner = Address::generate(&f.env);
@@ -932,9 +1032,315 @@ fn explicit_penalty_override_zero_is_valid() {
 
     let commitment = f.client.get_commitment(&id);
     assert_eq!(commitment.penalty_bps, 0);
-    
+
     // Fund and refund should return full amount.
     f.client.fund_escrow(&id);
     let refunded = f.client.refund(&id);
     assert_eq!(refunded, 1_000); // No penalty deducted
+}
+
+// ── Issue #462: partial early-exit (refund_partial) ────────────────────────
+
+#[test]
+fn refund_partial_applies_penalty_to_withdrawn_portion_only() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    // 10% penalty for easy arithmetic.
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Aggressive, &30, &1_000);
+    f.client.fund_escrow(&id);
+
+    // Withdraw 400 out of 1000. Penalty = 400 * 10% = 40. Net = 360.
+    let net = f.client.refund_partial(&id, &400);
+    assert_eq!(net, 360);
+    assert_eq!(f.token.balance(&owner), 360);
+    assert_eq!(f.token.balance(&f.fee_recipient), 40);
+
+    // Remaining principal is 600 and commitment stays Funded.
+    let c = f.client.get_commitment(&id);
+    assert_eq!(c.amount, 600);
+    assert_eq!(c.status, EscrowStatus::Funded);
+}
+
+#[test]
+fn refund_partial_full_amount_transitions_to_refunded() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    // 5% penalty (500 bps).
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Aggressive, &30, &500);
+    f.client.fund_escrow(&id);
+
+    // Withdraw the entire principal in one partial call.
+    let net = f.client.refund_partial(&id, &1_000);
+    assert_eq!(net, 950);
+    assert_eq!(f.token.balance(&owner), 950);
+    assert_eq!(f.token.balance(&f.fee_recipient), 50);
+
+    let c = f.client.get_commitment(&id);
+    assert_eq!(c.amount, 0);
+    assert_eq!(c.status, EscrowStatus::Refunded);
+}
+
+#[test]
+fn refund_partial_multiple_withdrawals_reduce_amount_cumulatively() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    // 0% penalty for simpler balance tracking.
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &0);
+    f.client.fund_escrow(&id);
+
+    f.client.refund_partial(&id, &300);
+    assert_eq!(f.client.get_commitment(&id).amount, 700);
+
+    f.client.refund_partial(&id, &200);
+    assert_eq!(f.client.get_commitment(&id).amount, 500);
+
+    assert_eq!(f.token.balance(&owner), 500); // 300 + 200 returned
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Funded);
+}
+
+#[test]
+fn refund_partial_rejects_amount_exceeding_balance() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    f.client.fund_escrow(&id);
+
+    let res = f.client.try_refund_partial(&id, &1_001);
+    assert_eq!(res, Err(Ok(Error::InvalidAmount)));
+}
+
+#[test]
+fn refund_partial_rejects_zero_amount() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    f.client.fund_escrow(&id);
+
+    let res = f.client.try_refund_partial(&id, &0);
+    assert_eq!(res, Err(Ok(Error::InvalidAmount)));
+}
+
+#[test]
+fn refund_partial_rejects_unfunded_commitment() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    // Not funded yet.
+    let res = f.client.try_refund_partial(&id, &500);
+    assert_eq!(res, Err(Ok(Error::InvalidState)));
+}
+
+#[test]
+fn refund_partial_matches_full_refund_when_withdrawing_entire_principal() {
+    // Partial withdrawal of the full amount must produce the same net payout
+    // and fee as calling the regular refund entrypoint.
+    let f = setup();
+    let owner_a = Address::generate(&f.env);
+    let owner_b = Address::generate(&f.env);
+    fund_owner(&f, &owner_a, 1_000);
+    fund_owner(&f, &owner_b, 1_000);
+    const PENALTY: u32 = 300;
+
+    let id_a = f
+        .client
+        .create_commitment(&owner_a, &f.asset, &1_000, &RiskProfile::Balanced, &30, &PENALTY);
+    f.client.fund_escrow(&id_a);
+    let full_refund = f.client.refund(&id_a);
+
+    let id_b = f
+        .client
+        .create_commitment(&owner_b, &f.asset, &1_000, &RiskProfile::Balanced, &30, &PENALTY);
+    f.client.fund_escrow(&id_b);
+    let partial_full = f.client.refund_partial(&id_b, &1_000);
+
+    assert_eq!(full_refund, partial_full);
+}
+
+// ── Issue #465: violation auto-trigger ─────────────────────────────────────
+
+#[test]
+fn set_and_get_violation_threshold() {
+    let f = setup();
+    // Default is 0 (disabled).
+    assert_eq!(f.client.get_violation_threshold(), 0);
+
+    f.client.set_violation_threshold(&60);
+    assert_eq!(f.client.get_violation_threshold(), 60);
+}
+
+#[test]
+fn set_violation_threshold_clamps_to_100() {
+    let f = setup();
+    f.client.set_violation_threshold(&150);
+    assert_eq!(f.client.get_violation_threshold(), 100);
+}
+
+#[test]
+fn attestation_below_threshold_auto_violates_funded_commitment() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Balanced, &30, &300);
+    f.client.fund_escrow(&id);
+
+    // Score of 59 is strictly below threshold of 60 — must violate.
+    f.client.record_attestation(&id, &attestor, &59);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Violated);
+    assert_eq!(f.client.get_commitment(&id).compliance_score, 59);
+}
+
+#[test]
+fn attestation_at_threshold_does_not_violate() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Balanced, &30, &300);
+    f.client.fund_escrow(&id);
+
+    // Score exactly at the threshold must NOT violate.
+    f.client.record_attestation(&id, &attestor, &60);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Funded);
+}
+
+#[test]
+fn attestation_above_threshold_does_not_violate() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    f.client.fund_escrow(&id);
+
+    f.client.record_attestation(&id, &attestor, &80);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Funded);
+}
+
+#[test]
+fn zero_threshold_disables_auto_violation() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    // Threshold defaults to 0 — no auto-violation even for score 0.
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    f.client.fund_escrow(&id);
+
+    f.client.record_attestation(&id, &attestor, &0);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Funded);
+}
+
+#[test]
+fn violated_commitment_blocks_release() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Balanced, &30, &300);
+    f.client.fund_escrow(&id);
+    f.client.record_attestation(&id, &attestor, &40);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Violated);
+
+    // Advance past maturity — release must still be blocked.
+    f.env.ledger().set_timestamp(31 * 86_400);
+    let res = f.client.try_release(&id);
+    assert_eq!(res, Err(Ok(Error::CommitmentViolated)));
+}
+
+#[test]
+fn violated_commitment_blocks_refund() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Balanced, &30, &300);
+    f.client.fund_escrow(&id);
+    f.client.record_attestation(&id, &attestor, &40);
+
+    let res = f.client.try_refund(&id);
+    assert_eq!(res, Err(Ok(Error::CommitmentViolated)));
+}
+
+#[test]
+fn violated_commitment_blocks_refund_partial() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Balanced, &30, &300);
+    f.client.fund_escrow(&id);
+    f.client.record_attestation(&id, &attestor, &40);
+
+    let res = f.client.try_refund_partial(&id, &500);
+    assert_eq!(res, Err(Ok(Error::CommitmentViolated)));
+}
+
+#[test]
+fn attestation_on_non_funded_commitment_does_not_violate() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let attestor = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    f.client.set_violation_threshold(&60);
+
+    // Commitment is Created, not Funded.
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Safe, &30, &200);
+    f.client.record_attestation(&id, &attestor, &10);
+    // Status should remain Created, not Violated.
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Created);
 }

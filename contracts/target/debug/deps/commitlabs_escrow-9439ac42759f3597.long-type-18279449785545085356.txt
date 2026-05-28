@@ -1,2 +1,0 @@
-TryFromVal<Env, soroban_env_common::bytes::BytesObject>
-TryFromVal<Env, soroban_sdk::testutils::arbitrary::objects::ArbitraryBytes>

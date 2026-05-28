@@ -7,7 +7,7 @@ import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from "@/lib/backend/jsonBodyLimit";
 import { checkRateLimit, getRateLimitWindowSeconds } from "@/lib/backend/rateLimit";
 import { getUserCommitmentsFromChain, createCommitmentOnChain } from "@/lib/backend/services/contracts";
-import { validateStellarAddress } from "@/lib/backend/validation";
+import { validateStellarAddress, validateSupportedAsset } from "@/lib/backend/validation";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
 
 const CommitmentsQuerySchema = z.object({
@@ -108,6 +108,11 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
   }
   if (!asset || typeof asset !== "string") {
     return fail("BAD_REQUEST", "Invalid asset", undefined, 400, correlationId);
+  }
+  try {
+    validateSupportedAsset(asset, "asset");
+  } catch {
+    throw new ValidationError("Asset is not supported. Supported assets: XLM, USDC.");
   }
   if (!amount || isNaN(Number(amount))) {
     return fail("BAD_REQUEST", "Invalid amount", undefined, 400, correlationId);

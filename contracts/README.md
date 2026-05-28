@@ -50,6 +50,20 @@ create_commitment ──► fund_escrow ──► release            (matured: p
                                   └──► dispute ──► resolve_dispute   (admin adjudication)
 ```
 
+### Marketplace transfer flow (secondary trading)
+
+`transfer_ownership(commitment_id, new_owner)` updates ownership for a **funded** commitment.
+
+**Flow**
+1. Marketplace buyer proposes `new_owner`.
+2. The current commitment owner calls `transfer_ownership` and must authorize via `require_auth()`.
+3. The contract verifies the commitment is `Funded` (transfers are blocked for non-funded states).
+4. The contract updates:
+   - `Commitment.owner`
+   - `OwnerIndex` for both `old_owner` and `new_owner`
+5. The commitment is now eligible for subsequent `release` / `refund` / dispute handling under the new owner.
+
+
 ### Public functions
 
 | Function | Description |
@@ -58,6 +72,11 @@ create_commitment ──► fund_escrow ──► release            (matured: p
 | `create_commitment(owner, asset, amount, risk, duration_days, penalty_bps)` | Create an unfunded commitment with explicit penalty; returns its `id`. |
 | `create_commitment_with_default_penalty(owner, asset, amount, risk, duration_days)` | Create an unfunded commitment using the default penalty for the risk profile; returns its `id`. |
 | `fund_escrow(commitment_id)` | Transfer `amount` from owner into the contract (`Created → Funded`). |
+| `transfer_ownership(commitment_id, new_owner)` | Transfer marketplace ownership for secondary trading (`Funded` only). Current owner must authorize and the contract updates both `Commitment.owner` and `OwnerIndex`. |
+| `release(commitment_id, caller)` | Return principal to owner once matured (`Funded → Released`). |
+| `refund(commitment_id)` | Early-exit refund of principal minus `penalty_bps` (`Funded → Refunded`). |
+| `dispute(commitment_id, caller, reason)` | Freeze a funded commitment pending admin resolution. |
+
 | `deposit_yield_pool(admin, amount)` | Admin-only deposit of yield tokens into the contract yield pool. |
 | `get_yield_pool_balance()` | Read the yield pool balance available for matured release payouts. |
 | `release(commitment_id, caller)` | Return principal plus accrued yield to owner once matured (`Funded → Released`). |
@@ -73,6 +92,9 @@ create_commitment ──► fund_escrow ──► release            (matured: p
 | `get_commitment(commitment_id)` | Read a single commitment record. |
 | `get_owner_commitments(owner)` | List commitment ids owned by an address. |
 | `get_attestations(commitment_id)` | Retrieve the timeline of `AttestationRecord`s for a commitment. |
+| `refund_partial(commitment_id, amount)` | Partial early-exit: withdraw `amount` from the principal, apply the proportional penalty to that portion, keep the remainder escrowed. |
+| `set_violation_threshold(threshold)` | Admin-only. Set the compliance score threshold (0–100) below which a funded commitment is auto-violated. 0 disables auto-violation. |
+| `get_violation_threshold()` | Read the current violation threshold. |
 
 ### Attestation History
 
@@ -208,13 +230,59 @@ The dispute record is persisted on-chain and can be read at any time via
 `get_dispute(commitment_id)`, even after the dispute is resolved. This enables
 auditing, analytics, and off-chain verification of dispute history.
 
+### Partial early-exit (`refund_partial`)
+
+`refund_partial(commitment_id, amount)` lets an owner exit a fraction of their
+locked principal before maturity. Only the withdrawn portion is penalised;
+the remainder stays escrowed under the same commitment.
+
+- `amount` must be > 0 and ≤ `Commitment.amount`.
+- `penalty_bps` is applied only to `amount`: `penalty = amount * penalty_bps / 10_000`.
+- `Commitment.amount` is reduced by `amount` in storage.
+- If `amount` equals the full stored principal the commitment transitions to
+  `Refunded`; otherwise it stays `Funded`.
+- Blocked when the commitment is in `Violated` status (`CommitmentViolated` error).
+
+```
+refund_partial(id, 400)   # withdraw 400 out of 1 000 at 10% penalty
+  → net to owner: 360, fee: 40, remaining escrowed: 600 (status: Funded)
+
+refund_partial(id, 1000)  # withdraw all remaining principal
+  → net to owner: 950, fee: 50, remaining: 0 (status: Refunded)
+```
+
+### Violation auto-trigger
+
+A configurable compliance score threshold controls automatic violation of funded
+commitments. When `record_attestation` records a score **strictly below** the
+threshold for a `Funded` commitment, the status transitions to `Violated` and
+a `commitment_violated` event is emitted.
+
+- `set_violation_threshold(threshold)` — admin-only, clamps to 0–100. A value
+  of `0` (default) disables auto-violation entirely.
+- `get_violation_threshold()` — public read of the current threshold.
+- `release`, `refund`, and `refund_partial` all return `CommitmentViolated`
+  while the commitment is in the `Violated` state.
+- A score **equal to** the threshold does **not** trigger a violation; only
+  scores **strictly below** do.
+- Auto-violation only applies to `Funded` commitments. Attestations on
+  `Created`, `Released`, `Refunded`, or `Disputed` commitments are recorded but
+  do not change status.
+
+```
+set_violation_threshold(60)   # violate when score < 60
+record_attestation(id, 59)    # → status: Violated, event emitted
+record_attestation(id, 60)    # → status unchanged (Funded)
+```
+
 ### Errors
 
 Stable numeric error codes (`#[contracterror]`) are surfaced so the backend
 `normalizeContractError` mapper can translate them into HTTP responses:
 `AlreadyInitialized`, `NotInitialized`, `NotFound`, `Unauthorized`,
 `InvalidAmount`, `InvalidState`, `NotMatured`, `InvalidDuration`,
-`PenaltyTooHigh`, `Paused`.
+`PenaltyTooHigh`, `Paused`, `AssetMismatch`, `InsufficientYieldPool`,
+`InvalidWasmHash`, `CommitmentViolated`.
 
 ## Build & test
 
