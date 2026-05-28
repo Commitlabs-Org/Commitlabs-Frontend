@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
-import { TooManyRequestsError } from '@/lib/backend/errors';
+import { ConflictError, TooManyRequestsError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { logEarlyExit } from '@/lib/backend/logger';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { idempotencyService } from '@/lib/backend/idempotency';
 
 const COMMITMENT_EARLY_EXIT_CORS_POLICY = {
   POST: { access: 'first-party' },
@@ -16,27 +17,52 @@ export const OPTIONS = createCorsOptionsHandler(COMMITMENT_EARLY_EXIT_CORS_POLIC
 export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
   const ip = getClientIp(req);
   if (!(await checkRateLimit(ip, 'api/commitments/early-exit'))) {
-    throw new TooManyRequestsError();
+    throw new TooManyRequestsError(
+      'Too many requests. Please try again later.',
+      undefined,
+      getRateLimitWindowSeconds('api/commitments/early-exit'),
+    );
   }
 
-  let body: Record<string, unknown> = {};
+  const idempotencyKey = req.headers.get('idempotency-key');
+  if (idempotencyKey) {
+    const record = await idempotencyService.getRecord(idempotencyKey);
+    if (record) {
+      if (record.status === 'COMPLETED') {
+        return ok(record.response, undefined, record.statusCode, correlationId);
+      } else if (record.status === 'STARTED') {
+        throw new ConflictError('A request with this Idempotency-Key is currently processing');
+      }
+    }
+    await idempotencyService.start(idempotencyKey);
+  }
+
   try {
-    body = await req.json();
-  } catch {
-    body = {};
-  }
+    let body: Record<string, unknown> = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
 
-  logEarlyExit({ ip, commitmentId: params.id, ...body });
+    logEarlyExit({ ip, commitmentId: params.id, ...body });
 
-  return ok(
-    {
+    const responseData = {
       message: `Stub early-exit endpoint for commitment ${params.id}`,
       commitmentId: params.id,
-    },
-    undefined,
-    200,
-    correlationId,
-  );
+    };
+
+    if (idempotencyKey) {
+      await idempotencyService.complete(idempotencyKey, responseData, 200);
+    }
+
+    return ok(responseData, undefined, 200, correlationId);
+  } catch (error) {
+    if (idempotencyKey) {
+      await idempotencyService.fail(idempotencyKey);
+    }
+    throw error;
+  }
 }, { cors: COMMITMENT_EARLY_EXIT_CORS_POLICY });
 
 const _405 = methodNotAllowed(['POST']);

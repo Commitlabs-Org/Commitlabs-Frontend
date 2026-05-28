@@ -2,10 +2,12 @@
 /**
  * GET /api/attestations/recent
  *
- * Returns the most recent attestations, sorted by timestamp descending.
+ * Returns the most recent attestations, sorted by timestamp descending,
+ * with page-based pagination metadata.
  *
  * Query parameters:
- *   limit        {number}  Max number of results to return. Must be 1–100. Defaults to 10.
+ *   page         {number}  Page number (1-based). Must be ≥ 1. Defaults to 1.
+ *   pageSize     {number}  Items per page. Must be 1–100. Defaults to 10.
  *   ownerAddress {string}  (Optional) Filter attestations by commitment owner address.
  *                          Requires authentication when provided.
  *
@@ -17,12 +19,19 @@
  *     "attestations": [ ...Attestation[] ],
  *     "total": 3
  *   },
- *   "meta": { "limit": 10 }
+ *   "meta": {
+ *     "page": 1,
+ *     "pageSize": 10,
+ *     "total": 3,
+ *     "totalPages": 1,
+ *     "hasNextPage": false,
+ *     "hasPrevPage": false
+ *   }
  * }
  * ```
  *
  * Error codes:
- *   400 VALIDATION_ERROR   — limit is out of range or ownerAddress is malformed
+ *   400 VALIDATION_ERROR   — page/pageSize out of range or ownerAddress is malformed
  *   401 UNAUTHORIZED       — ownerAddress filter requested without a valid session token
  *   429 TOO_MANY_REQUESTS  — rate limit exceeded
  */
@@ -37,40 +46,14 @@ import {
   TooManyRequestsError,
   UnauthorizedError,
 } from '@/lib/backend/errors';
+import {
+  parsePaginationParams,
+  paginateArray,
+  PaginationParseError,
+} from '@/lib/backend/pagination';
 import type { Attestation } from '@/lib/types/domain';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const DEFAULT_LIMIT = 10;
-const MIN_LIMIT = 1;
-const MAX_LIMIT = 100;
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Parse and validate the `limit` query parameter.
- * Returns the parsed integer, or the default if the param is absent.
- * Throws ValidationError for out-of-range or non-integer values.
- */
-function parseLimit(searchParams: URLSearchParams): number {
-  const raw = searchParams.get('limit');
-  if (raw === null) return DEFAULT_LIMIT;
-
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || !Number.isFinite(parsed)) {
-    throw new ValidationError(
-      `"limit" must be an integer between ${MIN_LIMIT} and ${MAX_LIMIT}.`,
-      { field: 'limit', received: raw }
-    );
-  }
-  if (parsed < MIN_LIMIT || parsed > MAX_LIMIT) {
-    throw new ValidationError(
-      `"limit" must be between ${MIN_LIMIT} and ${MAX_LIMIT}. Received: ${parsed}.`,
-      { field: 'limit', min: MIN_LIMIT, max: MAX_LIMIT, received: parsed }
-    );
-  }
-  return parsed;
-}
 
 /**
  * Validate the optional `ownerAddress` query parameter.
@@ -125,7 +108,16 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 
   const { searchParams } = new URL(req.url);
 
-  const limit = parseLimit(searchParams);
+  let pagination;
+  try {
+    pagination = parsePaginationParams(searchParams, { maxPageSize: 100 });
+  } catch (err) {
+    if (err instanceof PaginationParseError) {
+      throw new ValidationError(err.message, { details: err.errors });
+    }
+    throw err;
+  }
+
   const ownerAddress = parseOwnerAddress(searchParams);
 
   // ownerAddress filter requires authentication to prevent enumeration attacks
@@ -153,10 +145,10 @@ export const GET = withApiHandler(async (req: NextRequest) => {
     : attestations;
 
   const sorted = sortByTimestampDesc(filtered);
-  const sliced = sorted.slice(0, limit);
+  const paginated = paginateArray(sorted, pagination);
 
   return ok(
-    { attestations: sliced, total: filtered.length },
-    { limit }
+    { attestations: paginated.data, total: paginated.meta.total },
+    paginated.meta
   );
 });

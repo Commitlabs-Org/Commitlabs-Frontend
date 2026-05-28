@@ -107,7 +107,7 @@ export const GET = withApiHandler(async (_req: NextRequest, _context, correlatio
 
   const { attestations } = await getMockData();
   return ok({ attestations }, undefined, 200, correlationId);
-}, { cors: ATTESTATIONS_CORS_POLICY });
+}, { cors: ATTESTATIONS_CORS_POLICY, enableETag: true });
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
   if (!(await checkRateLimit('anonymous', 'api/attestations'))) {
@@ -149,6 +149,7 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
           violation: result.violation,
           feeEarned: result.feeEarned,
           recordedAt: result.recordedAt,
+          contractVersion: result.contractVersion,
         },
         txReference: result.txHash ?? null,
       },

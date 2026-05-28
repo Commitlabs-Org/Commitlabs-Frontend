@@ -48,12 +48,14 @@ export interface ChainCommitment {
   violationCount: number;
   createdAt?: string;
   expiresAt?: string;
+  contractVersion?: string;
 }
 
 export interface CreateCommitmentOnChainResult {
   commitmentId: string;
   commitment: ChainCommitment;
   txHash?: string;
+  contractVersion?: string;
 }
 
 export interface RecordAttestationOnChainParams {
@@ -74,6 +76,7 @@ export interface RecordAttestationOnChainResult {
   feeEarned: string;
   recordedAt: string;
   txHash?: string;
+  contractVersion?: string;
 }
 
 export interface SettleCommitmentOnChainParams {
@@ -86,18 +89,75 @@ export interface SettleCommitmentOnChainResult {
   txHash?: string;
   reference?: string;
   finalStatus: string;
+  contractVersion?: string;
 }
 
 type ContractCallMode = "read" | "write";
 interface ContractInvocationResult {
   value: unknown;
   txHash?: string;
+  version: string;
 }
 
 const ANALYTICS_SCALE = 100;
+const DEFAULT_RPC_TIMEOUT_MS = 30_000;
 
 function getRpcUrl(): string {
   return getBackendConfig().sorobanRpcUrl;
+}
+
+function getRpcTimeoutMs(): number {
+  const raw = process.env.SOROBAN_RPC_TIMEOUT_MS;
+  if (!raw) return DEFAULT_RPC_TIMEOUT_MS;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RPC_TIMEOUT_MS;
+}
+
+/**
+ * Races a Soroban RPC promise against an AbortSignal so that a controller-
+ * level timeout can cancel all in-flight RPC work simultaneously.  When the
+ * signal fires before the promise settles the rejection is mapped to a
+ * GATEWAY_TIMEOUT BackendError with retryable: true.
+ *
+ * For write calls the timeout may fire after sendTransaction has already
+ * broadcast the transaction; callers must treat GATEWAY_TIMEOUT responses as
+ * "outcome unknown" and advise the user to verify on-chain using the txHash
+ * surfaced in the error details.
+ */
+function abortableRpc<T>(
+  call: Promise<T>,
+  signal: AbortSignal,
+  methodName: string,
+  timeoutMs: number,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () =>
+      reject(
+        normalizeContractError(new Error("aborted"), {
+          code: "GATEWAY_TIMEOUT",
+          message: `Soroban RPC timed out after ${timeoutMs}ms for ${methodName}. The operation may still be processing on-chain.`,
+          status: 504,
+          details: { methodName, timeoutMs, retryable: true },
+        }),
+      );
+
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    call.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 function getNetworkPassphrase(): string {
@@ -262,7 +322,10 @@ function normalizeContractError(
   });
 }
 
-function parseChainCommitment(value: unknown): ChainCommitment {
+function parseChainCommitment(
+  value: unknown,
+  contractVersion?: string,
+): ChainCommitment {
   const raw = asRecord(value);
   const id = asString(raw.id ?? raw.commitmentId);
 
@@ -290,12 +353,14 @@ function parseChainCommitment(value: unknown): ChainCommitment {
     violationCount: asNumber(raw.violationCount ?? raw.violation_count),
     createdAt: asString(raw.createdAt ?? raw.created_at) || undefined,
     expiresAt: asString(raw.expiresAt ?? raw.expires_at) || undefined,
+    contractVersion,
   };
 }
 
 function parseCreateCommitmentResult(
   value: unknown,
   txHash?: string,
+  contractVersion?: string,
 ): CreateCommitmentOnChainResult {
   if (typeof value === "string") {
     return {
@@ -310,24 +375,31 @@ function parseCreateCommitmentResult(
         currentValue: "0",
         feeEarned: "0",
         violationCount: 0,
+        contractVersion,
       },
       txHash,
+      contractVersion,
     };
   }
 
   const raw = asRecord(value);
-  const parsedCommitment = parseChainCommitment(raw.commitment ?? raw);
+  const parsedCommitment = parseChainCommitment(
+    raw.commitment ?? raw,
+    contractVersion,
+  );
 
   return {
     commitmentId: parsedCommitment.id,
     commitment: parsedCommitment,
     txHash: asString(raw.txHash) || txHash,
+    contractVersion,
   };
 }
 
 function parseAttestationResult(
   value: unknown,
   txHash?: string,
+  contractVersion?: string,
 ): RecordAttestationOnChainResult {
   const raw = asRecord(value);
   const attestationId = asString(raw.attestationId ?? raw.id);
@@ -351,15 +423,19 @@ function parseAttestationResult(
     recordedAt:
       asString(raw.recordedAt ?? raw.recorded_at) || new Date().toISOString(),
     txHash: asString(raw.txHash) || txHash,
+    contractVersion,
   };
 }
 
-function parseCommitmentList(value: unknown): ChainCommitment[] {
+function parseCommitmentList(
+  value: unknown,
+  contractVersion?: string,
+): ChainCommitment[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.map((item) => parseChainCommitment(item));
+  return value.map((item) => parseChainCommitment(item, contractVersion));
 }
 
 async function waitForTransactionResult(
@@ -420,58 +496,98 @@ async function invokeContractMethod(
     });
   }
 
-  const server = getSorobanServer();
-  const contract = new Contract(contractId);
-  const account =
-    mode === "write"
-      ? await server.getAccount(sourcePublicKey)
-      : new Account(sourcePublicKey, "0");
-  const operation = contract.call(
-    methodName,
-    ...params.map((value) => nativeToScVal(value)),
-  );
+  const timeoutMs = getRpcTimeoutMs();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const tx = new TransactionBuilder(account, {
-    fee: String(BASE_FEE),
-    networkPassphrase: getNetworkPassphrase(),
-  })
-    .addOperation(operation)
-    .setTimeout(30)
-    .build();
+  try {
+    const server = getSorobanServer();
+    const contract = new Contract(contractId);
+    const account =
+      mode === "write"
+        ? await abortableRpc(
+            server.getAccount(sourcePublicKey),
+            controller.signal,
+            methodName,
+            timeoutMs,
+          )
+        : new Account(sourcePublicKey, "0");
 
-  const simulation = await server.simulateTransaction(tx);
-  if (SorobanRpc.Api.isSimulationError(simulation)) {
-    throw normalizeContractError(new Error(simulation.error), {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: `Soroban simulation failed for ${methodName}.`,
-      status: 502,
-      details: { methodName },
-    });
+    const operation = contract.call(
+      methodName,
+      ...params.map((value) => nativeToScVal(value)),
+    );
+
+    const tx = new TransactionBuilder(account, {
+      fee: String(BASE_FEE),
+      networkPassphrase: getNetworkPassphrase(),
+    })
+      .addOperation(operation)
+      .setTimeout(30)
+      .build();
+
+    const simulation = await abortableRpc(
+      server.simulateTransaction(tx),
+      controller.signal,
+      methodName,
+      timeoutMs,
+    );
+
+    if (SorobanRpc.Api.isSimulationError(simulation)) {
+      throw normalizeContractError(new Error(simulation.error), {
+        code: "BLOCKCHAIN_CALL_FAILED",
+        message: `Soroban simulation failed for ${methodName}.`,
+        status: 502,
+        details: { methodName },
+      });
+    }
+
+    if (mode === "read") {
+      return {
+        value: simulation.result ? scValToNative(simulation.result.retval) : null,
+      };
+    }
+
+    const sourceKeypair = getSourceKeypair();
+    if (!sourceKeypair) {
+      throw new BackendError({
+        code: "BLOCKCHAIN_UNAVAILABLE",
+        message: "Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.",
+        status: 500,
+        details: { methodName },
+      });
+    }
+
+    const preparedTx = await abortableRpc(
+      server.prepareTransaction(tx),
+      controller.signal,
+      methodName,
+      timeoutMs,
+    );
+    preparedTx.sign(sourceKeypair);
+
+    const sendResult = await abortableRpc(
+      server.sendTransaction(preparedTx),
+      controller.signal,
+      methodName,
+      timeoutMs,
+    );
+    const txHash = sendResult.hash;
+
+    // waitForTransactionResult has its own internal polling loop; we race it
+    // against the same abort signal so a slow confirmation also times out.
+    // A GATEWAY_TIMEOUT here means the tx was broadcast — callers should
+    // surface the txHash so users can verify the outcome on-chain.
+    const onChainValue = await abortableRpc(
+      waitForTransactionResult(server, txHash),
+      controller.signal,
+      methodName,
+      timeoutMs,
+    );
+    return { value: onChainValue, txHash };
+  } finally {
+    clearTimeout(timer);
   }
-
-  if (mode === "read") {
-    return {
-      value: simulation.result ? scValToNative(simulation.result.retval) : null,
-    };
-  }
-
-  const sourceKeypair = getSourceKeypair();
-  if (!sourceKeypair) {
-    throw new BackendError({
-      code: "BLOCKCHAIN_UNAVAILABLE",
-      message: "Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.",
-      status: 500,
-      details: { methodName },
-    });
-  }
-
-  const preparedTx = await server.prepareTransaction(tx);
-  preparedTx.sign(sourceKeypair);
-  const sendResult = await server.sendTransaction(preparedTx);
-  const txHash = sendResult.hash;
-
-  const onChainValue = await waitForTransactionResult(server, txHash);
-  return { value: onChainValue, txHash };
 }
 
 function validateOwnerAddress(ownerAddress: string): void {
@@ -510,7 +626,11 @@ export async function createCommitmentOnChain(
 
     void cache.delete(CacheKey.userCommitments(params.ownerAddress));
 
-    return parseCreateCommitmentResult(invocation.value, invocation.txHash);
+    return parseCreateCommitmentResult(
+      invocation.value,
+      invocation.txHash,
+      invocation.version,
+    );
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
@@ -556,7 +676,10 @@ export async function getCommitmentFromChain(
     const countersAdapter = getCountersAdapter();
     void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
 
-    const commitment = parseChainCommitment(invocation.value);
+    const commitment = parseChainCommitment(
+      invocation.value,
+      invocation.version,
+    );
     await cache.set(cacheKey, commitment, CacheTTL.COMMITMENT_DETAIL);
     return commitment;
   } catch (error) {
@@ -596,7 +719,10 @@ export async function getUserCommitmentsFromChain(
         [ownerAddress],
         "read",
       );
-      const commitments = parseCommitmentList(directResult.value);
+      const commitments = parseCommitmentList(
+        directResult.value,
+        directResult.version,
+      );
       if (commitments.length > 0) {
         await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
         // Increment successful actions counter on successful chain read
@@ -686,7 +812,11 @@ export async function recordAttestationOnChain(
       );
     }
 
-    return parseAttestationResult(invocation.value, invocation.txHash);
+    return parseAttestationResult(
+      invocation.value,
+      invocation.txHash,
+      invocation.version,
+    );
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
@@ -774,6 +904,7 @@ export async function settleCommitmentOnChain(
       settlementAmount,
       finalStatus,
       txHash: invocation.txHash,
+      contractVersion: invocation.version,
       reference: invocation.txHash
         ? undefined
         : "TODO_CHAIN_CALL_SETTLE_COMMITMENT",
@@ -850,6 +981,7 @@ export async function earlyExitCommitmentOnChain(
       penaltyAmount,
       finalStatus,
       txHash: invocation.txHash,
+      contractVersion: invocation.version,
       reference: invocation.txHash ? undefined : `TODO_CHAIN_CALL_EARLY_EXIT`
     };
   } catch (error) {
@@ -858,6 +990,71 @@ export async function earlyExitCommitmentOnChain(
       message: 'Unable to exit commitment early on chain.',
       status: 502,
       details: { method: 'early_exit_commitment', commitmentId: params.commitmentId }
+    });
+  }
+}
+
+export interface TransferOwnershipParams {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+}
+
+export interface TransferOwnershipResult {
+  commitmentId: string;
+  newOwner: string;
+  txHash?: string;
+  reference?: string;
+}
+
+export async function transferOwnership(
+  params: TransferOwnershipParams,
+): Promise<TransferOwnershipResult> {
+  try {
+    if (!params.commitmentId) {
+      throw new BackendError({
+        code: "BAD_REQUEST",
+        message: "Missing commitment id for ownership transfer.",
+        status: 400,
+      });
+    }
+    validateOwnerAddress(params.fromAddress);
+    validateOwnerAddress(params.toAddress);
+
+    const invocation = await invokeContractMethod(
+      getContractId("commitmentCore"),
+      "transfer_ownership",
+      [
+        nativeToScVal(params.commitmentId),
+        new Address(params.fromAddress).toScVal(),
+        new Address(params.toAddress).toScVal(),
+      ],
+      "write",
+    );
+
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementSuccessfulActions();
+
+    void cache.delete(CacheKey.commitment(params.commitmentId));
+    void cache.delete(CacheKey.userCommitments(params.fromAddress));
+    void cache.delete(CacheKey.userCommitments(params.toAddress));
+
+    const result = asRecord(invocation.value);
+    return {
+      commitmentId: params.commitmentId,
+      newOwner: asString(result.newOwner, params.toAddress),
+      txHash: invocation.txHash,
+      reference: invocation.txHash ? undefined : "TODO_CHAIN_CALL_TRANSFER_OWNERSHIP",
+    };
+  } catch (error) {
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementChainFailures();
+
+    throw normalizeBackendError(error, {
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to transfer commitment ownership on chain.",
+      status: 502,
+      details: { method: "transfer_ownership", commitmentId: params.commitmentId },
     });
   }
 }

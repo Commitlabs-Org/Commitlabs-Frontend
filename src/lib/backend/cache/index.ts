@@ -29,6 +29,8 @@ export const CacheKey = {
     `commitlabs:user-commitments:${ownerAddress}`,
   marketplaceListings: (queryHash: string) =>
     `commitlabs:marketplace:listings:${queryHash}`,
+  commitmentSearch: (queryHash: string) =>
+    `commitlabs:commitment-search:${queryHash}`,
 } as const;
 
 /** TTL in seconds — keep short so stale chain data doesn't linger. */
@@ -36,4 +38,6 @@ export const CacheTTL = {
   COMMITMENT_DETAIL: 30,
   USER_COMMITMENTS: 20,
   MARKETPLACE_LISTINGS: 15,
+  /** Short TTL for search results — keeps filters responsive while avoiding stale data. */
+  COMMITMENT_SEARCH: 15,
 } as const;
