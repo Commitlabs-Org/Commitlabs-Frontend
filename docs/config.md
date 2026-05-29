@@ -36,11 +36,33 @@ How to switch versions safely
 2. Set `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION` to the desired version (e.g., `v2`).
 3. Restart the application to pick up new environment variables.
 
+Fallback behavior
+- If `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION` is not set, the application defaults to `v1`.
+- If `NEXT_PUBLIC_CONTRACTS_JSON` is not set, the application falls back to parsing legacy environment variables (`NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT`, etc.) and treating them as `v1` contracts.
+- If a requested contract entry or key is missing in a version, the application will throw an error during contract resolution.
+
+Invalid version handling
+- If `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION` points to a version not defined in `NEXT_PUBLIC_CONTRACTS_JSON`, the application will throw an error: "Active contract version 'X' not found".
+- Invalid JSON in `NEXT_PUBLIC_CONTRACTS_JSON` will cause a parse error at startup; check JSON syntax and proper escaping.
+- Incomplete contract entries (missing `address` field) in a version will throw an error when that contract is accessed.
+
 Example `.env` entries
 
 ```
 NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION=v2
-NEXT_PUBLIC_CONTRACTS_JSON={"v1":{"commitmentCore":{"address":"0xold"}},"v2":{"commitmentCore":{"address":"0xnew"}}}
+
+NEXT_PUBLIC_CONTRACTS_JSON={
+  "v1": {
+    "commitmentCore": {
+      "address": "0xv1core"
+    }
+  },
+  "v2": {
+    "commitmentCore": {
+      "address": "0xv2core"
+    }
+  }
+}
 ```
 
 Common misconfiguration errors and fixes

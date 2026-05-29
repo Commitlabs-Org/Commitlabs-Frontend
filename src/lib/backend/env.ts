@@ -85,6 +85,12 @@ const envSchema = z.object({
 
   // Mock-mode flag
   NEXT_PUBLIC_USE_MOCKS: z.string().optional(),
+
+  // Per-call Soroban RPC timeout in milliseconds (default: 30000)
+  SOROBAN_RPC_TIMEOUT_MS: z
+    .string()
+    .regex(/^\d+$/, "Must be a positive integer")
+    .optional(),
 });
 
 /** Fully validated, type-safe environment object */

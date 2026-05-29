@@ -90,7 +90,7 @@ export const GET = withApiHandler(async (
   // Resolve commitment — throws NotFoundError (→ 404) if absent
   let commitment;
   try {
-    commitment = await getCommitmentFromChain(commitmentId);
+      commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
   } catch {
     throw new NotFoundError('Commitment', { commitmentId });
   }

@@ -140,5 +140,9 @@ export function fail(
     response.headers.set("x-request-id", correlationId);
   }
 
+  return NextResponse.json(body, {
+    status,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
+  });
   return response;
 }

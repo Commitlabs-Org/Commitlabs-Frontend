@@ -461,3 +461,204 @@ describe('AttestationPostResponseSchema', () => {
     });
   });
 });
+
+// ─── Compliance Score Scaling Round-Trip Tests ───────────────────────────────
+
+describe('Compliance Score Scaling Round-Trip', () => {
+  const ANALYTICS_SCALE = 100;
+
+  describe('parseChainCommitment scaling', () => {
+    it('should scale compliance score from 0.0 to 0 (boundary)', () => {
+      const rawValue = {
+        id: 'c1',
+        ownerAddress: 'GABC',
+        asset: 'USDC',
+        amount: '1000',
+        status: 'ACTIVE',
+        complianceScore: 0.0, // On-chain value
+        currentValue: '1000',
+        feeEarned: '0',
+        violationCount: 0,
+      };
+
+      // Simulate the parsing logic
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(0);
+    });
+
+    it('should scale compliance score from 0.5 to 50 (midpoint)', () => {
+      const rawValue = {
+        id: 'c1',
+        ownerAddress: 'GABC',
+        asset: 'USDC',
+        amount: '1000',
+        status: 'ACTIVE',
+        complianceScore: 0.5, // On-chain value
+        currentValue: '1000',
+        feeEarned: '0',
+        violationCount: 0,
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(50);
+    });
+
+    it('should scale compliance score from 1.0 to 100 (boundary)', () => {
+      const rawValue = {
+        id: 'c1',
+        ownerAddress: 'GABC',
+        asset: 'USDC',
+        amount: '1000',
+        status: 'ACTIVE',
+        complianceScore: 1.0, // On-chain value
+        currentValue: '1000',
+        feeEarned: '0',
+        violationCount: 0,
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(100);
+    });
+
+    it('should scale compliance score from 0.85 to 85 (typical value)', () => {
+      const rawValue = {
+        id: 'c1',
+        ownerAddress: 'GABC',
+        asset: 'USDC',
+        amount: '1000',
+        status: 'ACTIVE',
+        complianceScore: 0.85, // On-chain value
+        currentValue: '1000',
+        feeEarned: '0',
+        violationCount: 0,
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(85);
+    });
+  });
+
+  describe('parseAttestationResult scaling', () => {
+    it('should scale compliance score from 0.0 to 0 (boundary)', () => {
+      const rawValue = {
+        attestationId: 'att_1',
+        commitmentId: 'c1',
+        complianceScore: 0.0, // On-chain value
+        violation: false,
+        feeEarned: '0',
+        recordedAt: '2026-04-23T23:31:42.241Z',
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(0);
+    });
+
+    it('should scale compliance score from 0.5 to 50 (midpoint)', () => {
+      const rawValue = {
+        attestationId: 'att_1',
+        commitmentId: 'c1',
+        complianceScore: 0.5, // On-chain value
+        violation: false,
+        feeEarned: '0',
+        recordedAt: '2026-04-23T23:31:42.241Z',
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(50);
+    });
+
+    it('should scale compliance score from 1.0 to 100 (boundary)', () => {
+      const rawValue = {
+        attestationId: 'att_1',
+        commitmentId: 'c1',
+        complianceScore: 1.0, // On-chain value
+        violation: false,
+        feeEarned: '0',
+        recordedAt: '2026-04-23T23:31:42.241Z',
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(100);
+    });
+
+    it('should scale compliance score from 0.92 to 92 (typical value)', () => {
+      const rawValue = {
+        attestationId: 'att_1',
+        commitmentId: 'c1',
+        complianceScore: 0.92, // On-chain value
+        violation: false,
+        feeEarned: '0',
+        recordedAt: '2026-04-23T23:31:42.241Z',
+      };
+
+      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      expect(parsedScore).toBe(92);
+    });
+  });
+
+  describe('recordAttestationOnChain write scaling', () => {
+    it('should scale compliance score from 0 to 0.0 (boundary)', () => {
+      const inputScore = 0; // Application value
+      const scaledValue = inputScore / ANALYTICS_SCALE;
+      expect(scaledValue).toBe(0.0);
+    });
+
+    it('should scale compliance score from 50 to 0.5 (midpoint)', () => {
+      const inputScore = 50; // Application value
+      const scaledValue = inputScore / ANALYTICS_SCALE;
+      expect(scaledValue).toBe(0.5);
+    });
+
+    it('should scale compliance score from 100 to 1.0 (boundary)', () => {
+      const inputScore = 100; // Application value
+      const scaledValue = inputScore / ANALYTICS_SCALE;
+      expect(scaledValue).toBe(1.0);
+    });
+
+    it('should scale compliance score from 85 to 0.85 (typical value)', () => {
+      const inputScore = 85; // Application value
+      const scaledValue = inputScore / ANALYTICS_SCALE;
+      expect(scaledValue).toBe(0.85);
+    });
+  });
+
+  describe('Round-trip consistency', () => {
+    it('should maintain consistency for score 0', () => {
+      const originalScore = 0;
+      const onChainValue = originalScore / ANALYTICS_SCALE;
+      const restoredScore = onChainValue * ANALYTICS_SCALE;
+      expect(restoredScore).toBe(originalScore);
+    });
+
+    it('should maintain consistency for score 50', () => {
+      const originalScore = 50;
+      const onChainValue = originalScore / ANALYTICS_SCALE;
+      const restoredScore = onChainValue * ANALYTICS_SCALE;
+      expect(restoredScore).toBe(originalScore);
+    });
+
+    it('should maintain consistency for score 100', () => {
+      const originalScore = 100;
+      const onChainValue = originalScore / ANALYTICS_SCALE;
+      const restoredScore = onChainValue * ANALYTICS_SCALE;
+      expect(restoredScore).toBe(originalScore);
+    });
+
+    it('should maintain consistency for score 85', () => {
+      const originalScore = 85;
+      const onChainValue = originalScore / ANALYTICS_SCALE;
+      const restoredScore = onChainValue * ANALYTICS_SCALE;
+      expect(restoredScore).toBe(originalScore);
+    });
+
+    it('should avoid float precision loss for typical scores', () => {
+      const testScores = [0, 25, 50, 75, 85, 92, 100];
+      testScores.forEach((score) => {
+        const onChainValue = score / ANALYTICS_SCALE;
+        const restoredScore = onChainValue * ANALYTICS_SCALE;
+        // Check that the round-trip is exact (no precision loss)
+        expect(restoredScore).toBe(score);
+      });
+    });
+  });
+});

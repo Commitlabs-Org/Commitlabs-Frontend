@@ -61,7 +61,7 @@ export const GET = withApiHandler(async (
 
   let commitment;
   try {
-    commitment = await getCommitmentFromChain(commitmentId);
+    commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
   } catch {
     throw new NotFoundError('Commitment', { commitmentId });
   }

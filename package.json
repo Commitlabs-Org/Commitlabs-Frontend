@@ -41,6 +41,7 @@
     "eslint-config-next": "^14.0.0",
     "fast-check": "^4.8.0",
     "happy-dom": "^20.7.0",
+    "ioredis": "^5.11.0",
     "node-fetch": "^3.3.2",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",

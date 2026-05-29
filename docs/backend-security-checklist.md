@@ -147,6 +147,18 @@ npm audit
 
 ---
 
+## 12. Rate Limiting
+
+- [ ] Write-heavy routes (`POST /api/commitments`, `POST /api/commitments/[id]/fund`, `POST /api/commitments/[id]/settle`, `POST /api/commitments/[id]/early-exit`) are protected by per-IP rate limiting
+- [ ] Rate limits are applied via `checkRateLimit(ip, routeId)` using `getClientIp` for key derivation
+- [ ] 429 responses include a `Retry-After` header populated from `getRateLimitWindowSeconds(routeId)`
+- [ ] Rate limit thresholds are configurable via env vars (`RATE_LIMIT_WRITE_MAX_REQUESTS`, `RATE_LIMIT_WRITE_WINDOW_SECONDS`, etc.) — not hardcoded
+- [ ] The rate limiter fails open on KV errors (does not block legitimate traffic during Redis outages)
+- [ ] In production, `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set so limits are shared across serverless instances
+- [ ] New write routes added to the API have a corresponding named entry in `rateLimit.ts` LIMITS (not relying on the default)
+
+---
+
 ## Severity Guide
 
 Use this when flagging issues during review:
