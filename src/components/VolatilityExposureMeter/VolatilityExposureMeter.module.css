@@ -20,10 +20,75 @@
   margin: 0;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .percentLabel {
   font-size: 1.125rem;
   font-weight: 700;
   color: #0FF0FC;
+}
+
+/* Threshold band badge */
+.bandBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.band_safe {
+  background: rgba(0, 201, 80, 0.15);
+  color: #00C950;
+  border: 1px solid rgba(0, 201, 80, 0.3);
+}
+
+.band_caution {
+  background: rgba(255, 105, 0, 0.15);
+  color: #FF6900;
+  border: 1px solid rgba(255, 105, 0, 0.3);
+}
+
+.band_danger {
+  background: rgba(251, 44, 54, 0.15);
+  color: #FB2C36;
+  border: 1px solid rgba(251, 44, 54, 0.3);
+}
+
+/* Threshold band markers above the bar */
+.thresholdBands {
+  display: flex;
+  width: 100%;
+  height: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  gap: 2px;
+}
+
+.band {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.bandSafe {
+  width: 33%;
+  background: rgba(0, 201, 80, 0.35);
+}
+
+.bandCaution {
+  width: 33%;
+  background: rgba(255, 105, 0, 0.35);
+}
+
+.bandDanger {
+  width: 34%;
+  background: rgba(251, 44, 54, 0.35);
 }
 
 .barTrack {
@@ -31,7 +96,7 @@
   width: 100%;
   height: 12px;
   border-radius: 8px;
-  background: #1a1a1a; /* Dark background for empty part */
+  background: #1a1a1a;
   overflow: hidden;
   margin-bottom: 8px;
 }
@@ -42,16 +107,15 @@
   top: 0;
   bottom: 0;
   border-radius: 8px;
-  overflow: hidden; /* Clips the gradient */
+  overflow: hidden;
   transition: width 300ms ease-out;
 }
 
 .barGradient {
-  width: 100vw; /* Ensure wide enough to cover the mask */
-  max-width: 600px; /* Or responsive constraint */
+  width: 100vw;
+  max-width: 600px;
   height: 100%;
   border-radius: 8px;
-  /* Specific gradient from Green -> Orange -> Red matching design */
   background: linear-gradient(
     90deg,
     #00C950 0%,
@@ -59,6 +123,7 @@
     #FB2C36 100%
   );
 }
+
 .labelsRow {
   display: flex;
   justify-content: space-between;
@@ -69,11 +134,69 @@
   margin-top: 4px;
 }
 
+/* Tooltip */
+.tooltipWrapper {
+  position: relative;
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.tooltipTrigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.875rem;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tooltipTrigger:hover,
+.tooltipTrigger:focus-visible {
+  color: rgba(255, 255, 255, 0.8);
+  outline: 2px solid rgba(15, 240, 252, 0.5);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  white-space: normal;
+  width: 220px;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
 .description {
   font-size: 0.8125rem;
   color: rgba(255, 255, 255, 0.6);
   line-height: 1.45;
   margin: 0.75rem 0 0 0;
+}
+
+/* Screen-reader only utility */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-width: 520px) {

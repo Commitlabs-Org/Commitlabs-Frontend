@@ -161,3 +161,51 @@ Before committing UI changes involving tables or dense data, verify the followin
 ---
 
 _Created as part of Issue #237. Review this guide when building new dashboard components or marketplace tables._
+
+## 8. VolatilityExposureMeter Threshold Zones
+
+The `VolatilityExposureMeter` component divides the 0–100% exposure range into three named threshold bands that align with the `CommitmentType` risk tiers used across the creation wizard.
+
+### Threshold Definitions
+
+| Band    | Range    | CommitmentType | Badge Color |
+| :------ | :------- | :------------- | :---------- |
+| Safe    | 0–33%    | Safe           | Green       |
+| Caution | 34–66%   | Balanced       | Orange      |
+| Danger  | 67–100%  | Aggressive     | Red         |
+
+### Accessibility Requirements
+
+- **Non-color annotation**: Each band is identified by a textual badge (`Safe`, `Caution`, `Danger`) rendered next to the percentage value. Color is supplementary, not the sole indicator.
+- **ARIA meter**: The bar uses `role="meter"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext`. The `aria-valuetext` includes the band name, e.g. `"67 percent, Danger zone"`.
+- **Tooltip**: An info button (`ⓘ`) expands a `role="tooltip"` panel explaining what the current band means and which commitment profile it aligns with. The button carries `aria-label="What does [Band] exposure mean?"` and `aria-expanded`.
+- **Screen-reader-only text**: The `.srOnly` CSS utility hides supplementary text visually while keeping it available to assistive technology.
+
+### Implementation Example
+
+```tsx
+<div
+  role="meter"
+  aria-valuenow={67}
+  aria-valuemin={0}
+  aria-valuemax={100}
+  aria-label="Volatility Exposure meter"
+  aria-valuetext="67 percent, Danger zone"
+>
+  …
+</div>
+<span className={styles.bandBadge}>Danger</span>
+```
+
+### Exported Utilities
+
+The following are exported from `VolatilityExposureMeter.tsx` for reuse and testing:
+
+- `clamp(value)` – Clamps a number to [0, 100].
+- `getThresholdBand(percent)` – Returns `'safe' | 'caution' | 'danger'`.
+- `THRESHOLDS` – `{ SAFE_MAX: 33, CAUTION_MAX: 66 }`.
+- `BAND_LABELS` – Human-readable label per band.
+- `BAND_TOOLTIPS` – Tooltip copy per band.
+- `RISK_PROFILE_BAND` – Maps `CommitmentType` strings to bands.
+
+_Added as part of Issue #490._
