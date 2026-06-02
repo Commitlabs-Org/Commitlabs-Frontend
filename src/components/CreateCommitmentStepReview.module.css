@@ -86,14 +86,14 @@
 
 .stepCircleCompleted {
   background-color: #0ff0fc1e; /* Teal-600 */
-  border-color: #0FF0FC;
-  color: #0FF0FC;
+  border-color: #0ff0fc;
+  color: #0ff0fc;
 }
 
 .stepCircleActive {
   background-color: transparent;
-  border-color: #0FF0FC; /* Teal-400 */
-  color: #0FF0FC;
+  border-color: #0ff0fc; /* Teal-400 */
+  color: #0ff0fc;
   box-shadow: 0 0 20px rgba(45, 212, 191, 0.3);
 }
 
@@ -115,7 +115,7 @@
 .line {
   width: 6rem;
   height: 2px;
-  background-color: #0FF0FC;
+  background-color: #0ff0fc;
   margin: 0 -0.5rem;
   margin-bottom: 1.5rem;
   position: relative;
@@ -144,132 +144,160 @@
   font-size: 0.9rem;
 }
 
-/* Summary Card */
-.summaryCard {
-  background-color: #111111;
-  border: 1px solid #0FF0FC;
-  border-radius: 1rem;
-  padding: 2rem;
+/* Review Sections Layout */
+.reviewSections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 2px -5px 10px 0px rgba(45, 212, 191, 0.5);
+}
+
+.reviewSection {
+  background-color: #111111;
+  border: 1px solid #0ff0fc;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 2px -5px 10px 0px rgba(45, 212, 191, 0.3);
   position: relative;
   overflow: hidden;
 }
 
-.summaryCard::before {
-  content: '';
+.reviewSection::before {
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #0FF0FC, transparent);
+  background: linear-gradient(90deg, transparent, #0ff0fc, transparent);
   opacity: 0.5;
 }
 
-.cardHeader {
+.sectionHeader {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid #222;
 }
 
-.typeIconContainer {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 1rem;
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.editButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  border: 1px solid #0ff0fc;
+  border-radius: 0.5rem;
+  color: #0ff0fc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.editButton:hover {
+  background-color: #0ff0fc15;
+  box-shadow: 0 0 10px rgba(15, 240, 252, 0.3);
+}
+
+.editButton:focus {
+  outline: 2px solid #0ff0fc;
+  outline-offset: 2px;
+}
+
+.sectionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.typeDisplay {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.typeIconSmall {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
   background-color: #1a1a1a;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #333;
+  flex-shrink: 0;
 }
 
-.iconSafe { color: #10b981; }
-.iconBalanced { color: #3b82f6; }
-.iconAggressive { color: #f97316; }
+.typeDetails {
+  display: flex;
+  flex-direction: column;
+}
 
-.typeInfo h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
+.typeValue {
+  font-size: 1rem;
+  font-weight: 600;
   color: white;
-  margin-bottom: 0.25rem;
+  margin: 0;
 }
 
-.typeInfo p {
+.typeDescription {
+  font-size: 0.8rem;
   color: #6b7280;
-  font-size: 0.875rem;
+  margin: 0;
 }
 
-/* Data Grid */
-.dataGrid {
+.fieldRow,
+.fieldGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fieldGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
+  gap: 1rem;
 }
 
-.dataItem {
+.field {
   background-color: #161616;
   padding: 1rem;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.dataLabel {
+.fieldLabel {
   display: block;
   color: #6b7280;
   font-size: 0.75rem;
-  margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 500;
 }
 
-.dataValue {
+.fieldValue {
   color: white;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   font-family: monospace;
 }
 
-.dataValueRisk {
+.fieldValueRisk {
   color: #f97316;
-}
-
-.assetTag {
-  font-size: 0.8em;
-  color: #6b7280;
-}
-
-/* Secondary Details */
-.secondaryDetails {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  border-top: 1px solid #222;
-  padding-top: 1.5rem;
-}
-
-.detailRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-}
-
-.detailLabel {
-  color: #9ca3af;
-}
-
-.detailValue {
-  color: white;
-  font-weight: 500;
-  font-family: monospace;
-}
-
-.highlightValue {
-  color: #0FF0FC; /* Teal-400 */
 }
 
 /* Checkboxes */
@@ -304,7 +332,7 @@
 }
 
 .checkIconActive {
-  color: #0FF0FC;
+  color: #0ff0fc;
   filter: drop-shadow(0 0 6px rgba(15, 240, 252, 0.5));
 }
 
@@ -322,7 +350,7 @@
 }
 
 .link {
-  color: #0FF0FC;
+  color: #0ff0fc;
   text-decoration: none;
 }
 
@@ -375,8 +403,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .createButton {
@@ -401,9 +433,9 @@
 }
 
 .createButton:not(:disabled):hover {
-  border-color: #0FF0FC;
+  border-color: #0ff0fc;
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-  color: #0FF0FC;
+  color: #0ff0fc;
 }
 
 .createButton:disabled {
@@ -422,7 +454,44 @@
 }
 
 @media (max-width: 640px) {
-  .dataGrid {
+  .fieldGrid {
     grid-template-columns: 1fr;
   }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .editButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .typeDisplay {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* Icon Styles */
+.iconSafe {
+  color: #10b981;
+}
+.iconBalanced {
+  color: #3b82f6;
+}
+.iconAggressive {
+  color: #f97316;
+}
+
+/* Asset Tag */
+.assetTag {
+  font-size: 0.8em;
+  color: #6b7280;
+}
+
+.highlightValue {
+  color: #0ff0fc;
 }
