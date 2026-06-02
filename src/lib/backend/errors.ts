@@ -157,6 +157,7 @@ export const HTTP_ERROR_CODES: Record<number, string> = {
 
 export type BackendErrorCode =
   | "BAD_REQUEST"
+  | "NOT_MATURED"
   | "VALIDATION_ERROR"
   | "UNAUTHORIZED"
   | "FORBIDDEN"

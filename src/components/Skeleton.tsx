@@ -77,10 +77,6 @@ export function Skeleton({
       {shimmer && !prefersReducedMotion && (
         <div
           className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.05)] to-transparent"
-          style={{
-            animation: 'shimmer 2s infinite',
-            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
         />
       )}
       

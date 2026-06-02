@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/backend/auth';
-import { buildCsv } from '@/lib/backend/csv';
+import { type CsvRow, createCsvStream } from '@/lib/backend/csv';
 import {
   BadRequestError,
   ForbiddenError,
@@ -8,7 +8,10 @@ import {
   UnauthorizedError,
 } from '@/lib/backend/errors';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
-import { getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
+import {
+  getUserCommitmentsFromChain,
+  type Commitment,
+} from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 
 const CSV_HEADERS = [
@@ -48,6 +51,29 @@ function normalizeAddress(address: string): string {
   return address.trim().toLowerCase();
 }
 
+/**
+ * Lazily maps commitments to CSV rows. Using a generator avoids
+ * materializing the full mapped array — the streamer pulls one row at a
+ * time, so only a single row exists in memory between iterations.
+ */
+function* commitmentsToRows(commitments: Iterable<Commitment>): Generator<CsvRow> {
+  for (const commitment of commitments) {
+    yield [
+      commitment.id,
+      commitment.ownerAddress,
+      commitment.asset,
+      stringifyCsvValue(commitment.amount),
+      commitment.status,
+      stringifyCsvValue(commitment.complianceScore),
+      stringifyCsvValue(commitment.currentValue),
+      stringifyCsvValue(commitment.feeEarned),
+      stringifyCsvValue(commitment.violationCount),
+      stringifyCsvValue(commitment.createdAt),
+      stringifyCsvValue(commitment.expiresAt),
+    ];
+  }
+}
+
 export const GET = withApiHandler(async (req: NextRequest) => {
   const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
   const isAllowed = await checkRateLimit(ip, 'api/commitments/export');
@@ -72,27 +98,19 @@ export const GET = withApiHandler(async (req: NextRequest) => {
     throw new ForbiddenError();
   }
 
+  // Fetch happens before streaming starts so any failure here is caught by
+  // `withApiHandler` and surfaced as a JSON error response, not a truncated
+  // CSV. When `getUserCommitmentsFromChain` becomes streamable, swap the
+  // generator argument for the async iterable directly.
   const commitments = await getUserCommitmentsFromChain(ownerAddress);
-  const rows = commitments.map((commitment) => [
-    commitment.id,
-    commitment.ownerAddress,
-    commitment.asset,
-    stringifyCsvValue(commitment.amount),
-    commitment.status,
-    stringifyCsvValue(commitment.complianceScore),
-    stringifyCsvValue(commitment.currentValue),
-    stringifyCsvValue(commitment.feeEarned),
-    stringifyCsvValue(commitment.violationCount),
-    stringifyCsvValue(commitment.createdAt),
-    stringifyCsvValue(commitment.expiresAt),
-  ]);
-  const csv = buildCsv(CSV_HEADERS, rows);
+  const stream = createCsvStream(CSV_HEADERS, commitmentsToRows(commitments));
 
-  return new NextResponse(csv, {
+  return new NextResponse(stream, {
     status: 200,
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="commitments.csv"',
+      'Cache-Control': 'no-store',
     },
   });
 });

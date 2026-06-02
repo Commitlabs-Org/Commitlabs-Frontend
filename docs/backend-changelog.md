@@ -112,3 +112,40 @@ Copy this block for each new change:
 ### Migration Notes
 
 - First true backend contract break after this date must be added as a new dated entry.
+
+## 2026-05-28 — Compliance score scaling consistency fix
+
+- **Status:** Released
+- **Effective Date:** 2026-05-28
+- **API Surface:** Contracts service (src/lib/backend/services/contracts.ts)
+- **Change Type:** Bug fix (data consistency)
+- **Owner:** Frontend team
+- **Tracking:** Internal issue
+
+### What Changed
+
+- Fixed compliance score scaling asymmetry in the contracts service
+- Previously: `recordAttestationOnChain` divided scores by 100 before sending on-chain, but `parseChainCommitment` and `parseAttestationResult` did not re-scale when reading back
+- Now: Both write and read paths consistently use ANALYTICS_SCALE (100) for scaling
+- Added comprehensive documentation for the ANALYTICS_SCALE constant
+- Added round-trip scaling tests covering boundary values (0, 50, 100)
+
+### Frontend Impact
+
+- Compliance scores displayed to users will now show correct values (e.g., 85 instead of 0.85)
+- Previously corrupted scores from blockchain reads will now display correctly
+- No API contract changes - this is an internal implementation fix
+
+### Required Frontend Action
+
+- [x] Fix scaling in parseChainCommitment (multiply by ANALYTICS_SCALE)
+- [x] Fix scaling in parseAttestationResult (multiply by ANALYTICS_SCALE)
+- [x] Add documentation for ANALYTICS_SCALE constant
+- [x] Add round-trip scaling tests with boundary values
+
+### Migration Notes
+
+- This fix corrects a data consistency bug where compliance scores were incorrectly displayed
+- The scaling convention is now: divide by 100 on write, multiply by 100 on read
+- Example: Score 85 → 0.85 on-chain → 85 in application (correct round-trip)
+- Tests verify no float precision loss for typical scores (0, 25, 50, 75, 85, 92, 100)

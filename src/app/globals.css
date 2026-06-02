@@ -133,13 +133,18 @@ button {
         }
 
         /* Skeleton loading animations with reduced motion support */
+        :root {
+          --shimmer-duration: 2s;
+          --shimmer-easing: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
+        .animate-shimmer {
+          animation: shimmer var(--shimmer-duration) infinite var(--shimmer-easing);
         }
 
         @media (prefers-reduced-motion: reduce) {

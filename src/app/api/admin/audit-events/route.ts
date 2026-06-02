@@ -12,7 +12,11 @@
  *   If the variable is not set the endpoint always returns 403 (fail-secure).
  *
  * Query parameters:
- *   limit  {number}  Max events to return. Must be 1–200. Defaults to 50.
+ *   limit     {number}  Max events to return. Must be 1–200. Defaults to 50.
+ *   actor     {string}  Optional actor address to filter events by actor.
+ *   type      {string}  Optional audit event action to filter by event type.
+ *   startTime {string}  Optional ISO 8601 timestamp to filter events starting at or after this time.
+ *   endTime   {string}  Optional ISO 8601 timestamp to filter events ending at or before this time.
  *
  * Response shape:
  * ```json
@@ -36,7 +40,9 @@ import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { parsePaginationParams } from '@/lib/backend/pagination';
 import {
+  AuditEventFilters,
   isAuditLogEnabled,
   getRecentAuditEvents,
   getAuditEventCount,
@@ -73,6 +79,56 @@ function parseLimit(searchParams: URLSearchParams): number {
     );
   }
   return parsed;
+}
+
+function parseTimestampParam(searchParams: URLSearchParams, paramName: string): string | undefined {
+  const raw = searchParams.get(paramName);
+  if (raw === null) return undefined;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new ValidationError(
+      `"${paramName}" must be a valid ISO 8601 timestamp.`,
+      { field: paramName, received: raw }
+    );
+  }
+
+  return parsed.toISOString();
+}
+
+function parseAuditEventFilters(searchParams: URLSearchParams): AuditEventFilters {
+  const actorParam = searchParams.get('actor');
+  const typeParam = searchParams.get('type');
+  const startTime = parseTimestampParam(searchParams, 'startTime');
+  const endTime = parseTimestampParam(searchParams, 'endTime');
+
+  if (actorParam !== null && actorParam.trim() === '') {
+    throw new ValidationError('"actor" must not be empty.', {
+      field: 'actor',
+      received: actorParam,
+    });
+  }
+
+  if (typeParam !== null && typeParam.trim() === '') {
+    throw new ValidationError('"type" must not be empty.', {
+      field: 'type',
+      received: typeParam,
+    });
+  }
+
+  if (startTime && endTime && new Date(startTime) > new Date(endTime)) {
+    throw new ValidationError(
+      '"startTime" must be earlier than or equal to "endTime".',
+      { field: 'timeRange', startTime, endTime }
+    );
+  }
+
+  return {
+    actor: actorParam?.trim() ?? undefined,
+    type: typeParam?.trim() ?? undefined,
+    startTime,
+    endTime,
+  };
 }
 
 /**
@@ -124,13 +180,24 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 
   // 4. Parse query params
   const { searchParams } = new URL(req.url);
-  const limit = parseLimit(searchParams);
+  const pagination = parsePaginationParams(searchParams, {
+    defaultPageSize: DEFAULT_LIMIT,
+    maxPageSize: MAX_LIMIT,
+  });
+  const limit = searchParams.has('limit') ? parseLimit(searchParams) : pagination.pageSize;
+  const filters = parseAuditEventFilters(searchParams);
 
   // 5. Fetch and return redacted events
   const [events, total] = await Promise.all([
-    getRecentAuditEvents(limit),
-    getAuditEventCount(),
+    getRecentAuditEvents(limit, filters),
+    getAuditEventCount(filters),
   ]);
 
-  return ok({ events, total }, { limit });
+  const meta: Record<string, unknown> = { limit };
+  if (searchParams.has('page') || searchParams.has('pageSize')) {
+    meta.page = pagination.page;
+    meta.pageSize = pagination.pageSize;
+  }
+
+  return ok({ events, total }, meta);
 });

@@ -46,17 +46,30 @@ Every success state should follow this hierarchy:
 #### User Need
 The user needs reassurance that the commitment is active and a quick way to inspect it.
 
+#### Canonical Component
+- Source: `src/components/modals/CommitmentCreatedModal.tsx`
+- Naming: PascalCase file and component name only
+- Scope: This is the only commitment-created success modal allowed in the codebase
+- Delivery: Modal renders in a portal, traps focus, closes on `Escape`, and restores page scroll on dismiss
+
 #### Modal Content
 - Heading: `Commitment Created`
-- Body: `Your commitment is active and available in your dashboard.`
+- Body: `Your liquidity commitment is active and available in your dashboard.`
 - Metadata:
   - Commitment ID
-  - Asset pair or strategy name
-  - Start timestamp
+  - Additional metadata is optional and should only be added when it is available in the create flow without delaying confirmation
 - Primary action: `View Commitment`
-- Secondary actions: `Create Another`, `Go to Dashboard`
-- Optional share: `Copy Commitment Link`
+- Secondary actions: `Create Another`, `Close`
 - Optional external: `View on Stellar Explorer`
+
+#### Visual Spec
+- Dark modal surface with a cyan success accent
+- One centered success icon above the headline
+- High-contrast commitment ID block using monospace text
+- Up to three next-step recommendations, each one line on mobile when possible
+- Exactly one primary action with filled styling
+- Secondary actions share the same visual weight
+- External explorer link sits in a subdued footer row
 
 #### Full Page Additions
 - Commitment summary card
@@ -84,6 +97,26 @@ The user needs closure, clarity on what changed financially, and a path back to 
 - Final state summary
 - Outcome callout explaining that no further actions are required
 - Links to related records, receipts, or portfolio pages
+
+### Early Exit Penalty Preview
+
+#### User Need
+The user needs complete financial clarity regarding the penalty deductions, interest forfeitures, and net refund amount before making an irreversible on-chain exit.
+
+#### Modal Content
+- Heading: `Early Exit Warning`
+- Body: `This action is irreversible and carries penalties.`
+- Metadata (displayed in a semantic table):
+  - Commitment ID
+  - Original committed amount (Before Early Exit)
+  - Penalty rate (dynamic percentage derived from protocol constants)
+  - Penalty deduction amount
+  - Net receive / refund amount (After Early Exit)
+- Primary action: `Confirm Early Exit`
+- Secondary action: `Cancel`
+- Verification Flow:
+  - User must acknowledge consequences via checkbox before proceeding.
+  - User must input the exact commitment ID string to prevent accidental triggers.
 
 ### Listing Published
 

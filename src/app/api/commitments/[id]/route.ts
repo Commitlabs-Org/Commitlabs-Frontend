@@ -29,7 +29,7 @@ export const GET = withApiHandler(async (_req: NextRequest, context, correlation
 
   let commitment: any;
   try {
-    commitment = await getCommitmentFromChain(commitmentId);
+    commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
   } catch (err) {
     if (err instanceof BackendError && err.code === 'NOT_FOUND') {
       throw new NotFoundError('Commitment', { commitmentId });
@@ -67,6 +67,7 @@ export const GET = withApiHandler(async (_req: NextRequest, context, correlation
       maxLossPercent: commitment.rules?.maxLossPercent ?? null,
       tokenId: commitment.tokenId ?? null,
       nftMetadataLink: getNftMetadataLink(String(commitment.id ?? commitment.commitmentId)),
+      contractVersion: commitment.contractVersion,
     },
     undefined,
     200,

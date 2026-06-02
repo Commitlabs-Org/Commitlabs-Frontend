@@ -226,7 +226,133 @@ describe('GET /api/admin/audit-events — authorized', () => {
 
     expect(res.status).toBe(200);
     expect(body.meta.limit).toBe(10);
-    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(10);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(10, {
+      actor: undefined,
+      type: undefined,
+      startTime: undefined,
+      endTime: undefined,
+    });
+  });
+
+  it('filters events by actor', async () => {
+    vi.mocked(auditLog.getRecentAuditEvents).mockResolvedValue([MOCK_EVENTS[0]]);
+    vi.mocked(auditLog.getAuditEventCount).mockResolvedValue(1);
+
+    const req = makeRequest({ actor: '0xdeadbeef' }, ADMIN_SECRET);
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(50, {
+      actor: '0xdeadbeef',
+      type: undefined,
+      startTime: undefined,
+      endTime: undefined,
+    });
+    expect(auditLog.getAuditEventCount).toHaveBeenCalledWith({
+      actor: '0xdeadbeef',
+      type: undefined,
+      startTime: undefined,
+      endTime: undefined,
+    });
+    expect(body.data.events).toEqual([MOCK_EVENTS[0]]);
+    expect(body.data.total).toBe(1);
+  });
+
+  it('filters events by type', async () => {
+    vi.mocked(auditLog.getRecentAuditEvents).mockResolvedValue([MOCK_EVENTS[1]]);
+    vi.mocked(auditLog.getAuditEventCount).mockResolvedValue(1);
+
+    const req = makeRequest({ type: 'attestation.recorded' }, ADMIN_SECRET);
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(50, {
+      actor: undefined,
+      type: 'attestation.recorded',
+      startTime: undefined,
+      endTime: undefined,
+    });
+    expect(body.data.events[0]?.action).toBe('attestation.recorded');
+    expect(body.data.total).toBe(1);
+  });
+
+  it('filters events by time range', async () => {
+    vi.mocked(auditLog.getRecentAuditEvents).mockResolvedValue([MOCK_EVENTS[2]]);
+    vi.mocked(auditLog.getAuditEventCount).mockResolvedValue(1);
+
+    const req = makeRequest(
+      { startTime: '2026-04-22T00:00:00Z', endTime: '2026-04-22T23:59:59Z' },
+      ADMIN_SECRET
+    );
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(50, {
+      actor: undefined,
+      type: undefined,
+      startTime: '2026-04-22T00:00:00.000Z',
+      endTime: '2026-04-22T23:59:59.000Z',
+    });
+    expect(body.data.total).toBe(1);
+  });
+
+  it('supports combined filters and pagination', async () => {
+    vi.mocked(auditLog.getRecentAuditEvents).mockResolvedValue([MOCK_EVENTS[1]]);
+    vi.mocked(auditLog.getAuditEventCount).mockResolvedValue(1);
+
+    const req = makeRequest(
+      {
+        limit: '5',
+        actor: '0xdeadbeef',
+        type: 'attestation.recorded',
+        startTime: '2026-04-23T00:00:00Z',
+        endTime: '2026-04-24T00:00:00Z',
+      },
+      ADMIN_SECRET
+    );
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.meta.limit).toBe(5);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(5, {
+      actor: '0xdeadbeef',
+      type: 'attestation.recorded',
+      startTime: '2026-04-23T00:00:00.000Z',
+      endTime: '2026-04-24T00:00:00.000Z',
+    });
+    expect(auditLog.getAuditEventCount).toHaveBeenCalledWith({
+      actor: '0xdeadbeef',
+      type: 'attestation.recorded',
+      startTime: '2026-04-23T00:00:00.000Z',
+      endTime: '2026-04-24T00:00:00.000Z',
+    });
+  });
+
+  it('returns 400 for invalid filter values', async () => {
+    const invalidRequests = [
+      { params: { actor: '' }, message: /actor/i },
+      { params: { type: '' }, message: /type/i },
+      { params: { startTime: 'invalid-date' }, message: /startTime/i },
+      { params: { endTime: 'invalid-date' }, message: /endTime/i },
+      {
+        params: { startTime: '2026-04-25T00:00:00Z', endTime: '2026-04-24T00:00:00Z' },
+        message: /startTime.*endTime|earlier than or equal/i,
+      },
+    ];
+
+    for (const { params, message } of invalidRequests) {
+      const req = makeRequest(params, ADMIN_SECRET);
+      const res = await GET(req, { params: {} });
+      const body = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+      expect(body.error.message).toMatch(message);
+    }
   });
 
   it('returns empty array when no events exist', async () => {
@@ -247,7 +373,12 @@ describe('GET /api/admin/audit-events — authorized', () => {
     const res = await GET(req, { params: {} });
 
     expect(res.status).toBe(200);
-    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(1);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(1, {
+      actor: undefined,
+      type: undefined,
+      startTime: undefined,
+      endTime: undefined,
+    });
   });
 
   it('accepts limit=200 (maximum boundary)', async () => {
@@ -255,7 +386,12 @@ describe('GET /api/admin/audit-events — authorized', () => {
     const res = await GET(req, { params: {} });
 
     expect(res.status).toBe(200);
-    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(200);
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(200, {
+      actor: undefined,
+      type: undefined,
+      startTime: undefined,
+      endTime: undefined,
+    });
   });
 
   it('ensures all events have actor and ip redacted', async () => {

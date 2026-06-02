@@ -1,14 +1,15 @@
-import { defineConfig } from 'vitest/config'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
+  oxc: false,
   esbuild: {
     jsx: 'automatic',
-    jsxImportSource: 'react',
   },
   test: {
-    environment: 'node',
     globals: true,
+    setupFiles: ['./tests/setup/vitest.setup.ts'],
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
       all: true,
@@ -23,7 +24,7 @@ export default defineConfig({
         'src/app/api/marketplace/listings/route.ts',
         'src/app/api/marketplace/listings/[id]/route.ts',
         'src/app/api/commitments/route.ts',
-        'src/components/VolatilityExposureMeter/VolatilityExposureMeter.tsx',
+        'src/app/api/commitments/search/route.ts',
       ],
       exclude: [
         'node_modules/',
@@ -46,4 +47,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-})
+});

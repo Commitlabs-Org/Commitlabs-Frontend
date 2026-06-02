@@ -81,7 +81,7 @@ describe('GET /api/attestations/recent — happy paths', () => {
     });
   });
 
-  it('returns 200 with attestations sorted newest-first (default limit=10)', async () => {
+  it('returns 200 with attestations sorted newest-first (default pageSize=10)', async () => {
     const req = makeRequest();
     const res = await GET(req, { params: {} });
     const body = await res.json();
@@ -94,12 +94,19 @@ describe('GET /api/attestations/recent — happy paths', () => {
     expect(body.data.attestations[4].id).toBe('ATT-001');
   });
 
-  it('returns meta.limit equal to the resolved limit', async () => {
+  it('returns full pagination meta on default request', async () => {
     const req = makeRequest();
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
-    expect(body.meta).toMatchObject({ limit: 10 });
+    expect(body.meta).toMatchObject({
+      page: 1,
+      pageSize: 10,
+      total: 5,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPrevPage: false,
+    });
   });
 
   it('returns data.total equal to the total number of matching attestations', async () => {
@@ -110,8 +117,8 @@ describe('GET /api/attestations/recent — happy paths', () => {
     expect(body.data.total).toBe(5);
   });
 
-  it('respects a custom limit and slices correctly', async () => {
-    const req = makeRequest({ limit: '2' });
+  it('respects a custom pageSize and slices correctly', async () => {
+    const req = makeRequest({ pageSize: '2' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -121,11 +128,11 @@ describe('GET /api/attestations/recent — happy paths', () => {
     expect(body.data.attestations[1].id).toBe('ATT-004');
     // total reflects unsliced count
     expect(body.data.total).toBe(5);
-    expect(body.meta.limit).toBe(2);
+    expect(body.meta.pageSize).toBe(2);
   });
 
-  it('returns all attestations when limit exceeds available count', async () => {
-    const req = makeRequest({ limit: '100' });
+  it('returns all attestations when pageSize exceeds available count', async () => {
+    const req = makeRequest({ pageSize: '100' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -149,8 +156,8 @@ describe('GET /api/attestations/recent — happy paths', () => {
     expect(body.data.total).toBe(0);
   });
 
-  it('accepts limit=1 (minimum boundary)', async () => {
-    const req = makeRequest({ limit: '1' });
+  it('accepts pageSize=1 (minimum boundary)', async () => {
+    const req = makeRequest({ pageSize: '1' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -159,11 +166,93 @@ describe('GET /api/attestations/recent — happy paths', () => {
     expect(body.data.attestations[0].id).toBe('ATT-005');
   });
 
-  it('accepts limit=100 (maximum boundary)', async () => {
-    const req = makeRequest({ limit: '100' });
+  it('accepts pageSize=100 (maximum boundary)', async () => {
+    const req = makeRequest({ pageSize: '100' });
     const res = await GET(req, { params: {} });
 
     expect(res.status).toBe(200);
+  });
+});
+
+// ─── GET /api/attestations/recent — pagination ────────────────────────────────
+
+describe('GET /api/attestations/recent — pagination', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(rateLimit.checkRateLimit).mockResolvedValue(true);
+    vi.mocked(mockDb.getMockData).mockResolvedValue({
+      commitments: [],
+      attestations: ATTESTATIONS,
+      listings: [],
+    });
+  });
+
+  it('returns page 2 results with correct items', async () => {
+    const req = makeRequest({ page: '2', pageSize: '2' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.attestations).toHaveLength(2);
+    expect(body.data.attestations[0].id).toBe('ATT-003');
+    expect(body.data.attestations[1].id).toBe('ATT-002');
+  });
+
+  it('hasNextPage is true when more pages exist', async () => {
+    const req = makeRequest({ page: '1', pageSize: '2' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(body.meta.hasNextPage).toBe(true);
+    expect(body.meta.hasPrevPage).toBe(false);
+  });
+
+  it('hasPrevPage is true on page > 1', async () => {
+    const req = makeRequest({ page: '2', pageSize: '2' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(body.meta.hasPrevPage).toBe(true);
+  });
+
+  it('hasNextPage is false on the last page', async () => {
+    // 5 items, pageSize=2 → 3 pages; page 3 is last
+    const req = makeRequest({ page: '3', pageSize: '2' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(body.meta.hasNextPage).toBe(false);
+    expect(body.meta.hasPrevPage).toBe(true);
+    expect(body.data.attestations).toHaveLength(1);
+    expect(body.data.attestations[0].id).toBe('ATT-001');
+  });
+
+  it('reports correct totalPages', async () => {
+    const req = makeRequest({ pageSize: '2' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(body.meta.totalPages).toBe(3);
+  });
+
+  it('returns empty attestations array when page exceeds totalPages', async () => {
+    const req = makeRequest({ page: '99', pageSize: '10' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.attestations).toEqual([]);
+    expect(body.data.total).toBe(5);
+    expect(body.meta.page).toBe(99);
+  });
+
+  it('meta.total reflects total matching items, not page size', async () => {
+    const req = makeRequest({ pageSize: '2' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(body.meta.total).toBe(5);
+    expect(body.data.attestations).toHaveLength(2);
   });
 });
 
@@ -262,8 +351,8 @@ describe('GET /api/attestations/recent — ownerAddress filter', () => {
     expect(body.data.total).toBe(0);
   });
 
-  it('applies limit after ownerAddress filter', async () => {
-    const req = makeRequest({ ownerAddress: OWNER_A, limit: '1' }, 'valid-token');
+  it('applies pageSize after ownerAddress filter', async () => {
+    const req = makeRequest({ ownerAddress: OWNER_A, pageSize: '1' }, 'valid-token');
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -308,9 +397,9 @@ describe('GET /api/attestations/recent — ownerAddress filter', () => {
   });
 });
 
-// ─── GET /api/attestations/recent — limit validation ─────────────────────────
+// ─── GET /api/attestations/recent — page and pageSize validation ──────────────
 
-describe('GET /api/attestations/recent — limit validation', () => {
+describe('GET /api/attestations/recent — page and pageSize validation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(rateLimit.checkRateLimit).mockResolvedValue(true);
@@ -321,18 +410,8 @@ describe('GET /api/attestations/recent — limit validation', () => {
     });
   });
 
-  it('returns 400 when limit is 0 (below minimum)', async () => {
-    const req = makeRequest({ limit: '0' });
-    const res = await GET(req, { params: {} });
-    const body = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(body.error.message).toMatch(/limit/);
-  });
-
-  it('returns 400 when limit is negative', async () => {
-    const req = makeRequest({ limit: '-5' });
+  it('returns 400 when pageSize is 0 (below minimum)', async () => {
+    const req = makeRequest({ pageSize: '0' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -340,8 +419,17 @@ describe('GET /api/attestations/recent — limit validation', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('returns 400 when limit exceeds 100', async () => {
-    const req = makeRequest({ limit: '101' });
+  it('returns 400 when pageSize is negative', async () => {
+    const req = makeRequest({ pageSize: '-5' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when pageSize exceeds 100', async () => {
+    const req = makeRequest({ pageSize: '101' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -350,8 +438,8 @@ describe('GET /api/attestations/recent — limit validation', () => {
     expect(body.error.message).toMatch(/100/);
   });
 
-  it('returns 400 when limit is a non-numeric string', async () => {
-    const req = makeRequest({ limit: 'abc' });
+  it('returns 400 when pageSize is a non-numeric string', async () => {
+    const req = makeRequest({ pageSize: 'abc' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -359,8 +447,26 @@ describe('GET /api/attestations/recent — limit validation', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('returns 400 when limit is a float', async () => {
-    const req = makeRequest({ limit: '2.5' });
+  it('returns 400 when page is 0 (below minimum)', async () => {
+    const req = makeRequest({ page: '0' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when page is negative', async () => {
+    const req = makeRequest({ page: '-1' });
+    const res = await GET(req, { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when page is a non-numeric string', async () => {
+    const req = makeRequest({ page: 'first' });
     const res = await GET(req, { params: {} });
     const body = await res.json();
 
@@ -415,4 +521,3 @@ describe('GET /api/attestations/recent — rate limiting', () => {
     );
   });
 });
-

@@ -73,23 +73,73 @@ const SettlementModal: React.FC<SettlementModalProps> = ({
           {/* INELIGIBLE STATE */}
           {state === 'ineligible' && (
             <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-lg font-bold text-white">Ineligible for Settlement</h3>
-                <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl">
-                  <p className="text-red-400 text-sm leading-relaxed">
-                    {ineligibleReason || 'This commitment does not meet the necessary conditions for settlement at this time.'}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={onClose}
-                className="w-full py-4 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all"
-              >
-                Close
-              </button>
+              {(() => {
+                const reason = ineligibleReason?.toLowerCase() || '';
+                let isTemporary = false;
+                let message = 'This commitment does not meet the necessary conditions for settlement at this time.';
+                let iconColor = 'text-red-500';
+                let bgColor = 'bg-red-500/10';
+                let borderColor = 'border-red-500/20';
+                let textColor = 'text-red-400';
+
+                if (reason.includes('matured') || reason.includes('not matured')) {
+                  isTemporary = true;
+                  message = 'This commitment has not yet reached maturity. Please try again later.';
+                  iconColor = 'text-yellow-500';
+                  bgColor = 'bg-yellow-500/10';
+                  borderColor = 'border-yellow-500/20';
+                  textColor = 'text-yellow-400';
+                } else if (reason.includes('settled') || reason.includes('already settled')) {
+                  message = 'This commitment has already been settled.';
+                } else if (reason.includes('disputed') || reason.includes('dispute')) {
+                  message = 'This commitment is under dispute and cannot be settled at this time.';
+                } else if (reason.includes('violated')) {
+                  message = 'This commitment has been violated and cannot be settled.';
+                } else if (reason.includes('early exit') || reason.includes('early_exit')) {
+                  message = 'This commitment has already been exited early.';
+                }
+
+                return (
+                  <>
+                    <div className={`w-16 h-16 ${bgColor} ${iconColor} rounded-full flex items-center justify-center`}>
+                      {isTemporary ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-bold text-white">
+                        {isTemporary ? 'Not Ready Yet' : 'Ineligible for Settlement'}
+                      </h3>
+                      <div className={`bg-black/20 border ${borderColor} p-4 rounded-xl`}>
+                        <p className={`${textColor} text-sm leading-relaxed`}>{message}</p>
+                        {isTemporary && (
+                          <p className="text-white/40 text-xs mt-2">
+                            This is a temporary issue—you can try again once the commitment matures.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full space-y-3">
+                      {commitmentDetails && (
+                        <a 
+                          href={`/commitments/${commitmentDetails.id}`}
+                          className="block w-full py-3 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all"
+                        >
+                          View Commitment Details
+                        </a>
+                      )}
+                      <button 
+                        onClick={onReturnToDashboard || onClose}
+                        className="w-full py-4 bg-white text-black font-bold rounded-xl transition-all hover:bg-gray-200 active:scale-[0.98]"
+                      >
+                        Return to Dashboard
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 

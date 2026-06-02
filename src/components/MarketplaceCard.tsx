@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
@@ -184,22 +184,22 @@ export function MarketplaceCard({
     type === "Safe"
       ? "border-[#00C95066]"
       : type === "Balanced"
-      ? "border-[#2B7FFF66]"
-      : "border-[#FF690066]";
+        ? "border-[#2B7FFF66]"
+        : "border-[#FF690066]";
 
   const scoreColorClass =
     type === "Safe"
       ? "text-[#00C950]/95"
       : type === "Balanced"
-      ? "text-[#51A2FF]/95"
-      : "text-[#FF8904]/95";
+        ? "text-[#51A2FF]/95"
+        : "text-[#FF8904]/95";
 
   const badgeClass =
     type === "Safe"
       ? "bg-[#0f2a1d] text-[#00C950]"
       : type === "Balanced"
-      ? "bg-[#122238] text-[#51A2FF]"
-      : "bg-[#2b1c10] text-[#FF8904]";
+        ? "bg-[#122238] text-[#51A2FF]"
+        : "bg-[#2b1c10] text-[#FF8904]";
 
   const resolvedTradeHref =
     tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
@@ -265,7 +265,10 @@ export function MarketplaceCard({
               <span className="text-[15px] font-mono font-semibold text-white/80">
                 {truncateAddress(owner)}
               </span>
-              <TrustBadge level={trustLevel ?? 'unverified'} showTooltip={false} />
+              <TrustBadge
+                level={trustLevel ?? "unverified"}
+                showTooltip={false}
+              />
             </dd>
           </div>
         </dl>
@@ -322,10 +325,10 @@ export function MarketplaceCard({
         )}
       </footer>
 
-
       <CommitmentDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        commitmentId={id}
         typeLabel={`${type} Commitment`}
         typeVariant={type.toLowerCase() as "safe" | "balanced" | "aggressive"}
         currentPrice={price}
@@ -355,7 +358,6 @@ export function MarketplaceCard({
         ]}
         TypeIcon={TypeIcon}
       />
-
     </article>
   );
 }

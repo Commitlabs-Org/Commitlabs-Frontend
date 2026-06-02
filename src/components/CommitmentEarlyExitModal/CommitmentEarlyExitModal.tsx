@@ -18,6 +18,14 @@ export interface CommitmentEarlyExitModalProps {
   onClose?: () => void;
 }
 
+function formatScreenReaderText(val: string): string {
+  return val
+    .replace(/\bXLM\b/gi, 'Stellar Lumens')
+    .replace(/\bUSDC\b/gi, 'USD Coin')
+    .replace(/%/g, ' percent')
+    .replace(/-/g, 'minus ')
+}
+
 export default function CommitmentEarlyExitModal({
   isOpen,
   commitmentId,
@@ -120,25 +128,53 @@ export default function CommitmentEarlyExitModal({
 
         {/* Content Body */}
         <div className="px-6 sm:px-10 pb-8">
-          {/* Summary Table - Converted to metadata blocks for consistency */}
-          <div className="space-y-2 mb-8">
-            <div className="flex justify-between items-center py-3 border-b border-white/5 px-1">
-              <span className="text-[14px] text-white/40 font-medium">Commitment ID</span>
-              <span className="text-[14px] font-mono text-white/80 font-bold">{commitmentId.slice(0, 8)}...{commitmentId.slice(-6)}</span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-white/5 px-1">
-              <span className="text-[14px] text-white/40 font-medium">Original amount</span>
-              <span className="text-[14px] text-white font-bold">{originalAmount}</span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-white/5 px-1">
-              <span className="text-[14px] text-[#FF8A04]/80 font-medium">Early exit penalty ({penaltyPercent})</span>
-              <span className="text-[14px] text-[#FF8A04] font-bold">-{penaltyAmount}</span>
-            </div>
-            <div className="flex justify-between items-center py-4 px-1">
-              <span className="text-[15px] text-white font-bold tracking-tight">You&apos;ll receive</span>
-              <span className="text-[18px] text-[#0FF0FC] font-extrabold tracking-tight">{netReceiveAmount}</span>
-            </div>
-          </div>
+          {/* Summary Table - Semantic financial breakdown for accessibility */}
+          <table className="w-full text-left border-collapse mb-8" aria-label="Early exit penalty breakdown">
+            <caption className="sr-only">Financial breakdown of early exit penalty and final refund amount</caption>
+            <thead>
+              <tr className="border-b border-white/10">
+                <th scope="col" className="text-[12px] font-bold uppercase tracking-wider text-white/40 pb-3">Item</th>
+                <th scope="col" className="text-[12px] font-bold uppercase tracking-wider text-white/40 pb-3 text-right">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Commitment ID */}
+              <tr className="border-b border-white/5">
+                <th scope="row" className="py-3 text-[14px] text-white/40 font-medium">Commitment ID</th>
+                <td className="py-3 text-[14px] font-mono text-white/80 font-bold text-right" aria-label={`Commitment ID ${commitmentId}`}>
+                  {commitmentId.slice(0, 8)}...{commitmentId.slice(-6)}
+                </td>
+              </tr>
+              {/* Before Early Exit */}
+              <tr className="border-b border-white/5">
+                <th scope="row" className="py-3 text-[14px] text-white/40 font-medium">Before Early Exit (Committed Amount)</th>
+                <td className="py-3 text-[14px] text-white font-bold text-right" aria-label={`Committed amount: ${formatScreenReaderText(originalAmount)}`}>
+                  {originalAmount}
+                </td>
+              </tr>
+              {/* Penalty Rate */}
+              <tr className="border-b border-white/5">
+                <th scope="row" className="py-3 text-[14px] text-[#FF8A04]/80 font-medium">Penalty Rate</th>
+                <td className="py-3 text-[14px] text-[#FF8A04] font-bold text-right" aria-label={`Penalty rate: ${formatScreenReaderText(penaltyPercent)}`}>
+                  {penaltyPercent}
+                </td>
+              </tr>
+              {/* Penalty Deduction */}
+              <tr className="border-b border-white/5">
+                <th scope="row" className="py-3 text-[14px] text-[#FF8A04]/80 font-medium">Penalty Deduction</th>
+                <td className="py-3 text-[14px] text-[#FF8A04] font-bold text-right" aria-label={`Penalty deduction: minus ${formatScreenReaderText(penaltyAmount)}`}>
+                  -{penaltyAmount}
+                </td>
+              </tr>
+              {/* After Early Exit */}
+              <tr>
+                <th scope="row" className="py-4 text-[15px] text-white font-bold tracking-tight">After Early Exit (Net Refund)</th>
+                <td className="py-4 text-[18px] text-[#0FF0FC] font-extrabold tracking-tight text-right" aria-label={`Net refund amount: ${formatScreenReaderText(netReceiveAmount)}`}>
+                  {netReceiveAmount}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           {/* Important Notice Block */}
           <div className="bg-[#FF8A04]/10 border border-[#FF8A04]/20 rounded-2xl p-5 mb-8 group hover:bg-[#FF8A04]/15 transition-colors">

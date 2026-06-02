@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
+    "test:contracts:deploy": "node contracts/scripts/deploy-testnet.smoke.mjs",
     "seed:mock": "tsx scripts/seed-backend-mock.ts"
   },
   "dependencies": {
@@ -35,11 +36,13 @@
     "@types/node": "^20.19.33",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.1.5",
     "@vitest/ui": "^4.0.18",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
     "happy-dom": "^20.7.0",
+    "ioredis": "^5.11.0",
     "node-fetch": "^3.3.2",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",

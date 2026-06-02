@@ -349,4 +349,18 @@ async function apiRequest(url: string, init?: RequestInit) {
 
 ---
 
+## Transaction Error Recovery Mapping
+
+`src/app/transaction-error/page.tsx` maps backend-normalized chain errors into three user-facing recovery categories. The page keeps the shared `ErrorLayout` and `ErrorButton` shell, focuses the `<h1>` on load, and always provides both a `Try Again` path and a `Go to Dashboard` path.
+
+| UI category | Backend codes | Recovery behavior |
+|-------------|---------------|-------------------|
+| `rejected` | `VALIDATION_ERROR`, `BAD_REQUEST`, `UNPROCESSABLE_ENTITY`, `CONFLICT`, `SIGNATURE_INVALID`, `USER_REJECTED` | Explain that the transaction was not accepted, prompt the user to review wallet approval, parameters, and current commitment state, then try again. |
+| `timed-out` | `GATEWAY_TIMEOUT`, `RPC_TIMEOUT`, `BLOCKCHAIN_UNAVAILABLE`, `SERVICE_UNAVAILABLE` | Treat the transaction outcome as unknown. If a hash is available, point the user to Stellar Expert before retrying so the same signed transaction is not resubmitted blindly. |
+| `failed` | `BLOCKCHAIN_CALL_FAILED`, `BAD_GATEWAY`, `INTERNAL_ERROR`, unknown codes | Explain that execution or upstream chain handling failed, show the normalized code, and let the user retry after checking balance, fees, and contract state. |
+
+The backend source of truth remains `src/lib/backend/errorCodes.ts` and the Soroban normalization in `src/lib/backend/services/contracts.ts`. When adding a new normalized chain error, update this table and the page mapping together.
+
+---
+
 *This document was created as part of issue #133. Update it as new error types are introduced.*

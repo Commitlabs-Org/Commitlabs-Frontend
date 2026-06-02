@@ -43,6 +43,17 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeDefinition> = {
       "Triggered when the HTTP request is malformed, has invalid headers, or violates the API protocol.",
   },
 
+  NOT_MATURED: {
+    code: "NOT_MATURED",
+    statusCode: 400,
+    meaning: "Commitment has not matured yet and cannot be settled.",
+    clientHandling:
+      "Check the maturity date of the commitment before attempting to settle. Do not retry until maturity.",
+    retriable: false,
+    description:
+      "Triggered when a user or caller attempts to settle a commitment that has not reached its expiration time, or lacks expiry information.",
+  },
+
   // ─── 400 Validation Error ─────────────────────────────────────────────────
   VALIDATION_ERROR: {
     code: "VALIDATION_ERROR",

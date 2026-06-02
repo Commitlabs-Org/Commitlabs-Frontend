@@ -5,6 +5,7 @@ import { StarField } from "../ui/StarField";
 import { FaGithub, FaEnvelope } from "react-icons/fa";
 import { IoDocumentText } from "react-icons/io5";
 import { motion, Variants } from "framer-motion";
+import Link from "next/link";
 
 const containerVariants: Variants = {
   hidden: {},
@@ -88,31 +89,18 @@ export const HeroSection: React.FC = () => {
             <div id="benefits" className="scroll-mt-28" aria-hidden="true" />
             <motion.div variants={itemVariants} className="relative">
               <div className="absolute inset-0 bg-linear-to-b from-[#0ff0fc] to-[#0a7a82] blur-lg opacity-50 rounded-[14px]" />
-              <button className="relative hover:cursor-pointer group bg-[#0a0a0a] border-[0.556px] border-[rgba(15,240,252,0.3)] rounded-[14px] shadow-[0px_0px_30px_0px_rgba(15,240,252,0.2)] px-6 sm:px-8 py-3 sm:py-4 flex items-center gap-3 hover:shadow-[0px_0px_40px_0px_rgba(15,240,252,0.4)] transition-shadow">
-                <span className="font-['Roboto_Mono',sans-serif] font-medium text-base sm:text-lg bg-clip-text text-transparent bg-linear-to-b from-[#f5f5f7] to-[#909091]">
-                  Explore the Protocol
-                </span>
-                <svg
-                  className="w-5 h-5 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-1.5"
-                  fill="none"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    d="M4.16667 10H15.8333"
-                    stroke="#0FF0FC"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.66667"
-                  />
-                  <path
-                    d="M10 4.16667L15.8333 10L10 15.8333"
-                    stroke="#0FF0FC"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.66667"
-                  />
-                </svg>
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                <Link href="/create" legacyBehavior>
+                  <a className="bg-[#0ff0fc] text-black font-medium py-3 px-6 rounded-md hover:bg-[#0a7a82] transition-colors">
+                    Create commitment
+                  </a>
+                </Link>
+                <Link href="/marketplace" legacyBehavior>
+                  <a className="bg-[#0a0a0a] border border-[#0ff0fc] text-[#0ff0fc] font-medium py-3 px-6 rounded-md hover:bg-[#0ff0fc] hover:text-black transition-colors">
+                    Explore marketplace
+                  </a>
+                </Link>
+              </div>
             </motion.div>
 
             {/* Social Icons */}
