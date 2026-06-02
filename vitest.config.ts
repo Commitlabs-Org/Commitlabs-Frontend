@@ -9,6 +9,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    setupFiles: ['tests/setup/vitest.setup.ts'],
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
       all: true,

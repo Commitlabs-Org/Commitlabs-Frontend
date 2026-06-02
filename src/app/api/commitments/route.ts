@@ -98,6 +98,9 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
   const body = (parsed ?? {}) as Partial<CreateCommitmentRequestBody>;
   const { ownerAddress, asset, amount, durationDays, maxLossBps, metadata } = body;
 
+  if (!ownerAddress || typeof ownerAddress !== "string") {
+    return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400, correlationId);
+  }
   if (!asset || typeof asset !== "string") {
     return fail("BAD_REQUEST", "Invalid asset", undefined, 400, correlationId);
   }
@@ -129,7 +132,6 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
   if (maxLossBps == null || maxLossBps < 0) {
     return fail("BAD_REQUEST", "Invalid maxLossBps", undefined, 400, correlationId);
   }
-
   const result = await createCommitmentOnChain({
     ownerAddress,
     asset,

@@ -34,9 +34,7 @@ export const GET = withApiHandler(async (
   req: NextRequest,
   context: { params: Record<string, string> },
 ) => {
-  // 1. Authenticate Request
   requireAuth(req);
-
   const commitmentId = context.params.id;
   if (!commitmentId) {
     throw new NotFoundError('Commitment');

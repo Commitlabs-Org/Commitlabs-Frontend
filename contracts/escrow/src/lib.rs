@@ -38,14 +38,9 @@ const MAX_DURATION_DAYS: u32 = 365;
 /// Upper bound for penalty basis points (10_000 = 100%).
 const MAX_PENALTY_BPS: u32 = 10_000;
 
-/// Soroban testnet targets a roughly 5-second ledger close time. We convert
-/// commitment maturity timestamps into ledgers using that estimate when
-/// extending persistent storage TTLs.
-const ESTIMATED_LEDGER_SECONDS: u64 = 5;
-
-/// Keep commitment storage alive slightly beyond maturity so the release/refund
-/// path still has room to execute once the commitment matures.
-const TTL_MATURITY_BUFFER_LEDGERS: u32 = 12;
+/// Bound full-record owner reads so a single query does not exceed Soroban
+/// simulation/result size limits.
+const MAX_USER_COMMITMENTS_READ: u32 = 100;
 
 /// Storage keys for persistent contract state.
 #[contracttype]
@@ -1313,6 +1308,37 @@ impl EscrowContract {
             .unwrap_or_else(|| Vec::new(&env))
     }
 
+    /// Return full commitment records for a user.
+    ///
+    /// This is the backend's primary read path. The result is intentionally
+    /// bounded so a single read stays within Soroban RPC payload limits.
+    pub fn get_user_commitments(env: Env, owner: Address) -> Vec<Commitment> {
+        let ids = Self::owner_commitment_ids(&env, owner);
+        let mut commitments = Vec::new(&env);
+        let limit = ids.len().min(MAX_USER_COMMITMENTS_READ);
+        let mut index = 0;
+
+        while index < limit {
+            let commitment_id = ids.get(index).unwrap();
+            if let Some(commitment) = env
+                .storage()
+                .persistent()
+                .get(&DataKey::Commitment(commitment_id))
+            {
+                commitments.push_back(commitment);
+            }
+            index += 1;
+        }
+
+        commitments
+    }
+
+    /// Return the list of commitment ids owned by an address using the backend's
+    /// fallback reader name.
+    pub fn get_user_commitment_ids(env: Env, owner: Address) -> Vec<u64> {
+        Self::owner_commitment_ids(&env, owner)
+    }
+
     /// Return the list of commitment ids owned by an address.
     ///
     /// # Authorization
@@ -1321,10 +1347,7 @@ impl EscrowContract {
     /// # Returns
     /// A vector of commitment ids owned by the address
     pub fn get_owner_commitments(env: Env, owner: Address) -> Vec<u64> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::OwnerIndex(owner))
-            .unwrap_or_else(|| Vec::new(&env))
+        Self::owner_commitment_ids(&env, owner)
     }
 
     /// Retrieve the dispute record for a commitment. Returns `None` if no
@@ -1562,6 +1585,13 @@ impl EscrowContract {
         ids.push_back(id);
         env.storage().persistent().set(&key, &ids);
         Self::refresh_owner_index_ttl(env, owner, &ids);
+    }
+
+    fn owner_commitment_ids(env: &Env, owner: Address) -> Vec<u64> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::OwnerIndex(owner))
+            .unwrap_or_else(|| Vec::new(env))
     }
 
     /// Remove `id` from `owner`'s OwnerIndex list.

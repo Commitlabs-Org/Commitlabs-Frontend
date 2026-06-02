@@ -135,10 +135,20 @@ Soroban fee overhead under control.
 | `get_grace_period()` | Read the currently configured penalty-free grace period in seconds. |
 | `dispute(commitment_id, caller, reason)` | Freeze a funded commitment pending admin resolution. The reason is automatically categorized. |
 | `resolve_dispute(commitment_id, release_to_owner)` | Admin-only settlement of a disputed commitment. |
-| `transfer_ownership(commitment_id, new_owner)` | Move marketplace ownership for funded commitments. |
-| `record_attestation(commitment_id, attestor, compliance_score)` | Store a compliance attestation. |
-| `deposit_yield_pool(admin, amount)` | Admin-only yield funding for mature releases. |
-| `pause()` / `unpause()` | Admin-only emergency write controls. |
+| `get_dispute(commitment_id)` | Read the dispute record for a commitment (category, reason, timestamp, initiator). |
+| `get_default_penalty(risk)` | Read the default penalty for a specific risk profile. |
+| `record_attestation(commitment_id, attestor, compliance_score)` | Record a 0–100 compliance score. |
+| `pause()` | Admin-only emergency pause for write operations. |
+| `unpause()` | Admin-only resume for paused contract writes. |
+| `is_paused()` | Read the current paused state. |
+| `get_commitment(commitment_id)` | Read a single commitment record. |
+| `get_user_commitments(owner)` | Read up to `MAX_USER_COMMITMENTS_READ` full `Commitment` records for `owner`. This is the primary backend read path and is intentionally bounded to keep Soroban read responses within practical limits. |
+| `get_user_commitment_ids(owner)` | Read all commitment ids for `owner`. The backend uses this as its fallback path when it needs to hydrate records one by one. |
+| `get_owner_commitments(owner)` | List commitment ids owned by an address. |
+| `get_attestations(commitment_id)` | Retrieve the timeline of `AttestationRecord`s for a commitment. |
+| `refund_partial(commitment_id, amount)` | Partial early-exit: withdraw `amount` from the principal, apply the proportional penalty to that portion, keep the remainder escrowed. |
+| `set_violation_threshold(threshold)` | Admin-only. Set the compliance score threshold (0–100) below which a funded commitment is auto-violated. 0 disables auto-violation. |
+| `get_violation_threshold()` | Read the current violation threshold. |
 
 ## Lifecycle event schema
 
@@ -146,7 +156,13 @@ The backend indexer depends on the lifecycle event topics staying stable.
 `contracts/escrow/src/lib.rs` includes an explicit comment on the shared helper
 that should not be changed without coordinating an indexer update.
 
-### Stable topic tuple
+### User commitment readers
+
+The backend first tries `get_user_commitments(owner)` so it can read a user's commitments in one typed call. That reader now returns full `Commitment` records directly from the owner index and intentionally caps the response size with `MAX_USER_COMMITMENTS_READ` to avoid oversized Soroban read payloads.
+
+For compatibility and fallback hydration, the contract also keeps an id-only reader at `get_user_commitment_ids(owner)`. The older `get_owner_commitments(owner)` name remains available as a legacy alias for the same owner index.
+
+### `early_exit_commitment` entrypoint details
 
 All primary lifecycle events use the same topic order:
 

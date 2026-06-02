@@ -32,6 +32,7 @@ export const CacheKey = {
   marketplaceStats: () => `commitlabs:marketplace:stats`,
   commitmentSearch: (queryHash: string) =>
     `commitlabs:commitment-search:${queryHash}`,
+  marketplaceStats: () => "commitlabs:marketplace:stats",
 } as const;
 
 /** TTL in seconds — keep short so stale chain data doesn't linger. */

@@ -41,11 +41,6 @@ export const userPreferencesSchema = z.object({
             }),
         })
         .optional(),
-           /**
-     * Per-category opt-in for the in-app notification feed. Each key maps to
-     * a notification `type`. Omitted keys fall back to DEFAULT_PREFERENCES
-     * (opt-in). Extend this when new notification types are introduced.
-     */
     notifications: z
         .object({
             email: z.boolean().optional(),

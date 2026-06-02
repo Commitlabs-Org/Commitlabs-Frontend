@@ -469,7 +469,100 @@ fn dispute_emits_stable_indexable_event() {
     let owner = Address::generate(&f.env);
     fund_owner(&f, &owner, 1_000);
 
-    let id = f.client.create_commitment(
+#[test]
+fn owner_index_tracks_commitments() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let a = f
+        .client
+        .create_commitment(&owner, &f.asset, &100, &RiskProfile::Safe, &30, &200, &Map::new(&f.env));
+    let b = f
+        .client
+        .create_commitment(&owner, &f.asset, &200, &RiskProfile::Balanced, &30, &300, &Map::new(&f.env));
+    let ids = f.client.get_owner_commitments(&owner);
+    assert_eq!(ids.len(), 2);
+    assert_eq!(ids.get(0).unwrap(), a);
+    assert_eq!(ids.get(1).unwrap(), b);
+}
+
+#[test]
+fn get_user_commitments_returns_full_records() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let first_id = f.client.create_commitment(
+        &owner,
+        &f.asset,
+        &100,
+        &RiskProfile::Safe,
+        &30,
+        &200,
+        &Map::new(&f.env),
+    );
+    let second_id = f.client.create_commitment(
+        &owner,
+        &f.asset,
+        &250,
+        &RiskProfile::Balanced,
+        &45,
+        &300,
+        &Map::new(&f.env),
+    );
+
+    let commitments = f.client.get_user_commitments(&owner);
+
+    assert_eq!(commitments.len(), 2);
+
+    let first = commitments.get(0).unwrap();
+    assert_eq!(first.id, first_id);
+    assert_eq!(first.owner, owner);
+    assert_eq!(first.amount, 100);
+    assert_eq!(first.status, EscrowStatus::Created);
+
+    let second = commitments.get(1).unwrap();
+    assert_eq!(second.id, second_id);
+    assert_eq!(second.owner, owner);
+    assert_eq!(second.amount, 250);
+    assert_eq!(second.status, EscrowStatus::Created);
+}
+
+#[test]
+fn get_user_commitments_is_bounded() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+
+    for index in 0..(MAX_USER_COMMITMENTS_READ + 5) {
+        let amount = 100 + index as i128;
+        f.client.create_commitment(
+            &owner,
+            &f.asset,
+            &amount,
+            &RiskProfile::Safe,
+            &30,
+            &200,
+            &Map::new(&f.env),
+        );
+    }
+
+    let commitments = f.client.get_user_commitments(&owner);
+    let ids = f.client.get_user_commitment_ids(&owner);
+
+    assert_eq!(commitments.len(), MAX_USER_COMMITMENTS_READ);
+    assert_eq!(ids.len(), MAX_USER_COMMITMENTS_READ + 5);
+    assert_eq!(commitments.get(0).unwrap().id, ids.get(0).unwrap());
+    assert_eq!(
+        commitments
+            .get(MAX_USER_COMMITMENTS_READ - 1)
+            .unwrap()
+            .id,
+        ids.get(MAX_USER_COMMITMENTS_READ - 1).unwrap()
+    );
+}
+
+#[test]
+fn create_rejects_excessive_amount() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let res = f.client.try_create_commitment(
         &owner,
         &f.asset,
         &(MAX_AMOUNT + 1),
