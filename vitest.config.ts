@@ -1,7 +1,34 @@
-import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { defineConfig } from 'vitest/config'
+import path from 'path'
+import ts from 'typescript'
+
+const settlementModalTestTransform = {
+  name: 'settlement-modal-test-transform',
+  enforce: 'pre' as const,
+  transform(code: string, id: string) {
+    const normalizedId = id.replace(/\\/g, '/')
+    const shouldTransform =
+      normalizedId.endsWith('/src/components/modals/SettlementModal.tsx') ||
+      normalizedId.endsWith('/tests/SettlementModal.test.tsx')
+
+    if (!shouldTransform) return null
+
+    return {
+      code: ts.transpileModule(code, {
+        compilerOptions: {
+          jsx: ts.JsxEmit.ReactJSX,
+          module: ts.ModuleKind.ESNext,
+          target: ts.ScriptTarget.ES2020,
+        },
+        fileName: id,
+      }).outputText,
+      map: null,
+    }
+  },
+}
 
 export default defineConfig({
+  plugins: [settlementModalTestTransform],
   test: {
     globals: true,
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],

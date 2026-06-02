@@ -349,4 +349,25 @@ async function apiRequest(url: string, init?: RequestInit) {
 
 ---
 
+## Settlement Ineligible Reasons
+
+`SettlementModal` renders settlement failures from `POST /api/commitments/[id]/settle`
+as structured, accessible remediation states. The primary action is always
+`Return to dashboard`, wired to `onReturnToDashboard`. A secondary link returns
+the user to `/commitments/[id]` so they can inspect the source commitment state.
+
+| Settle response reason | UI category | Visual treatment | Remediation CTA |
+|------------------------|-------------|------------------|-----------------|
+| `Commitment has not matured yet and cannot be settled.` | Not matured | Temporary blocker; includes text that settlement can be retried later | `View maturity details` |
+| `Commitment has already been settled` / `Commitment has already been settled.` | Already settled | Terminal state; includes text that settlement cannot be retried for this state | `View settlement details` |
+| `Commitment has been violated and cannot be settled` | Disputed | Terminal state; explains that a dispute or violation prevents settlement | `Review dispute details` |
+| `Commitment has already been exited early` | Early exit | Terminal state; explains that the commitment is already closed | `Review exit details` |
+| Unknown or missing reason text | Unknown | Review-required state; avoids guessing at the cause | `Review commitment details` |
+
+Reason text must be rendered in the modal body and announced through the alert
+region. Do not rely on color alone: temporary and terminal states also include
+explicit labels such as `Temporary blocker` and `Terminal state`.
+
+---
+
 *This document was created as part of issue #133. Update it as new error types are introduced.*
