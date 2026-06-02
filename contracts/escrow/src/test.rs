@@ -479,10 +479,84 @@ fn owner_index_tracks_commitments() {
     let b = f
         .client
         .create_commitment(&owner, &f.asset, &200, &RiskProfile::Balanced, &30, &300, &Map::new(&f.env));
-    let ids = f.client.get_owner_commitments(&owner);
+    let ids = f
+        .client
+        .get_owner_commitments(&owner, &0, &MAX_OWNER_COMMITMENTS_PAGE_LIMIT);
     assert_eq!(ids.len(), 2);
     assert_eq!(ids.get(0).unwrap(), a);
     assert_eq!(ids.get(1).unwrap(), b);
+}
+
+#[test]
+fn get_owner_commitments_pages_results() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    let mut created_ids = Vec::new(&f.env);
+
+    for index in 0..5 {
+        let id = f.client.create_commitment(
+            &owner,
+            &f.asset,
+            &(100 + index as i128),
+            &RiskProfile::Safe,
+            &30,
+            &200,
+            &Map::new(&f.env),
+        );
+        created_ids.push_back(id);
+    }
+
+    let page = f.client.get_owner_commitments(&owner, &1, &2);
+
+    assert_eq!(page.len(), 2);
+    assert_eq!(page.get(0).unwrap(), created_ids.get(1).unwrap());
+    assert_eq!(page.get(1).unwrap(), created_ids.get(2).unwrap());
+}
+
+#[test]
+fn get_owner_commitments_caps_limit_and_handles_boundaries() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+
+    for index in 0..(MAX_OWNER_COMMITMENTS_PAGE_LIMIT + 5) {
+        f.client.create_commitment(
+            &owner,
+            &f.asset,
+            &(100 + index as i128),
+            &RiskProfile::Safe,
+            &30,
+            &200,
+            &Map::new(&f.env),
+        );
+    }
+
+    let capped = f.client.get_owner_commitments(
+        &owner,
+        &0,
+        &(MAX_OWNER_COMMITMENTS_PAGE_LIMIT + 5),
+    );
+    let tail = f.client.get_owner_commitments(
+        &owner,
+        &MAX_OWNER_COMMITMENTS_PAGE_LIMIT,
+        &10,
+    );
+    let empty_limit = f.client.get_owner_commitments(&owner, &0, &0);
+    let out_of_range = f.client.get_owner_commitments(
+        &owner,
+        &(MAX_OWNER_COMMITMENTS_PAGE_LIMIT + 5),
+        &10,
+    );
+
+    assert_eq!(capped.len(), MAX_OWNER_COMMITMENTS_PAGE_LIMIT);
+    assert_eq!(
+        capped.get(MAX_OWNER_COMMITMENTS_PAGE_LIMIT - 1).unwrap(),
+        MAX_OWNER_COMMITMENTS_PAGE_LIMIT as u64 - 1
+    );
+    assert_eq!(tail.len(), 5);
+    assert_eq!(tail.get(0).unwrap(), MAX_OWNER_COMMITMENTS_PAGE_LIMIT as u64);
+    assert_eq!(tail.get(4).unwrap(), MAX_OWNER_COMMITMENTS_PAGE_LIMIT as u64 + 4);
+    assert_eq!(empty_limit.len(), 0);
+    assert_eq!(out_of_range.len(), 0);
 }
 
 #[test]
@@ -544,10 +618,14 @@ fn get_user_commitments_is_bounded() {
     }
 
     let commitments = f.client.get_user_commitments(&owner);
-    let ids = f.client.get_user_commitment_ids(&owner);
+    let ids = f.client.get_user_commitment_ids_page(
+        &owner,
+        &0,
+        &(MAX_USER_COMMITMENTS_READ + 5),
+    );
 
     assert_eq!(commitments.len(), MAX_USER_COMMITMENTS_READ);
-    assert_eq!(ids.len(), MAX_USER_COMMITMENTS_READ + 5);
+    assert_eq!(ids.len(), MAX_OWNER_COMMITMENTS_PAGE_LIMIT);
     assert_eq!(commitments.get(0).unwrap().id, ids.get(0).unwrap());
     assert_eq!(
         commitments
@@ -693,4 +771,3 @@ fn owner_index_ttl_tracks_the_latest_commitment_maturity() {
         .as_contract(&f.contract_id, || f.env.storage().persistent().get_ttl(&DataKey::OwnerIndex(owner)));
     assert_eq!(owner_index_ttl, expected_ttl);
 }
-

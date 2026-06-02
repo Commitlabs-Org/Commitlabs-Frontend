@@ -42,6 +42,9 @@ const MAX_PENALTY_BPS: u32 = 10_000;
 /// simulation/result size limits.
 const MAX_USER_COMMITMENTS_READ: u32 = 100;
 
+/// Maximum number of owner commitment ids returned by a single paginated read.
+const MAX_OWNER_COMMITMENTS_PAGE_LIMIT: u32 = 100;
+
 /// Storage keys for persistent contract state.
 #[contracttype]
 #[derive(Clone)]
@@ -1333,21 +1336,41 @@ impl EscrowContract {
         commitments
     }
 
-    /// Return the list of commitment ids owned by an address using the backend's
-    /// fallback reader name.
+    /// Return the first bounded page of commitment ids owned by an address using
+    /// the backend's fallback reader name.
     pub fn get_user_commitment_ids(env: Env, owner: Address) -> Vec<u64> {
-        Self::owner_commitment_ids(&env, owner)
+        Self::owner_commitment_ids_page(&env, owner, 0, MAX_OWNER_COMMITMENTS_PAGE_LIMIT)
     }
 
-    /// Return the list of commitment ids owned by an address.
+    /// Return a paginated list of commitment ids owned by an address using the
+    /// backend's fallback reader name.
+    pub fn get_user_commitment_ids_page(
+        env: Env,
+        owner: Address,
+        start: u32,
+        limit: u32,
+    ) -> Vec<u64> {
+        Self::owner_commitment_ids_page(&env, owner, start, limit)
+    }
+
+    /// Return a bounded page of commitment ids owned by an address.
+    ///
+    /// `start` is a zero-based offset into the owner's commitment id index.
+    /// `limit` is clamped to `MAX_OWNER_COMMITMENTS_PAGE_LIMIT` so callers
+    /// cannot request an unbounded payload.
     ///
     /// # Authorization
     /// None; read-only operation
     ///
     /// # Returns
-    /// A vector of commitment ids owned by the address
-    pub fn get_owner_commitments(env: Env, owner: Address) -> Vec<u64> {
-        Self::owner_commitment_ids(&env, owner)
+    /// A vector of commitment ids owned by the address for the requested page
+    pub fn get_owner_commitments(
+        env: Env,
+        owner: Address,
+        start: u32,
+        limit: u32,
+    ) -> Vec<u64> {
+        Self::owner_commitment_ids_page(&env, owner, start, limit)
     }
 
     /// Retrieve the dispute record for a commitment. Returns `None` if no
@@ -1592,6 +1615,30 @@ impl EscrowContract {
             .persistent()
             .get(&DataKey::OwnerIndex(owner))
             .unwrap_or_else(|| Vec::new(env))
+    }
+
+    fn owner_commitment_ids_page(
+        env: &Env,
+        owner: Address,
+        start: u32,
+        limit: u32,
+    ) -> Vec<u64> {
+        let ids = Self::owner_commitment_ids(env, owner);
+        let capped_limit = limit.min(MAX_OWNER_COMMITMENTS_PAGE_LIMIT);
+        let mut page = Vec::new(env);
+
+        if capped_limit == 0 || start >= ids.len() {
+            return page;
+        }
+
+        let end = start.saturating_add(capped_limit).min(ids.len());
+        let mut index = start;
+        while index < end {
+            page.push_back(ids.get(index).unwrap());
+            index += 1;
+        }
+
+        page
     }
 
     /// Remove `id` from `owner`'s OwnerIndex list.
