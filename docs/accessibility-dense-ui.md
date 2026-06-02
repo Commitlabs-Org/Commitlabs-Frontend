@@ -160,4 +160,82 @@ Before committing UI changes involving tables or dense data, verify the followin
 
 ---
 
-_Created as part of Issue #237. Review this guide when building new dashboard components or marketplace tables._
+## 8. Volatility Exposure Meter — Threshold Zones & Value Annotations
+
+The `VolatilityExposureMeter` component visualizes portfolio volatility with three clearly defined threshold zones aligned to risk profiles.
+
+### Threshold Zones
+
+| Zone | Range | Risk Profile Alignment | Color Indicator |
+| :--- | :---- | :--------------------- | :-------------- |
+| Safe | 0–33% | Conservative | Green (`#00C950`) |
+| Caution | 34–66% | Balanced | Amber (`#FFA500`) |
+| Danger | 67–100% | Aggressive | Red (`#FB2C36`) |
+
+### Accessibility Requirements
+
+#### Meter Attributes
+
+| Attribute | Value | Purpose |
+| :---------| :---- | :------ |
+| `role="meter"` | — | Identifies the element as a gauge |
+| `aria-valuenow` | 0–100 | Current numeric value |
+| `aria-valuemin` | 0 | Minimum value |
+| `aria-valuemax` | 100 | Maximum value |
+| `aria-valuetext` | `"X percent, Z zone — annotation"` | Human-readable value + zone explanation |
+| `aria-label` | `"Volatility exposure: X%, Y range."` | Primary accessible name |
+
+#### Zone Labels & Annotations
+
+- Zone labels (`Safe`, `Caution`, `Danger`) are rendered as a list (`role="list"` / `role="listitem"`)
+- The active zone has `aria-current="true"`
+- A persistent annotation box with `role="status"` and `aria-live="polite"` announces zone changes
+- Non-color indicators (emoji icons) are included with `aria-hidden="true"`
+- An info (ℹ) button with `role="tooltip"` on each zone provides detailed hover/accessible explanation
+
+#### Risk Profile Badge
+
+When a `riskProfileId` prop is provided, a badge appears next to the title announcing the user's risk tier (e.g., "Conservative", "Balanced", "Aggressive") via visual text and `aria-label`.
+
+### Component Props
+
+```tsx
+interface VolatilityExposureMeterProps {
+  /** Current exposure as a percentage (0–100). Clamped when rendering. */
+  valuePercent: number
+  /** Optional short description of what the exposure means. */
+  description?: string
+  /**
+   * Optional risk-profile identifier that highlights the matching zone.
+   * One of 'conservative' | 'balanced' | 'aggressive'.
+   */
+  riskProfileId?: RiskProfileId
+}
+```
+
+### Example Usage
+
+```tsx
+<VolatilityExposureMeter
+  valuePercent={45}
+  riskProfileId="balanced"
+  description="Current exposure based on allocation and market conditions."
+/>
+```
+
+### Testing Checklist
+
+Before committing changes to `VolatilityExposureMeter`, verify:
+
+- [ ] All threshold zone boundaries (0, 33, 34, 66, 67, 100) render correct zone
+- [ ] ARIA attributes (`role`, `aria-valuenow`, `aria-valuetext`, `aria-label`) are present and accurate
+- [ ] Annotation box text matches active zone
+- [ ] Risk profile badge appears when `riskProfileId` is provided
+- [ ] Tooltip trigger has `aria-label` for screen readers
+- [ ] Zone labels use semantic list markup (`role="list"` / `role="listitem"`)
+- [ ] Non-color indicators (icons) are present alongside zone names
+- [ ] All tests pass with 95%+ coverage threshold
+
+---
+
+_Created as part of Issue #490. Review this guide when building new dashboard components with threshold visualizations._

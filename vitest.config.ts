@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config'
 import path from 'path'
 
 export default defineConfig({
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: 'react',
+  },
   test: {
     environment: 'node',
     globals: true,
@@ -19,6 +23,7 @@ export default defineConfig({
         'src/app/api/marketplace/listings/route.ts',
         'src/app/api/marketplace/listings/[id]/route.ts',
         'src/app/api/commitments/route.ts',
+        'src/components/VolatilityExposureMeter/VolatilityExposureMeter.tsx',
       ],
       exclude: [
         'node_modules/',
