@@ -9,10 +9,14 @@ export const useWallet = () => {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
 
   const fetchAddress = useCallback(async () => {
+    setConnecting(true);
+
     try {
       const result = await getAddress();
+
       if (result.error) {
         setError(result.error);
         setConnected(false);
@@ -23,14 +27,16 @@ export const useWallet = () => {
         setError(null);
       }
     } catch (e) {
-      setError((e as Error).message);
+      setError((e as Error).message || "Unable to connect to Freighter.");
       setConnected(false);
       setAddress("");
+    } finally {
+      setConnecting(false);
     }
   }, []);
 
   const connect = useCallback(() => {
-    // Freighter prompts the user when getAddress is called.
+    setError(null);
     fetchAddress();
   }, [fetchAddress]);
 
@@ -38,6 +44,7 @@ export const useWallet = () => {
     setConnected(false);
     setAddress("");
     setError(null);
+    setConnecting(false);
   }, []);
 
   // Auto-detect on mount (e.g., if already connected)
@@ -45,5 +52,5 @@ export const useWallet = () => {
     fetchAddress();
   }, [fetchAddress]);
 
-  return { connected, address, connect, disconnect, error };
+  return { connected, address, connect, disconnect, error, connecting };
 };
