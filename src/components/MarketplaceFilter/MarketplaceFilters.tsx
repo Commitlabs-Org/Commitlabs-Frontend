@@ -182,6 +182,7 @@ const MarketplaceFilters = ({
               />
               {/* Draggable handle */}
               <input
+                aria-label="Maximum price"
                 type="range"
                 min="0"
                 max="1000000"
@@ -221,6 +222,7 @@ const MarketplaceFilters = ({
                 }}
               />
               <input
+                aria-label="Maximum duration remaining"
                 type="range"
                 min="0"
                 max="90"
@@ -254,6 +256,7 @@ const MarketplaceFilters = ({
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.minCompliance}%` }} />
               <input
+                aria-label="Minimum compliance score"
                 type="range"
                 min="0"
                 max="100"
@@ -284,6 +287,7 @@ const MarketplaceFilters = ({
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.maxLoss}%` }} />
               <input
+                aria-label="Maximum loss threshold"
                 type="range"
                 min="0"
                 max="100"
