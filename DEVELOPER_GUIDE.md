@@ -54,6 +54,20 @@ clients, complete this checklist in the same PR:
 Treat this checklist as required for all endpoint, payload, auth, and error
 shape breaking changes.
 
+### Settlement and Early-Exit Flow Documentation
+
+-   Keep `docs/settlement-and-early-exit-flows.md` aligned with settlement and
+    early-exit route, modal, state, and error-copy changes.
+-   Update the flow doc in the same PR when changing:
+    -   `GET /api/commitments/[id]/settle/preview`
+    -   `POST /api/commitments/[id]/settle`
+    -   `GET /api/commitments/[id]/early-exit/preview`
+    -   `POST /api/commitments/[id]/early-exit`
+    -   `src/components/modals/SettlementModal.tsx`
+    -   `src/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal.tsx`
+-   Include manual verification notes for docs-only changes and relevant test
+    output for behavior changes.
+
 ### React & Next.js
 
 -   **Functional Components**: Use functional components with hooks.

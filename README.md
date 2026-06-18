@@ -30,7 +30,7 @@ This frontend interacts with the CommitLabs Soroban smart contracts to:
 - **Commitment Creation Wizard**: Step-by-step process to configure asset, amount, duration, and risk parameters.
 - **Dashboard**: Real-time visualization of commitment health, including value history, drawdown, and compliance scores.
 - **Marketplace**: Browse and filter active commitments available for purchase.
-- **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions (In Progress).
+- **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions, including documented settlement and early-exit flows.
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 
 ## 🏗 Architecture
@@ -94,6 +94,10 @@ To add new API route tests, create a `.test.ts` file in `tests/api/` following t
 ## 🔄 Backend API Changelog
 
 Breaking backend API changes are tracked in [docs/backend-changelog.md](./docs/backend-changelog.md). Update this changelog whenever a backend change can break existing frontend integrations.
+
+Settlement and early-exit user flows are documented in
+[docs/settlement-and-early-exit-flows.md](./docs/settlement-and-early-exit-flows.md),
+including preview routes, mutation routes, modal states, and retry guidance.
 
 ## 🚀 Getting Started
 
