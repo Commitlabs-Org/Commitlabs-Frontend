@@ -19,6 +19,17 @@ function renderSettlementModal(props: Partial<React.ComponentProps<typeof Settle
 }
 
 describe('SettlementModal ineligible reasons', () => {
+  it.each([
+    ['  commitment has NOT MATURED yet  ', 'not_matured'],
+    ['Commitment has already been settled', 'already_settled'],
+    ['Commitment is disputed and cannot be settled', 'disputed'],
+    ['Commitment was closed through early exit', 'early_exit'],
+    ['Unexpected settlement preflight response', 'unknown'],
+    [undefined, 'unknown'],
+  ] as const)('maps %s to %s copy', (reason, category) => {
+    expect(getSettlementIneligibleReasonCopy(reason).category).toBe(category);
+  });
+
   it('maps a not-matured reason to a temporary layout and details CTA', () => {
     renderSettlementModal({
       ineligibleReason: 'Commitment has not matured yet and cannot be settled.',
