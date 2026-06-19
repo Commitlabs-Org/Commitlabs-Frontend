@@ -105,6 +105,10 @@ pnpm lint
 
 Fix all errors before committing. Warnings are informational but should be addressed where practical.
 
+## 📚 Flow Documentation
+
+- [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md) documents the settlement eligibility modal, settlement success state, early-exit preview/confirmation flow, related endpoints, and user-facing error reasons.
+- Update that document whenever the settlement or early-exit API contracts, modal copy, or confirmation safeguards change.
 ## 🧪 Testing Procedures
 
 *(Note: Testing framework setup is currently in progress)*
