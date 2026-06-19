@@ -157,12 +157,78 @@ describe('SettlementModal ineligible reasons', () => {
       onReturnToDashboard,
     });
 
-    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-success-title');
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-settled-title');
     expect(screen.getByText('Settlement complete')).toBeTruthy();
     expect(screen.getByText('100 XLM')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Return to dashboard' }));
 
+    expect(onReturnToDashboard).toHaveBeenCalledOnce();
+  });
+
+  it('renders an eligible confirmation state with the previewed settlement amount', () => {
+    const onConfirmSettlement = vi.fn();
+
+    renderSettlementModal({
+      state: 'eligible',
+      settlementAmount: '125 XLM',
+      onConfirmSettlement,
+    });
+
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-eligible-title');
+    expect(screen.getByText('Ready to settle')).toBeTruthy();
+    expect(screen.getByText('Previewed settlement amount')).toBeTruthy();
+    expect(screen.getByText('125 XLM')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm settlement' }));
+
+    expect(onConfirmSettlement).toHaveBeenCalledOnce();
+  });
+
+  it('disables eligible confirmation when no settlement handler is provided', () => {
+    renderSettlementModal({
+      state: 'eligible',
+      settlementAmount: '125 XLM',
+    });
+
+    expect(screen.getByRole('button', { name: 'Confirm settlement' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it.each([
+    ['initiating', 'Initiating'],
+    ['confirming', 'Confirming on Stellar'],
+    ['finalizing', 'Finalizing'],
+  ] as const)('renders the processing stepper at the %s step', (processingStep, label) => {
+    renderSettlementModal({
+      state: 'processing',
+      processingStep,
+    });
+
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-processing-title');
+    expect(screen.getByText('Settlement in progress')).toBeTruthy();
+    expect(screen.getByLabelText('Settlement progress')).toBeTruthy();
+    expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it('renders a recoverable error state with retry and dashboard actions', () => {
+    const onRetrySettlement = vi.fn();
+    const onReturnToDashboard = vi.fn();
+
+    renderSettlementModal({
+      state: 'error',
+      errorMessage: 'The transaction timed out before finalization.',
+      onRetrySettlement,
+      onReturnToDashboard,
+    });
+
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-error-title');
+    expect(screen.getByText('Settlement needs attention')).toBeTruthy();
+    expect(screen.getByText('The transaction timed out before finalization.')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry settlement' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Return to dashboard' }));
+
+    expect(onRetrySettlement).toHaveBeenCalledOnce();
     expect(onReturnToDashboard).toHaveBeenCalledOnce();
   });
 });
