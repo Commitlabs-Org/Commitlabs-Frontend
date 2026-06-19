@@ -13,7 +13,7 @@
   - [ ] Fails when commitment not funded
   - [ ] Fails when commitment disputed (still requires funded-only)
   - [ ] Edge: transfer to self / duplicate handling
-- [ ] Document flow in `contracts/README.md`
+- [x] Document flow in `contracts/README.md`
 - [ ] Run `cargo test` and ensure coverage meets requirement
 - [ ] Commit changes on branch (feature/transfer-ownership-entrypoint)
 
