@@ -11,6 +11,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Backend API Changelog](#backend-api-changelog)
+- [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md)
 - [Contributing](#contributing)
 - [API Reference](#api-reference)
 - [License](#license)
@@ -30,7 +31,8 @@ This frontend interacts with the CommitLabs Soroban smart contracts to:
 - **Commitment Creation Wizard**: Step-by-step process to configure asset, amount, duration, and risk parameters.
 - **Dashboard**: Real-time visualization of commitment health, including value history, drawdown, and compliance scores.
 - **Marketplace**: Browse and filter active commitments available for purchase.
-- **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions (In Progress).
+- **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions.
+- **Settlement and Early Exit Flows**: Guided settlement eligibility, settlement success, and early-exit confirmation surfaces backed by preview and execution endpoints. See [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md).
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 
 ## 🏗 Architecture
