@@ -60,7 +60,7 @@ describe('transaction error page recovery actions', () => {
   it('renders timeout recovery with an explorer check before retry guidance', () => {
     params = new URLSearchParams({
       code: 'GATEWAY_TIMEOUT',
-      hash: 'abc 123',
+      hash: 'a'.repeat(64),
     })
 
     render(React.createElement(TransactionError))
@@ -70,14 +70,14 @@ describe('transaction error page recovery actions', () => {
     expect(screen.getByText('Avoid submitting the same signed transaction twice.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Check Explorer' })).toHaveAttribute(
       'href',
-      'https://stellar.expert/explorer/public/tx/abc%20123',
+      `https://stellar.expert/explorer/public/tx/${'a'.repeat(64)}`,
     )
   })
 
   it('renders failed transaction recovery for normalized chain call failures', () => {
     params = new URLSearchParams({
       code: 'BLOCKCHAIN_CALL_FAILED',
-      hash: 'deadbeef',
+      hash: 'b'.repeat(64),
     })
 
     render(React.createElement(TransactionError))
@@ -87,7 +87,19 @@ describe('transaction error page recovery actions', () => {
     expect(screen.getByText('Check whether the smart contract rejected the operation.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'View on Explorer' })).toHaveAttribute(
       'href',
-      'https://stellar.expert/explorer/public/tx/deadbeef',
+      `https://stellar.expert/explorer/public/tx/${'b'.repeat(64)}`,
     )
+  })
+
+  it('does not render explorer links for malformed transaction hashes', () => {
+    params = new URLSearchParams({
+      code: 'GATEWAY_TIMEOUT',
+      hash: 'abc 123',
+    })
+
+    render(React.createElement(TransactionError))
+
+    expect(screen.getByText('abc 123')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Check Explorer' })).not.toBeInTheDocument()
   })
 })

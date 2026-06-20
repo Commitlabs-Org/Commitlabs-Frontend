@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ErrorLayout from '@/components/ErrorLayout'
 import ErrorButton from '@/components/ErrorButton'
+import { buildExplorerUrl } from '@/utils/explorerLinks'
 import styles from './page.module.css'
 
 type TransactionErrorCategory = 'rejected' | 'timed-out' | 'failed'
@@ -113,6 +114,7 @@ function TransactionErrorContent() {
   const errorMessage = searchParams.get('message') || content.description
   const txHash = searchParams.get('hash')
   const errorCode = searchParams.get('code')
+  const txExplorerUrl = buildExplorerUrl('tx', txHash)
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -212,9 +214,9 @@ function TransactionErrorContent() {
         <ErrorButton href="/commitments/overview" variant="secondary">
           Go to Dashboard
         </ErrorButton>
-        {txHash && (
+        {txExplorerUrl && (
           <ErrorButton
-            href={`https://stellar.expert/explorer/public/tx/${encodeURIComponent(txHash)}`}
+            href={txExplorerUrl}
             variant="secondary"
             isExternal
           >

@@ -6,6 +6,7 @@ import CreateCommitmentStepSelectType from "@/components/CreateCommitmentStepSel
 import CreateCommitmentStepConfigure from "@/components/CreateCommitmentStepConfigure";
 import CreateCommitmentStepReview from "@/components/CreateCommitmentStepReview";
 import CommitmentCreatedModal from "@/components/modals/Commitmentcreatedmodal";
+import { buildExplorerUrl, openExplorerUrl } from "@/utils/explorerLinks";
 
 type CommitmentType = "safe" | "balanced" | "aggressive";
 
@@ -154,9 +155,10 @@ export default function CreateCommitment() {
   };
 
   const handleViewOnExplorer = () => {
-    const explorerUrl = `https://stellar.expert/explorer/testnet/tx/${commitmentId}`;
-    window.open(explorerUrl, "_blank");
+    openExplorerUrl("tx", commitmentId, "testnet");
   };
+
+  const commitmentExplorerUrl = buildExplorerUrl("tx", commitmentId, "testnet");
 
   const handleEditStep = (targetStep: 1 | 2) => {
     setStep(targetStep);
@@ -210,7 +212,7 @@ export default function CreateCommitment() {
             onViewCommitment={handleViewCommitment}
             onCreateAnother={handleCreateAnother}
             onClose={handleCloseModal}
-            onViewOnExplorer={handleViewOnExplorer}
+            onViewOnExplorer={commitmentExplorerUrl ? handleViewOnExplorer : undefined}
           />
         </>
       )}

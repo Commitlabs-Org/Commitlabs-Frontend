@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
 
 export type TransactionState =
   | 'IDLE'
@@ -86,6 +87,8 @@ export default function TransactionProgressModal({
   onSuccessAction,
 }: TransactionProgressModalProps) {
   if (!isOpen || state === 'IDLE') return null;
+
+  const txExplorerUrl = buildExplorerUrl('tx', txHash);
 
   // -- State Configuration Helpers --
   const getHeader = () => {
@@ -220,8 +223,8 @@ export default function TransactionProgressModal({
       const isTimeout = errorCode === 'RPC_TIMEOUT';
 
       const handlePrimaryClick = () => {
-        if (isTimeout && txHash) {
-          window.open(`https://stellar.expert/explorer/public/tx/${txHash}`, '_blank', 'noopener,noreferrer');
+        if (isTimeout && txExplorerUrl) {
+          openExplorerUrl('tx', txHash);
         } else if (mapping.primary === 'Fund Wallet' || mapping.primary === 'Contact Support') {
            // Handle external redirect logic here if applicable, otherwise fallback to generic
           onClose(); 
@@ -292,13 +295,13 @@ export default function TransactionProgressModal({
           </p>
 
           {/* Explorer Link Slot */}
-          {txHash && (state === 'SUCCESS' || state === 'ERROR' || state === 'PROCESSING') && (
+          {txExplorerUrl && (state === 'SUCCESS' || state === 'ERROR' || state === 'PROCESSING') && (
             <div className="mt-6 p-3 w-full rounded-lg bg-white/5 border border-white/5 flex items-center justify-between">
               <span className="text-xs text-white/40 font-mono truncate max-w-[200px]">
                 {txHash}
               </span>
               <a 
-                href={`https://stellar.expert/explorer/public/tx/${txHash}`}
+                href={txExplorerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-white/70 hover:text-[#00C950] flex items-center gap-1.5 font-medium transition-colors"

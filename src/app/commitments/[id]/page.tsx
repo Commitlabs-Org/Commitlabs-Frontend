@@ -8,6 +8,7 @@ import CommitmentDetailAllocationConstraints from '@/components/CommitmentDetail
 import { CommitmentDetailNftSection } from '@/components/dashboard/CommitmentDetailNftSection';
 import { CommitmentDetailParameters } from '@/components/CommitmentDetailParameters/CommitmentDetailParameters';
 import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
+import { openExplorerUrl } from '@/utils/explorerLinks';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -105,8 +106,8 @@ const MOCK_ATTESTATION_SUMMARY = {
 // Mock data for the NFT section
 const MOCK_NFT_DATA = {
     tokenId: '123456789',
-    ownerAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    ownerAddress: `G${'A'.repeat(55)}`,
+    contractAddress: `C${'B'.repeat(55)}`,
     mintDate: 'Jan 10, 2026',
 };
 
@@ -139,7 +140,7 @@ export default function CommitmentDetailPage({
     };
 
     const handleViewDetails = () => console.log('View Details clicked');
-    const handleViewExplorer = () => console.log('View Explorer clicked');
+    const handleViewExplorer = () => openExplorerUrl('contract', MOCK_NFT_DATA.contractAddress, 'testnet');
     const handleTransfer = () => console.log('Transfer clicked');
 
     return (
