@@ -12,6 +12,8 @@ export interface CommitmentEarlyExitModalProps {
   penaltyAmount: string;
   netReceiveAmount: string;
   hasAcknowledged: boolean;
+  isPreviewLoading?: boolean;
+  previewError?: string | null;
   onChangeAcknowledged: (value: boolean) => void;
   onCancel: () => void;
   onConfirm: () => void;
@@ -34,6 +36,8 @@ export default function CommitmentEarlyExitModal({
   penaltyAmount,
   netReceiveAmount,
   hasAcknowledged,
+  isPreviewLoading = false,
+  previewError = null,
   onChangeAcknowledged,
   onCancel,
   onConfirm,
@@ -49,7 +53,7 @@ export default function CommitmentEarlyExitModal({
 
   const [confirmationInput, setConfirmationInput] = useState('')
   const hasTypedConfirmation = confirmationInput.trim() === commitmentId
-  const canConfirm = hasAcknowledged && hasTypedConfirmation
+  const canConfirm = hasAcknowledged && hasTypedConfirmation && !isPreviewLoading
 
   const handleClose = useCallback(() => {
     (onClose ?? onCancel)();
@@ -129,6 +133,25 @@ export default function CommitmentEarlyExitModal({
         {/* Content Body */}
         <div className="px-6 sm:px-10 pb-8">
           {/* Summary Table - Semantic financial breakdown for accessibility */}
+          {isPreviewLoading && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mb-4 rounded-2xl border border-[#0FF0FC]/20 bg-[#0FF0FC]/10 px-4 py-3 text-[13px] font-semibold text-[#0FF0FC]"
+            >
+              Fetching live early-exit preview...
+            </div>
+          )}
+
+          {previewError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-2xl border border-[#FF8A04]/25 bg-[#FF8A04]/10 px-4 py-3 text-[13px] font-semibold text-[#FFB15A]"
+            >
+              Could not refresh the live preview. Showing estimated local figures instead. {previewError}
+            </div>
+          )}
+
           <table className="w-full text-left border-collapse mb-8" aria-label="Early exit penalty breakdown">
             <caption className="sr-only">Financial breakdown of early exit penalty and final refund amount</caption>
             <thead>
