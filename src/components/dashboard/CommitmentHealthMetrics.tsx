@@ -15,6 +15,13 @@ function cn(...inputs: ClassValue[]) {
 
 type TabType = 'value' | 'drawdown' | 'fee' | 'compliance';
 
+const tabs: { id: TabType; label: string }[] = [
+    { id: 'value', label: 'Value History' },
+    { id: 'drawdown', label: 'Drawdown' },
+    { id: 'fee', label: 'Fee Generation' },
+    { id: 'compliance', label: 'Compliance' },
+];
+
 const tabIcons: Record<TabType, React.ReactNode> = {
     value: <TrendingUp className="w-4 h-4" />,
     drawdown: <TrendingDown className="w-4 h-4" />,
@@ -41,23 +48,50 @@ export default function CommitmentHealthMetrics({
 }: CommitmentHealthMetricsProps) {
     const [activeTab, setActiveTab] = useState<TabType>('value');
 
-    const tabs: { id: TabType; label: string }[] = [
-        { id: 'value', label: 'Value History' },
-        { id: 'drawdown', label: 'Drawdown' },
-        { id: 'fee', label: 'Fee Generation' },
-        { id: 'compliance', label: 'Compliance' },
-    ];
+    const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+        const lastIndex = tabs.length - 1;
+        let nextIndex: number | null = null;
+
+        if (event.key === 'ArrowRight') {
+            nextIndex = index === lastIndex ? 0 : index + 1;
+        } else if (event.key === 'ArrowLeft') {
+            nextIndex = index === 0 ? lastIndex : index - 1;
+        } else if (event.key === 'Home') {
+            nextIndex = 0;
+        } else if (event.key === 'End') {
+            nextIndex = lastIndex;
+        }
+
+        if (nextIndex !== null) {
+            event.preventDefault();
+            setActiveTab(tabs[nextIndex].id);
+            event.currentTarget
+                .closest('[role="tablist"]')
+                ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                [nextIndex]?.focus();
+        }
+    };
 
     return (
         <div className="w-full bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <h2 className="text-2xl font-semibold text-white">Health Metrics</h2>
 
-                <div className="flex flex-wrap gap-2 p-1 bg-[#111] rounded-lg border border-[#222]">
-                    {tabs.map((tab) => (
+                <div
+                    className="flex flex-wrap gap-2 p-1 bg-[#111] rounded-lg border border-[#222]"
+                    role="tablist"
+                    aria-label="Health metric charts"
+                >
+                    {tabs.map((tab, index) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
+                            onKeyDown={(event) => handleTabKeyDown(event, index)}
+                            role="tab"
+                            id={`health-metric-tab-${tab.id}`}
+                            aria-selected={activeTab === tab.id}
+                            aria-controls={`health-metric-panel-${tab.id}`}
+                            tabIndex={activeTab === tab.id ? 0 : -1}
                             className={cn(
                                 'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200',
                                 activeTab === tab.id
@@ -72,7 +106,12 @@ export default function CommitmentHealthMetrics({
                 </div>
             </div>
 
-            <div className="w-full">
+            <div
+                className="w-full"
+                role="tabpanel"
+                id={`health-metric-panel-${activeTab}`}
+                aria-labelledby={`health-metric-tab-${activeTab}`}
+            >
                 {activeTab === 'value' && (
                     <HealthMetricsValueHistoryChart 
                         data={valueHistoryData} 
