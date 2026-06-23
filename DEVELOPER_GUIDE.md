@@ -111,10 +111,11 @@ Fix all errors before committing. Warnings are informational but should be addre
 - Update that document whenever the settlement or early-exit API contracts, modal copy, or confirmation safeguards change.
 ## 🧪 Testing Procedures
 
-*(Note: Testing framework setup is currently in progress)*
-
--   **Unit Tests**: We plan to use Vitest + React Testing Library.
--   **Integration Tests**: Test user flows (e.g., creating a commitment) end-to-end.
+-   The testing stack is Vitest, React Testing Library, happy-dom, and V8 coverage. The detailed conventions live in [Frontend Testing Guide](docs/TESTING_GUIDE.md).
+-   **Unit Tests**: Use Vitest for utilities, hooks, and backend helpers.
+-   **Component Tests**: Use React Testing Library with role, label, and text queries.
+-   **Integration Tests**: Test route contracts and user flows without live network or wallet calls.
+-   **Mocks**: Keep `fetch`, Freighter, timer, storage, and chain mocks scoped to each test file.
 -   **Linting**: Run `pnpm lint` before committing to ensure code quality.
 
 ## 🔄 Contribution Workflow

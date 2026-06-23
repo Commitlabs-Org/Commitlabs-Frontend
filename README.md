@@ -50,7 +50,7 @@ For a deep dive into the system design, modules, and data flow, please refer to 
 
 ## 🧪 Testing
 
-This project uses **Vitest** for unit and integration testing of API routes.
+This project uses **Vitest** for unit and integration testing of API routes, utilities, and React components. See [Frontend Testing Guide](docs/TESTING_GUIDE.md) for Vitest, React Testing Library, happy-dom, fetch, Freighter, and fake-timer conventions.
 
 ### Running Tests
 
@@ -90,6 +90,8 @@ Tests demonstrate:
 - Testing request/response handling
 - Parameter validation and error handling
 - Mock data without external dependencies
+- React Testing Library patterns for user-facing component behavior
+- Wallet, fetch, and timer mocks that stay local to each test
 
 To add new API route tests, create a `.test.ts` file in `tests/api/` following the same pattern.
 
