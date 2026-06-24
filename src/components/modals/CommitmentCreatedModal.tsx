@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { ArrowRight, CheckCircle, ExternalLink, Eye, X } from 'lucide-react';
+import Dialog from '@/components/ui/Dialog';
 
 export interface CommitmentCreatedModalProps {
   isOpen: boolean;
@@ -27,7 +27,6 @@ export default function CommitmentCreatedModal({
   onClose,
   onViewOnExplorer,
 }: CommitmentCreatedModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -36,86 +35,24 @@ export default function CommitmentCreatedModal({
     return () => setMounted(false);
   }, []);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-        return;
-      }
-
-      if (event.key !== 'Tab' || !modalRef.current) return;
-
-      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-
-      if (focusableElements.length === 0) return;
-
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-
-      if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault();
-        lastElement.focus();
-      } else if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement.focus();
-      }
-    };
-
-    const focusTimer = window.setTimeout(() => {
-      primaryButtonRef.current?.focus();
-    }, 100);
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, onClose]);
-
   if (!isOpen || !mounted) return null;
 
-  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-300"
-      onClick={handleBackdropClick}
-      role="presentation"
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Commitment Created"
+      description="Your liquidity commitment is active and available in your dashboard."
+      initialFocusRef={primaryButtonRef}
+      panelClassName="relative flex max-h-[100dvh] w-full max-w-[540px] flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-[#0A0A0A] shadow-2xl motion-safe:animate-in motion-safe:slide-in-from-bottom-8 motion-safe:duration-500 motion-safe:ease-out sm:max-h-[90vh]"
+      closeButtonClassName="absolute right-6 top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:scale-105 hover:bg-white/10 active:scale-95"
+      closeIcon={<X className="h-5 w-5 text-white/50" />}
+      closeLabel="Close Commitment Created dialog"
     >
-      <div
-        ref={modalRef}
-        className="relative flex max-h-[100dvh] w-full max-w-[540px] flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-[#0A0A0A] shadow-2xl animate-in slide-in-from-bottom-8 duration-500 ease-out sm:max-h-[90vh]"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="commitment-created-title"
-        aria-describedby="commitment-created-description"
-      >
-        <div className="absolute right-6 top-6 z-10">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:scale-105 hover:bg-white/10 active:scale-95"
-            aria-label="Close modal"
-          >
-            <X className="h-5 w-5 text-white/50" />
-          </button>
-        </div>
-
         <div className="flex-1 px-6 pb-10 pt-12 sm:px-10">
           <div className="mb-8 flex flex-col items-center">
             <div className="relative mb-6 h-20 w-20 sm:h-24 sm:w-24">
-              <div className="absolute inset-0 rounded-full bg-[#0FF0FC] opacity-20 blur-2xl animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-[#0FF0FC] opacity-20 blur-2xl motion-safe:animate-pulse" />
               <div className="relative z-10 flex h-full w-full items-center justify-center rounded-full border-2 border-[#0FF0FC] bg-[#0FF0FC]/10 shadow-[inset_0_0_20px_rgba(15,240,252,0.2)]">
                 <CheckCircle className="h-10 w-10 text-[#0FF0FC] sm:h-12 sm:w-12" strokeWidth={2.5} />
               </div>
@@ -208,8 +145,6 @@ export default function CommitmentCreatedModal({
             </div>
           )}
         </div>
-      </div>
-    </div>,
-    document.body
+    </Dialog>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock3, FileSearch, RotateCcw, X } from 'lucide-react';
+import Dialog from '@/components/ui/Dialog';
 
 export type SettlementModalState = 'eligible' | 'processing' | 'error' | 'ineligible' | 'settled';
 export type SettlementProcessingStep = 'initiating' | 'confirming' | 'finalizing';
@@ -192,17 +193,26 @@ export default function SettlementModal({
           };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={descriptionId}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose?.();
-      }}
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose ?? onReturnToDashboard}
+      title={headerTitle}
+      description={
+        state === 'eligible'
+          ? 'This commitment is eligible for settlement. Review the previewed amount before starting the on-chain settlement flow.'
+          : state === 'processing'
+            ? 'Settlement is moving through the on-chain flow. Keep this window open until the final state is recorded.'
+            : state === 'error'
+              ? errorMessage ?? 'The settlement flow stopped before reaching a final state.'
+              : state === 'ineligible'
+                ? reasonCopy.message
+                : 'Settlement is complete and this commitment is now closed.'
+      }
+      dismissible={Boolean(onClose)}
+      showCloseButton={false}
+      backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      panelClassName="w-full max-w-[560px] rounded-3xl border border-white/10 bg-[#0A0B0E] p-6 text-white shadow-[0_0_50px_rgba(15,240,252,0.12)] sm:p-8"
     >
-      <section className="w-full max-w-[560px] rounded-3xl border border-white/10 bg-[#0A0B0E] p-6 text-white shadow-[0_0_50px_rgba(15,240,252,0.12)] sm:p-8">
         <div className="mb-7 flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <div
@@ -231,7 +241,7 @@ export default function SettlementModal({
               type="button"
               onClick={onClose}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
-              aria-label="Close settlement modal"
+              aria-label="Close settlement dialog"
             >
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -413,7 +423,6 @@ export default function SettlementModal({
             </button>
           </div>
         )}
-      </section>
-    </div>
+    </Dialog>
   );
 }

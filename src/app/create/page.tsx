@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import CreateCommitmentStepSelectType from "@/components/CreateCommitmentStepSelectType";
 import CreateCommitmentStepConfigure from "@/components/CreateCommitmentStepConfigure";
 import CreateCommitmentStepReview from "@/components/CreateCommitmentStepReview";
-import CommitmentCreatedModal from "@/components/modals/Commitmentcreatedmodal";
+import CommitmentCreatedModal from "@/components/modals/CommitmentCreatedModal";
 import { buildExplorerUrl, openExplorerUrl } from "@/utils/explorerLinks";
 
 type CommitmentType = "safe" | "balanced" | "aggressive";

@@ -49,8 +49,8 @@ export const POST = withApiHandler(async (req: NextRequest, { params }, correlat
     throw new ValidationError('Invalid request data', validation.error.issues);
   }
 
-    const callerAddress = validation.data.callerAddress;
-    const commitment: any = await getCommitmentFromChain(id, { requestId: correlationId });
+  const callerAddress = validation.data.callerAddress;
+  const commitment = await getCommitmentFromChain(id, { requestId: correlationId });
 
   if (!commitment) {
     throw new NotFoundError('Commitment', { commitmentId: id });
@@ -97,19 +97,11 @@ export const POST = withApiHandler(async (req: NextRequest, { params }, correlat
       txHash: settlementResult.txHash,
       reference: settlementResult.reference,
       settledAt: new Date().toISOString(),
-    };
-
-    if (idempotencyKey) {
-      await idempotencyService.complete(idempotencyKey, responseData, 200);
-    }
-
-    return ok(responseData, undefined, 200, correlationId);
-  } catch (error) {
-    if (idempotencyKey) {
-      await idempotencyService.fail(idempotencyKey);
-    }
-    throw error;
-  }
+    },
+    undefined,
+    200,
+    correlationId,
+  );
 }, { cors: COMMITMENT_SETTLE_CORS_POLICY });
 
 const _405 = methodNotAllowed(['POST']);

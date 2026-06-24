@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { AlertTriangle, X, Info } from 'lucide-react';
+import Dialog from '@/components/ui/Dialog';
 
 export interface CommitmentEarlyExitModalProps {
   isOpen: boolean;
@@ -39,7 +39,7 @@ export default function CommitmentEarlyExitModal({
   onConfirm,
   onClose,
 }: CommitmentEarlyExitModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -55,53 +55,21 @@ export default function CommitmentEarlyExitModal({
     (onClose ?? onCancel)();
   }, [onClose, onCancel]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-
-      // Focus trap
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll(
-          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const first = focusableElements[0] as HTMLElement;
-        const last = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, handleClose]);
-
   if (!isOpen || !mounted) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300"
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="early-exit-title"
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Early Exit Warning"
+      description="This action is irreversible and carries penalties."
+      initialFocusRef={cancelButtonRef}
+      backdropClassName="fixed inset-0 z-9999 flex items-center justify-center bg-black/80 backdrop-blur-md motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+      panelClassName="w-full sm:max-w-[520px] mt-auto sm:mt-0 bg-[#0A0A0A] border-t sm:border border-[#FF8A04]/30 rounded-t-[32px] sm:rounded-[32px] flex flex-col relative shadow-[0_0_60px_rgba(255,138,4,0.15)] motion-safe:animate-in motion-safe:slide-in-from-bottom-8 motion-safe:duration-500 motion-safe:ease-out"
+      closeButtonClassName="absolute right-6 top-8 z-10 w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/10"
+      closeIcon={<X className="w-5 h-5 text-white/50" />}
+      closeLabel="Close Early Exit Warning dialog"
     >
-      <div
-        ref={modalRef}
-        className="w-full sm:max-w-[520px] mt-auto sm:mt-0 bg-[#0A0A0A] border-t sm:border border-[#FF8A04]/30 rounded-t-[32px] sm:rounded-[32px] flex flex-col relative shadow-[0_0_60px_rgba(255,138,4,0.15)] animate-in slide-in-from-bottom-8 duration-500 ease-out"
-      >
         {/* Header - Consistency with Details modal */}
         <div className="px-6 sm:px-10 py-8 flex items-start justify-between">
           <div className="flex items-center gap-5">
@@ -119,10 +87,10 @@ export default function CommitmentEarlyExitModal({
           </div>
           <button
             onClick={handleClose}
-            className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/10"
-            aria-label="Close modal"
+            className="sr-only"
+            aria-label="Close Early Exit Warning dialog"
           >
-            <X className="w-5 h-5 text-white/50" />
+            Close
           </button>
         </div>
 
@@ -234,22 +202,25 @@ export default function CommitmentEarlyExitModal({
           {/* Action Buttons - Standardized placement */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
+              ref={cancelButtonRef}
               onClick={onCancel}
               className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[18px] py-4 text-[15px] font-bold text-white transition-all order-2 sm:order-1 active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
-              disabled={!canConfirm}
-              onClick={onConfirm}
-              className="flex-[1.5] bg-[#FF8A04] disabled:grayscale disabled:opacity-30 hover:bg-[#FF8A04]/90 text-black rounded-[18px] py-4 text-[15px] font-bold transition-all order-1 sm:order-2 shadow-[0_0_30px_rgba(255,138,4,0.25)] active:scale-[0.98]"
+              aria-disabled={!canConfirm}
+              onClick={() => {
+                if (canConfirm) onConfirm();
+              }}
+              className={`flex-[1.5] bg-[#FF8A04] hover:bg-[#FF8A04]/90 text-black rounded-[18px] py-4 text-[15px] font-bold transition-all order-1 sm:order-2 shadow-[0_0_30px_rgba(255,138,4,0.25)] active:scale-[0.98] ${
+                canConfirm ? '' : 'cursor-not-allowed grayscale opacity-30'
+              }`}
             >
               Confirm Early Exit
             </button>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
+    </Dialog>
   )
 }

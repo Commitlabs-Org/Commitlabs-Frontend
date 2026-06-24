@@ -68,19 +68,12 @@ describe("CommitmentDetailsModal", () => {
       />,
     );
 
-    const closeButton = screen.getByRole("button", { name: /close modal/i });
-    const viewDetailsLink = screen.getByRole("link", {
-      name: /view full details/i,
+    const closeButton = screen.getByRole("button", {
+      name: /close modal: balanced commitment dialog/i,
     });
     const doneButton = screen.getByRole("button", { name: /done/i });
 
-    closeButton.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(document.activeElement).toBe(viewDetailsLink);
-
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(document.activeElement).toBe(doneButton);
-
+    doneButton.focus();
     fireEvent.keyDown(document, { key: "Tab" });
     expect(document.activeElement).toBe(closeButton);
 

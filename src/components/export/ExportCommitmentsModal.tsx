@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { AlertCircle, CheckCircle2, Download, Loader2, X } from 'lucide-react';
+import Dialog from '@/components/ui/Dialog';
 
 type ExportStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -68,15 +69,6 @@ function getExportErrorMessage(status: number): string {
   return 'Export failed. Try again in a moment.';
 }
 
-const focusableSelector = [
-  'button:not([disabled])',
-  'a[href]',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
 export default function ExportCommitmentsModal({
   isOpen,
   onClose,
@@ -84,34 +76,8 @@ export default function ExportCommitmentsModal({
   sessionToken,
   endpoint = '/api/commitments/export',
 }: ExportCommitmentsModalProps) {
-  const titleId = useId();
-  const descriptionId = useId();
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<ExportStatus>('idle');
   const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    setStatus('idle');
-    setMessage('');
-
-    const focusDialog = () => {
-      dialogRef.current?.focus();
-    };
-
-    if (typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(focusDialog);
-    } else {
-      window.setTimeout(focusDialog, 0);
-    }
-
-    return () => {
-      previousFocusRef.current?.focus?.();
-    };
-  }, [isOpen]);
 
   const handleExport = useCallback(async () => {
     const normalizedAddress = ownerAddress?.trim();
@@ -169,57 +135,27 @@ export default function ExportCommitmentsModal({
     }
   }, [endpoint, ownerAddress, sessionToken]);
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape' && status !== 'loading') {
-      onClose();
-      return;
-    }
-
-    if (event.key !== 'Tab') return;
-
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    const focusableElements = Array.from(
-      dialog.querySelectorAll<HTMLElement>(focusableSelector)
-    );
-
-    if (focusableElements.length === 0) return;
-
-    const first = focusableElements[0];
-    const last = focusableElements[focusableElements.length - 1];
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
   if (!isOpen) return null;
 
   const isLoading = status === 'loading';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        tabIndex={-1}
-        onKeyDown={handleKeyDown}
-        className="w-full max-w-[520px] rounded-[18px] border border-[#0FF0FC33] bg-[#0A0A0A] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
-      >
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Export commitment data"
+      description="Download a CSV snapshot for the connected owner address. Large portfolios may take a moment to prepare."
+      dismissible={!isLoading}
+      showCloseButton={false}
+      backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6"
+      panelClassName="w-full max-w-[520px] rounded-[18px] border border-[#0FF0FC33] bg-[#0A0A0A] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
+    >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#0FF0FC]">
               Portfolio export
             </p>
-            <h2 id={titleId} className="mt-2 text-2xl font-semibold leading-tight">
+            <h2 className="mt-2 text-2xl font-semibold leading-tight">
               Export commitment data
             </h2>
           </div>
@@ -234,7 +170,7 @@ export default function ExportCommitmentsModal({
           </button>
         </div>
 
-        <p id={descriptionId} className="mt-4 text-sm leading-6 text-white/70">
+        <p className="mt-4 text-sm leading-6 text-white/70">
           Download a CSV snapshot for the connected owner address. Large portfolios may take a moment to prepare.
         </p>
 
@@ -318,7 +254,6 @@ export default function ExportCommitmentsModal({
             {isLoading ? 'Preparing export' : 'Export CSV'}
           </button>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }
