@@ -7,6 +7,7 @@ import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
 import { MarketplaceGridSkeleton } from '@/components/MarketplaceGridSkeleton'
+import { FeaturedListingsCarousel } from '@/components/FeaturedListingsCarousel'
 
 // Interfaces matching the components
 interface Filters {
@@ -432,6 +433,8 @@ export default function Marketplace() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
+
+        <FeaturedListingsCarousel />
 
         {/* Mobile Filter Toggle */}
         <div className="md:hidden mb-6">
