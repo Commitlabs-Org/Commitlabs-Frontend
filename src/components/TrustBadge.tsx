@@ -16,6 +16,9 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
   className = '',
   showTooltip = true 
 }) => {
+  const tooltipId = React.useId();
+  const tooltipDescriptionId = `${tooltipId}-description`;
+
   const getBadgeConfig = () => {
     switch (level) {
       case 'verified':
@@ -46,13 +49,22 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
   const config = getBadgeConfig();
 
   return (
-    <div className={`group relative inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${config.colorClass} ${className}`}>
+    <div
+      aria-describedby={showTooltip ? tooltipDescriptionId : undefined}
+      aria-label={config.label}
+      role="status"
+      className={`group relative inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${config.colorClass} ${className}`}
+    >
       {config.icon}
       {config.label}
       
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 rounded-lg bg-[#1A1A1A] border border-white/10 shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[11px] normal-case tracking-normal font-medium leading-relaxed text-white/70">
-          <p>{config.description}</p>
+        <div
+          id={tooltipId}
+          role="tooltip"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 rounded-lg bg-[#1A1A1A] border border-white/10 shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[11px] normal-case tracking-normal font-medium leading-relaxed text-white/70"
+        >
+          <p id={tooltipDescriptionId}>{config.description}</p>
           <div className="mt-1 flex items-center gap-1 text-[9px] text-[#0FF0FC]">
             <Info className="w-2.5 h-2.5" />
             Learn about trust levels
