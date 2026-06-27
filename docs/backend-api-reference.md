@@ -64,6 +64,44 @@ Clients should wait the indicated seconds before retrying. See [error-handling.m
 
 ---
 
+## `GET /api/marketplace/listings/[id]`
+
+Fetches a single marketplace listing by its listing ID. This endpoint is used by
+`/marketplace/[id]` to render deep-linkable listing detail pages.
+
+- **Authentication**: none
+- **Path parameter**: `id` — the marketplace listing ID
+- **Response**:
+  - `200 OK`: Listing returned.
+  - `404 Not Found`: Listing does not exist.
+
+### Example
+
+```bash
+curl -X GET http://localhost:3000/api/marketplace/listings/LST-001
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "listing": {
+      "listingId": "LST-001",
+      "commitmentId": "CMT-001",
+      "type": "Safe",
+      "amount": 50000,
+      "remainingDays": 25,
+      "maxLoss": 2,
+      "currentYield": 5.2,
+      "complianceScore": 95,
+      "price": 52000
+    }
+  }
+}
+```
+
+---
+
 ## `POST /api/marketplace/listings/[id]/purchase`
 
 Purchases a marketplace listing. Requires an active session cookie. Runs
