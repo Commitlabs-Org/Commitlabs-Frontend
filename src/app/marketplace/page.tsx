@@ -7,6 +7,7 @@ import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
 import { MarketplaceGridSkeleton } from '@/components/MarketplaceGridSkeleton'
+import { TrustBadge } from '@/components/TrustBadge'
 
 // Interfaces matching the components
 interface Filters {

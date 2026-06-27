@@ -109,7 +109,8 @@ export default function CreateCommitmentStepConfigure({
           </p>
         </div>
 
-        <form className={styles.form} onKeyDown={handleKeyDown}>
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+        <div className={styles.form} onKeyDown={handleKeyDown} role="group" aria-label="Commitment configuration form">
           {/* Commitment Amount */}
           <div className={styles.formGroup}>
             <label htmlFor="amount" className={styles.label}>
@@ -362,7 +363,7 @@ export default function CreateCommitmentStepConfigure({
               All parameters are enforced on-chain and cannot be changed after creation. Early exits will incur the penalty shown above.
             </span>
           </div>
-        </form>
+        </div>
 
         <div className={styles.footerActions}>
           <button type="button" className={styles.footerBackButton} onClick={onBack}>

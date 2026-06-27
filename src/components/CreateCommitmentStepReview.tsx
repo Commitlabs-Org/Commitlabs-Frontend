@@ -155,7 +155,7 @@ export default function CreateCommitmentStepReview({
             <div className={styles.sectionContent}>
               <div className={styles.fieldRow}>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Amount</label>
+                  <p className={styles.fieldLabel}>Amount</p>
                   <p className={styles.fieldValue}>
                     {amount} <span className={styles.assetTag}>{asset}</span>
                   </p>
@@ -188,15 +188,15 @@ export default function CreateCommitmentStepReview({
             <div className={styles.sectionContent}>
               <div className={styles.fieldGrid}>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Duration</label>
+                  <p className={styles.fieldLabel}>Duration</p>
                   <p className={styles.fieldValue}>{durationDays} days</p>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Start Date</label>
+                  <p className={styles.fieldLabel}>Start Date</p>
                   <p className={styles.fieldValue}>{commitmentStart}</p>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>End Date</label>
+                  <p className={styles.fieldLabel}>End Date</p>
                   <p className={styles.fieldValue}>{commitmentEnd}</p>
                 </div>
               </div>
@@ -227,9 +227,9 @@ export default function CreateCommitmentStepReview({
             <div className={styles.sectionContent}>
               <div className={styles.fieldGrid}>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>
+                  <p className={styles.fieldLabel}>
                     Max Loss Protection
-                  </label>
+                  </p>
                   <p
                     className={`${styles.fieldValue} ${maxLossPercent >= 100 ? styles.fieldValueRisk : ""}`}
                   >
@@ -237,17 +237,17 @@ export default function CreateCommitmentStepReview({
                   </p>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>
+                  <p className={styles.fieldLabel}>
                     Early Exit Penalty
-                  </label>
+                  </p>
                   <p className={styles.fieldValue}>{earlyExitPenalty}</p>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Estimated Fees</label>
+                  <p className={styles.fieldLabel}>Estimated Fees</p>
                   <p className={styles.fieldValue}>{estimatedFees}</p>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Estimated Yield</label>
+                  <p className={styles.fieldLabel}>Estimated Yield</p>
                   <p
                     className={`${styles.fieldValue} ${styles.highlightValue}`}
                   >
@@ -261,9 +261,11 @@ export default function CreateCommitmentStepReview({
 
         {/* Checkboxes */}
         <div className={styles.checkboxSection}>
-          <div
+          <button
+            type="button"
             className={styles.checkboxRow}
             onClick={() => setAcceptedTerms(!acceptedTerms)}
+            aria-pressed={acceptedTerms}
           >
             <CheckCircle2
               className={`${styles.checkIcon} ${acceptedTerms ? styles.checkIconActive : ""}`}
@@ -271,22 +273,22 @@ export default function CreateCommitmentStepReview({
               aria-hidden="true"
             />
             <div className={styles.checkboxContent}>
-              <label>
-                <h4>I agree to the terms and conditions</h4>
-              </label>
+              <h4>I agree to the terms and conditions</h4>
               <p>
                 I have read and understand the{" "}
-                <a href="#" className={styles.link}>
+                <a href="/terms" className={styles.link}>
                   terms of service
                 </a>{" "}
                 and smart contract exit conditions.
               </p>
             </div>
-          </div>
+          </button>
 
-          <div
+          <button
+            type="button"
             className={styles.checkboxRow}
             onClick={() => setAcknowledgedRisks(!acknowledgedRisks)}
+            aria-pressed={acknowledgedRisks}
           >
             <CheckCircle2
               className={`${styles.checkIcon} ${acknowledgedRisks ? styles.checkIconActive : ""}`}
@@ -294,16 +296,14 @@ export default function CreateCommitmentStepReview({
               aria-hidden="true"
             />
             <div className={styles.checkboxContent}>
-              <label>
-                <h4>I acknowledge the risks</h4>
-              </label>
+              <h4>I acknowledge the risks</h4>
               <p>
                 I understand that DeFi protocols carry inherent risks including
                 smart contract vulnerabilities, market volatility, and potential
                 loss of funds up to the max loss threshold I configured.
               </p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Important Notice */}

@@ -97,11 +97,13 @@ export function MarketplaceHeader({
       </header>
 
       {/* Mobile Drawer Overlay */}
-      <div 
+      <button
+        type="button"
         className={`fixed inset-0 top-[80px] z-[60] bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
           isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setIsMenuOpen(false)}
+        aria-label="Close mobile menu"
       />
 
       {/* Mobile Drawer Content */}

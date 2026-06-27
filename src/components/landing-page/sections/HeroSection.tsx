@@ -90,15 +90,11 @@ export const HeroSection: React.FC = () => {
             <motion.div variants={itemVariants} className="relative">
               <div className="absolute inset-0 bg-linear-to-b from-[#0ff0fc] to-[#0a7a82] blur-lg opacity-50 rounded-[14px]" />
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <Link href="/create" legacyBehavior>
-                  <a className="bg-[#0ff0fc] text-black font-medium py-3 px-6 rounded-md hover:bg-[#0a7a82] transition-colors">
-                    Create commitment
-                  </a>
+                <Link href="/create" className="bg-[#0ff0fc] text-black font-medium py-3 px-6 rounded-md hover:bg-[#0a7a82] transition-colors">
+                  Create commitment
                 </Link>
-                <Link href="/marketplace" legacyBehavior>
-                  <a className="bg-[#0a0a0a] border border-[#0ff0fc] text-[#0ff0fc] font-medium py-3 px-6 rounded-md hover:bg-[#0ff0fc] hover:text-black transition-colors">
-                    Explore marketplace
-                  </a>
+                <Link href="/marketplace" className="bg-[#0a0a0a] border border-[#0ff0fc] text-[#0ff0fc] font-medium py-3 px-6 rounded-md hover:bg-[#0ff0fc] hover:text-black transition-colors">
+                  Explore marketplace
                 </Link>
               </div>
             </motion.div>
@@ -109,18 +105,20 @@ export const HeroSection: React.FC = () => {
               className="flex gap-8 items-center justify-center mt-10"
             >
               <a
-                href="#"
+                href="https://github.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:opacity-80"
+                aria-label="Visit GitHub"
               >
                 <FaGithub className="text-[#0a7a82] animate-bounce" size={30} />
               </a>
               <a
-                href="#"
+                href="mailto:hello@commitlabs.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:opacity-80"
+                aria-label="Email CommitLabs"
               >
                 <FaEnvelope
                   className="text-[#0a7a82] animate-bounce"
@@ -128,10 +126,11 @@ export const HeroSection: React.FC = () => {
                 />
               </a>
               <a
-                href="#"
+                href="/docs"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:opacity-80"
+                aria-label="Read documentation"
               >
                 <IoDocumentText
                   className="text-[#0a7a82] animate-bounce"
