@@ -1,4 +1,5 @@
 "use client";
+import { ReputationDisplay } from "./ReputationDisplay";
 
 import { memo, useState } from "react";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
@@ -10,7 +11,9 @@ export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 export interface MarketplaceCardProps {
   id: string;
   type: CommitmentType;
-  score: number;
+  score: number; // reputation score (0-100)
+  totalCommitments?: number; // optional seller total commitments
+  successRate?: number; // optional seller success rate percentage
   amount: string;
   duration: string;
   yield: string;
@@ -167,6 +170,8 @@ function MarketplaceCardComponent({
   id,
   type,
   score,
+  totalCommitments,
+  successRate,
   amount,
   duration,
   yield: apy,
@@ -222,11 +227,12 @@ function MarketplaceCardComponent({
           >
             {type}
           </span>
-          <span
-            className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}
-          >
-            {clampedScore}%
-          </span>
+            {/* Compact reputation display */}
+            {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
+              <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>"{clampedScore}%"</span>
+            ) : (
+              <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">New seller</span>
+            )}
         </div>
       </header>
 
@@ -268,6 +274,15 @@ function MarketplaceCardComponent({
                 level={trustLevel ?? "unverified"}
                 showTooltip={false}
               />
+              {/* Render ReputationDisplay compactly when data available */}
+              {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' && (
+                <ReputationDisplay
+                  score={clampedScore}
+                  totalCommitments={totalCommitments}
+                  successRate={successRate}
+                  className="mt-2"
+                />
+              )}
             </dd>
           </div>
         </dl>
@@ -357,6 +372,10 @@ function MarketplaceCardComponent({
             statusVariant: "ok",
           },
         ]}
+        // Pass reputation data to modal
+        reputationScore={clampedScore}
+        totalCommitments={totalCommitments}
+        successRate={successRate}
         TypeIcon={TypeIcon}
       />
     </article>
