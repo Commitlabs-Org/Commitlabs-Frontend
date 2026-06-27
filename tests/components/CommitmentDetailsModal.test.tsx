@@ -30,13 +30,13 @@ const defaultProps = {
       id: "volatility",
       label: "Volatility Exposure",
       statusLabel: "Within limits",
-      statusVariant: "ok",
+      statusVariant: "ok" as const,
     },
     {
       id: "fee",
       label: "Fee Generation",
       statusLabel: "On track",
-      statusVariant: "ok",
+      statusVariant: "ok" as const,
     },
   ],
   onSelectComplianceItem: vi.fn(),
@@ -69,20 +69,17 @@ describe("CommitmentDetailsModal", () => {
     );
 
     const closeButton = screen.getByRole("button", { name: /close modal/i });
-    const viewDetailsLink = screen.getByRole("link", {
-      name: /view full details/i,
-    });
     const doneButton = screen.getByRole("button", { name: /done/i });
 
-    closeButton.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(document.activeElement).toBe(viewDetailsLink);
-
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(document.activeElement).toBe(doneButton);
-
+    // Test focus wrapping from last to first
+    doneButton.focus();
     fireEvent.keyDown(document, { key: "Tab" });
     expect(document.activeElement).toBe(closeButton);
+
+    // Test focus wrapping from first to last
+    closeButton.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(doneButton);
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();

@@ -261,4 +261,8 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   );
 };
 
-export default MyCommitmentCard;
+// Memoized so that filtering/sorting a large list only re-renders cards whose
+// props actually changed. `commitment` keeps a stable reference across filter/
+// sort operations, and the callbacks are stabilized with useCallback by the
+// parent, so React.memo's shallow prop comparison skips unchanged cards.
+export default React.memo(MyCommitmentCard);

@@ -78,21 +78,48 @@ const MarketplaceFilters = ({
     return `$${value}`;
   };
 
+  const renderSectionToggle = (
+    section: string,
+    label: string,
+    panelId: string,
+    options?: { headingClassName?: string },
+  ) => (
+    <button
+      type="button"
+      className={`focus-ring flex w-full items-center justify-between cursor-pointer py-1.5 bg-transparent border-0 text-left text-white ${
+        options?.headingClassName ?? "text-sm font-medium"
+      }`}
+      onClick={() => toggleSection(section)}
+      aria-expanded={expandedSections[section]}
+      aria-controls={panelId}
+    >
+      <span>{label}</span>
+      {section !== "sort" &&
+        (expandedSections[section] ? (
+          <ChevronUp size={18} aria-hidden="true" />
+        ) : (
+          <ChevronDown size={18} aria-hidden="true" />
+        ))}
+    </button>
+  );
+
   return (
     <aside
       className="focus-ring-container custom-scrollbar w-full md:fixed md:top-28 lg:left-10 xl:left-20 md:h-[600px] md:overflow-y-scroll md:w-80 bg-[#0A0A0A] border border-white/10 rounded-xl p-5 text-white custom-scrollbar"
+      aria-label="Marketplace filters"
     >
       {/* Sort By */}
       <div className="mb-4 border-b border-white/5 pb-3">
+        {renderSectionToggle("sort", "Sort By", "marketplace-filter-sort", {
+          headingClassName: "text-lg font-semibold",
+        })}
         <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("sort")}
+          id="marketplace-filter-sort"
+          className="mt-2"
+          hidden={!expandedSections.sort}
         >
-          <span className="text-lg font-semibold">Sort By</span>
-        </div>
-        <div className="mt-2">
           <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} aria-hidden="true" />
             <input
               type="text"
               placeholder="Search filters..."
@@ -106,15 +133,9 @@ const MarketplaceFilters = ({
 
       {/* Commitment Type */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("type")}
-        >
-          <span className="text-sm font-medium">Commitment Type</span>
-          {expandedSections.type ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle("type", "Commitment Type", "marketplace-filter-type")}
         {expandedSections.type && (
-          <div className="mt-2 flex flex-col gap-3">
+          <div id="marketplace-filter-type" className="mt-2 flex flex-col gap-3">
             {commitmentTypes.map((type) => {
               const isActive = localFilters.commitmentType.includes(type);
               return (
@@ -162,15 +183,9 @@ const MarketplaceFilters = ({
 
       {/* Price Range */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("price")}
-        >
-          <span className="text-sm font-medium">Price Range</span>
-          {expandedSections.price ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle("price", "Price Range", "marketplace-filter-price")}
         {expandedSections.price && (
-          <div className="mt-3">
+          <div id="marketplace-filter-price" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               {/* Active range */}
               <div
@@ -204,15 +219,13 @@ const MarketplaceFilters = ({
 
       {/* Duration */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("duration")}
-        >
-          <span className="text-sm font-medium">Duration Remaining</span>
-          {expandedSections.duration ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle(
+          "duration",
+          "Duration Remaining",
+          "marketplace-filter-duration",
+        )}
         {expandedSections.duration && (
-          <div className="mt-3">
+          <div id="marketplace-filter-duration" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div
                 className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
@@ -244,15 +257,13 @@ const MarketplaceFilters = ({
 
       {/* Compliance */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("compliance")}
-        >
-          <span className="text-sm font-medium">Min Compliance Score</span>
-          {expandedSections.compliance ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle(
+          "compliance",
+          "Min Compliance Score",
+          "marketplace-filter-compliance",
+        )}
         {expandedSections.compliance && (
-          <div className="mt-3">
+          <div id="marketplace-filter-compliance" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.minCompliance}%` }} />
               <input
@@ -275,15 +286,13 @@ const MarketplaceFilters = ({
 
       {/* Max Loss */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("loss")}
-        >
-          <span className="text-sm font-medium">Max Loss Threshold</span>
-          {expandedSections.loss ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle(
+          "loss",
+          "Max Loss Threshold",
+          "marketplace-filter-loss",
+        )}
         {expandedSections.loss && (
-          <div className="mt-3">
+          <div id="marketplace-filter-loss" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.maxLoss}%` }} />
               <input
@@ -305,6 +314,7 @@ const MarketplaceFilters = ({
       </div>
 
       <button
+        type="button"
         onClick={handleReset}
         className="focus-ring w-full mt-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/20 hover:text-white transition"
       >

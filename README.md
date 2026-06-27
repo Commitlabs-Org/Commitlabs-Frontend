@@ -48,6 +48,8 @@ The application is built using the **Next.js App Router** architecture.
 
 For a deep dive into the system design, modules, and data flow, please refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+For a frontend-focused map of pages to components to API routes, plus wallet/auth state flow, see [FRONTEND_ARCHITECTURE.md](./docs/FRONTEND_ARCHITECTURE.md).
+
 ## 🧪 Testing
 
 This project uses **Vitest** for unit and integration testing of API routes.
@@ -179,8 +181,13 @@ src/
 │   ├── modals/             # Global modals (Success, Errors)
 │   └── ...
 ├── types/                  # TypeScript interfaces and types
+├── hooks/                  # React hooks (useWallet, etc.)
+├── lib/                    # Backend lib, services, mocks
 ├── utils/                  # Utility functions (Soroban, formatting)
 └── ...
+
+See [docs/FRONTEND_ARCHITECTURE.md](./docs/FRONTEND_ARCHITECTURE.md) for a
+detailed page→component→API-route map and state/data-flow conventions.
 ```
 
 ## 🤝 Contributing

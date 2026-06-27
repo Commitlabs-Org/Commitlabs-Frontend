@@ -143,8 +143,7 @@ describe('SettlementModal ineligible reasons', () => {
       ineligibleReason: 'Commitment has not matured yet and cannot be settled.',
     });
 
-    fireEvent.click(screen.getByRole('dialog'));
-
+    fireEvent.click(screen.getByTestId('dialog-backdrop'));
     expect(onClose).toHaveBeenCalledOnce();
   });
 

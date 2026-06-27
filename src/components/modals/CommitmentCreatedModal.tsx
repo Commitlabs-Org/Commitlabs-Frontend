@@ -63,9 +63,7 @@ export default function CommitmentCreatedModal({
   onFundLater,
   onViewOnExplorer,
 }: CommitmentCreatedModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
-  const [mounted, setMounted] = useState(false);
 
   // Fund state machine
   const [fundStep, setFundStep] = useState<FundStep>('idle');
@@ -376,6 +374,7 @@ export default function CommitmentCreatedModal({
                 />
               </div>
             </div>
+          </div>
 
             <div className="text-center">
               <h2
@@ -394,6 +393,7 @@ export default function CommitmentCreatedModal({
               </p>
             </div>
           </div>
+        </div>
 
           {/* Commitment ID */}
           <div className="group relative mb-6 overflow-hidden rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-6 text-center transition-colors hover:bg-white/[0.05]">
@@ -405,6 +405,7 @@ export default function CommitmentCreatedModal({
               {commitmentId}
             </div>
           </div>
+        </div>
 
           {/* Fund step region */}
           <div className="mb-8">
@@ -489,8 +490,20 @@ export default function CommitmentCreatedModal({
             </div>
           )}
         </div>
+
+        {onViewOnExplorer && (
+          <div className="mt-8 border-t border-white/5 pt-6">
+            <button
+              type="button"
+              onClick={onViewOnExplorer}
+              className="flex w-full items-center justify-center gap-2 py-1 text-[13px] text-white/30 transition-colors hover:text-[#0FF0FC]"
+            >
+              View on Stellar Explorer
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
-    </div>,
-    document.body
+    </Dialog>
   );
 }

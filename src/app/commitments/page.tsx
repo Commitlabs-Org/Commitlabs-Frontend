@@ -229,6 +229,18 @@ export default function MyCommitments() {
     setHasAcknowledged(false)
   }, [])
 
+  // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
+  // own commitment changes, not on every filter/sort that re-runs this page.
+  const handleViewDetails = useCallback(
+    (id: string) => router.push(`/commitments/${id}`),
+    [router]
+  )
+
+  const handleViewAttestations = useCallback(
+    (id: string) => console.log('Attestations for', id),
+    []
+  )
+
   const closeEarlyExitModal = useCallback(() => {
     setEarlyExitCommitmentId(null)
     setHasAcknowledged(false)
@@ -310,8 +322,8 @@ export default function MyCommitments() {
 
             <MyCommitmentsGrid
               commitments={filteredCommitments}
-              onDetails={(id) => router.push(`/commitments/${id}`)}
-              onAttestations={(id) => console.log('Attestations for', id)}
+              onDetails={handleViewDetails}
+              onAttestations={handleViewAttestations}
               onEarlyExit={openEarlyExitModal}
             />
           </>
