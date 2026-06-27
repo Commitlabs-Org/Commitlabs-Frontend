@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-import { WalletConnectButton } from "@/components/WalletConnectButton";
+import { WalletAccountMenu } from "@/components/wallet/WalletAccountMenu";
 
 export const Navigation: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,7 +80,7 @@ export const Navigation: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3 justify-self-end">
-          <WalletConnectButton />
+          <WalletAccountMenu />
           {/* Mobile menu button */}
           <button
             type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Shield,
   TrendingUp,
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import WizardStepper from "./WizardStepper";
 import styles from "./CreateCommitmentStepReview.module.css";
+import { useWallet } from "@/hooks/useWallet";
+import ValidationSummary, { ValidationErrorItem } from "./create/ValidationSummary";
 
 interface CreateCommitmentStepReviewProps {
   typeLabel: string;
@@ -29,7 +31,7 @@ interface CreateCommitmentStepReviewProps {
   submitError?: string;
   onBack: () => void;
   onSubmit: () => void;
-  onEditStep?: (step: 1 | 2) => void;
+  onEditStep?: (step: 1 | 2, fieldId?: string) => void;
 }
 
 export default function CreateCommitmentStepReview({
@@ -49,10 +51,152 @@ export default function CreateCommitmentStepReview({
   onSubmit,
   onEditStep,
 }: CreateCommitmentStepReviewProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acknowledgedRisks, setAcknowledgedRisks] = useState(false);
+  const { connected, address, connect } = useWallet();
+  const [validationErrors, setValidationErrors] = useState<ValidationErrorItem[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
 
-  const canSubmit = acceptedTerms && acknowledgedRisks && !isSubmitting;
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function validate() {
+      setIsValidating(true);
+      const errors: ValidationErrorItem[] = [];
+
+      // 1. Client-side checks on review step
+      if (!connected || !address) {
+        errors.push({
+          id: "client-wallet",
+          message: "Wallet must be connected to submit transaction.",
+          step: 3,
+          field: "review-connect-wallet",
+        });
+      }
+
+      if (!acceptedTerms) {
+        errors.push({
+          id: "client-terms",
+          message: "You must agree to the terms and conditions.",
+          step: 3,
+          field: "acceptedTerms",
+        });
+      }
+
+      if (!acknowledgedRisks) {
+        errors.push({
+          id: "client-risks",
+          message: "You must acknowledge the risks.",
+          step: 3,
+          field: "acknowledgedRisks",
+        });
+      }
+
+      // 2. Call validate route
+      try {
+        const response = await fetch("/api/commitments/validate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ownerAddress: address || "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            asset,
+            amount: amount || "0",
+            durationDays,
+            maxLossBps: maxLossPercent * 100,
+          }),
+        });
+
+        if (response.ok && active) {
+          const data = await response.json();
+          if (!data.valid && data.errors) {
+            data.errors.forEach((err: any, index: number) => {
+              if (err.field === "ownerAddress") {
+                if (!errors.some((e) => e.field === "review-connect-wallet")) {
+                  errors.push({
+                    id: "server-ownerAddress",
+                    message: err.message || "Invalid Stellar address format.",
+                    step: 3,
+                    field: "review-connect-wallet",
+                  });
+                }
+              } else if (err.field === "amount") {
+                errors.push({
+                  id: "server-amount",
+                  message: err.message || "Amount must be a positive number.",
+                  step: 2,
+                  field: "amount",
+                });
+              } else if (err.field === "durationDays") {
+                errors.push({
+                  id: "server-duration",
+                  message: err.message || "Duration must be a positive integer.",
+                  step: 2,
+                  field: "duration",
+                });
+              } else if (err.field === "maxLossBps") {
+                errors.push({
+                  id: "server-maxloss",
+                  message: err.message || "Max loss must be a non-negative number.",
+                  step: 2,
+                  field: "maxLoss",
+                });
+              } else {
+                errors.push({
+                  id: `server-${err.field || "general"}-${index}`,
+                  message: err.message || "Validation error.",
+                  step: 2,
+                  field: err.field || "amount",
+                });
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Validation API error:", e);
+      }
+
+      if (active) {
+        setValidationErrors(errors);
+        setIsValidating(false);
+      }
+    }
+
+    validate();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    connected,
+    address,
+    acceptedTerms,
+    acknowledgedRisks,
+    amount,
+    asset,
+    durationDays,
+    maxLossPercent,
+  ]);
+
+  const handleJumpToError = (targetStep: 1 | 2 | 3, field: string) => {
+    if (targetStep === 3) {
+      const element = document.getElementById(field);
+      if (element) {
+        element.focus();
+        element.scrollIntoView({ block: "center" });
+      }
+    } else if (onEditStep) {
+      onEditStep(targetStep as 1 | 2, field);
+    }
+  };
+
+  const canSubmit = acceptedTerms && acknowledgedRisks && !isSubmitting && validationErrors.length === 0;
 
   const getIconAndStyle = () => {
     const l = typeLabel.toLowerCase();
@@ -85,8 +229,31 @@ export default function CreateCommitmentStepReview({
 
         <WizardStepper currentStep={3} />
 
+        <ValidationSummary
+          errors={validationErrors}
+          onJumpToError={handleJumpToError}
+        />
+
+        {!connected && (
+          <div className={styles.walletWarningBanner} id="review-connect-wallet-section">
+            <AlertCircle size={20} className={styles.walletWarningIcon} />
+            <div className={styles.walletWarningContent}>
+              <h4>Wallet Disconnected</h4>
+              <p>Please connect your Stellar wallet to authorize and sign the creation transaction.</p>
+              <button
+                type="button"
+                id="review-connect-wallet"
+                onClick={connect}
+                className={styles.connectWalletButton}
+              >
+                Connect Wallet
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className={styles.reviewHeading}>
-          <h2 className={styles.reviewTitle}>Review & Confirm</h2>
+          <h2 ref={headingRef} tabIndex={-1} className={styles.reviewTitle}>Review & Confirm</h2>
           <p className={styles.reviewSubtitle}>
             Please review your commitment details carefully — these parameters
             are enforced on-chain and cannot be changed after creation.
@@ -94,7 +261,7 @@ export default function CreateCommitmentStepReview({
         </div>
 
         {/* Review Sections */}
-        <div className={styles.reviewSections}>
+        <div className={styles.reviewSections} data-testid="review-sections">
           {/* Type Section */}
           <section
             className={styles.reviewSection}
@@ -260,10 +427,21 @@ export default function CreateCommitmentStepReview({
         </div>
 
         {/* Checkboxes */}
-        <div className={styles.checkboxSection}>
+        <div className={styles.checkboxSection} data-testid="review-checkboxes">
           <div
+            id="acceptedTerms"
             className={styles.checkboxRow}
+            role="checkbox"
+            aria-checked={acceptedTerms}
+            aria-labelledby="terms-label"
+            tabIndex={0}
             onClick={() => setAcceptedTerms(!acceptedTerms)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setAcceptedTerms(!acceptedTerms);
+              }
+            }}
           >
             <CheckCircle2
               className={`${styles.checkIcon} ${acceptedTerms ? styles.checkIconActive : ""}`}
@@ -271,9 +449,9 @@ export default function CreateCommitmentStepReview({
               aria-hidden="true"
             />
             <div className={styles.checkboxContent}>
-              <label>
+              <span id="terms-label">
                 <h4>I agree to the terms and conditions</h4>
-              </label>
+              </span>
               <p>
                 I have read and understand the{" "}
                 <a href="#" className={styles.link}>
@@ -285,8 +463,19 @@ export default function CreateCommitmentStepReview({
           </div>
 
           <div
+            id="acknowledgedRisks"
             className={styles.checkboxRow}
+            role="checkbox"
+            aria-checked={acknowledgedRisks}
+            aria-labelledby="risks-label"
+            tabIndex={0}
             onClick={() => setAcknowledgedRisks(!acknowledgedRisks)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setAcknowledgedRisks(!acknowledgedRisks);
+              }
+            }}
           >
             <CheckCircle2
               className={`${styles.checkIcon} ${acknowledgedRisks ? styles.checkIconActive : ""}`}
@@ -294,9 +483,9 @@ export default function CreateCommitmentStepReview({
               aria-hidden="true"
             />
             <div className={styles.checkboxContent}>
-              <label>
+              <span id="risks-label">
                 <h4>I acknowledge the risks</h4>
-              </label>
+              </span>
               <p>
                 I understand that DeFi protocols carry inherent risks including
                 smart contract vulnerabilities, market volatility, and potential
@@ -322,12 +511,13 @@ export default function CreateCommitmentStepReview({
 
         {/* Footer */}
         <div className={styles.footer}>
-          {submitError && <p className={styles.submitError}>{submitError}</p>}
+          {submitError && <p className={styles.submitError} role="alert">{submitError}</p>}
           <button
             onClick={onSubmit}
             disabled={!canSubmit}
             className={styles.createButton}
             aria-disabled={!canSubmit}
+            data-testid="create-commitment-submit"
           >
             {isSubmitting ? (
               <>

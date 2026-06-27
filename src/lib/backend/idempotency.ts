@@ -18,7 +18,7 @@ export interface KVStore {
  * A simple in-memory KV store with TTL support.
  * Designed to be swapped with Redis or Vercel KV.
  */
-class InMemoryKVStore implements KVStore {
+export class InMemoryKVStore implements KVStore {
   private store = new Map<string, { value: any; expiresAt: number }>();
 
   async get<T>(key: string): Promise<T | null> {

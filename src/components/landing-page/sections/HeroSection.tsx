@@ -6,6 +6,7 @@ import { FaGithub, FaEnvelope } from "react-icons/fa";
 import { IoDocumentText } from "react-icons/io5";
 import { motion, Variants } from "framer-motion";
 import Link from "next/link";
+import { useTranslations } from "@/lib/i18n";
 
 const containerVariants: Variants = {
   hidden: {},
@@ -22,6 +23,8 @@ const itemVariants: Variants = {
 };
 
 export const HeroSection: React.FC = () => {
+  const t = useTranslations();
+
   return (
     <div className="min-h-screen w-full pb-10 bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
       <div className="relative w-full aspect-[1680/823.333]">
@@ -48,12 +51,12 @@ export const HeroSection: React.FC = () => {
                 </div>
                 <div className="absolute inset-0 rounded-full shadow-[inset_0px_0px_15px_0px_rgba(245,245,247,0.3)]" />
                 <p className="relative font-roboto font-normal text-white text-lg sm:text-xl lg:text-2xl leading-8 text-center z-10">
-                  C
+                  {t("landing.hero.brand_letter")}
                 </p>
               </div>
               <div className="flex items-center pt-2">
                 <h1 className="font-roboto font-medium text-[#f5f5f7] text-xl sm:text-3xl lg:text-[30px] leading-9">
-                  CommitLabs
+                  {t("landing.hero.brand_name")}
                 </h1>
               </div>
             </motion.div>
@@ -64,13 +67,13 @@ export const HeroSection: React.FC = () => {
               className="flex flex-col items-center mb-6"
             >
               <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl xl:text-[85px] leading-tight text-center bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
-                Liquidity as a
+                {t("landing.hero.heading_line1")}
               </h2>
               <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl xl:text-[85px] leading-tight text-center bg-clip-text text-transparent bg-linear-to-b from-[#0ff0fc] to-[#0a7a82]">
-                commitment,
+                {t("landing.hero.heading_line2")}
               </h2>
               <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl xl:text-[85px] leading-tight text-center bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
-                not a guess.
+                {t("landing.hero.heading_line3")}
               </h2>
             </motion.div>
 
@@ -80,9 +83,7 @@ export const HeroSection: React.FC = () => {
               variants={itemVariants}
               className="font-['Inter',sans-serif] font-normal text-[#99a1af] text-base sm:text-lg lg:text-2xl leading-relaxed lg:leading-9.75 text-center max-w-176.25 mb-2 tracking-[0.0703px] px-4"
             >
-              Building core DeFi infrastructure that transforms passive
-              liquidity into enforceable, attestable, and composable on-chain
-              commitments.
+              {t("landing.hero.description")}
             </motion.p>
 
             {/* CTA Button */}
@@ -92,12 +93,12 @@ export const HeroSection: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <Link href="/create" legacyBehavior>
                   <a className="bg-[#0ff0fc] text-black font-medium py-3 px-6 rounded-md hover:bg-[#0a7a82] transition-colors">
-                    Create commitment
+                    {t("landing.hero.cta_create")}
                   </a>
                 </Link>
                 <Link href="/marketplace" legacyBehavior>
                   <a className="bg-[#0a0a0a] border border-[#0ff0fc] text-[#0ff0fc] font-medium py-3 px-6 rounded-md hover:bg-[#0ff0fc] hover:text-black transition-colors">
-                    Explore marketplace
+                    {t("landing.hero.cta_explore")}
                   </a>
                 </Link>
               </div>

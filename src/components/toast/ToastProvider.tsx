@@ -26,6 +26,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const timerStartedAtRef = useRef<Map<string, number>>(new Map());
+  const timerRemainingRef = useRef<Map<string, number>>(new Map());
   const reducedMotion = useRef<boolean>(false);
 
   useEffect(() => {
@@ -50,25 +52,44 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer);
       timersRef.current.delete(id);
     }
+    timerStartedAtRef.current.delete(id);
+    timerRemainingRef.current.delete(id);
   }, []);
 
   const dismissAll = useCallback(() => {
     timersRef.current.forEach((timer) => clearTimeout(timer));
     timersRef.current.clear();
+    timerStartedAtRef.current.clear();
+    timerRemainingRef.current.clear();
     setToasts([]);
     setVisibleIds(new Set());
   }, []);
 
+  const startTimer = useCallback(
+    (id: string, duration: number) => {
+      if (duration <= 0 || timersRef.current.has(id)) return;
+
+      timerStartedAtRef.current.set(id, Date.now());
+      const timer = setTimeout(() => {
+        dismiss(id);
+      }, duration);
+      timersRef.current.set(id, timer);
+    },
+    [dismiss]
+  );
+
   const showToast = useCallback(
     (severity: ToastSeverity, options: ToastOptions) => {
       const id = generateId();
+      const duration = options.duration ?? DEFAULT_DURATION;
       const toast: Toast = {
         id,
         severity,
         title: options.title,
         description: options.description,
-        duration: options.duration ?? DEFAULT_DURATION,
+        duration,
         createdAt: Date.now(),
+        action: options.action,
       };
 
       setToasts((prev) => {
@@ -79,6 +100,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             const timer = timersRef.current.get(t.id);
             if (timer) clearTimeout(timer);
             timersRef.current.delete(t.id);
+            timerStartedAtRef.current.delete(t.id);
+            timerRemainingRef.current.delete(t.id);
           });
           return next.slice(0, MAX_VISIBLE_TOASTS);
         }
@@ -91,17 +114,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         return next;
       });
 
-      const duration = options.duration ?? DEFAULT_DURATION;
       if (duration > 0) {
-        const timer = setTimeout(() => {
-          dismiss(id);
-        }, duration);
-        timersRef.current.set(id, timer);
+        timerRemainingRef.current.set(id, duration);
+        startTimer(id, duration);
       }
 
       return id;
     },
-    [dismiss]
+    [startTimer]
   );
 
   const pauseTimer = useCallback((id: string) => {
@@ -109,21 +129,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (timer) {
       clearTimeout(timer);
       timersRef.current.delete(id);
+      const startedAt = timerStartedAtRef.current.get(id) ?? Date.now();
+      const remaining = timerRemainingRef.current.get(id) ?? DEFAULT_DURATION;
+      timerRemainingRef.current.set(id, Math.max(0, remaining - (Date.now() - startedAt)));
+      timerStartedAtRef.current.delete(id);
     }
   }, []);
 
   const resumeTimer = useCallback(
     (id: string) => {
       const toast = toasts.find((t) => t.id === id);
-      if (!toast) return;
-      const elapsed = Date.now() - toast.createdAt;
-      const remaining = Math.max(0, (toast.duration ?? DEFAULT_DURATION) - elapsed);
-      const timer = setTimeout(() => {
-        dismiss(id);
-      }, remaining);
-      timersRef.current.set(id, timer);
+      if (!toast || timersRef.current.has(id)) return;
+      const remaining = timerRemainingRef.current.get(id) ?? toast.duration ?? DEFAULT_DURATION;
+      if (remaining > 0) {
+        startTimer(id, remaining);
+      }
     },
-    [toasts, dismiss]
+    [toasts, startTimer]
   );
 
   const success = useCallback(

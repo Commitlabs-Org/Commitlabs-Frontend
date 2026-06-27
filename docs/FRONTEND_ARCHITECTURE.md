@@ -82,7 +82,15 @@ api/
 
 ---
 
+## Fonts & typography
+
+Fonts are loaded via `next/font/google` in `src/app/layout.tsx` to avoid render-blocking `@import` of remote Google Fonts stylesheets.
+
+- `Inter` and `Roboto Mono` are self-hosted and configured with `display: swap`.
+- Tailwind’s font theme uses the existing `--font-roboto` CSS variable.
+
 ## Wallet & Auth State Flow
+
 
 ### Auth flow
 
@@ -225,6 +233,8 @@ Footer
 ---
 
 ## Shared Components
+
+Component file convention: shared React components in `src/` should use TypeScript (`.ts`/`.tsx`) rather than untyped `.jsx` files.
 
 | Component | File | Usage |
 |-----------|------|-------|

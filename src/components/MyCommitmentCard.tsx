@@ -1,5 +1,6 @@
 import React from "react";
 import { Commitment } from "@/types/commitment";
+import type { MarketplaceListing } from "@/types/marketplace";
 import Link from "next/link";
 import {
   SafeIcon,
@@ -13,6 +14,8 @@ import { TrendingUp as Increase, TrendingDown as Decrease, Tag } from "lucide-re
 
 interface MyCommitmentCardProps {
   commitment: Commitment;
+  listing?: MarketplaceListing;
+  sellerAddress?: string;
   onDetails?: (id: string) => void;
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
@@ -21,6 +24,8 @@ interface MyCommitmentCardProps {
 
 const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   commitment,
+  listing,
+  sellerAddress,
   onDetails,
   onAttestations,
   onEarlyExit,
@@ -234,6 +239,17 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
           <span className="text-white font-roboto">{expiryDate}</span>
         </div>
       </div>
+
+      {listing && sellerAddress && (
+        <div className="rounded-[10px] border border-white/5 bg-[#FFFFFF05] px-3 py-2.5">
+          <RelistPriceEditor
+            listing={listing}
+            sellerAddress={sellerAddress}
+            commitmentAsset={asset}
+            onPriceUpdated={(newPrice) => onListingPriceUpdated?.(id, newPrice)}
+          />
+        </div>
+      )}
 
       <div className="mt-2 flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-3">

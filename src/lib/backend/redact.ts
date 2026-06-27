@@ -16,15 +16,14 @@ const DEFAULT_DENYLIST = new Set([
   'password',
   'secret',
   'key',
-  'privateKey',
-  'publicKey',
+  'privatekey',
+  'publickey',
   'mnemonic',
   'seed',
   'hash',
   'digest',
   'auth',
   'bearer',
-  'apikey',
   'apikey',
   'api_key',
   'session',
@@ -61,18 +60,17 @@ export function redact<T = unknown>(data: T, options: RedactOptions = {}): T {
   } = options
 
   // Combine default denylist with custom denylist
-  const denylistSet = new Set([
-    ...DEFAULT_DENYLIST,
-    ...denylist
-  ])
+  const denylistSet = new Set(
+    [...DEFAULT_DENYLIST, ...denylist].map(key =>
+      caseInsensitive ? key.toLowerCase() : key
+    )
+  )
 
   // Create case-insensitive matcher if enabled
   const shouldRedact = caseInsensitive
     ? (key: string): boolean => {
         const lowerKey = key.toLowerCase()
-        return Array.from(denylistSet).some(denyKey => 
-          denyKey.toLowerCase() === lowerKey
-        )
+        return denylistSet.has(lowerKey)
       }
     : (key: string): boolean => denylistSet.has(key)
 
