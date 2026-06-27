@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { NotificationSection } from '@/components/settings/NotificationSection'
 import { NotificationToggle } from '@/components/settings/NotificationToggle'
 import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { AccountWalletSection } from '@/components/settings/AccountWalletSection'
 import { 
   ShieldAlert, 
   Clock, 
@@ -66,13 +67,15 @@ export default function SettingsPage() {
           className="mb-12"
         >
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-4 bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-            Notification Preferences
+            Settings
           </h1>
           <p className="text-lg text-white/50 max-w-2xl leading-relaxed">
-            Manage how and when you receive updates about your commitments, 
-            market activity, and account security.
+            Manage your account, wallet, and notification preferences.
           </p>
         </motion.div>
+
+        {/* Account & Wallet */}
+        <AccountWalletSection />
 
         {/* Violations & Security */}
         <NotificationSection 
