@@ -11,6 +11,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Backend API Changelog](#backend-api-changelog)
+- [Commitment Detail Header Copy](docs/DETAIL_HEADER_COPY.md)
 - [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md)
 - [Contributing](#contributing)
 - [API Reference](#api-reference)
