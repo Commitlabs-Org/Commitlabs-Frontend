@@ -1,5 +1,9 @@
 import React from "react";
 
+// Decorative only — hidden from assistive tech, never intercepts pointer events.
+// Animation is opt-in via motion-safe so prefers-reduced-motion:reduce users
+// always see static stars (no layout thrash; pure CSS transform/opacity).
+
 const stars = [
   { left: 1056.99, top: 101.12, opacity: 0.57 },
   { left: 1184.99, top: 65.96, opacity: 0.76 },
@@ -54,11 +58,14 @@ const stars = [
 ];
 
 export const StarField: React.FC = () => (
-  <div className="absolute inset-0 overflow-hidden hidden md:block">
+  <div
+    aria-hidden="true"
+    className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none"
+  >
     {stars.map((star, index) => (
       <div
         key={index}
-        className="absolute bg-white rounded-full w-[0.998px] h-[0.998px]"
+        className="absolute bg-white rounded-full w-[0.998px] h-[0.998px] motion-safe:animate-pulse"
         style={{
           left: `${(star.left / 1680) * 100}%`,
           top: `${(star.top / 823.333) * 100}%`,
