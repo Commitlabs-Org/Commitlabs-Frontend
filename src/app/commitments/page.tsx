@@ -13,6 +13,7 @@ import { useWallet } from '@/hooks/useWallet'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
 import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
+import { AppShellLayout } from '@/components/shell/AppShellLayout'
 
 const mockCommitments: Commitment[] = [
   {
@@ -268,12 +269,13 @@ export default function MyCommitments() {
   }, [earlyExitCommitmentId, earlyExitSummary, commitmentsList, closeEarlyExitModal])
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <MyCommitmentsHeader
-        onBack={() => router.push('/')}
-        onCreateNew={() => router.push('/create')}
-        onExport={() => setIsExportOpen(true)}
-      />
+    <AppShellLayout>
+      <main id="main-content" className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <MyCommitmentsHeader
+          onBack={() => router.push('/')}
+          onCreateNew={() => router.push('/create')}
+          onExport={() => setIsExportOpen(true)}
+        />
 
       {successMessage && (
         <div className="mx-22 mt-4 rounded-[28px] border border-[#0ff0fc1a] bg-[#0ff0fc0d] px-6 py-4 text-[#e6fffe] shadow-[0_20px_60px_rgba(15,240,252,0.12)] max-[1024px]:mx-8 max-[640px]:mx-4">
@@ -352,5 +354,6 @@ export default function MyCommitments() {
         ownerAddress={address}
       />
     </main>
+    </AppShellLayout>
   )
 }

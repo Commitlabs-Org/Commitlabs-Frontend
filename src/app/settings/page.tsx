@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Navigation } from '@/components/landing-page/Navigation'
-import Footer from '@/components/landing-page/Footer'
 import { NotificationSection } from '@/components/settings/NotificationSection'
 import { NotificationToggle } from '@/components/settings/NotificationToggle'
+import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { 
   ShieldAlert, 
   Clock, 
@@ -58,10 +57,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0a] text-white">
-      <Navigation />
-
-      <main id="main-content" className="mx-auto max-w-4xl px-4 pt-32 pb-24">
+    <AppShellLayout>
+      <div className="min-h-screen w-full bg-[#0a0a0a] text-white">
+        <main id="main-content" className="mx-auto max-w-4xl px-4 pt-12 pb-24">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -232,8 +230,7 @@ export default function SettingsPage() {
           )}
         </AnimatePresence>
       </main>
-
-      <Footer />
     </div>
+    </AppShellLayout>
   )
 }
