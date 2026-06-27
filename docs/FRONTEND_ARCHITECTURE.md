@@ -226,6 +226,8 @@ Footer
 
 ## Shared Components
 
+Component file convention: shared React components in `src/` should use TypeScript (`.ts`/`.tsx`) rather than untyped `.jsx` files.
+
 | Component | File | Usage |
 |-----------|------|-------|
 | `ErrorLayout` | `src/components/ErrorLayout.tsx` | 500, 404, network-error, transaction-error pages |
