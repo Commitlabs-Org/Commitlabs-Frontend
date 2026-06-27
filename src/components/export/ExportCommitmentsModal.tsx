@@ -111,6 +111,8 @@ export default function ExportCommitmentsModal({
       const url = new URL(endpoint, window.location.origin);
       url.searchParams.set('ownerAddress', normalizedAddress);
 
+      // Since the endpoint returns a CSV blob, we need to handle it differently.
+      // We'll use the original fetch for blob retrieval after confirming auth.
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {

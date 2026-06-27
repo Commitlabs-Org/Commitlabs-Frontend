@@ -27,9 +27,6 @@ export interface ProtocolConstants {
 }
 
 export async function fetchProtocolConstants(): Promise<ProtocolConstants> {
-  const response = await fetch('/api/protocol/constants');
-  if (!response.ok) {
-    throw new Error(`Failed to fetch protocol constants: ${response.statusText}`);
-  }
-  return response.json();
+  const data = await apiFetch<ProtocolConstants>('/api/protocol/constants');
+  return data;
 }

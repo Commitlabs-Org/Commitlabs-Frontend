@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Search, ArrowLeft } from 'lucide-react'
-import styles from './MarketplaceHeader.module.css'
+import { apiFetch } from '@/lib/apiClient';
 
 // Types for marketplace stats fetched from the API
 interface MarketplaceStats {
@@ -55,10 +55,13 @@ export function MarketplaceHeader({
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch('/api/marketplace/stats');
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data = await res.json();
+        try {
+        const data = await apiFetch<MarketplaceStats>('/api/marketplace/stats');
         setStats(data);
+      } catch (e) {
+        const err = e as Error;
+        setStatsError(err.message);
+      }
       } catch (e) {
         setStatsError((e as Error).message);
       }
