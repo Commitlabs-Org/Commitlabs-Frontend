@@ -9,6 +9,7 @@ import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
 import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
 import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal'
+import { useToast } from '@/components/toast/ToastProvider'
 import { useWallet } from '@/hooks/useWallet'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
@@ -133,6 +134,7 @@ function getEarlyExitValues(originalAmount: string, asset: string, penaltyPercen
 
 export default function MyCommitments() {
   const router = useRouter()
+  const toast = useToast()
   const { address } = useWallet()
 
   // State
@@ -145,7 +147,6 @@ export default function MyCommitments() {
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [protocolConstants, setProtocolConstants] = useState<ProtocolConstants | null>(null)
   const [, setIsLoadingConstants] = useState(true)
@@ -224,7 +225,6 @@ export default function MyCommitments() {
 
   // Callbacks
   const openEarlyExitModal = useCallback((id: string) => {
-    setSuccessMessage(null)
     setEarlyExitCommitmentId(id)
     setHasAcknowledged(false)
   }, [])
@@ -260,12 +260,25 @@ export default function MyCommitments() {
       )
     )
 
-    setSuccessMessage(
-      `Early exit confirmed for ${committed.id}. ${earlyExitSummary.penaltyPercent} penalty applied; you will receive ${earlyExitSummary.netReceiveAmount}.`
-    )
+    toast.success({
+      title: 'Early exit confirmed',
+      description: `${committed.id} was moved to Early Exit. ${earlyExitSummary.penaltyPercent} penalty applied; you will receive ${earlyExitSummary.netReceiveAmount}.`,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setCommitmentsList((current) =>
+            current.map((commitment) =>
+              commitment.id === committed.id
+                ? { ...commitment, status: committed.status }
+                : commitment
+            )
+          )
+        },
+      },
+    })
 
     closeEarlyExitModal()
-  }, [earlyExitCommitmentId, earlyExitSummary, commitmentsList, closeEarlyExitModal])
+  }, [earlyExitCommitmentId, earlyExitSummary, commitmentsList, closeEarlyExitModal, toast])
 
   return (
     <main id="main-content" className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -274,24 +287,6 @@ export default function MyCommitments() {
         onCreateNew={() => router.push('/create')}
         onExport={() => setIsExportOpen(true)}
       />
-
-      {successMessage && (
-        <div className="mx-22 mt-4 rounded-[28px] border border-[#0ff0fc1a] bg-[#0ff0fc0d] px-6 py-4 text-[#e6fffe] shadow-[0_20px_60px_rgba(15,240,252,0.12)] max-[1024px]:mx-8 max-[640px]:mx-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-6 text-white/90">{successMessage}</p>
-            <button
-              type="button"
-              onClick={() => setSuccessMessage(null)}
-              className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#0ff0fc] hover:text-white transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-          <p className="mt-2 text-[13px] text-white/70">
-            This commitment has been updated to Early Exit status in your portfolio. Check the list for the new status and confirm any remaining settlement details.
-          </p>
-        </div>
-      )}
 
       <div className="w-full flex-1 px-22 py-8 max-[1024px]:px-8 max-[640px]:px-4">
         {isLoading ? (

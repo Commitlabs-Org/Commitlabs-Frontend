@@ -7,12 +7,20 @@ export interface Toast {
   description?: string;
   duration?: number;
   createdAt: number;
+  action?: ToastAction;
+}
+
+export interface ToastAction {
+  label: string;
+  onClick: () => void | Promise<void>;
+  dismiss?: boolean;
 }
 
 export interface ToastOptions {
   title: string;
   description?: string;
   duration?: number;
+  action?: ToastAction;
 }
 
 export interface ToastContextValue {
