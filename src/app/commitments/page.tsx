@@ -9,6 +9,7 @@ import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
 import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
 import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal'
+import ListForSaleModal from '@/components/modals/ListForSaleModal'
 import { useWallet } from '@/hooks/useWallet'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
@@ -142,6 +143,7 @@ export default function MyCommitments() {
   const [sortBy, setSortBy] = useState('Newest')
 
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
+  const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
@@ -196,6 +198,9 @@ export default function MyCommitments() {
   }, [commitmentsList, searchQuery, statusFilter, typeFilter, sortBy])
 
   const commitmentForEarlyExit = commitmentsList.find((c) => c.id === earlyExitCommitmentId)
+  const commitmentForListing = listingCommitmentId
+    ? commitmentsList.find((c) => c.id === listingCommitmentId) ?? null
+    : null
   const earlyExitSummary = useMemo(() => {
     if (!commitmentForEarlyExit) return null
 
@@ -228,6 +233,26 @@ export default function MyCommitments() {
     setEarlyExitCommitmentId(id)
     setHasAcknowledged(false)
   }, [])
+
+  const openListForSaleModal = useCallback((id: string) => {
+    setSuccessMessage(null)
+    setListingCommitmentId(id)
+  }, [])
+
+  const closeListForSaleModal = useCallback(() => {
+    setListingCommitmentId(null)
+  }, [])
+
+  const handleListForSaleSuccess = useCallback((listingId: string) => {
+    if (!listingCommitmentId) return
+    const committed = commitmentsList.find((c) => c.id === listingCommitmentId)
+    if (!committed) return
+    setSuccessMessage(
+      listingId
+        ? `${committed.id} is now listed on the marketplace as ${listingId}. Buyers will see it in the listings grid.`
+        : `${committed.id} is now listed on the marketplace. Buyers will see it in the listings grid.`
+    )
+  }, [commitmentsList, listingCommitmentId])
 
   // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
   // own commitment changes, not on every filter/sort that re-runs this page.
@@ -325,6 +350,7 @@ export default function MyCommitments() {
               onDetails={handleViewDetails}
               onAttestations={handleViewAttestations}
               onEarlyExit={openEarlyExitModal}
+              onListForSale={openListForSaleModal}
             />
           </>
         )}
@@ -351,6 +377,17 @@ export default function MyCommitments() {
         onClose={() => setIsExportOpen(false)}
         ownerAddress={address}
       />
+
+      {commitmentForListing && (
+        <ListForSaleModal
+          isOpen={true}
+          commitmentId={commitmentForListing.id}
+          asset={commitmentForListing.asset}
+          sellerAddress={address}
+          onClose={closeListForSaleModal}
+          onSuccess={handleListForSaleSuccess}
+        />
+      )}
     </main>
   )
 }
