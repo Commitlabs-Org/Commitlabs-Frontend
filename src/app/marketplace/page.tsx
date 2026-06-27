@@ -7,6 +7,8 @@ import { MarketplaceGrid } from '@/components/MarketplaceGrid'
 import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 import MarketplaceFilters from '@/components/MarketplaceFilter/MarketplaceFilters'
 import { MarketplaceGridSkeleton } from '@/components/MarketplaceGridSkeleton'
+import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { TrustBadge } from '@/components/TrustBadge'
 
 // Interfaces matching the components
 interface Filters {
@@ -426,8 +428,9 @@ export default function Marketplace() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0a] text-white overflow-x-hidden">
-      <main id="main-content" className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 pt-24 md:pt-32 pb-10 relative">
+    <AppShellLayout>
+      <div className="min-h-screen w-full bg-[#0a0a0a] text-white overflow-x-hidden">
+        <main id="main-content" className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 pt-8 md:pt-12 pb-10 relative">
         <MarketplaceHeader
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -501,5 +504,6 @@ export default function Marketplace() {
         }
       `}</style>
     </div>
+    </AppShellLayout>
   )
 }

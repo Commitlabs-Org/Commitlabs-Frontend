@@ -52,19 +52,55 @@ but inherits any fields not explicitly set (e.g. `robots`, `verification`).
 
 ### Dynamic routes
 
-For dynamic routes like `/commitments/[id]`, use `generateMetadata`:
+For dynamic routes like `/commitments/[id]`, use `generateMetadata`. Because the page itself
+is a client component (`'use client'`), place `generateMetadata` in the sibling
+`layout.tsx` server component:
 
 ```ts
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+// src/app/commitments/[id]/layout.tsx
+import type { Metadata } from 'next'
+
+type Props = { params: { id: string } }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const id = params.id
+  const title = `Commitment #${id} — CommitLabs`
+  const description = `View performance metrics, compliance scores, and activity for commitment #${id} on CommitLabs.`
   return {
-    title: `Commitment #${params.id} — CommitLabs`,
-    description: `Details and performance data for commitment #${params.id}.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://commitlabs.com/commitments/${id}`,
+      siteName: 'CommitLabs',
+      images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: title }],
+      locale: 'en_US',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/og-image.jpg'],
+    },
   }
+}
+
+export default function CommitmentDetailLayout({ children }: { children: React.ReactNode }) {
+  return children
 }
 ```
 
 The page **must** be a server component (or wrapped in a server-component layout) to use
 `generateMetadata`.
+
+### Implemented per-route metadata
+
+| Route | File | Metadata type | Notes |
+|-------|------|--------------|-------|
+| `/commitments/[id]` | `src/app/commitments/[id]/layout.tsx` | `generateMetadata` | Derives title/OG from `params.id`; safe fallback for unknown ids |
+| `/marketplace` | `src/app/marketplace/layout.tsx` | `export const metadata` | Static; full OG + Twitter card |
 
 ## Sitemap
 

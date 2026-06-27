@@ -2,6 +2,49 @@
 
 This project supports multiple smart contract versions and addresses via a centralized configuration accessor.
 
+## Client-Side Environment Variable Validation
+
+Client-side environment variables (those prefixed with `NEXT_PUBLIC_*`) are validated at startup by `src/lib/clientEnv.ts` using Zod. This ensures that:
+
+- Misconfigured or missing public env vars fail fast with clear error messages
+- Invalid URLs are caught before runtime
+- Accidental exposure of non-public secrets as `NEXT_PUBLIC_*` is prevented
+- All client config is type-safe through TypeScript
+
+### Validated Client Environment Variables
+
+The following `NEXT_PUBLIC_*` variables are validated by the client env module:
+
+- `NEXT_PUBLIC_SOROBAN_RPC_URL` - Soroban RPC endpoint (URL format validated)
+- `NEXT_PUBLIC_NETWORK_PASSPHRASE` - Stellar network passphrase
+- `NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT` - NFT contract address
+- `NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT` - Core contract address
+- `NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT` - Attestation contract address
+- `NEXT_PUBLIC_CONTRACTS_JSON` - JSON blob for contract configuration
+- `NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION` - Active contract version
+- `NEXT_PUBLIC_USE_MOCKS` - Mock mode flag
+- `NEXT_PUBLIC_APP_URL` - Application URL (for CORS)
+- `NEXT_PUBLIC_SITE_URL` - Site URL (for CORS)
+
+### Usage in Client Code
+
+Import and use the validated client env in client-side code:
+
+```typescript
+import { getValidatedClientEnv } from '@/lib/clientEnv';
+
+const clientEnv = getValidatedClientEnv();
+const rpcUrl = clientEnv.NEXT_PUBLIC_SOROBAN_RPC_URL;
+```
+
+### Error Handling
+
+If validation fails, a `ClientEnvValidationError` is thrown with a clear message indicating which variables are invalid or missing. In development and production, validation happens eagerly at module load time to catch issues early.
+
+### Security Note
+
+Never include secrets in `NEXT_PUBLIC_*` variables. These are exposed to the browser and should only contain non-sensitive configuration data.
+
 ## Config sources
 
 - `NEXT_PUBLIC_CONTRACTS_JSON` (preferred): JSON string mapping versions to contract entries.

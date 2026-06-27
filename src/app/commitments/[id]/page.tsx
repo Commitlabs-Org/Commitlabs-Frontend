@@ -12,7 +12,9 @@ import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/Recent
 import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal';
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal';
 import CommitmentDisputeModal from '@/components/modals/CommitmentDisputeModal';
+import DisputeStatusTracker, { type DisputeInfo } from '@/components/dispute/DisputeStatusTracker';
 import { openExplorerUrl } from '@/utils/explorerLinks';
+import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -21,6 +23,17 @@ const MOCK_COMMITMENTS: Record<
 > = {
   '1': { id: '1', type: 'Balanced', duration: 60, maxLoss: 8, earlyExitPenaltyPercent: 3, canEarlyExit: true },
   '2': { id: '2', type: 'Safe', duration: 30, maxLoss: 2, earlyExitPenaltyPercent: 3, canEarlyExit: false },
+};
+
+// Mock dispute state — populated from /api/commitments/[id] status + history in production
+const MOCK_DISPUTES: Record<string, DisputeInfo | null> = {
+  '1': {
+    stage: 'under_review',
+    filedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    reasonCategory: 'Compliance violation',
+    reviewStartedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  '2': null,
 };
 
 // Mock data for health metrics
@@ -129,6 +142,8 @@ export default function CommitmentDetailPage({
     const commitment = getCommitmentById(params.id)
     if (!commitment) notFound()
 
+    const dispute = MOCK_DISPUTES[params.id] ?? null;
+
     const durationLabel = `${commitment.duration} days`
     const maxLossLabel = `${commitment.maxLoss}%`
     const commitmentTypeLabel = commitment.type
@@ -173,126 +188,181 @@ export default function CommitmentDetailPage({
     }, []);
 
     return (
-        <main id="main-content" className="min-h-screen bg-[#050505] text-[#f5f5f7] p-4 sm:p-8 lg:p-12">
-            <div className="max-w-7xl mx-auto space-y-8">
-                
-                <header className="flex flex-col gap-4">
-                    <Link
-                        href="/commitments"
-                        className="text-[#666] hover:text-[#0ff0fc] transition-colors text-sm w-fit"
-                        aria-label="Back to My Commitments"
-                    >
-                        ← Back to My Commitments
-                    </Link>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
-                                {commitment.type} Commitment #{commitment.id}
-                            </h1>
-                            <p className="text-[#99a1af] mt-2">
-                                Active • {commitment.type} Strategy
-                            </p>
+        <CommitmentStatusProvider commitmentId={commitment.id}>
+            <main id="main-content" className="min-h-screen bg-[#050505] text-[#f5f5f7] p-4 sm:p-8 lg:p-12">
+                <div className="max-w-7xl mx-auto space-y-8">
+                    
+                    <header className="flex flex-col gap-4">
+                        <Link
+                            href="/commitments"
+                            className="text-[#666] hover:text-[#0ff0fc] transition-colors text-sm w-fit"
+                            aria-label="Back to My Commitments"
+                        >
+                            ← Back to My Commitments
+                        </Link>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
+                                    {commitment.type} Commitment #{commitment.id}
+                                </h1>
+                                <p className="text-[#99a1af] mt-2">
+                                    {commitment.type} Strategy
+                                </p>
+                            </div>
+                            <div className="hidden sm:block">
+                                <StatusBadge />
+                            </div>
                         </div>
-                        <div className="hidden sm:block">
-                            <span className="px-4 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[#0ff0fc] text-sm font-medium">
-                                Active
-                            </span>
-                        </div>
-                    </div>
-                </header>
+                    </header>
 
-                <div className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
-                    <CommitmentDetailParameters
-                        durationLabel={durationLabel}
-                        maxLossLabel={maxLossLabel}
-                        commitmentTypeLabel={commitmentTypeLabel}
-                        earlyExitPenaltyLabel={earlyExitPenaltyLabel}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                    <div className="lg:col-span-2 space-y-8">
-                        <CommitmentHealthMetrics 
-                            complianceData={MOCK_COMPLIANCE_DATA}
-                            drawdownData={MOCK_DRAWDOWN_DATA}
-                            valueHistoryData={MOCK_VALUE_HISTORY_DATA}
-                            feeGenerationData={MOCK_FEE_GENERATION_DATA}
-                            thresholdPercent={0.5}
-                            volatilityPercent={35}
+                    <div className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
+                        <CommitmentDetailParameters
+                            durationLabel={durationLabel}
+                            maxLossLabel={maxLossLabel}
+                            commitmentTypeLabel={commitmentTypeLabel}
+                            earlyExitPenaltyLabel={earlyExitPenaltyLabel}
                         />
+                    </div>
 
-                        <div ref={attestationsRef} id="attestations-section">
-                            <RecentAttestationsPanel
-                                attestations={MOCK_ATTESTATIONS}
-                                summary={MOCK_ATTESTATION_SUMMARY}
-                                onSelectAttestation={(id) => console.log('Selected attestation:', id)}
-                                onViewAll={() => console.log('View all attestations')}
+                    <DisputeStatusTracker dispute={dispute} />
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                        <div className="lg:col-span-2 space-y-8">
+                            <CommitmentHealthMetrics 
+                                complianceData={MOCK_COMPLIANCE_DATA}
+                                drawdownData={MOCK_DRAWDOWN_DATA}
+                                valueHistoryData={MOCK_VALUE_HISTORY_DATA}
+                                feeGenerationData={MOCK_FEE_GENERATION_DATA}
+                                thresholdPercent={0.5}
+                                volatilityPercent={35}
+                            />
+
+                            <div ref={attestationsRef} id="attestations-section">
+                                <RecentAttestationsPanel
+                                    attestations={MOCK_ATTESTATIONS}
+                                    summary={MOCK_ATTESTATION_SUMMARY}
+                                    onSelectAttestation={(id) => console.log('Selected attestation:', id)}
+                                    onViewAll={() => console.log('View all attestations')}
+                                />
+                            </div>
+                            
+                            <CommitmentDetailAllocationConstraints 
+                                constraints={[
+                                    { id: '1', text: 'Max 50% allocation to any single protocol' },
+                                    { id: '2', text: 'Only whitelisted DeFi protocols allowed' },
+                                    { id: '3', text: 'Minimum 20% must remain in stablecoins' },
+                                ]}
                             />
                         </div>
-                        
-                        <CommitmentDetailAllocationConstraints 
-                            constraints={[
-                                { id: '1', text: 'Max 50% allocation to any single protocol' },
-                                { id: '2', text: 'Only whitelisted DeFi protocols allowed' },
-                                { id: '3', text: 'Minimum 20% must remain in stablecoins' },
-                            ]}
-                        />
-                    </div>
 
-                    <div className="lg:col-span-1 w-full space-y-8">
-                        <CommitmentDetailNftSection 
-                            tokenId={MOCK_NFT_DATA.tokenId}
-                            ownerAddress={MOCK_NFT_DATA.ownerAddress}
-                            contractAddress={MOCK_NFT_DATA.contractAddress}
-                            mintDate={MOCK_NFT_DATA.mintDate}
-                            onCopyTokenId={() => handleCopy(MOCK_NFT_DATA.tokenId, 'Token ID')}
-                            onCopyOwner={() => handleCopy(MOCK_NFT_DATA.ownerAddress, 'Owner Address')}
-                            onCopyContract={() => handleCopy(MOCK_NFT_DATA.contractAddress, 'Contract Address')}
-                            onViewDetails={handleViewDetails}
-                            onViewOnExplorer={handleViewExplorer}
-                            onTransfer={handleTransfer}
-                        />
+                        <div className="lg:col-span-1 w-full space-y-8">
+                            <CommitmentDetailNftSection 
+                                tokenId={MOCK_NFT_DATA.tokenId}
+                                ownerAddress={MOCK_NFT_DATA.ownerAddress}
+                                contractAddress={MOCK_NFT_DATA.contractAddress}
+                                mintDate={MOCK_NFT_DATA.mintDate}
+                                onCopyTokenId={() => handleCopy(MOCK_NFT_DATA.tokenId, 'Token ID')}
+                                onCopyOwner={() => handleCopy(MOCK_NFT_DATA.ownerAddress, 'Owner Address')}
+                                onCopyContract={() => handleCopy(MOCK_NFT_DATA.contractAddress, 'Contract Address')}
+                                onViewDetails={handleViewDetails}
+                                onViewOnExplorer={handleViewExplorer}
+                                onTransfer={handleTransfer}
+                            />
 
-                        <CommitmentDetailActions
-                            canEarlyExit={canEarlyExit}
-                            onEarlyExit={handleEarlyExit}
-                            onViewAttestations={handleViewAttestations}
-                            onExportData={handleExportData}
-                            onReportIssue={handleReportIssue}
-                            earlyExitDisabledReason="This commitment has already matured or was exited early"
-                        />
+                            <CommitmentDetailActionsUsingContext
+                                onEarlyExit={handleEarlyExit}
+                                onViewAttestations={handleViewAttestations}
+                                onExportData={handleExportData}
+                                onReportIssue={handleReportIssue}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <ExportCommitmentsModal
-                isOpen={exportModalOpen}
-                onClose={() => setExportModalOpen(false)}
-                ownerAddress={MOCK_OWNER_ADDRESS}
-            />
-
-            {earlyExitModalOpen && (
-                <CommitmentEarlyExitModal
-                    isOpen={earlyExitModalOpen}
-                    commitmentId={commitment.id}
-                    originalAmount="50,000 XLM"
-                    penaltyPercent={earlyExitPenaltyLabel}
-                    penaltyAmount="1,500 XLM"
-                    netReceiveAmount="48,500 XLM"
-                    hasAcknowledged={false}
-                    onChangeAcknowledged={() => {}}
-                    onCancel={() => setEarlyExitModalOpen(false)}
-                    onConfirm={() => {
-                        setEarlyExitModalOpen(false);
-                    }}
+                <ExportCommitmentsModal
+                    isOpen={exportModalOpen}
+                    onClose={() => setExportModalOpen(false)}
+                    ownerAddress={MOCK_OWNER_ADDRESS}
                 />
-            )}
 
-            <CommitmentDisputeModal
-                isOpen={disputeModalOpen}
-                commitmentId={commitment.id}
-                onClose={() => setDisputeModalOpen(false)}
-            />
-        </main>
+                {earlyExitModalOpen && (
+                    <CommitmentEarlyExitModal
+                        isOpen={earlyExitModalOpen}
+                        commitmentId={commitment.id}
+                        originalAmount="50,000 XLM"
+                        penaltyPercent={earlyExitPenaltyLabel}
+                        penaltyAmount="1,500 XLM"
+                        netReceiveAmount="48,500 XLM"
+                        hasAcknowledged={false}
+                        onChangeAcknowledged={() => {}}
+                        onCancel={() => setEarlyExitModalOpen(false)}
+                        onConfirm={() => {
+                            setEarlyExitModalOpen(false);
+                        }}
+                    />
+                )}
+
+                <CommitmentDisputeModal
+                    isOpen={disputeModalOpen}
+                    commitmentId={commitment.id}
+                    onClose={() => setDisputeModalOpen(false)}
+                />
+            </main>
+        </CommitmentStatusProvider>
     );
+
+function StatusBadge() {
+    const { status, isLoading } = useCommitmentStatus();
+    if (isLoading || !status) {
+        return (
+            <span className="px-4 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[#99a1af] text-sm font-medium">
+                Loading...
+            </span>
+        );
+    }
+    const getStatusColor = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'active':
+                return 'text-[#0ff0fc] border-[#0ff0fc]/30';
+            case 'settled':
+                return 'text-[#4ade80] border-[#4ade80]/30';
+            case 'violated':
+                return 'text-[#f87171] border-[#f87171]/30';
+            case 'early exit':
+                return 'text-[#fbbf24] border-[#fbbf24]/30';
+            default:
+                return 'text-[#99a1af] border-[#222]';
+        }
+    };
+    return (
+        <span className={`px-4 py-2 bg-[#1a1a1a] border rounded-lg text-sm font-medium ${getStatusColor(status.status)}`}>
+            {status.status}
+        </span>
+    );
+}
+
+function CommitmentDetailActionsUsingContext({
+    onEarlyExit,
+    onViewAttestations,
+    onExportData,
+    onReportIssue,
+}: {
+    onEarlyExit: () => void;
+    onViewAttestations: () => void;
+    onExportData: () => void;
+    onReportIssue: () => void;
+}) {
+    const { status } = useCommitmentStatus();
+    const canEarlyExit = status ? (status.status.toLowerCase() === 'active' && status.daysRemaining > 0) : false;
+    
+    return (
+        <CommitmentDetailActions
+            canEarlyExit={canEarlyExit}
+            onEarlyExit={onEarlyExit}
+            onViewAttestations={onViewAttestations}
+            onExportData={onExportData}
+            onReportIssue={onReportIssue}
+        />
+    );
+}
 }

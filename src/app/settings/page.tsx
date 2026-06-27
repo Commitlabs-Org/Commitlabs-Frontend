@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Navigation } from '@/components/landing-page/Navigation'
-import Footer from '@/components/landing-page/Footer'
 import { NotificationSection } from '@/components/settings/NotificationSection'
 import { NotificationToggle } from '@/components/settings/NotificationToggle'
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { AccountWalletSection } from '@/components/settings/AccountWalletSection'
 import { 
   ShieldAlert, 
   Clock, 
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   })
 
   const [isSaving, setIsSaving] = useState(false)
+  const { isDirty, resetBaseline } = useUnsavedChangesGuard(preferences);
   const [showSuccess, setShowSuccess] = useState(false)
 
   const handleToggle = (key: keyof typeof preferences) => {
@@ -40,6 +42,7 @@ export default function SettingsPage() {
     setTimeout(() => {
       setIsSaving(false)
       setShowSuccess(true)
+      resetBaseline();
       setTimeout(() => setShowSuccess(false), 3000)
     }, 1000)
   }
@@ -58,23 +61,25 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0a] text-white">
-      <Navigation />
-
-      <main id="main-content" className="mx-auto max-w-4xl px-4 pt-32 pb-24">
+    <AppShellLayout>
+      <div className="min-h-screen w-full bg-[#0a0a0a] text-white">
+        <main id="main-content" className="mx-auto max-w-4xl px-4 pt-12 pb-24">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-12"
         >
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-4 bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-            Notification Preferences
+            Settings
           </h1>
+          {isDirty && <span className="ml-2 px-2 py-1 bg-yellow-500 text-black text-sm rounded">Unsaved changes</span>}
           <p className="text-lg text-white/50 max-w-2xl leading-relaxed">
-            Manage how and when you receive updates about your commitments, 
-            market activity, and account security.
+            Manage your account, wallet, and notification preferences.
           </p>
         </motion.div>
+
+        {/* Account & Wallet */}
+        <AccountWalletSection />
 
         {/* Violations & Security */}
         <NotificationSection 
@@ -198,7 +203,7 @@ export default function SettingsPage() {
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !isDirty}
             className={`
               w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-3.5 rounded-xl font-bold transition-all active:scale-[0.98]
               ${isSaving 
@@ -232,8 +237,7 @@ export default function SettingsPage() {
           )}
         </AnimatePresence>
       </main>
-
-      <Footer />
     </div>
+    </AppShellLayout>
   )
 }

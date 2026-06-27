@@ -3,6 +3,7 @@
 import React, { useCallback, useState } from 'react';
 import { AlertTriangle, X, Info } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
+import { ExitTimingPreview } from './ExitTimingPreview';
 
 export interface CommitmentEarlyExitModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export interface CommitmentEarlyExitModalProps {
   onCancel: () => void;
   onConfirm: () => void;
   onClose?: () => void;
+  maturityDate?: Date;
 }
 
 function formatScreenReaderText(val: string): string {
@@ -38,10 +40,15 @@ export default function CommitmentEarlyExitModal({
   onCancel,
   onConfirm,
   onClose,
+  maturityDate,
 }: CommitmentEarlyExitModalProps) {
   const [confirmationInput, setConfirmationInput] = useState('')
   const hasTypedConfirmation = confirmationInput.trim() === commitmentId
   const canConfirm = hasAcknowledged && hasTypedConfirmation
+
+  const parsedOriginalAmount = parseFloat(originalAmount.replace(/,/g, ''));
+  const parsedPenaltyPercent = parseFloat(penaltyPercent);
+  const effectiveMaturityDate = maturityDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // fallback to 30 days
 
   const handleClose = useCallback(() => {
     (onClose ?? onCancel)();
@@ -127,6 +134,13 @@ export default function CommitmentEarlyExitModal({
             </tr>
           </tbody>
         </table>
+
+        <ExitTimingPreview 
+          commitmentId={commitmentId}
+          originalAmount={parsedOriginalAmount}
+          currentPenaltyPercent={parsedPenaltyPercent}
+          maturityDate={effectiveMaturityDate}
+        />
 
         {/* Important Notice Block */}
         <div className="bg-[#FF8A04]/10 border border-[#FF8A04]/20 rounded-2xl p-5 mb-8 group hover:bg-[#FF8A04]/15 transition-colors">

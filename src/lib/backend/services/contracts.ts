@@ -167,45 +167,6 @@ function getNetworkPassphrase(): string {
   return getBackendConfig().networkPassphrase;
 }
 
-function getRpcTimeoutMs(): number {
-  const raw = Number(process.env.SOROBAN_RPC_TIMEOUT_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : 15_000;
-}
-
-async function withRpcTimeout<T>(
-  promise: Promise<T>,
-  methodName: string,
-): Promise<T> {
-  const timeoutMs = getRpcTimeoutMs();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => {
-          reject(
-            new BackendError({
-              code: "GATEWAY_TIMEOUT",
-              message:
-                "The blockchain operation timed out. It may still be processed later.",
-              status: 504,
-              details: {
-                methodName,
-                timeoutMs,
-                retryable: true,
-              },
-            }),
-          );
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
 
 function getContractId(kind: "commitmentCore" | "attestationEngine"): string {
   const config = getBackendConfig();
@@ -232,44 +193,6 @@ function getSourcePublicKey(): string | null {
   return process.env.SOROBAN_SOURCE_ACCOUNT || null;
 }
 
-function getRpcTimeoutMs(): number {
-  const raw = Number(process.env.SOROBAN_RPC_TIMEOUT_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : 15_000;
-}
-
-async function withRpcTimeout<T>(
-  operation: Promise<T>,
-  methodName: string,
-  timeoutMs = getRpcTimeoutMs(),
-): Promise<T> {
-  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    return await Promise.race([
-      operation,
-      new Promise<T>((_, reject) => {
-        timeoutHandle = setTimeout(() => {
-          reject(
-            new BackendError({
-              code: "GATEWAY_TIMEOUT",
-              message: "The blockchain operation timed out. It may still be processed later.",
-              status: 504,
-              details: {
-                methodName,
-                timeoutMs,
-                retryable: true,
-              },
-            }),
-          );
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timeoutHandle) {
-      clearTimeout(timeoutHandle);
-    }
-  }
-}
 
 function getSorobanServer(): SorobanRpc.Server {
   const url = getRpcUrl();
