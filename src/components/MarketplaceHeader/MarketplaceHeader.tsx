@@ -79,6 +79,11 @@ export function MarketplaceHeader({
   backHref = '/',
   createHref = '/create',
   searchQuery: controlledQuery,
+}: MarketplaceHeaderProps) {
+  const [stats, setStats] = useState<MarketplaceStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [sortValue, setSortValue] = useState<SortValue>('popular');
+  const [query, setQuery] = useState(controlledQuery ?? '');
   ownerAddress,
   onResultSelect,
 }: MarketplaceHeaderProps) {

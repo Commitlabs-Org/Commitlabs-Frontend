@@ -45,18 +45,10 @@ export class ValidationError extends Error {
 
 export interface PaginationParams {
   page: number;
-  limit: number;
+  pageSize: number;
+  offset: number;
 }
 
-export interface FilterParams {
-  [key: string]: string | number | boolean | undefined;
-}
-
-const addressSchema = z
-  .string()
-  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
-    message: "Invalid Stellar address format",
-  });
 
 const amountSchema = z.union([z.string(), z.number()]).transform((val) => {
   const num = typeof val === "string" ? parseFloat(val) : val;
@@ -124,11 +116,6 @@ const ResolveDisputeSchema = z.object({
 export { DisputeReasonSchema, ResolveDisputeSchema };
 export type DisputeReasonInput = z.infer<typeof DisputeReasonSchema>;
 export type ResolveDisputeInput = z.infer<typeof ResolveDisputeSchema>;
-export interface PaginationParams {
-  page: number;
-  limit: number;
-}
-
 export type FilterParams = Record<string, string | number | boolean>;
 
 const addressSchema2 = z
@@ -347,8 +334,6 @@ export type CreateCommitmentInput = z.infer<typeof createCommitmentSchema>;
 export type CreateMarketplaceListingInput = z.infer<
   typeof createMarketplaceListingSchema
 >;
-type FilterParams = Record<string, string | number | boolean>;
-
 // Validate Stellar address
 export function validateAddress(address: string): string {
   try {
