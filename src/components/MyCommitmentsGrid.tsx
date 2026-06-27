@@ -10,6 +10,7 @@ interface MyCommitmentsGridProps {
   onDetails?: (id: string) => void;
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
+  onListForSale?: (id: string) => void;
 }
 
 const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
@@ -17,6 +18,7 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
   onDetails,
   onAttestations,
   onEarlyExit,
+  onListForSale,
 }) => {
   return (
     <div className="flex flex-col gap-4">
@@ -28,12 +30,13 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
       {commitments.length > 0 ? (
         <div className="grid grid-cols-3 gap-6 max-[1200px]:grid-cols-2 max-[768px]:grid-cols-1">
           {commitments.map((commitment) => (
-            <MyCommitmentCard 
-              key={commitment.id} 
+            <MyCommitmentCard
+              key={commitment.id}
               commitment={commitment}
               onDetails={onDetails}
               onAttestations={onAttestations}
               onEarlyExit={onEarlyExit}
+              onListForSale={onListForSale}
             />
           ))}
         </div>

@@ -3,15 +3,33 @@
 import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { HealthMetricsComplianceChart } from './HealthMetricsComplianceChart';
-import { HealthMetricsDrawdownChart } from './HealthMetricsDrawdownChart';
-import { HealthMetricsValueHistoryChart } from './HealthMetricsValueHistoryChart';
-import { HealthMetricsFeeGenerationChart } from './HealthMetricsFeeGenerationChart';
+import dynamic from 'next/dynamic';
 import { TrendingUp, TrendingDown, DollarSign, CheckCircle } from 'lucide-react';
+import HealthMetricsSkeleton from '../HealthMetricsSkeleton';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
+
+const HealthMetricsValueHistoryChart = dynamic(
+    () => import('./HealthMetricsValueHistoryChart').then((mod) => mod.HealthMetricsValueHistoryChart),
+    { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
+
+const HealthMetricsDrawdownChart = dynamic(
+    () => import('./HealthMetricsDrawdownChart').then((mod) => mod.HealthMetricsDrawdownChart),
+    { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
+
+const HealthMetricsFeeGenerationChart = dynamic(
+    () => import('./HealthMetricsFeeGenerationChart').then((mod) => mod.HealthMetricsFeeGenerationChart),
+    { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
+
+const HealthMetricsComplianceChart = dynamic(
+    () => import('./HealthMetricsComplianceChart').then((mod) => mod.HealthMetricsComplianceChart),
+    { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
 
 type TabType = 'value' | 'drawdown' | 'fee' | 'compliance';
 

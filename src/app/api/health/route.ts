@@ -1,18 +1,17 @@
-import { NextRequest } from 'next/server';
-import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
-import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
-import { logInfo } from '@/lib/backend/logger';
-import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { attachSecurityHeaders } from '@/utils/response';
+import { NextRequest } from "next/server";
+import { ok, methodNotAllowed } from "@/lib/backend/apiResponse";
+import { logInfo } from "@/lib/backend/logger";
+import { withApiHandler } from "@/lib/backend/withApiHandler";
+import { attachSecurityHeaders } from "@/utils/response";
 
 export const GET = withApiHandler(async (req: NextRequest) => {
   logInfo(req, "Healthcheck requested");
   const response = ok({
     status: "healthy",
-    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
     version: "0.1.0",
   });
-  return attachSecurityHeaders(response) as NextResponse;
+  return attachSecurityHeaders(response);
 });
 
 const _405 = methodNotAllowed(["GET"]);

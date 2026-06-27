@@ -1,12 +1,39 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { CommitmentDetailOverview } from "@/components/CommitmentDetailOverview";
+import { AtRiskCommitments } from "@/components/dashboard/AtRiskCommitments";
+import { Commitment } from "@/lib/types/domain";
 
 export default function CommitmentOverviewPage() {
+  const [commitments, setCommitments] = useState<Commitment[]>([]);
+
+  useEffect(() => {
+    async function loadCommitments() {
+      try {
+        const res = await fetch("/api/commitments");
+        if (res.ok) {
+          const data = await res.json();
+          // Assuming API returns { data: Commitment[] } based on standard patterns
+          if (data && Array.isArray(data.data)) {
+            setCommitments(data.data);
+          } else if (Array.isArray(data)) {
+            setCommitments(data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load commitments", err);
+      }
+    }
+    loadCommitments();
+  }, []);
+
   return (
     <main className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
-      <div className="mx-auto w-full max-w-[1200px]">
+      <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-6">
+        <div className="w-full">
+          <AtRiskCommitments commitments={commitments} />
+        </div>
         <CommitmentDetailOverview
           commitmentTypeLabel="Safe Commitment"
           currentValue="52,600"
