@@ -34,8 +34,21 @@ export function recordAuditEvent(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>)
     return logEntry;
 }
 
-export function getAuditLog(commitmentId: string): AuditLogEntry[] {
-    return auditLogStore.filter(entry => entry.commitmentId === commitmentId);
+export interface GetAuditLogFilters {
+  commitmentId?: string;
+  actorAddress?: string;
+  eventType?: AuditEventType;
+}
+
+export function getAuditLog(filters: GetAuditLogFilters): AuditLogEntry[] {
+  return auditLogStore.filter((entry) => {
+    if (filters.commitmentId && entry.commitmentId !== filters.commitmentId)
+      return false;
+    if (filters.actorAddress && entry.actorAddress !== filters.actorAddress)
+      return false;
+    if (filters.eventType && entry.eventType !== filters.eventType) return false;
+    return true;
+  });
 }
 
 export function clearAuditLog(): void {
@@ -132,5 +145,3 @@ export function resetAuditStoreForTests(): void {
   auditLogStore.length = 0;
   auditEventsStore.length = 0;
 }
-
-
