@@ -15,6 +15,7 @@ The App Shell Sidebar provides a persistent, collapsible navigation interface fo
 - **Responsive Design**: Automatically converts to a mobile drawer on smaller screens
 - **Focus Trap**: Mobile drawer implements proper focus trapping for accessibility
 - **Smooth Animations**: Powered by Framer Motion for fluid transitions
+- **Keyboard Shortcut Help**: `AppShellLayout` mounts a `?` shortcut overlay documented in [Keyboard Shortcuts](./KEYBOARD_SHORTCUTS.md)
 
 ### Navigation Items
 
@@ -140,6 +141,7 @@ The sidebar follows the CommitLabs design system:
 
 - **Tab**: Navigate through navigation items
 - **Escape**: Close mobile drawer
+- **?**: Open the keyboard shortcuts reference, unless focus is inside an editable field
 - **Enter/Space**: Activate navigation links
 
 ### ARIA Attributes

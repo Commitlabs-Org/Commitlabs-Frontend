@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { isCommandPaletteShortcut } from '@/lib/keyboardShortcuts';
 
 /**
  * Manages global command palette open/close state and wires up the
@@ -19,7 +20,7 @@ export function useCommandPalette() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Cmd+K (macOS) or Ctrl+K (Windows / Linux)
-      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+      if (isCommandPaletteShortcut(event)) {
         event.preventDefault();
         toggle();
       }
