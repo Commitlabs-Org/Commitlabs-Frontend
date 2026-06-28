@@ -12,6 +12,16 @@ export type TransactionState =
   | 'SUCCESS'
   | 'ERROR';
 
+const RESTORABLE_TRANSACTION_STATES = [
+  'AWAITING_SIGNATURE',
+  'SUBMITTING',
+  'PROCESSING',
+  'ERROR',
+] as const;
+
+type RestorableTransactionState = (typeof RESTORABLE_TRANSACTION_STATES)[number];
+type ActiveTransactionState = Exclude<TransactionState, 'IDLE'>;
+
 export interface TransactionProgressModalProps {
   isOpen: boolean;
   state: TransactionState;
@@ -22,6 +32,105 @@ export interface TransactionProgressModalProps {
   onClose: () => void;
   onRetry?: () => void;
   onSuccessAction?: () => void; // e.g., "View Details"
+}
+
+interface PersistedTransactionSnapshot {
+  state: RestorableTransactionState;
+  actionName: string;
+  successMessage?: string;
+  txHash?: string;
+  errorCode?: string;
+}
+
+interface ActiveTransactionSnapshot {
+  state: ActiveTransactionState;
+  actionName: string;
+  successMessage: string;
+  txHash?: string;
+  errorCode: string;
+}
+
+const TRANSACTION_PROGRESS_STORAGE_KEY =
+  'commitlabs.transactionProgressModal.v1';
+
+function getTransactionProgressStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isRestorableTransactionState(
+  value: unknown,
+): value is RestorableTransactionState {
+  return RESTORABLE_TRANSACTION_STATES.includes(
+    value as RestorableTransactionState,
+  );
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function readPersistedTransactionSnapshot(): PersistedTransactionSnapshot | null {
+  const storage = getTransactionProgressStorage();
+  if (!storage) return null;
+
+  try {
+    const raw = storage.getItem(TRANSACTION_PROGRESS_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) return null;
+    if (!isRestorableTransactionState(parsed.state)) return null;
+    if (typeof parsed.actionName !== 'string' || !parsed.actionName.trim()) {
+      return null;
+    }
+
+    return {
+      state: parsed.state,
+      actionName: parsed.actionName,
+      successMessage: optionalString(parsed.successMessage),
+      txHash: optionalString(parsed.txHash),
+      errorCode: optionalString(parsed.errorCode),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedTransactionSnapshot(
+  snapshot: PersistedTransactionSnapshot,
+) {
+  const storage = getTransactionProgressStorage();
+  if (!storage) return;
+
+  try {
+    storage.setItem(
+      TRANSACTION_PROGRESS_STORAGE_KEY,
+      JSON.stringify(snapshot),
+    );
+  } catch {
+    // Storage may be unavailable in private mode or locked-down browsers.
+  }
+}
+
+function clearPersistedTransactionSnapshot() {
+  const storage = getTransactionProgressStorage();
+  if (!storage) return;
+
+  try {
+    storage.removeItem(TRANSACTION_PROGRESS_STORAGE_KEY);
+  } catch {
+    // Treat storage cleanup failures as non-fatal UI concerns.
+  }
 }
 
 const ERROR_MAPPINGS: Record<string, { type: 'error' | 'warning'; lead: string; helper: string; primary: string; secondary: string }> = {
@@ -88,36 +197,101 @@ export default function TransactionProgressModal({
   onSuccessAction,
 }: TransactionProgressModalProps) {
   const [timelinePhase, setTimelinePhase] = React.useState<TransactionTimelinePhase>('build');
+  const [restoredSnapshot, setRestoredSnapshot] =
+    React.useState<PersistedTransactionSnapshot | null>(null);
+
+  const externalSnapshot = React.useMemo<ActiveTransactionSnapshot | null>(() => {
+    if (!isOpen || state === 'IDLE') return null;
+
+    return {
+      state,
+      actionName,
+      successMessage,
+      txHash,
+      errorCode,
+    };
+  }, [actionName, errorCode, isOpen, state, successMessage, txHash]);
+  const activeSnapshot = externalSnapshot ?? restoredSnapshot;
+  const modalState = activeSnapshot?.state ?? state;
+  const modalActionName = activeSnapshot?.actionName ?? actionName;
+  const modalSuccessMessage =
+    activeSnapshot?.successMessage ?? successMessage;
+  const modalTxHash = activeSnapshot?.txHash;
+  const modalErrorCode =
+    activeSnapshot?.errorCode ?? errorCode ?? 'UNKNOWN_ERROR';
 
   React.useEffect(() => {
     if (!isOpen || state === 'IDLE') {
+      setRestoredSnapshot(readPersistedTransactionSnapshot());
+    }
+  }, [isOpen, state]);
+
+  React.useEffect(() => {
+    if (!externalSnapshot) return;
+
+    setRestoredSnapshot(null);
+
+    if (externalSnapshot.state === 'SUCCESS') {
+      clearPersistedTransactionSnapshot();
+      return;
+    }
+
+    writePersistedTransactionSnapshot({
+      state: externalSnapshot.state,
+      actionName: externalSnapshot.actionName,
+      successMessage: externalSnapshot.successMessage,
+      txHash: externalSnapshot.txHash,
+      errorCode: externalSnapshot.errorCode,
+    });
+  }, [externalSnapshot]);
+
+  React.useEffect(() => {
+    if (!activeSnapshot || modalState === 'IDLE') {
       setTimelinePhase('build');
       return;
     }
 
-    if (state === 'AWAITING_SIGNATURE') {
+    if (modalState === 'AWAITING_SIGNATURE') {
       setTimelinePhase('sign');
       return;
     }
 
-    if (state === 'SUBMITTING') {
+    if (modalState === 'SUBMITTING') {
       setTimelinePhase('submit');
       return;
     }
 
-    if (state === 'PROCESSING' || state === 'SUCCESS') {
+    if (modalState === 'PROCESSING' || modalState === 'SUCCESS') {
       setTimelinePhase('confirm');
       return;
     }
 
-    if (state === 'ERROR') {
+    if (modalState === 'ERROR') {
       setTimelinePhase((current) => (current === 'build' ? 'sign' : current));
     }
-  }, [isOpen, state]);
+  }, [activeSnapshot, modalState]);
 
-  if (!isOpen || state === 'IDLE') return null;
+  if (!activeSnapshot || modalState === 'IDLE') return null;
 
-  const txExplorerUrl = buildExplorerUrl('tx', txHash);
+  const txExplorerUrl = buildExplorerUrl('tx', modalTxHash);
+
+  const handleClose = () => {
+    clearPersistedTransactionSnapshot();
+    setRestoredSnapshot(null);
+    onClose();
+  };
+
+  const handleRetry = () => {
+    clearPersistedTransactionSnapshot();
+    setRestoredSnapshot(null);
+    onRetry?.();
+  };
+
+  const handleSuccessAction = () => {
+    clearPersistedTransactionSnapshot();
+    setRestoredSnapshot(null);
+    (onSuccessAction || onClose)();
+  };
 
   const handleCopyHash = async (hash: string) => {
     if (!hash) return;
@@ -133,44 +307,44 @@ export default function TransactionProgressModal({
 
   // -- State Configuration Helpers --
   const getHeader = () => {
-    switch (state) {
+    switch (modalState) {
       case 'AWAITING_SIGNATURE': return 'Confirm in Freighter';
-      case 'SUBMITTING': return `${actionName} in Progress`;
+      case 'SUBMITTING': return `${modalActionName} in Progress`;
       case 'PROCESSING': return 'Confirming Transaction';
-      case 'SUCCESS': return `${actionName} Successful!`;
+      case 'SUCCESS': return `${modalActionName} Successful!`;
       case 'ERROR':
-        return errorCode === 'RPC_TIMEOUT' ? 'Network Timeout' : 'Transaction Failed';
+        return modalErrorCode === 'RPC_TIMEOUT' ? 'Network Timeout' : 'Transaction Failed';
       default: return 'Transaction in Progress';
     }
   };
 
   const getLeadText = () => {
-    switch (state) {
+    switch (modalState) {
       case 'AWAITING_SIGNATURE': return 'Please sign the transaction in your wallet.';
       case 'SUBMITTING': return 'Sending to the Stellar Network...';
       case 'PROCESSING': return 'Waiting for network confirmation...';
       case 'SUCCESS': return 'Your transaction has been confirmed.';
       case 'ERROR':
-        return ERROR_MAPPINGS[errorCode]?.lead || ERROR_MAPPINGS['UNKNOWN_ERROR'].lead;
+        return ERROR_MAPPINGS[modalErrorCode]?.lead || ERROR_MAPPINGS['UNKNOWN_ERROR'].lead;
       default: return '';
     }
   };
 
   const getHelperText = () => {
-    switch (state) {
+    switch (modalState) {
       case 'AWAITING_SIGNATURE': return "We're waiting for your approval to proceed.";
       case 'SUBMITTING': return "This usually takes 3-5 seconds. Please don't close this window.";
       case 'PROCESSING': return 'The transaction has been submitted and is waiting to be included in the ledger.';
-      case 'SUCCESS': return successMessage;
+      case 'SUCCESS': return modalSuccessMessage;
       case 'ERROR':
-        return ERROR_MAPPINGS[errorCode]?.helper || ERROR_MAPPINGS['UNKNOWN_ERROR'].helper;
+        return ERROR_MAPPINGS[modalErrorCode]?.helper || ERROR_MAPPINGS['UNKNOWN_ERROR'].helper;
       default: return '';
     }
   };
 
   // -- Visual Graphic Renderers --
   const renderGraphic = () => {
-    if (state === 'AWAITING_SIGNATURE') {
+    if (modalState === 'AWAITING_SIGNATURE') {
       return (
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white/5 border border-white/10 animate-pulse">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/80">
@@ -182,7 +356,7 @@ export default function TransactionProgressModal({
       );
     }
 
-    if (state === 'SUBMITTING' || state === 'PROCESSING') {
+    if (modalState === 'SUBMITTING' || modalState === 'PROCESSING') {
       return (
         <div className="flex items-center justify-center w-16 h-16">
           <svg className="animate-spin text-[#00C950]" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -193,7 +367,7 @@ export default function TransactionProgressModal({
       );
     }
 
-    if (state === 'SUCCESS') {
+    if (modalState === 'SUCCESS') {
       return (
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#00C950]/10 border border-[#00C950]/20">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00C950" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -203,8 +377,8 @@ export default function TransactionProgressModal({
       );
     }
 
-    if (state === 'ERROR') {
-      const errorType = ERROR_MAPPINGS[errorCode]?.type || 'error';
+    if (modalState === 'ERROR') {
+      const errorType = ERROR_MAPPINGS[modalErrorCode]?.type || 'error';
       const color = errorType === 'warning' ? '#FF8904' : '#FF4757';
       const bgClass = errorType === 'warning' ? 'bg-[#FF8904]/10 border-[#FF8904]/20' : 'bg-[#FF4757]/10 border-[#FF4757]/20';
 
@@ -232,45 +406,45 @@ export default function TransactionProgressModal({
 
   // -- Actions Renderer --
   const renderActions = () => {
-    const inProgress = state === 'SUBMITTING' || state === 'PROCESSING';
+    const inProgress = modalState === 'SUBMITTING' || modalState === 'PROCESSING';
 
     if (inProgress) {
       return null; // No actions allowed while broadcasting/mining to prevent desync
     }
 
-    if (state === 'AWAITING_SIGNATURE') {
+    if (modalState === 'AWAITING_SIGNATURE') {
       return (
-        <button onClick={onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
+        <button onClick={handleClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
           Cancel
         </button>
       );
     }
 
-    if (state === 'SUCCESS') {
+    if (modalState === 'SUCCESS') {
       return (
         <div className="flex flex-col gap-3 w-full">
-          <button onClick={onSuccessAction || onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-[#00C950] hover:bg-[#00C950]/90 transition-colors">
+          <button onClick={handleSuccessAction} className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-[#00C950] hover:bg-[#00C950]/90 transition-colors">
             View Details
           </button>
-          <button onClick={onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
+          <button onClick={handleClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
             Close
           </button>
         </div>
       );
     }
 
-    if (state === 'ERROR') {
-      const mapping = ERROR_MAPPINGS[errorCode] || ERROR_MAPPINGS['UNKNOWN_ERROR'];
-      const isTimeout = errorCode === 'RPC_TIMEOUT';
+    if (modalState === 'ERROR') {
+      const mapping = ERROR_MAPPINGS[modalErrorCode] || ERROR_MAPPINGS['UNKNOWN_ERROR'];
+      const isTimeout = modalErrorCode === 'RPC_TIMEOUT';
 
       const handlePrimaryClick = () => {
         if (isTimeout && txExplorerUrl) {
-          openExplorerUrl('tx', txHash);
+          openExplorerUrl('tx', modalTxHash);
         } else if (mapping.primary === 'Fund Wallet' || mapping.primary === 'Contact Support') {
            // Handle external redirect logic here if applicable, otherwise fallback to generic
-          onClose(); 
+          handleClose();
         } else {
-          onRetry?.();
+          handleRetry();
         }
       };
 
@@ -282,7 +456,7 @@ export default function TransactionProgressModal({
           >
             {mapping.primary}
           </button>
-          <button onClick={onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/50 hover:text-white/80 transition-colors">
+          <button onClick={handleClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/50 hover:text-white/80 transition-colors">
             {mapping.secondary}
           </button>
         </div>
@@ -306,9 +480,9 @@ export default function TransactionProgressModal({
             {getHeader()}
           </h2>
           {/* Only show close button if it's safe to cancel */}
-          {state !== 'SUBMITTING' && state !== 'PROCESSING' && (
+          {modalState !== 'SUBMITTING' && modalState !== 'PROCESSING' && (
             <button 
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-md text-white/50 hover:text-white hover:bg-white/10 transition-colors"
               aria-label="Close modal"
             >
@@ -337,16 +511,16 @@ export default function TransactionProgressModal({
 
           <TransactionStepTimeline
             currentPhase={timelinePhase}
-            state={state === 'SUCCESS' ? 'success' : state === 'ERROR' ? 'error' : 'in_progress'}
-            txHash={txHash}
+            state={modalState === 'SUCCESS' ? 'success' : modalState === 'ERROR' ? 'error' : 'in_progress'}
+            txHash={modalTxHash}
             onCopyHash={handleCopyHash}
           />
 
           {/* Explorer Link Slot */}
-          {txExplorerUrl && (state === 'SUCCESS' || state === 'ERROR' || state === 'PROCESSING') && (
+          {txExplorerUrl && (modalState === 'SUCCESS' || modalState === 'ERROR' || modalState === 'PROCESSING') && (
             <div className="mt-6 p-3 w-full rounded-lg bg-white/5 border border-white/5 flex items-center justify-between">
               <span className="text-xs text-white/40 font-mono truncate max-w-[200px]">
-                {txHash}
+                {modalTxHash}
               </span>
               <a 
                 href={txExplorerUrl}
@@ -366,7 +540,7 @@ export default function TransactionProgressModal({
         </div>
 
         {/* Footer Actions */}
-        {(state !== 'SUBMITTING' && state !== 'PROCESSING') && (
+        {(modalState !== 'SUBMITTING' && modalState !== 'PROCESSING') && (
           <div className="px-6 pb-6 pt-2 flex flex-col items-center">
             {renderActions()}
           </div>

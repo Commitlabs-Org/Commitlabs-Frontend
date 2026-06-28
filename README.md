@@ -33,6 +33,7 @@ This frontend interacts with the CommitLabs Soroban smart contracts to:
 - **Marketplace**: Browse and filter active commitments available for purchase.
 - **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions.
 - **Settlement and Early Exit Flows**: Guided settlement eligibility, settlement success, and early-exit confirmation surfaces backed by preview and execution endpoints. See [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md).
+- **Transaction Progress Recovery**: Reload-safe transaction progress modal state for wallet actions. See [Transaction Progress Persistence](docs/TRANSACTION_PERSIST.md).
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 
 ## 🏗 Architecture

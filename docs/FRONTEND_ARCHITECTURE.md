@@ -146,6 +146,7 @@ Key auth utilities:
 ### Modal patterns
 - Modals are rendered conditionally at the page level (not via a global portal).
 - `TransactionProgressModal` handles the full lifecycle of any blockchain transaction with mapped error codes (`USER_REJECTED`, `RPC_TIMEOUT`, `SLIPPAGE_EXCEEDED`, `CONTRACT_REVERTED`, `INSUFFICIENT_BALANCE`, `NETWORK_CONGESTION`, `UNKNOWN_ERROR`).
+- `TransactionProgressModal` persists non-terminal progress in `localStorage` and restores the modal after reload; see [Transaction Progress Persistence](./TRANSACTION_PERSIST.md).
 - Error modals show primary/secondary action buttons based on error category.
 
 ---
