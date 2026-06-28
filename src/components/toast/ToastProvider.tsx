@@ -22,9 +22,16 @@ function generateId(): string {
   return `toast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
+/** Text queued into the polite and assertive live regions. */
+interface AnnouncerState {
+  polite: string;
+  assertive: string;
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
+  const [announcer, setAnnouncer] = useState<AnnouncerState>({ polite: '', assertive: '' });
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const timerStartedAtRef = useRef<Map<string, number>>(new Map());
   const timerRemainingRef = useRef<Map<string, number>>(new Map());
@@ -114,6 +121,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         return next;
       });
 
+      // Announce to screen readers: errors use assertive, others use polite.
+      const text = [options.title, options.description].filter(Boolean).join(' — ');
+      if (severity === 'error') {
+        setAnnouncer({ polite: '', assertive: text });
+      } else {
+        setAnnouncer({ assertive: '', polite: text });
+      }
+
       if (duration > 0) {
         timerRemainingRef.current.set(id, duration);
         startTimer(id, duration);
@@ -177,13 +192,49 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
+      {/* Visually-hidden aria-live announcer — one region per politeness level. */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        data-toast-announcer="polite"
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: 0,
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0,0,0,0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {announcer.polite}
+      </div>
+      <div
+        aria-live="assertive"
+        aria-atomic="true"
+        data-toast-announcer="assertive"
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: 0,
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0,0,0,0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {announcer.assertive}
+      </div>
       <div
         className="toast-container"
         role="region"
-        aria-live="polite"
-        aria-atomic="false"
+        aria-label="Notifications"
       >
-        <div className="toast-viewport" role="status" aria-live="assertive" aria-atomic="true">
+        <div className="toast-viewport" data-toast-viewport>
           {toasts.map((toast) => (
             <ToastItem
               key={toast.id}

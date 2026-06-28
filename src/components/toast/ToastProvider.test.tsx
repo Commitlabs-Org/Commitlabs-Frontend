@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { ToastProvider, useToast } from './ToastProvider';
 
+vi.mock('./toast.css', () => ({}));
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
@@ -59,10 +61,11 @@ describe('ToastProvider', () => {
     );
 
     act(() => screen.getByText('success').click());
-    expect(screen.getByText('ok')).toBeDefined();
+    const viewport = document.querySelector('[data-toast-viewport]')!;
+    expect(viewport.querySelector('.toast-title')?.textContent).toBe('ok');
 
     act(() => vi.advanceTimersByTime(5000));
-    expect(screen.queryByText('ok')).toBeNull();
+    expect(viewport.querySelector('.toast-title')).toBeNull();
   });
 
   it('renders no action button for toasts without an action', () => {
@@ -73,7 +76,8 @@ describe('ToastProvider', () => {
     );
 
     act(() => screen.getByText('success').click());
-    expect(screen.getByText('ok')).toBeDefined();
+    const viewport = document.querySelector('[data-toast-viewport]')!;
+    expect(viewport.querySelector('.toast-title')?.textContent).toBe('ok');
     expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
   });
 
@@ -85,14 +89,15 @@ describe('ToastProvider', () => {
     );
 
     act(() => screen.getByText('action success').click());
-    expect(screen.getByText('actionable')).toBeDefined();
+    const viewport = document.querySelector('[data-toast-viewport]')!;
+    expect(viewport.querySelector('.toast-title')?.textContent).toBe('actionable');
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     });
 
     expect(actionSpy).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('actionable')).toBeNull();
+    expect(viewport.querySelector('.toast-title')).toBeNull();
   });
 
   it('pauses auto-dismiss while hovered and resumes with remaining time', () => {
@@ -103,20 +108,20 @@ describe('ToastProvider', () => {
     );
 
     act(() => screen.getByText('short success').click());
-    const toastElement = screen.getByText('short').closest('[data-toast]');
+    const toastElement = document.querySelector('[data-toast-viewport] [data-toast]');
     expect(toastElement).not.toBeNull();
 
     act(() => vi.advanceTimersByTime(500));
     act(() => fireEvent.mouseEnter(toastElement as Element));
     act(() => vi.advanceTimersByTime(1000));
-    expect(screen.getByText('short')).toBeDefined();
+    expect(document.querySelector('[data-toast-viewport] .toast-title')?.textContent).toBe('short');
 
     act(() => fireEvent.mouseLeave(toastElement as Element));
     act(() => vi.advanceTimersByTime(499));
-    expect(screen.getByText('short')).toBeDefined();
+    expect(document.querySelector('[data-toast-viewport] .toast-title')?.textContent).toBe('short');
 
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.queryByText('short')).toBeNull();
+    expect(document.querySelector('[data-toast-viewport] .toast-title')).toBeNull();
   });
 
   it('dismisses a toast manually', () => {
@@ -127,10 +132,11 @@ describe('ToastProvider', () => {
     );
 
     act(() => screen.getByText('error').click());
-    expect(screen.getByText('bad')).toBeDefined();
+    const viewport = document.querySelector('[data-toast-viewport]')!;
+    expect(viewport.querySelector('.toast-title')?.textContent).toBe('bad');
 
     act(() => screen.getByLabelText('Dismiss notification').click());
-    expect(screen.queryByText('bad')).toBeNull();
+    expect(viewport.querySelector('.toast-title')).toBeNull();
   });
 
   it('dismisses all toasts', () => {
@@ -165,7 +171,7 @@ describe('ToastProvider', () => {
     expect(toastTitles.length).toBeLessThanOrEqual(4);
   });
 
-  it('announces toasts in live region', () => {
+  it('announces a success toast in the polite live region', () => {
     render(
       React.createElement(ToastProvider, null,
         React.createElement(TestConsumer, null)
@@ -173,7 +179,82 @@ describe('ToastProvider', () => {
     );
 
     act(() => screen.getByText('success').click());
-    const status = document.querySelector('[role="status"]');
-    expect(status?.getAttribute('aria-live')).toBe('assertive');
+
+    const polite = document.querySelector('[data-toast-announcer="polite"]');
+    const assertive = document.querySelector('[data-toast-announcer="assertive"]');
+    expect(polite?.textContent).toBe('ok');
+    expect(assertive?.textContent).toBe('');
+  });
+
+  it('announces an error toast in the assertive live region', () => {
+    render(
+      React.createElement(ToastProvider, null,
+        React.createElement(TestConsumer, null)
+      )
+    );
+
+    act(() => screen.getByText('error').click());
+
+    const polite = document.querySelector('[data-toast-announcer="polite"]');
+    const assertive = document.querySelector('[data-toast-announcer="assertive"]');
+    expect(assertive?.textContent).toBe('bad');
+    expect(polite?.textContent).toBe('');
+  });
+
+  it('announces info and warning toasts in the polite region', () => {
+    render(
+      React.createElement(ToastProvider, null,
+        React.createElement(TestConsumer, null)
+      )
+    );
+
+    act(() => screen.getByText('info').click());
+    expect(document.querySelector('[data-toast-announcer="polite"]')?.textContent).toBe('info');
+
+    act(() => screen.getByText('warning').click());
+    expect(document.querySelector('[data-toast-announcer="polite"]')?.textContent).toBe('warn');
+    expect(document.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe('');
+  });
+
+  it('clears the opposing region when severity changes', () => {
+    render(
+      React.createElement(ToastProvider, null,
+        React.createElement(TestConsumer, null)
+      )
+    );
+
+    act(() => screen.getByText('error').click());
+    expect(document.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe('bad');
+
+    act(() => screen.getByText('success').click());
+    expect(document.querySelector('[data-toast-announcer="polite"]')?.textContent).toBe('ok');
+    expect(document.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe('');
+  });
+
+  it('polite announcer has aria-live="polite" and assertive has aria-live="assertive"', () => {
+    render(
+      React.createElement(ToastProvider, null,
+        React.createElement(TestConsumer, null)
+      )
+    );
+
+    const polite = document.querySelector('[data-toast-announcer="polite"]');
+    const assertive = document.querySelector('[data-toast-announcer="assertive"]');
+    expect(polite?.getAttribute('aria-live')).toBe('polite');
+    expect(assertive?.getAttribute('aria-live')).toBe('assertive');
+  });
+
+  it('announcer regions are visually hidden', () => {
+    render(
+      React.createElement(ToastProvider, null,
+        React.createElement(TestConsumer, null)
+      )
+    );
+
+    const polite = document.querySelector('[data-toast-announcer="polite"]') as HTMLElement | null;
+    expect(polite?.style.position).toBe('absolute');
+    expect(polite?.style.width).toBe('1px');
+    expect(polite?.style.height).toBe('1px');
+    expect(polite?.style.overflow).toBe('hidden');
   });
 });
