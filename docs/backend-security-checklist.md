@@ -159,6 +159,29 @@ npm audit
 
 ---
 
+## Dependency Audit Gate
+
+Pull requests are scanned for known-vulnerable dependencies by the
+[`security-audit`](../.github/workflows/security-audit.yml) workflow:
+
+- **`npm audit --omit=dev --audit-level=high`** fails CI when a **high or
+  critical** advisory affects a **production** dependency. Dev-only advisories
+  do not block the build.
+- **`dependency-review-action`** runs on PRs and flags dependency changes that
+  introduce advisories at `high` severity or above. It requires a committed
+  lockfile to diff against.
+
+### Triaging / waiving findings
+
+1. Prefer upgrading to a patched version (`npm update <pkg>` or bump the range).
+2. If no fix exists and the advisory is not exploitable in our usage, document
+   the rationale in the PR and track it as a follow-up issue.
+3. As a last resort, scope a temporary waiver narrowly (e.g. raise the
+   `audit-level` only for the affected job) and link the tracking issue so it is
+   revisited.
+
+---
+
 ## Severity Guide
 
 Use this when flagging issues during review:
