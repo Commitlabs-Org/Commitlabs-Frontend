@@ -5,16 +5,15 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Documentation Index (docs/README.md)](docs/README.md)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
-- [Backend API Changelog](#backend-api-changelog)
-- [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md)
 - [Contributing](#contributing)
-- [API Reference](#api-reference)
 - [License](#license)
+
 
 ## 🔭 Overview
 
@@ -227,30 +226,29 @@ This project includes a reusable helper to attach standard security headers to H
 - **Disabling/Modifying Headers:**
   The `attachSecurityHeaders` function returns the modified `Response` object. You can further modify headers on the returned object if needed, or update the `src/utils/response.ts` file to change default behaviors globally.
 
-## License
-
-We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md) for detailed instructions on coding standards, testing procedures, and the pull request process.
-
 ## 📡 API Reference
 
 A description of the backend endpoints exposed under `/api` can be found in:
-
 - [docs/backend-api-reference.md](./docs/backend-api-reference.md)
 - [docs/backend-cors-policy.md](./docs/backend-cors-policy.md)
 - [docs/backend-storage.md](./docs/backend-storage.md)
 
-This document includes available routes, required parameters, and example
-requests/responses.  It is intended for developers building against or testing
-the backend.
+This document includes available routes, required parameters, and example requests/responses. It is intended for developers building against or testing the backend.
 
+## 🤝 Contributing
+
+We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) and check out the **[Documentation Index (docs/README.md)](docs/README.md)** for details on all available documentation, coding standards, naming conventions, and testing guidelines.
+
+### Steps to Contribute
+1. **Fork** the repository and clone it to your local machine.
+2. **Create a branch** for your changes:
+   ```bash
+   git checkout -b feat/your-feature-name
+   ```
+3. **Develop & Test** following the conventions in the [Developer Guide](./DEVELOPER_GUIDE.md).
+4. **Commit and Push** your changes to your fork.
+5. **Open a Pull Request** pointing to the upstream repository's `master` branch.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-Fork the repository and clone it to your local machine
-Create a new branch for your changes
-Make and test your updates following the project guidelines
-Commit and push your changes to your fork
-Open a Pull Request with a clear description
