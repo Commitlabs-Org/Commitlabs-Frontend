@@ -2,6 +2,10 @@
 
 This document tracks **breaking backend API changes** that may impact this frontend. Keep entries brief, actionable, and linked to implementation artifacts.
 
+For frontend release notes and versioning rules, see the top-level
+[`CHANGELOG.md`](../CHANGELOG.md) and the frontend
+[`RELEASE_PROCESS.md`](./RELEASE_PROCESS.md).
+
 ## Purpose
 
 - Provide a single source of truth for backend API breaking changes.
@@ -30,7 +34,7 @@ Add an entry when any backend change can break existing clients, including:
 Copy this block for each new change:
 
 ```md
-## YYYY-MM-DD — <Short Change Title>
+## YYYY-MM-DD 鈥?<Short Change Title>
 
 - **Status:** Planned | Released | Rolled Back
 - **Effective Date:** YYYY-MM-DD
@@ -60,7 +64,7 @@ Copy this block for each new change:
 
 ---
 
-## 2026-02-25 — Backend API changelog process introduced
+## 2026-02-25 鈥?Backend API changelog process introduced
 
 - **Status:** Released
 - **Effective Date:** 2026-02-25
@@ -88,7 +92,7 @@ Copy this block for each new change:
 
 - This is a non-runtime governance entry that establishes the baseline process.
 
-## 2026-02-25 — Initial baseline: no pending breaking backend changes
+## 2026-02-25 鈥?Initial baseline: no pending breaking backend changes
 
 - **Status:** Released
 - **Effective Date:** 2026-02-25
@@ -113,7 +117,7 @@ Copy this block for each new change:
 
 - First true backend contract break after this date must be added as a new dated entry.
 
-## 2026-05-28 — Compliance score scaling consistency fix
+## 2026-05-28 鈥?Compliance score scaling consistency fix
 
 - **Status:** Released
 - **Effective Date:** 2026-05-28
@@ -147,5 +151,5 @@ Copy this block for each new change:
 
 - This fix corrects a data consistency bug where compliance scores were incorrectly displayed
 - The scaling convention is now: divide by 100 on write, multiply by 100 on read
-- Example: Score 85 → 0.85 on-chain → 85 in application (correct round-trip)
+- Example: Score 85 鈫?0.85 on-chain 鈫?85 in application (correct round-trip)
 - Tests verify no float precision loss for typical scores (0, 25, 50, 75, 85, 92, 100)
