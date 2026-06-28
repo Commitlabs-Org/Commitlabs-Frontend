@@ -5,6 +5,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Documentation Index (docs/README.md)](docs/README.md)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
@@ -17,6 +18,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Community & Contributing](#community--contributing)
 - [API Reference](#api-reference)
 - [License](#license)
+
 
 ## 🔭 Overview
 
@@ -231,7 +233,6 @@ This project includes a reusable helper to attach standard security headers to H
 ## 📡 API Reference
 
 A description of the backend endpoints exposed under `/api` can be found in:
-
 - [docs/backend-api-reference.md](./docs/backend-api-reference.md)
 - [docs/backend-cors-policy.md](./docs/backend-cors-policy.md)
 - [docs/backend-storage.md](./docs/backend-storage.md)
@@ -240,7 +241,7 @@ This document includes available routes, required parameters, and example reques
 
 ## 🤝 Contributing
 
-We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) for details on coding standards, naming conventions, and testing guidelines.
+We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) and check out the **[Documentation Index (docs/README.md)](docs/README.md)** for details on all available documentation, coding standards, naming conventions, and testing guidelines.
 
 To standardize submissions and streamline reviews, we use structured templates:
 - **Bug Reports**: Use the [Bug Report Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-bug&projects=&template=bug_report.yml) to report issues.

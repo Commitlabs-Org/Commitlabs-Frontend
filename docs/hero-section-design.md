@@ -5,7 +5,7 @@ The landing page hero now features a clear CTA hierarchy:
 - **Primary CTA**: "Create commitment" – links to `/create`
 - **Secondary CTA**: "Explore marketplace" – links to `/marketplace`
 
-Both buttons follow the color palette and typography defined in **Branding.txt**.
+Both buttons follow the color palette and typography defined in [Branding.txt](design/Branding.txt).
 
 ## Accessibility
 - Sufficient contrast ratios (primary button uses bright accent, secondary uses dark background with accent border).
