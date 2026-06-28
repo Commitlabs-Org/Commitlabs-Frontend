@@ -58,6 +58,13 @@ const amountSchema = z.union([z.string(), z.number()]).transform((val) => {
   return num;
 });
 
+const addressSchema = z
+  .string()
+  .trim()
+  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
+    message: "Must be a valid Stellar address (G... format).",
+  });
+
 const paginationSchema = z
   .object({
     page: z

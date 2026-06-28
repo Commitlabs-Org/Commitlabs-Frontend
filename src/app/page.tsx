@@ -13,7 +13,7 @@ const SolutionSection = dynamic(() => import('@/components/SolutionSection'), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,
 });
-const CoreConceptsSection = dynamic(() => import('@/components/landing-page/sections/CoreConceptsSection'), {
+const CoreConceptsSection = dynamic(() => import('@/components/landing-page/sections/CoreConceptsSection').then((m) => m.CoreConceptsSection), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,
 });
@@ -25,7 +25,7 @@ const ImpactSection = dynamic(() => import('@/components/ImpactSection'), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,
 });
-const ExperienceSection = dynamic(() => import('@/components/landing-page/sections/ExperienceSection'), {
+const ExperienceSection = dynamic(() => import('@/components/landing-page/sections/ExperienceSection').then((m) => m.ExperienceSection), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,
 });

@@ -11,6 +11,7 @@ import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/Comm
 import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal'
 import ListForSaleModal from '@/components/modals/ListForSaleModal'
 import { useWallet } from '@/hooks/useWallet'
+import { useToast } from '@/components/toast/ToastProvider'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
 import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
