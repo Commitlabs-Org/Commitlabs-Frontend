@@ -7,6 +7,8 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 ## 📖 Overview & General Guides
 - **[README.md](../README.md)** (Root) — Main project overview, features, configuration guide, and quick start instructions.
 - **[DEVELOPER_GUIDE.md](../DEVELOPER_GUIDE.md)** (Root) — Coding standards, TypeScript conventions, styling practices, package management, and testing workflows.
+- **[CHANGELOG.md](../CHANGELOG.md)** (Root) — Keep-a-Changelog record of notable frontend changes.
+- **[RELEASE_PROCESS.md](RELEASE_PROCESS.md)** — Semantic versioning, how changelog entries are added, and how releases are cut.
 - **[GLOSSARY.md](GLOSSARY.md)** — Explanations of core business domain terms (e.g., Safe, Balanced, Aggressive commitments, drawdowns).
 - **[todo/TODO.md](todo/TODO.md)** — Tracked checklist for self-hosting fonts performance feature.
 
