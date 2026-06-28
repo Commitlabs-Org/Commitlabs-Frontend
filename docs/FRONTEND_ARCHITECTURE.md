@@ -184,6 +184,7 @@ MarketplaceFilters
 │   └── MarketplaceCard (per item)
 └── MarketplaceResultsLayout  (pagination, view toggle)
 MarketplaceGridSkeleton  (loading)
+CompareTray + CompareView  (URL-restored compare sets via `?compare=`)
 TrustBadge
 ```
 

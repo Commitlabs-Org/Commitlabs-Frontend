@@ -6,14 +6,15 @@ Buyers can pin up to three marketplace listings and open a side-by-side comparis
 
 1. Each grid card exposes a **Compare** toggle in the header.
 2. Pinned listings appear in a fixed bottom **Compare tray** with a count badge.
-3. Click **Compare** in the tray (requires at least two listings) to open the comparison dialog.
-4. Use **Clear** or **Dismiss** to empty the tray, or remove individual pins from the tray chips.
+3. Share or reload `/marketplace?compare=001,002` to restore a saved comparison set.
+4. Click **Compare** in the tray (requires at least two listings) to open the comparison dialog.
+5. Use **Clear** or **Dismiss** to empty the tray, or remove individual pins from the tray chips.
 
 ## Implementation
 
 | Piece | Location |
 |-------|----------|
-| Selection state + session persistence | `src/hooks/useCompareListings.ts` |
+| Selection state + session persistence + URL sync | `src/hooks/useCompareListings.ts` |
 | Bottom tray UI | `src/components/marketplace/CompareTray.tsx` |
 | Side-by-side table | `src/components/marketplace/CompareView.tsx` |
 | Card toggle | `src/components/MarketplaceCard.tsx` |
@@ -23,6 +24,8 @@ Buyers can pin up to three marketplace listings and open a side-by-side comparis
 ## Persistence
 
 Pinned listing payloads are stored in `sessionStorage` under `marketplace-compare-listings`. The set survives filter, sort, and pagination changes within the same browser tab.
+
+The selected ids are also mirrored into the `compare` URL query parameter. See [Marketplace Compare Share URLs](./COMPARE_SHARE.md) for the restore rules, invalid-id handling, and auto-open behavior.
 
 ## Limits and accessibility
 

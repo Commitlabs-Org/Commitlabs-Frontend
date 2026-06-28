@@ -22,6 +22,7 @@ const makeListing = (id: string): MarketplaceCardProps => ({
 describe('useCompareListings', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    window.history.replaceState(null, '', '/marketplace');
     vi.restoreAllMocks();
   });
 

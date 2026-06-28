@@ -357,7 +357,8 @@ export default function Marketplace() {
     toggleListing,
     removeListing,
     clearAll: clearCompareListings,
-  } = useCompareListings()
+    restoredFromUrl: compareRestoredFromUrl,
+  } = useCompareListings(mockListings)
   const [filters, setFilters] = useState<Filters>({
     sortBy: 'price',
     commitmentType: ['balanced'],
@@ -513,6 +514,7 @@ export default function Marketplace() {
         listings={compareListings}
         onRemove={removeListing}
         onClear={clearCompareListings}
+        openOnRestore={compareRestoredFromUrl}
       />
 
       <style jsx global>{`

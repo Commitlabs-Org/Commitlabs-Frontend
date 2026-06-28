@@ -97,6 +97,21 @@ describe('CompareTray', () => {
     expect(screen.getByText('12.5%')).toBeTruthy();
   });
 
+  it('auto-opens comparison view once for restored share URLs', async () => {
+    render(
+      <CompareTray
+        listings={[LISTING_A, LISTING_B]}
+        onRemove={vi.fn()}
+        onClear={vi.fn()}
+        openOnRestore
+      />,
+    );
+
+    expect(
+      await screen.findByRole('dialog', { name: /Compare Listings/i }),
+    ).toBeTruthy();
+  });
+
   it('calls onClear when Clear or Dismiss is clicked', () => {
     const onClear = vi.fn();
     render(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard';
 import { MAX_COMPARE_LISTINGS } from '@/hooks/useCompareListings';
 import { CompareView } from './CompareView';
@@ -9,10 +9,29 @@ interface CompareTrayProps {
   listings: MarketplaceCardProps[];
   onRemove: (id: string) => void;
   onClear: () => void;
+  openOnRestore?: boolean;
 }
 
-export function CompareTray({ listings, onRemove, onClear }: CompareTrayProps) {
+export function CompareTray({
+  listings,
+  onRemove,
+  onClear,
+  openOnRestore = false,
+}: CompareTrayProps) {
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const hasAutoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (!openOnRestore) {
+      hasAutoOpenedRef.current = false;
+      return;
+    }
+
+    if (hasAutoOpenedRef.current || listings.length < 2) return;
+
+    setIsCompareOpen(true);
+    hasAutoOpenedRef.current = true;
+  }, [listings.length, openOnRestore]);
 
   if (listings.length === 0) {
     return null;
