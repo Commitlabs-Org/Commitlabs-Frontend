@@ -7,6 +7,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Architecture Decision Records](./docs/adr/README.md)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
@@ -49,6 +50,8 @@ The application is built using the **Next.js App Router** architecture.
 For a deep dive into the system design, modules, and data flow, please refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 For a frontend-focused map of pages to components to API routes, plus wallet/auth state flow, see [FRONTEND_ARCHITECTURE.md](./docs/FRONTEND_ARCHITECTURE.md).
+
+For cross-cutting decision history and contributor guidance, see the [Architecture Decision Records](./docs/adr/README.md).
 
 ## 🧪 Testing
 
