@@ -21,6 +21,7 @@ export default defineConfig({
         'src/app/api/marketplace/listings/[id]/route.ts',
         'src/app/api/commitments/route.ts',
         'src/app/api/commitments/search/route.ts',
+        'scripts/routeCoverage.ts',
       ],
       exclude: [
         'node_modules/',
