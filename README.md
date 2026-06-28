@@ -94,6 +94,7 @@ Tests demonstrate:
 - Mock data without external dependencies
 
 To add new API route tests, create a `.test.ts` file in `tests/api/` following the same pattern.
+Fixture locations and naming conventions are documented in [docs/testing/FIXTURES.md](./docs/testing/FIXTURES.md).
 
 ## 🔄 Backend API Changelog
 
