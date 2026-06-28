@@ -64,6 +64,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[testing/TRUST_BADGE_TESTS.md](testing/TRUST_BADGE_TESTS.md)** — Verification details for seller trust level badges.
 
 ## ♿ Accessibility & Performance
+- **[accessibility/ACCESSIBILITY_STATEMENT.md](accessibility/ACCESSIBILITY_STATEMENT.md)** — Overall WCAG 2.1 AA target, current conformance posture, known gaps, and how to report accessibility problems.
 - **[accessibility-dense-ui.md](accessibility-dense-ui.md)** — Layout rules and size considerations for data-dense tables.
 - **[accessibility/CONTRAST_AUDIT.md](accessibility/CONTRAST_AUDIT.md)** — Verification report on text color contrast ratios.
 - **[accessibility/CREATE_WIZARD_A11Y.md](accessibility/CREATE_WIZARD_A11Y.md)** — Keyboard controls, screen-reader descriptions, and aria labels for form steps.
