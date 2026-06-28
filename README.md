@@ -2,7 +2,7 @@
 
 The frontend application for the CommitLabs protocol, a decentralized platform for managing liquidity commitments on the Stellar network. Built with Next.js, TypeScript, and Tailwind CSS.
 
-## 📋 Table of Contents
+## 馃搵 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -10,13 +10,14 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
+- [Changelog](./CHANGELOG.md)
 - [Backend API Changelog](#backend-api-changelog)
 - [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md)
 - [Contributing](#contributing)
 - [API Reference](#api-reference)
 - [License](#license)
 
-## 🔭 Overview
+## 馃敪 Overview
 
 CommitLabs allows users to create, manage, and trade liquidity commitments. These commitments are on-chain contracts that lock assets for a specified duration in exchange for yield, with specific compliance and risk parameters.
 
@@ -26,7 +27,7 @@ This frontend interacts with the CommitLabs Soroban smart contracts to:
 2.  Monitor the health and performance of existing commitments.
 3.  Trade commitments on a secondary marketplace.
 
-## ✨ Features
+## 鉁?Features
 
 - **Commitment Creation Wizard**: Step-by-step process to configure asset, amount, duration, and risk parameters.
 - **Dashboard**: Real-time visualization of commitment health, including value history, drawdown, and compliance scores.
@@ -35,7 +36,7 @@ This frontend interacts with the CommitLabs Soroban smart contracts to:
 - **Settlement and Early Exit Flows**: Guided settlement eligibility, settlement success, and early-exit confirmation surfaces backed by preview and execution endpoints. See [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md).
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 
-## 🏗 Architecture
+## 馃彈 Architecture
 
 The application is built using the **Next.js App Router** architecture.
 
@@ -50,7 +51,7 @@ For a deep dive into the system design, modules, and data flow, please refer to 
 
 For a frontend-focused map of pages to components to API routes, plus wallet/auth state flow, see [FRONTEND_ARCHITECTURE.md](./docs/FRONTEND_ARCHITECTURE.md).
 
-## 🧪 Testing
+## 馃И Testing
 
 This project uses **Vitest** for unit and integration testing of API routes.
 
@@ -73,10 +74,10 @@ Tests are organized in the `tests/` directory:
 
 ```
 tests/
-└── api/
-    ├── helpers.ts           # Test utilities and mock request helpers
-    ├── health.test.ts       # Tests for /api/health route
-    └── commitments.test.ts  # Tests for /api/commitments route
+鈹斺攢鈹€ api/
+    鈹溾攢鈹€ helpers.ts           # Test utilities and mock request helpers
+    鈹溾攢鈹€ health.test.ts       # Tests for /api/health route
+    鈹斺攢鈹€ commitments.test.ts  # Tests for /api/commitments route
 ```
 
 ### API Routes
@@ -95,11 +96,13 @@ Tests demonstrate:
 
 To add new API route tests, create a `.test.ts` file in `tests/api/` following the same pattern.
 
-## 🔄 Backend API Changelog
+## 馃攧 Backend API Changelog
 
 Breaking backend API changes are tracked in [docs/backend-changelog.md](./docs/backend-changelog.md). Update this changelog whenever a backend change can break existing frontend integrations.
 
-## 🚀 Getting Started
+Frontend release notes are tracked in [CHANGELOG.md](./CHANGELOG.md), with release and versioning guidance in [docs/RELEASE_PROCESS.md](./docs/RELEASE_PROCESS.md).
+
+## 馃殌 Getting Started
 
 ### Prerequisites
 
@@ -144,7 +147,7 @@ Breaking backend API changes are tracked in [docs/backend-changelog.md](./docs/b
 5.  **Open the application:**
     Visit [http://localhost:3000](http://localhost:3000) in your browser.
 
-## ⚙️ Configuration
+## 鈿欙笍 Configuration
 
 The application requires the following environment variables (defined in `.env`):
 
@@ -167,30 +170,30 @@ Backend API storage uses a provider-agnostic adapter. Configure
 `COMMITLABS_STORAGE_PROVIDER=memory` by default and see
 [docs/backend-storage.md](docs/backend-storage.md) for adapter details.
 
-## 📂 Project Structure
+## 馃搨 Project Structure
 
 ```
 src/
-├── app/                    # Next.js App Router pages and layouts
-│   ├── commitments/        # Dashboard & Commitment Details
-│   ├── create/             # Commitment Creation Wizard
-│   ├── marketplace/        # Marketplace Listing
-│   └── page.tsx            # Landing Page
-├── components/             # Reusable UI components
-│   ├── dashboard/          # Charts and metrics components
-│   ├── modals/             # Global modals (Success, Errors)
-│   └── ...
-├── types/                  # TypeScript interfaces and types
-├── hooks/                  # React hooks (useWallet, etc.)
-├── lib/                    # Backend lib, services, mocks
-├── utils/                  # Utility functions (Soroban, formatting)
-└── ...
+鈹溾攢鈹€ app/                    # Next.js App Router pages and layouts
+鈹?  鈹溾攢鈹€ commitments/        # Dashboard & Commitment Details
+鈹?  鈹溾攢鈹€ create/             # Commitment Creation Wizard
+鈹?  鈹溾攢鈹€ marketplace/        # Marketplace Listing
+鈹?  鈹斺攢鈹€ page.tsx            # Landing Page
+鈹溾攢鈹€ components/             # Reusable UI components
+鈹?  鈹溾攢鈹€ dashboard/          # Charts and metrics components
+鈹?  鈹溾攢鈹€ modals/             # Global modals (Success, Errors)
+鈹?  鈹斺攢鈹€ ...
+鈹溾攢鈹€ types/                  # TypeScript interfaces and types
+鈹溾攢鈹€ hooks/                  # React hooks (useWallet, etc.)
+鈹溾攢鈹€ lib/                    # Backend lib, services, mocks
+鈹溾攢鈹€ utils/                  # Utility functions (Soroban, formatting)
+鈹斺攢鈹€ ...
 
 See [docs/FRONTEND_ARCHITECTURE.md](./docs/FRONTEND_ARCHITECTURE.md) for a
-detailed page→component→API-route map and state/data-flow conventions.
+detailed page鈫抍omponent鈫扐PI-route map and state/data-flow conventions.
 ```
 
-## 🤝 Contributing
+## 馃 Contributing
 
 ## Security Headers
 
@@ -231,7 +234,7 @@ This project includes a reusable helper to attach standard security headers to H
 
 We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md) for detailed instructions on coding standards, testing procedures, and the pull request process.
 
-## 📡 API Reference
+## 馃摗 API Reference
 
 A description of the backend endpoints exposed under `/api` can be found in:
 
@@ -244,11 +247,11 @@ requests/responses.  It is intended for developers building against or testing
 the backend.
 
 
-## 📄 License
+## 馃搫 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Contributing
+## 馃 Contributing
 Fork the repository and clone it to your local machine
 Create a new branch for your changes
 Make and test your updates following the project guidelines
