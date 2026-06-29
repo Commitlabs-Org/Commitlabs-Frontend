@@ -1,0 +1,26 @@
+# CODEOWNERS
+#
+# This file routes review requests to the right maintainers based on the
+# area of the codebase a change touches. The last matching pattern wins, so
+# more specific patterns are placed below the broad fallback.
+#
+# See docs/CODEOWNERS.md for how ownership maps to review expectations.
+
+# Fallback owner for anything not matched by a more specific rule below.
+*                       @Commitlabs-Org/maintainers
+
+# Frontend: app router, UI components and styles
+/src/app/               @Commitlabs-Org/frontend
+/src/components/        @Commitlabs-Org/frontend
+/src/styles/            @Commitlabs-Org/frontend
+
+# API / backend library layer
+/src/app/api/           @Commitlabs-Org/backend
+/src/lib/backend/       @Commitlabs-Org/backend
+
+# Smart contracts
+/contracts/             @Commitlabs-Org/contracts
+
+# Documentation
+/docs/                  @Commitlabs-Org/docs
+*.md                    @Commitlabs-Org/docs
