@@ -22,7 +22,6 @@
     "test:contracts:deploy": "node contracts/scripts/deploy-testnet.smoke.mjs",
     "seed:mock": "tsx scripts/seed-backend-mock.ts",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -50,6 +49,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
     "@playwright/test": "^1.61.1",
     "@size-limit/file": "^12.1.0",
     "@testing-library/jest-dom": "^6.9.1",
