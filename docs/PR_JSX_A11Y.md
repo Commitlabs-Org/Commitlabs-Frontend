@@ -1,32 +1,36 @@
-# PR Documentation: Enable jsx-a11y ESLint Rules
+# PR Documentation: JSX Accessibility Linting
 
 ## Summary
 
-This PR enables the recommended `jsx-a11y` rules in `.eslintrc.json` and fixes all violations reported across the frontend component tree.
-The goal is to enforce accessibility best practices automatically in CI and prevent common issues such as missing `alt` text, clickable non-interactive elements, and improper label/control associations.
+This PR enables the recommended `jsx-a11y` ESLint rules across the frontend and fixes the accessibility issues they surface.
+The goal is to make accessibility checks part of the normal development workflow and reduce regressions in interactive UI components.
 
 ## What changed
 
-- Updated `.eslintrc.json` to extend `plugin:jsx-a11y/recommended`.
-- Fixed accessibility violations across `src/components/**` and `src/app/**`.
-- Added documentation for the enabled accessibility linting rules and enforcement expectations in `docs/accessibility/LINTING.md`.
+- Enabled the recommended `jsx-a11y` rules in `.eslintrc.json`.
+- Fixed accessibility violations in affected components and route views, including:
+  - keyboard-accessible interactive controls
+  - proper label associations for form-like controls
+  - valid link semantics and navigable anchors
+  - safer interactive patterns in dialogs and menus
+- Added documentation for the linting setup and local validation steps in `docs/accessibility/LINTING.md`.
 
 ## Why this matters
 
-- Enables automated enforcement of React accessibility best practices.
-- Prevents regressions in alt text, keyboard operability, and form labeling.
-- Ensures the codebase is aligned with Next.js and React accessibility standards.
-- Makes the app more usable for keyboard, screen reader, and assistive technology users.
+- Helps prevent common accessibility regressions in buttons, links, forms, and dialogs.
+- Improves support for keyboard and assistive-technology users.
+- Makes accessibility enforcement part of the regular frontend workflow rather than a one-off review task.
 
-## How to verify
+## Testing
 
-1. Run the lint command:
-   - `pnpm lint`
-2. Confirm the command completes without any `jsx-a11y` or other ESLint errors.
-3. Review the new docs in `docs/accessibility/LINTING.md`.
+1. Run the targeted lint check for updated UI files:
+   - `./node_modules/.bin/eslint "src/components/**/*.{ts,tsx}" "src/app/**/*.{ts,tsx}" --ext .ts,.tsx`
+2. Confirm the updated `jsx-a11y` issues are resolved.
+3. Optionally run the broader repo lint command:
+   - `corepack pnpm lint`
 
 ## Notes
 
-- No blanket rule disables were introduced.
-- Any targeted disable comments must be inline, justified, and reviewed.
-- This PR is focused on lint enforcement and remediation, not on new UI behavior.
+- This PR focuses on enabling and remediating the accessibility issues surfaced by `jsx-a11y`.
+- Some unrelated repository-wide lint issues remain outside the scope of this change.
+- The new documentation provides a repeatable local validation path for future contributors.

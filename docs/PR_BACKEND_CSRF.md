@@ -2,37 +2,38 @@
 
 ## Summary
 
-This PR extends CSRF protection unit test coverage for browser-session mutation endpoints.
-It exercises the `src/lib/backend/csrf.ts` helper across valid and invalid token branches, including double-submit cookie verification and CSRF rotation behavior.
+This PR strengthens the backend CSRF test suite for browser-session mutation endpoints.
+It adds focused coverage around the double-submit cookie flow implemented in `src/lib/backend/csrf.ts`, with emphasis on token freshness, session binding, rotation, and origin validation.
 
 ## What changed
 
-- Extended `src/lib/backend/csrf.test.ts` with new coverage for:
-  - freshly generated CSRF token verification against the same browser session
-  - empty CSRF header rejection
-  - token mismatch when the header token belongs to a different session
-  - CSRF token rotation: old token rejected, new token accepted
-  - same-origin validation for `assertSameOriginForCookieSession`
-- Verified the CSRF helper behavior using `./node_modules/.bin/vitest run src/lib/backend/csrf.test.ts`
+- Expanded `src/lib/backend/csrf.test.ts` to cover:
+  - fresh CSRF token verification for the same browser session
+  - rejection of empty or missing CSRF headers
+  - rejection when the header token belongs to a different session
+  - token rotation behavior where the old token is rejected and the new token is accepted
+  - same-origin enforcement for `assertSameOriginForCookieSession`
+- Verified the behavior with:
+  - `./node_modules/.bin/vitest run src/lib/backend/csrf.test.ts`
 
 ## Why this matters
 
-- Ensures cookie-authenticated write routes are protected by the double-submit CSRF pattern.
-- Prevents attackers from abusing valid session cookies with tampered or stale CSRF tokens.
-- Confirms the implementation rejects invalid, empty, or mismatched header tokens.
-- Validates that token rotation behavior preserves security while allowing a new token to be accepted.
+- Protects cookie-authenticated write routes from forged cross-site requests.
+- Ensures stale or tampered CSRF tokens cannot be replayed with a valid session cookie.
+- Confirms the helper continues to reject mismatched, empty, and cross-session token values.
+- Makes the intended security behavior explicit and regression-resistant.
 
-## How to verify
+## Testing
 
 1. Run the focused CSRF unit tests:
    - `./node_modules/.bin/vitest run src/lib/backend/csrf.test.ts`
-2. Confirm all tests pass:
+2. Confirm the result:
    - `17 tests passed`
-3. Optionally run the full test suite to ensure no regressions:
+3. Optionally run the wider suite for regression coverage:
    - `pnpm test`
 
 ## Notes
 
-- No production code behavior was changed; this PR extends test coverage only.
-- The CSRF helper already enforces same-origin checks and bearer-token bypass for API clients.
-- The new tests make the double-submit flow explicit and cover tamper/mismatch branches.
+- No production behavior was changed; this PR is test coverage focused.
+- The existing CSRF helper already enforces same-origin checks and avoids enforcement for bearer-token API clients.
+- These additions make the security contract easier to audit and maintain over time.
