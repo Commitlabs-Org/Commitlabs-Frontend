@@ -1,7 +1,9 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import styles from './RecentAttestationsPanel.module.css'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useAttestationStream } from '@/hooks/useAttestationStream'
 
 export interface Attestation {
   id: string
@@ -21,6 +23,10 @@ export interface RecentAttestationsPanelProps {
   }
   onSelectAttestation: (id: string) => void
   onViewAll: () => void
+  /** Optional commitment ID to enable real-time SSE streaming of new attestations. */
+  commitmentId?: string | null
+  /** Set to false to disable streaming even when commitmentId is provided. */
+  streamingEnabled?: boolean
 }
 
 // Utility function to format relative time
@@ -130,11 +136,53 @@ function ArrowRightIcon() {
 }
 
 export default function RecentAttestationsPanel({
-  attestations,
-  summary,
+  attestations: initialAttestations,
+  summary: initialSummary,
   onSelectAttestation,
   onViewAll,
+  commitmentId = null,
+  streamingEnabled = true,
 }: RecentAttestationsPanelProps) {
+  // Live attestations prepend in front of the initial static list
+  const [liveAttestations, setLiveAttestations] = useState<Attestation[]>([])
+  const [liveAnnouncement, setLiveAnnouncement] = useState<string>('')
+
+  const handleAttestation = useCallback(
+    (attestation: Attestation) => {
+      setLiveAttestations((prev) => {
+        // Deduplicate by id against both live and initial lists
+        const existsInLive = prev.some((a) => a.id === attestation.id)
+        const existsInInitial = initialAttestations.some((a) => a.id === attestation.id)
+        if (existsInLive || existsInInitial) return prev
+        return [attestation, ...prev]
+      })
+      setLiveAnnouncement(`New attestation: ${attestation.title}`)
+    },
+    [initialAttestations],
+  )
+
+  useAttestationStream({
+    commitmentId,
+    onAttestation: handleAttestation,
+    enabled: streamingEnabled && commitmentId !== null,
+  })
+
+  // Merge live (prepended) with initial static list
+  const attestations = [...liveAttestations, ...initialAttestations]
+
+  // Derive live summary counts that include streamed items
+  const summary = {
+    complianceCount:
+      initialSummary.complianceCount +
+      liveAttestations.filter((a) => a.severity === 'ok').length,
+    warningCount:
+      initialSummary.warningCount +
+      liveAttestations.filter((a) => a.severity === 'warning').length,
+    violationCount:
+      initialSummary.violationCount +
+      liveAttestations.filter((a) => a.severity === 'violation').length,
+  }
+
   const getSeverityIcon = (severity: Attestation['severity']) => {
     switch (severity) {
       case 'ok':
@@ -163,6 +211,16 @@ export default function RecentAttestationsPanel({
 
   return (
     <section className={styles.panel} aria-label="Recent Attestations">
+      {/* Accessible live region for new attestation announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveAnnouncement}
+      </div>
+
       <header className={styles.header}>
         <h2 className={styles.title}>Recent Attestations</h2>
         <button
