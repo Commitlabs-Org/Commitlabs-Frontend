@@ -1,10 +1,24 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { apiGet } from '@/lib/apiClient';
 import { CommitmentDetailOverview } from "@/components/CommitmentDetailOverview";
 import { AtRiskCommitments } from "@/components/dashboard/AtRiskCommitments";
 import { Commitment } from "@/lib/types/domain";
+
+const PortfolioAllocationChart = dynamic(
+  () =>
+    import(
+      "@/components/dashboard/PortfolioAllocationChart"
+    ).then((mod) => mod.PortfolioAllocationChartInner),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-[#111] border border-[#222] rounded-xl p-6 h-80 animate-pulse" />
+    ),
+  },
+);
 
 export default function CommitmentOverviewPage() {
   const [commitments, setCommitments] = useState<Commitment[]>([]);
@@ -13,12 +27,10 @@ export default function CommitmentOverviewPage() {
     async function loadCommitments() {
       try {
         const data = await apiGet<{ data: Commitment[] }>('/api/commitments');
-        setCommitments(data.data);
-          if (data && Array.isArray(data.data)) {
-            setCommitments(data.data);
-          } else if (Array.isArray(data)) {
-            setCommitments(data);
-          }
+        if (data && Array.isArray(data.data)) {
+          setCommitments(data.data);
+        } else if (Array.isArray(data)) {
+          setCommitments(data);
         }
       } catch (err) {
         console.error("Failed to load commitments", err);
@@ -32,6 +44,9 @@ export default function CommitmentOverviewPage() {
       <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-6">
         <div className="w-full">
           <AtRiskCommitments commitments={commitments} />
+        </div>
+        <div className="w-full">
+          <PortfolioAllocationChart commitments={commitments} />
         </div>
         <CommitmentDetailOverview
           commitmentTypeLabel="Safe Commitment"
