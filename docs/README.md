@@ -78,6 +78,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[performance/STARFIELD.md](performance/STARFIELD.md)** — Canvas rendering optimizations for animated background components.
 
 ## 📡 API & Backend Storage
+- **[observability/LOGGING_SCHEMA.md](observability/LOGGING_SCHEMA.md)** — Structured JSON logging contract: record shapes, levels, request-id correlation, and redaction.
 - **[backend-api-reference.md](backend-api-reference.md)** — Detailed definitions of REST API routes, parameter validations, schemas, and return formats.
 - **[backend-changelog.md](backend-changelog.md)** — Version logs tracking updates and contract changes to endpoints.
 - **[backend-cors-policy.md](backend-cors-policy.md)** — CORS whitelist configs and cross-origin handling.
