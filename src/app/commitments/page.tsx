@@ -149,6 +149,8 @@ export default function MyCommitments() {
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
   const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [selectedIdsForExport, setSelectedIdsForExport] = useState<string[]>([])
+  const [isExporting, setIsExporting] = useState(false)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
   const [isLoading, setIsLoading] = useState(true)
@@ -246,6 +248,11 @@ export default function MyCommitments() {
     )
   }, [commitmentsList, listingCommitmentId])
 
+  const handleExportSelected = useCallback((ids: string[]) => {
+    setSelectedIdsForExport(ids)
+    setIsExportOpen(true)
+  }, [])
+
   // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
   // own commitment changes, not on every filter/sort that re-runs this page.
   const handleViewDetails = useCallback(
@@ -339,6 +346,8 @@ export default function MyCommitments() {
               onAttestations={handleViewAttestations}
               onEarlyExit={openEarlyExitModal}
               onListForSale={openListForSaleModal}
+              onExportSelected={handleExportSelected}
+              isExporting={isExporting}
             />
           </>
         )}
@@ -362,8 +371,12 @@ export default function MyCommitments() {
 
       <ExportCommitmentsModal
         isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
+        onClose={() => {
+          setIsExportOpen(false)
+          setSelectedIdsForExport([])
+        }}
         ownerAddress={address}
+        selectedIds={selectedIdsForExport}
       />
 
       {commitmentForListing && (

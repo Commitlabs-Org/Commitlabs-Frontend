@@ -12,6 +12,7 @@ interface ExportCommitmentsModalProps {
   ownerAddress?: string;
   sessionToken?: string;
   endpoint?: string;
+  selectedIds?: string[];
 }
 
 const STORED_TOKEN_KEYS = [
@@ -75,6 +76,7 @@ export default function ExportCommitmentsModal({
   ownerAddress,
   sessionToken,
   endpoint = '/api/commitments/export',
+  selectedIds,
 }: ExportCommitmentsModalProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -110,6 +112,11 @@ export default function ExportCommitmentsModal({
     try {
       const url = new URL(endpoint, window.location.origin);
       url.searchParams.set('ownerAddress', normalizedAddress);
+
+      // Add selected IDs if provided
+      if (selectedIds && selectedIds.length > 0) {
+        selectedIds.forEach(id => url.searchParams.append('ids', id));
+      }
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -182,16 +189,18 @@ export default function ExportCommitmentsModal({
 
       <div className="mt-6 grid gap-4">
         <label className="flex items-center gap-3 rounded-[14px] border border-[#0FF0FC33] bg-[#0FF0FC0D] px-4 py-3">
-          <input type="radio" name="exportScope" checked readOnly />
+          <input type="radio" name="exportScope" checked={!selectedIds || selectedIds.length === 0} readOnly />
           <span className="text-sm font-medium">All commitments</span>
         </label>
 
-        <label className="flex items-center justify-between gap-3 rounded-[14px] border border-white/10 px-4 py-3 text-white/40">
+        <label className={`flex items-center justify-between gap-3 rounded-[14px] border px-4 py-3 ${selectedIds && selectedIds.length > 0 ? 'border-[#0FF0FC33] bg-[#0FF0FC0D] text-white' : 'border-white/10 text-white/40'}`}>
           <span className="flex items-center gap-3">
-            <input type="radio" name="exportScope" disabled />
+            <input type="radio" name="exportScope" checked={selectedIds && selectedIds.length > 0} readOnly />
             <span className="text-sm font-medium">Selected commitments</span>
           </span>
-          <span className="text-xs uppercase tracking-[0.16em]">Soon</span>
+          {selectedIds && selectedIds.length > 0 && (
+            <span className="text-xs font-semibold text-[#0FF0FC]">{selectedIds.length} selected</span>
+          )}
         </label>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
