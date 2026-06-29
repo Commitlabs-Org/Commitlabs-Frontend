@@ -3,6 +3,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { axe } from "vitest-axe";
 
 import {
   MarketplaceCard,
@@ -59,6 +60,8 @@ const BASE_PROPS: MarketplaceCardProps = {
   id: "42",
   type: "Safe",
   score: 85,
+  totalCommitments: 10,
+  successRate: 99,
   amount: "1000 XLM",
   duration: "30 days",
   yield: "8.5% APY",
@@ -474,6 +477,20 @@ describe("MarketplaceCard", () => {
       expect(link.getAttribute("href")).toBe(
         `/marketplace/trade?id=${encodeURIComponent("a b&c")}`,
       );
+    });
+  });
+
+  describe("accessibility", () => {
+    it("should have no accessibility violations when forSale is true", async () => {
+      const { container } = renderCard({ forSale: true });
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
+    });
+
+    it("should have no accessibility violations when forSale is false", async () => {
+      const { container } = renderCard({ forSale: false });
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
     });
   });
 });

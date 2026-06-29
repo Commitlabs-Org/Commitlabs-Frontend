@@ -2,6 +2,7 @@
 import { ReputationDisplay } from "./ReputationDisplay";
 
 import { memo, useState, useEffect } from "react";
+import Link from "next/link";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
 import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
 import { TrustBadge, TrustLevel } from "./TrustBadge";
@@ -391,15 +392,25 @@ function MarketplaceCardComponent({
                 View
               </button>
 
-              <button
-                type="button"
-                onClick={handleTrade}
-                disabled={isPurchasing}
-                className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
-                aria-label={`Trade ${id}`}
-              >
-                <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
-              </button>
+              {onPurchase ? (
+                <button
+                  type="button"
+                  onClick={handleTrade}
+                  disabled={isPurchasing}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
+                </button>
+              ) : (
+                <Link
+                  href={resolvedTradeHref}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> Trade
+                </Link>
+              )}
             </div>
           </>
         ) : (
