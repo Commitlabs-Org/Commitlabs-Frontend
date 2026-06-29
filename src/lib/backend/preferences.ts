@@ -64,6 +64,23 @@ export const userPreferencesSchema = z.object({
         .regex(/^[a-z]{2,3}(-[A-Z]{2,3})?$/, 'language must be a valid BCP-47 tag (e.g. "en", "en-US")')
         .optional(),
     seenWizardTour: z.boolean().optional(),
+    savedMarketplaceSearches: z
+        .array(
+            z.object({
+                id: z.string(),
+                name: z.string(),
+                filters: z.object({
+                    sortBy: z.string(),
+                    commitmentType: z.array(z.string()),
+                    priceRange: z.tuple([z.number(), z.number()]),
+                    durationRange: z.tuple([z.number(), z.number()]),
+                    minCompliance: z.number(),
+                    maxLoss: z.number(),
+                }),
+                createdAt: z.string(),
+            }),
+        )
+        .optional(),
 });
 
 /** Shape returned/stored for a single wallet. */
@@ -77,6 +94,7 @@ export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
     theme: 'system',
     language: 'en',
     seenWizardTour: false,
+    savedMarketplaceSearches: [],
 };
 
 // ─── Storage Adapter Interface ───────────────────────────────────────────────

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import SavedSearches from "./SavedSearches";
 
 type CommitmentType = "balanced" | "aggressive" | "conservative";
 
@@ -108,6 +109,9 @@ const MarketplaceFilters = ({
       className="focus-ring-container custom-scrollbar w-full md:fixed md:top-28 lg:left-10 xl:left-20 md:h-[600px] md:overflow-y-scroll md:w-80 bg-[#0A0A0A] border border-white/10 rounded-xl p-5 text-white custom-scrollbar"
       aria-label="Marketplace filters"
     >
+      {/* Saved Searches */}
+      <SavedSearches filters={filters} onApplyFilters={onFilterChange || (() => {})} />
+
       {/* Sort By */}
       <div className="mb-4 border-b border-white/5 pb-3">
         {renderSectionToggle("sort", "Sort By", "marketplace-filter-sort", {
