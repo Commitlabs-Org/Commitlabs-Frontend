@@ -186,9 +186,9 @@ describe("Marketplace keyboard accessibility", () => {
     render(<MarketplaceGrid items={[listing]} />);
 
     const viewButton = screen.getByRole("button", { name: /view 12/i });
-    const tradeLink = screen.getByRole("link", { name: /trade 12/i });
+    const tradeButton = screen.getByRole("button", { name: /trade 12/i });
 
     expect(viewButton.className).toContain("focus-ring");
-    expect(tradeLink.className).toContain("focus-ring");
+    expect(tradeButton.className).toContain("focus-ring");
   });
 });

@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import ErrorLayout from '@/components/ErrorLayout'
 import ErrorButton from '@/components/ErrorButton'
+import { reportError } from '@/lib/observability/reportError'
 import styles from './error.module.css'
 
 interface ErrorProps {
@@ -11,6 +12,10 @@ interface ErrorProps {
 }
 
 export default function Error({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    reportError(error, window.location.pathname)
+  }, [error])
+
   const handleRetry = useCallback(() => {
     reset()
   }, [reset])

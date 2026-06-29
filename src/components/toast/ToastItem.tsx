@@ -45,22 +45,19 @@ export default function ToastItem({
   onResume,
 }: ToastItemProps) {
   const [paused, setPaused] = React.useState(false);
+  const handleActionClick = async () => {
+    if (!toast.action) return;
 
-  React.useEffect(() => {
-    if (!isVisible) return;
-    const handleFocus = () => setPaused(true);
-    const handleBlur = () => setPaused(false);
-    const element = document.activeElement as HTMLElement | null;
-    if (element && element.closest('[data-toast]')) {
-      setPaused(true);
+    try {
+      await toast.action.onClick();
+    } catch (error) {
+      console.error('Toast action failed', error);
+    } finally {
+      if (toast.action.dismiss !== false) {
+        onDismiss();
+      }
     }
-    window.addEventListener('focusin', handleFocus);
-    window.addEventListener('focusout', handleBlur);
-    return () => {
-      window.removeEventListener('focusin', handleFocus);
-      window.removeEventListener('focusout', handleBlur);
-    };
-  }, [isVisible]);
+  };
 
   React.useEffect(() => {
     if (paused) {
@@ -90,6 +87,15 @@ export default function ToastItem({
       <div className="toast-content">
         <p className="toast-title">{toast.title}</p>
         {toast.description && <p className="toast-description">{toast.description}</p>}
+        {toast.action && (
+          <button
+            type="button"
+            className="toast-action"
+            onClick={handleActionClick}
+          >
+            {toast.action.label}
+          </button>
+        )}
       </div>
       <button
         type="button"

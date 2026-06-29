@@ -1,10 +1,18 @@
-import { NextRequest } from 'next/server';
-import { ok } from '@/lib/backend/apiResponse';
-import { BackendError, BackendErrorCode } from '@/lib/backend/errors';
-import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
-import { getCommitmentFromChain } from '@/lib/backend/services/contracts';
-import { getProtocolConstants, PenaltyTier } from '@/lib/backend/services/protocolConstants';
+import { NextRequest } from "next/server";
+import { ok } from "@/lib/backend/apiResponse";
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  TooManyRequestsError,
+} from "@/lib/backend/errors";
+import { withApiHandler } from "@/lib/backend/withApiHandler";
+import { checkRateLimit } from "@/lib/backend/rateLimit";
+import { getCommitmentFromChain } from "@/lib/backend/services/contracts";
+import {
+  getProtocolConstants,
+  PenaltyTier,
+} from "@/lib/backend/services/protocolConstants";
 
 /**
  * GET /api/commitments/{id}/early-exit/preview
@@ -13,54 +21,92 @@ import { getProtocolConstants, PenaltyTier } from '@/lib/backend/services/protoc
  * The calculation uses the penalty tiers defined in `protocolConstants.ts` and
  * the commitment data fetched from the blockchain.
  */
+function getPenaltyPercent(
+  commitment: Record<string, any>,
+  tier: PenaltyTier,
+): number {
+  const basePenaltyPercent = tier.earlyExitPenaltyPercent;
+  const createdAtMs = new Date(commitment.createdAt ?? "").getTime();
+  const expiresAtMs = new Date(commitment.expiresAt ?? "").getTime();
+
+  if (
+    !Number.isFinite(createdAtMs) ||
+    !Number.isFinite(expiresAtMs) ||
+    expiresAtMs <= createdAtMs
+  ) {
+    return basePenaltyPercent;
+  }
+
+  const now = Date.now();
+  if (now >= expiresAtMs) {
+    return 0;
+  }
+
+  if (now <= createdAtMs) {
+    return basePenaltyPercent;
+  }
+
+  const totalDurationMs = expiresAtMs - createdAtMs;
+  const remainingDurationMs = expiresAtMs - now;
+  const scaledPenaltyPercent =
+    basePenaltyPercent * (remainingDurationMs / totalDurationMs);
+
+  return +Math.max(
+    0,
+    Math.min(basePenaltyPercent, scaledPenaltyPercent),
+  ).toFixed(4);
+}
+
 export const GET = withApiHandler(async (req: NextRequest, { params }) => {
-  // Rate‑limit to protect the RPC endpoint.
-  const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
-  const allowed = await checkRateLimit(ip, 'api/commitments/early-exit/preview');
+  const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
+  const allowed = await checkRateLimit(
+    ip,
+    "api/commitments/early-exit/preview",
+  );
   if (!allowed) {
-    throw new BackendError({
-      code: BackendErrorCode.TOO_MANY_REQUESTS,
-      message: 'Rate limit exceeded',
-      status: 429,
-    });
+    throw new TooManyRequestsError("Rate limit exceeded");
   }
 
-  const commitmentId = params.id as string;
+  const commitmentId = params.id?.trim();
   if (!commitmentId) {
-    throw new BackendError({
-      code: BackendErrorCode.BAD_REQUEST,
-      message: 'Missing commitment id',
-      status: 400,
-    });
+    throw new BadRequestError("Missing commitment id");
   }
 
-  // Fetch the commitment from the chain.
   const commitment = await getCommitmentFromChain(commitmentId).catch(() => {
-    throw new BackendError({
-      code: BackendErrorCode.NOT_FOUND,
-      message: `Commitment ${commitmentId} not found`,
-      status: 404,
-    });
+    throw new NotFoundError("Commitment", { commitmentId });
   });
 
-  // Disallow preview for already settled commitments.
-  if (commitment.status === 'SETTLED') {
-    throw new BackendError({
-      code: BackendErrorCode.CONFLICT,
-      message: 'Commitment has already been settled',
-      status: 409,
-    });
+  if (!commitment) {
+    throw new NotFoundError("Commitment", { commitmentId });
   }
 
-  // Determine the applicable penalty tier. If the commitment contains a `type`
-  // field we use it, otherwise we fall back to the first tier (usually "safe").
+  if (commitment.status === "SETTLED") {
+    throw new ConflictError("Commitment has already been settled");
+  }
+
+  if (commitment.status === "VIOLATED") {
+    throw new ConflictError(
+      "Commitment has been violated and cannot be exited early",
+    );
+  }
+
+  if (commitment.status !== "ACTIVE") {
+    throw new ConflictError(
+      "Commitment must be active to preview an early exit",
+    );
+  }
+
   const protocol = getProtocolConstants();
   const tier: PenaltyTier = (commitment as any).type
-    ? protocol.penalties.find((t) => t.type === (commitment as any).type) ?? protocol.penalties[0]
+    ? (protocol.penalties.find((t) => t.type === (commitment as any).type) ??
+      protocol.penalties[0])
     : protocol.penalties[0];
 
   const principal = Number(commitment.amount);
-  const penaltyPercent = tier.earlyExitPenaltyPercent;
+  const penaltyPercent = getPenaltyPercent(
+    commitment as Record<string, any>,
+    tier,
+  );
   const penaltyAmount = +(principal * (penaltyPercent / 100)).toFixed(2);
   const netRefund = +(principal - penaltyAmount).toFixed(2);
 

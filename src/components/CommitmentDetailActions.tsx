@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiLogOut, FiFileText, FiDownload, FiAlertCircle } from 'react-icons/fi';
+import { SettlementEligibilityChecklist } from '@/components/settlement/SettlementEligibilityChecklist';
 
 interface CommitmentDetailActionsProps {
   canEarlyExit: boolean;
@@ -8,6 +9,10 @@ interface CommitmentDetailActionsProps {
   onExportData: () => void;
   onReportIssue: () => void;
   earlyExitDisabledReason?: string;
+  commitmentId?: string;
+  onSettle?: () => void;
+  settleDisabledReason?: string;
+  previewRefreshTrigger?: string | number;
 }
 
 export function CommitmentDetailActions ({
@@ -17,6 +22,10 @@ export function CommitmentDetailActions ({
   onExportData,
   onReportIssue,
   earlyExitDisabledReason = 'Early exit is only available before maturity',
+  commitmentId,
+  onSettle,
+  settleDisabledReason,
+  previewRefreshTrigger,
 
 }: CommitmentDetailActionsProps) {
   const focusRing =
@@ -57,6 +66,17 @@ export function CommitmentDetailActions ({
           </div>
         </button>
       </div>
+
+      {commitmentId ? (
+        <div className="mb-8">
+          <SettlementEligibilityChecklist
+            commitmentId={commitmentId}
+            onSettle={onSettle}
+            disabledReason={settleDisabledReason}
+            refreshTrigger={previewRefreshTrigger}
+          />
+        </div>
+      ) : null}
 
       {/* Additional Actions */}
       <div className="mb-8">

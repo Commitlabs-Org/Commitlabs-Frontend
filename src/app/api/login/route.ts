@@ -6,8 +6,7 @@ import {
   toCorsErrorResponse,
   type CorsRoutePolicy,
 } from '@/lib/backend/cors';
-import { attachSecurityHeaders } from '@/utils/response';
-import { methodNotAllowed } from '@/lib/backend/apiResponse';
+import { attachSecurityHeaders, methodNotAllowed } from '@/lib/backend/apiResponse';
 
 const LOGIN_CORS_POLICY = {
   POST: { access: 'first-party' },

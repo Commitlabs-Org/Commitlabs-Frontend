@@ -7,7 +7,7 @@ import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from "@/lib/backend/jsonBodyLimit";
 import { checkRateLimit, getRateLimitWindowSeconds } from "@/lib/backend/rateLimit";
 import { getUserCommitmentsFromChain, createCommitmentOnChain } from "@/lib/backend/services/contracts";
-import { validateSupportedAsset } from "@/lib/backend/validation";
+import { validateSupportedAsset, validateStellarAddress } from "@/lib/backend/validation";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
 
 const CommitmentsQuerySchema = z.object({

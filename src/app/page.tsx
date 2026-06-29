@@ -1,15 +1,42 @@
-import SolutionSection from "@/components/SolutionSection";
-import CommitmentJourney from "@/components/CommitmentJourney/CommitmentJourney";
-import ImpactSection from "@/components/ImpactSection";
+import dynamic from 'next/dynamic';
+import React from 'react';
 import { HeroSection } from "@/components/landing-page/sections/HeroSection";
-import { CoreConceptsSection } from "@/components/landing-page/sections/CoreConceptsSection";
-import { ProblemSection } from "@/components/landing-page/sections/ProblemSection";
-import Footer from "@/components/landing-page/Footer";
-import React from "react";
-
-import { ExperienceSection } from "@/components/landing-page/sections/ExperienceSection";
 import { Navigation } from "@/components/landing-page/Navigation";
-import ModalTester from "./ModalTester";
+import { Skeleton } from '@/components/Skeleton';
+
+// Lazy-loaded sections
+const ProblemSection = dynamic(() => import('@/components/landing-page/sections/ProblemSection'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const SolutionSection = dynamic(() => import('@/components/SolutionSection'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const CoreConceptsSection = dynamic(() => import('@/components/landing-page/sections/CoreConceptsSection'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const CommitmentJourney = dynamic(() => import('@/components/CommitmentJourney/CommitmentJourney'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const ImpactSection = dynamic(() => import('@/components/ImpactSection'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const ExperienceSection = dynamic(() => import('@/components/landing-page/sections/ExperienceSection'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const Footer = dynamic(() => import('@/components/landing-page/Footer'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
+const ModalTester = dynamic(() => import('./ModalTester'), {
+  loading: () => <Skeleton className="w-full h-64" />,
+  ssr: false,
+});
 
 export default function Home() {
   return (

@@ -1,5 +1,6 @@
 import React from "react";
 import { Commitment } from "@/types/commitment";
+import type { MarketplaceListing } from "@/types/marketplace";
 import Link from "next/link";
 import {
   SafeIcon,
@@ -9,20 +10,26 @@ import {
   FileTextIcon,
   AlertIcon,
 } from "./icons/CommitmentIcons";
-import { TrendingUp as Increase, TrendingDown as Decrease } from "lucide-react";
+import { TrendingUp as Increase, TrendingDown as Decrease, Tag } from "lucide-react";
 
 interface MyCommitmentCardProps {
   commitment: Commitment;
+  listing?: MarketplaceListing;
+  sellerAddress?: string;
   onDetails?: (id: string) => void;
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
+  onListForSale?: (id: string) => void;
 }
 
 const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   commitment,
+  listing,
+  sellerAddress,
   onDetails,
   onAttestations,
   onEarlyExit,
+  onListForSale,
 }) => {
   const {
     id,
@@ -101,7 +108,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
         <div className="flex items-baseline gap-2 text-[32px] font-bold font-roboto">
           {amount}{" "}
           <span
-            className="text-[16px] font-medium text-[#666]"
+            className="text-[16px] font-medium text-[#8892a0]"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
             {asset}
@@ -233,6 +240,17 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
         </div>
       </div>
 
+      {listing && sellerAddress && (
+        <div className="rounded-[10px] border border-white/5 bg-[#FFFFFF05] px-3 py-2.5">
+          <RelistPriceEditor
+            listing={listing}
+            sellerAddress={sellerAddress}
+            commitmentAsset={asset}
+            onPriceUpdated={(newPrice) => onListingPriceUpdated?.(id, newPrice)}
+          />
+        </div>
+      )}
+
       <div className="mt-2 flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -248,6 +266,15 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             <FileTextIcon size={16} /> Attestations
           </button>
         </div>
+        {status === "Active" && (
+          <button
+            className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[rgba(15,240,252,0.2)] bg-[rgba(15,240,252,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#0FF0FC] transition-all duration-200 ease-[ease] hover:bg-[rgba(15,240,252,0.1)]"
+            onClick={() => onListForSale?.(id)}
+            aria-label={`List ${id} for sale on the marketplace`}
+          >
+            <Tag size={16} /> List for sale
+          </button>
+        )}
         {status === "Active" && (
           <button
             className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#ff8904] transition-all duration-200 ease-[ease] hover:bg-[rgba(245,158,11,0.1)]"

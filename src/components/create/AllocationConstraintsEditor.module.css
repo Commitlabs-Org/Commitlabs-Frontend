@@ -1,0 +1,44 @@
+.editorSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.editorSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #00d4aa);
+  cursor: pointer;
+  border: none;
+  transition: box-shadow 0.2s;
+}
+
+.editorSlider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 12px var(--slider-thumb-color, rgba(0, 212, 170, 0.6));
+}
+
+.editorSlider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #00d4aa);
+  cursor: pointer;
+  border: none;
+}
+
+.editorNumberInput::-webkit-outer-spin-button,
+.editorNumberInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.editorNumberInput[type='number'] {
+  -moz-appearance: textfield;
+}

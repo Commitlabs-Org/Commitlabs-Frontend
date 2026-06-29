@@ -63,15 +63,15 @@
 .badge {
   display: inline-block;
   padding: 0.5rem 1.5rem;
-  border: 0.56px solid rgba(20, 184, 166, 0.4);
+  border: 0.56px solid var(--border-teal);
   border-radius: 20px;
-  color: rgba(15, 240, 252, 1);
+  color: var(--accent-teal);
   font-size: 14px;
   font-weight: 400;
   letter-spacing: 0px;
   text-transform: uppercase;
   margin-bottom: 2rem;
-  background: rgba(20, 184, 166, 0.05);
+  background: rgba(var(--accent-teal-rgb), 0.05);
   font-family: 'Roboto Mono';
   text-align: center;
 }
@@ -79,7 +79,7 @@
 .title {
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-style: Bold;
   font-size: clamp(2.5rem, 5vw, 4rem);
@@ -89,8 +89,8 @@
 }
 
 .titleAccent {
-  color: rgba(15, 240, 252, 1);
-  background: linear-gradient(135deg, #0FF0FC 0%, #0A7A82 100%);
+  color: var(--accent-teal);
+  background: linear-gradient(135deg, var(--accent-teal) 0%, #0A7A82 100%);
   /* background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%); */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -106,7 +106,7 @@
 
 .description {
   font-size: clamp(1rem, 2vw, 1.25rem);
-  color: rgba(153, 161, 175, 1);
+  color: var(--text-secondary);
   max-width: 800px;
   margin: 0 auto;
   font-family: 'Inter';
@@ -141,7 +141,7 @@
   transform: translate(-50%, -50%);
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(15, 240, 252, 0.2) 0%, rgba(15, 240, 252, 0.05) 40%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-teal-rgb), 0.2) 0%, rgba(var(--accent-teal-rgb), 0.05) 40%, transparent 70%);
   border-radius: 50%;
   filter: blur(60px);
   animation: glow 3s ease-in-out infinite alternate;
@@ -175,7 +175,7 @@
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
   animation: drawLine 2s ease-out forwards;
-  filter: drop-shadow(0 0 8px rgba(15, 240, 252, 0.05));
+  filter: drop-shadow(0 0 8px rgba(var(--accent-teal-rgb), 0.05));
 }
 
 @keyframes drawLine {
@@ -222,49 +222,49 @@
   position: absolute;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(15, 240, 252, 0.2) 0%, rgba(15, 240, 252, 0.5) 100%);
-  border: 1px solid rgba(15, 240, 252, 0.2);
+  background: linear-gradient(135deg, rgba(var(--accent-teal-rgb), 0.2) 0%, rgba(var(--accent-teal-rgb), 0.5) 100%);
+  border: 1px solid rgba(var(--accent-teal-rgb), 0.2);
   border-radius: 12px;
   backdrop-filter: blur(10px);
   box-shadow:
-    0 0 40px rgba(15, 240, 252, 0.2),
-    inset 0 0 40px rgba(15, 240, 252, 0.5);
+    0 0 40px rgba(var(--accent-teal-rgb), 0.2),
+    inset 0 0 40px rgba(var(--accent-teal-rgb), 0.5);
 }
 
 .blockTop {
   position: absolute;
   width: 100%;
   height: 40px;
-  background: linear-gradient(135deg, rgba(15, 240, 252, 0.2) 0%, rgba(15, 240, 252, 0.5) 100%);
-  border: 1px solid rgba(15, 240, 252, 0.2);
+  background: linear-gradient(135deg, rgba(var(--accent-teal-rgb), 0.2) 0%, rgba(var(--accent-teal-rgb), 0.5) 100%);
+  border: 1px solid rgba(var(--accent-teal-rgb), 0.2);
   border-radius: 12px 12px 0 0;
   transform: rotateX(90deg);
   transform-origin: top center;
-  box-shadow: 0 0 30px rgba(15, 240, 252, 0.4);
+  box-shadow: 0 0 30px rgba(var(--accent-teal-rgb), 0.4);
 }
 
 .blockRight {
   position: absolute;
   width: 40px;
   height: 100%;
-  background: linear-gradient(180deg, rgba(15, 240, 252, 0.2) 0%, rgba(15, 240, 252, 0.5) 100%);
-  border: 1px solid rgba(15, 240, 252, 0.2);
+  background: linear-gradient(180deg, rgba(var(--accent-teal-rgb), 0.2) 0%, rgba(var(--accent-teal-rgb), 0.5) 100%);
+  border: 1px solid rgba(var(--accent-teal-rgb), 0.2);
   border-radius: 0 12px 12px 0;
   transform: rotateY(90deg);
   transform-origin: right center;
   right: 0;
-  box-shadow: 0 0 30px rgba(15, 240, 252, 0.3);
+  box-shadow: 0 0 30px rgba(var(--accent-teal-rgb), 0.3);
 }
 
 /* Labels */
 .label {
   position: absolute;
   padding: 0.5rem 1.5rem;
-  border: 0.56px solid rgba(15, 240, 252, 0.2);
+  border: 0.56px solid rgba(var(--accent-teal-rgb), 0.2);
   border-radius: 25px;
   background: rgba(10, 10, 10, 0.8);
   backdrop-filter: blur(10px);
-  color: rgba(15, 240, 252, 1);
+  color: var(--accent-teal);
   transition: all 0.3s ease;
   cursor: default;
   animation: fadeInScale 0.8s ease-out both;
@@ -295,8 +295,8 @@
   transform: translateX(-50%);
   width: 398px;
   height: 17px;
-  background: linear-gradient(90deg, transparent, rgba(15, 240, 252, 0.2), transparent);
-  border-top: 0.56px solid rgba(15, 240, 252, 0.2);
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-teal-rgb), 0.2), transparent);
+  border-top: 0.56px solid rgba(var(--accent-teal-rgb), 0.2);
   z-index: 2;
   opacity: 1;
   border-top-left-radius: 18641400px;
@@ -304,9 +304,9 @@
 }
 
 .label:hover {
-  border-color: rgba(94, 234, 212, 0.6);
+  border-color: rgba(var(--accent-teal-rgb), 0.6);
   background: rgba(10, 47, 42, 0.95);
-  box-shadow: 0 0 20px rgba(20, 184, 166, 0.4);
+  box-shadow: 0 0 20px rgba(var(--accent-teal-rgb), 0.4);
   transform: scale(1.05);
 }
 
@@ -355,26 +355,26 @@
 .featureCard {
   position: relative;
   padding: 2rem;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(94, 234, 212, 0.1);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-teal);
   border-radius: 16px;
   transition: all 0.4s ease;
 }
 
 .featureCard:hover {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(15, 240, 252, 1);
+  background: var(--surface-secondary-hover);
+  border-color: var(--accent-teal);
   transform: translateY(-8px);
-  box-shadow: 0 12px 40px rgba(20, 184, 166, 0.2);
+  box-shadow: 0 12px 40px rgba(var(--accent-teal-rgb), 0.2);
 }
 
 .featureDot {
   width: 8px;
   height: 8px;
-  background: rgba(15, 240, 252, 1);
+  background: var(--accent-teal);
   border-radius: 50%;
   margin-bottom: 1.5rem;
-  box-shadow: 0 0 20px rgba(94, 234, 212, 0.6);
+  box-shadow: 0 0 20px rgba(var(--accent-teal-rgb), 0.6);
   animation: dotPulse 2s ease-in-out infinite;
 }
 
@@ -395,7 +395,7 @@
 .featureTitle {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -403,7 +403,7 @@
 .featureDescription {
   font-size: 0.95rem;
   line-height: 1.7;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 /* Responsive Design */

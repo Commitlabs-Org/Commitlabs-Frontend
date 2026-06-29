@@ -34,12 +34,28 @@ export function recordAuditEvent(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>)
     return logEntry;
 }
 
-export function getAuditLog(commitmentId: string): AuditLogEntry[] {
-    return auditLogStore.filter(entry => entry.commitmentId === commitmentId);
+export interface GetAuditLogFilters {
+  commitmentId?: string;
+  actorAddress?: string;
+  eventType?: AuditEventType;
+}
+
+export function getAuditLog(filters: GetAuditLogFilters): AuditLogEntry[] {
+  return auditLogStore.filter((entry) => {
+    if (filters.commitmentId && entry.commitmentId !== filters.commitmentId)
+      return false;
+    if (filters.actorAddress && entry.actorAddress !== filters.actorAddress)
+      return false;
+    if (filters.eventType && entry.eventType !== filters.eventType) return false;
+    return true;
+  });
 }
 
 export function clearAuditLog(): void {
   auditLogStore.length = 0;
+  if (typeof auditEventsStore !== 'undefined') {
+    auditEventsStore.length = 0;
+  }
 }
 /**
  * Audit Event Store
@@ -86,21 +102,9 @@ export type RedactedAuditEvent = Omit<AuditEvent, "actor" | "ip"> & {
   ip: string;
 };
 
-const auditLogStore: AuditLogEntry[] = [];
 const auditEventsStore: AuditEvent[] = [];
 const REDACTED = "[REDACTED]";
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
-
-export function recordAuditEvent(entry: Omit<AuditLogEntry, "id" | "timestamp">): AuditLogEntry {
-  const logEntry: AuditLogEntry = {
-    id: randomUUID(),
-    timestamp: new Date().toISOString(),
-    ...entry,
-  };
-
-  auditLogStore.push(logEntry);
-  return logEntry;
-}
 
 function redactAuditEvent(event: AuditEvent): RedactedAuditEvent {
   return {
@@ -108,10 +112,6 @@ function redactAuditEvent(event: AuditEvent): RedactedAuditEvent {
     actor: REDACTED,
     ip: REDACTED,
   };
-}
-
-export function getAuditLog(commitmentId: string): AuditLogEntry[] {
-  return auditLogStore.filter((entry) => entry.commitmentId === commitmentId);
 }
 
 export function isAuditLogEnabled(): boolean {
@@ -142,11 +142,6 @@ export async function getAuditEventCount(): Promise<number> {
 }
 
 export function resetAuditStoreForTests(): void {
-  auditLogStore.length = 0;
-  auditEventsStore.length = 0;
-}
-
-export function clearAuditLog(): void {
   auditLogStore.length = 0;
   auditEventsStore.length = 0;
 }

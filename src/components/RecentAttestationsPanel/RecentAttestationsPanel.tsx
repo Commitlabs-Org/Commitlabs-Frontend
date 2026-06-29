@@ -1,6 +1,7 @@
 'use client'
 
 import styles from './RecentAttestationsPanel.module.css'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export interface Attestation {
   id: string
@@ -177,8 +178,8 @@ export default function RecentAttestationsPanel({
 
       <div className={styles.attestationsList} role="list">
         {attestations.length === 0 ? (
-          <div className={styles.emptyState} role="listitem">
-            <p>No attestations available</p>
+          <div role="listitem">
+            <EmptyState title="No attestations available" />
           </div>
         ) : (
           attestations.map((attestation) => (

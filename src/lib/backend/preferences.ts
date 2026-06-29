@@ -22,6 +22,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { UnauthorizedError } from './errors';
+import { verifySessionToken } from './auth';
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ export const userPreferencesSchema = z.object({
         .max(10)
         .regex(/^[a-z]{2,3}(-[A-Z]{2,3})?$/, 'language must be a valid BCP-47 tag (e.g. "en", "en-US")')
         .optional(),
+    seenWizardTour: z.boolean().optional(),
 });
 
 /** Shape returned/stored for a single wallet. */
@@ -74,6 +76,7 @@ export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
     notificationCategories: { expiry: true, violation: true, health_check: true },
     theme: 'system',
     language: 'en',
+    seenWizardTour: false,
 };
 
 // ─── Storage Adapter Interface ───────────────────────────────────────────────
@@ -186,7 +189,13 @@ export function requireWalletAuth(authHeader: string | null): string {
 
     const token = parts[1];
 
-    // Decode placeholder token: session_<address>_<timestamp>
+    // 1. Try to verify session token via the session store first
+    const session = verifySessionToken(token);
+    if (session.valid && session.address) {
+        return session.address;
+    }
+
+    // 2. Fall back to placeholder token: session_<address>_<timestamp>
     const match = token.match(/^session_([A-Z0-9]+)_\d+$/);
     if (!match) {
         throw new UnauthorizedError('Invalid or expired session token.');

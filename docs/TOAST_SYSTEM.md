@@ -67,3 +67,20 @@ Options:
 - Max visible toasts: `5`; extra toasts are dropped from the visible queue.
 - Accessible live regions for screen readers.
 - Respects `prefers-reduced-motion`.
+
+## Aria-live Announcer
+
+`ToastProvider` renders two visually-hidden `aria-live` regions that announce toast text to screen readers as toasts are added.
+
+| Severity | Region | `aria-live` |
+|----------|--------|-------------|
+| `error` | `[data-toast-announcer="assertive"]` | `assertive` |
+| `success`, `info`, `warning` | `[data-toast-announcer="polite"]` | `polite` |
+
+The announced text is the toast `title` (and `description`, if present, joined with ` — `). When a new toast fires, the opposing region is cleared to avoid stale announcements. The regions use `aria-atomic="true"` so assistive tech reads the full updated text.
+
+The regions are hidden from view using inline clip/overflow styles (equivalent to a `.sr-only` class) and are never interactive.
+
+### Custom transport hook
+
+To forward error records to an observability sink alongside announcements, see `src/lib/observability/reportError.ts` (wired into `src/app/error.tsx`).

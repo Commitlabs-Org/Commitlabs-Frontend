@@ -1,8 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import WizardStepper from './WizardStepper'
+import AllocationConstraintsEditor from './create/AllocationConstraintsEditor'
 import styles from './CreateCommitmentStepConfigure.module.css'
+import GlossaryTerm from './GlossaryTerm'
+
+interface ServerFieldErrors {
+  amount?: string
+  durationDays?: string
+  maxLossBps?: string
+  ownerAddress?: string
+  asset?: string
+}
 
 interface CreateCommitmentStepConfigureProps {
   amount: string | number
@@ -13,6 +23,8 @@ interface CreateCommitmentStepConfigureProps {
   earlyExitPenalty: string
   estimatedFees: string
   isValid: boolean
+  ownerAddress?: string
+  commitmentType?: 'safe' | 'balanced' | 'aggressive'
   onChangeAmount: (value: string) => void
   onChangeAsset: (asset: string) => void
   onChangeDuration: (value: number) => void
@@ -21,6 +33,7 @@ interface CreateCommitmentStepConfigureProps {
   onNext: () => void
   amountError?: string
   maxLossWarning?: boolean
+  initialFocusField?: string
 }
 
 // Per-type constraints surfaced as copy
@@ -36,6 +49,8 @@ export default function CreateCommitmentStepConfigure({
   earlyExitPenalty,
   estimatedFees,
   isValid,
+  ownerAddress = '',
+  commitmentType = 'balanced',
   onChangeAmount,
   onChangeAsset,
   onChangeDuration,
@@ -44,10 +59,73 @@ export default function CreateCommitmentStepConfigure({
   onNext,
   amountError,
   maxLossWarning = false,
+  initialFocusField,
 }: CreateCommitmentStepConfigureProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (initialFocusField) {
+      const element = document.getElementById(initialFocusField);
+      if (element) {
+        element.focus();
+        element.scrollIntoView({ block: 'center' });
+      }
+    }
+  }, [initialFocusField]);
+
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [slippageTolerance, setSlippageTolerance] = useState(1)
   const [liquidationBuffer, setLiquidationBuffer] = useState(5)
+  const [serverErrors, setServerErrors] = useState<ServerFieldErrors>({})
+  const [serverValidating, setServerValidating] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
+
+  // Debounced server-side validation
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      setServerValidating(true)
+      try {
+        const res = await fetch('/api/commitments/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ownerAddress,
+            asset,
+            amount,
+            durationDays,
+            maxLossBps: maxLossPercent * 100,
+          }),
+          signal: controller.signal,
+        })
+        const json = await res.json()
+        const fieldMap: ServerFieldErrors = {}
+        for (const err of json?.data?.errors ?? json?.errors ?? []) {
+          if (err.field && err.message) {
+            fieldMap[err.field as keyof ServerFieldErrors] = err.message
+          }
+        }
+        setServerErrors(fieldMap)
+      } catch {
+        // Network failure: clear errors gracefully — don't block the user
+        setServerErrors({})
+      } finally {
+        setServerValidating(false)
+      }
+    }, 500)
+    return () => {
+      clearTimeout(timer)
+      abortRef.current?.abort()
+    }
+  }, [ownerAddress, asset, amount, durationDays, maxLossPercent])
+
+  const hasServerErrors = Object.keys(serverErrors).length > 0
+  const canAdvance = isValid && !hasServerErrors && !serverValidating
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   // Inline validation messages
   const durationError =
@@ -83,7 +161,7 @@ export default function CreateCommitmentStepConfigure({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && isValid) onNext()
+    if (e.key === 'Enter' && canAdvance) onNext()
   }
 
   return (
@@ -103,7 +181,7 @@ export default function CreateCommitmentStepConfigure({
         <WizardStepper currentStep={2} />
 
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Configure Parameters</h2>
+          <h2 ref={headingRef} tabIndex={-1} className={styles.sectionTitle}>Configure Parameters</h2>
           <p className={styles.sectionSubtitle}>
             Set your commitment amount, duration, and risk tolerance
           </p>
@@ -115,7 +193,7 @@ export default function CreateCommitmentStepConfigure({
             <label htmlFor="amount" className={styles.label}>
               Commitment Amount <span className={styles.required}>*</span>
             </label>
-            <div className={`${styles.amountInputWrapper} ${amountError ? styles.hasError : ''}`}>
+            <div className={`${styles.amountInputWrapper} ${amountError || serverErrors.amount ? styles.hasError : ''}`}>
               <span className={styles.currencyPrefix}>$</span>
               <input
                 id="amount"
@@ -127,7 +205,7 @@ export default function CreateCommitmentStepConfigure({
                 min="0"
                 step="0.01"
                 aria-describedby="amount-helper amount-error"
-                aria-invalid={!!amountError}
+                aria-invalid={!!(amountError || serverErrors.amount)}
               />
               <select
                 className={styles.assetSelector}
@@ -144,9 +222,9 @@ export default function CreateCommitmentStepConfigure({
               <span id="amount-helper" className={styles.helperText}>
                 Available: {availableBalance} {asset}
               </span>
-              {amountError && (
+              {(amountError || serverErrors.amount) && (
                 <span id="amount-error" className={styles.errorText} role="alert">
-                  {amountError}
+                  {amountError ?? serverErrors.amount}
                 </span>
               )}
             </div>
@@ -176,21 +254,21 @@ export default function CreateCommitmentStepConfigure({
                 <input
                   id="duration"
                   type="number"
-                  className={`${styles.sliderNumberInput} ${durationError ? styles.inputError : ''}`}
+                  className={`${styles.sliderNumberInput} ${durationError || serverErrors.durationDays ? styles.inputError : ''}`}
                   value={durationDays}
                   onChange={handleDurationInputChange}
                   min="1"
                   max="365"
                   aria-describedby="duration-hint duration-error"
-                  aria-invalid={!!durationError}
+                  aria-invalid={!!(durationError || serverErrors.durationDays)}
                 />
                 <span className={styles.sliderValueLabel}>
                   {durationDays} days
                 </span>
               </div>
             </div>
-            {durationError ? (
-              <span id="duration-error" className={styles.errorText} role="alert">{durationError}</span>
+            {durationError || serverErrors.durationDays ? (
+              <span id="duration-error" className={styles.errorText} role="alert">{durationError ?? serverErrors.durationDays}</span>
             ) : (
               <p id="duration-hint" className={styles.constraintHint}>{DURATION_COPY}</p>
             )}
@@ -199,7 +277,7 @@ export default function CreateCommitmentStepConfigure({
           {/* Max Loss — promoted out of Advanced */}
           <div className={styles.formGroup}>
             <label htmlFor="maxLoss" className={styles.label}>
-              Maximum Acceptable Loss (%)
+              <GlossaryTerm termKey="max loss threshold">Maximum Acceptable Loss (%)</GlossaryTerm>
               <span className={styles.required}>*</span>
             </label>
             <div className={styles.sliderInputWrapper}>
@@ -223,13 +301,21 @@ export default function CreateCommitmentStepConfigure({
                 <input
                   id="maxLoss"
                   type="number"
-                  className={`${styles.sliderNumberInput} ${maxLossError ? styles.inputError : ''}`}
+                  className={`${styles.sliderNumberInput} ${maxLossError || serverErrors.maxLossBps ? styles.inputError : ''}`}
                   value={maxLossPercent}
                   onChange={handleMaxLossInputChange}
                   min="0"
                   max="100"
-                  aria-describedby="maxloss-hint maxloss-error"
-                  aria-invalid={!!maxLossError}
+                  aria-describedby={
+                    [
+                      !maxLossError && !maxLossWarning ? 'maxloss-hint' : undefined,
+                      maxLossWarning && !maxLossError ? 'maxloss-warning' : undefined,
+                      maxLossError ? 'maxloss-error' : undefined,
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
+                  aria-invalid={!!(maxLossError || serverErrors.maxLossBps)}
                 />
                 <span className={`${styles.sliderValueLabel} ${maxLossWarning ? styles.warningLabel : ''}`}>
                   {maxLossWarning && (
@@ -243,16 +329,25 @@ export default function CreateCommitmentStepConfigure({
                 </span>
               </div>
             </div>
-            {maxLossError ? (
-              <span id="maxloss-error" className={styles.errorText} role="alert">{maxLossError}</span>
+            {maxLossError || serverErrors.maxLossBps ? (
+              <span id="maxloss-error" className={styles.errorText} role="alert">{maxLossError ?? serverErrors.maxLossBps}</span>
             ) : maxLossWarning ? (
-              <p className={styles.warningHint}>
+              <p id="maxloss-warning" className={styles.warningHint}>
                 ⚠ Setting max loss above 80% means most of your committed amount could be lost before the position closes.
               </p>
             ) : (
               <p id="maxloss-hint" className={styles.constraintHint}>{MAX_LOSS_COPY}</p>
             )}
           </div>
+
+          {/* Allocation Constraints Editor */}
+          <AllocationConstraintsEditor
+            maxLossPercent={maxLossPercent}
+            commitmentType={commitmentType}
+            amount={amount}
+            asset={asset}
+            onChangeMaxLoss={onChangeMaxLoss}
+          />
 
           {/* Advanced Risk Settings */}
           <div className={styles.advancedToggleContainer}>
@@ -261,6 +356,7 @@ export default function CreateCommitmentStepConfigure({
               className={styles.advancedToggleButton}
               onClick={() => setShowAdvanced(!showAdvanced)}
               aria-expanded={showAdvanced}
+              data-testid="advanced-toggle"
             >
               <span>Advanced Risk Parameters</span>
               <svg
@@ -345,9 +441,9 @@ export default function CreateCommitmentStepConfigure({
           </div>
 
           {/* Derived Values */}
-          <div className={styles.derivedSection}>
+          <div className={styles.derivedSection} data-testid="derived-section">
             <div className={styles.derivedRow}>
-              <span className={styles.derivedLabel}>Early Exit Penalty</span>
+              <span className={styles.derivedLabel}><GlossaryTerm termKey="early exit">Early Exit Penalty</GlossaryTerm></span>
               <span className={styles.derivedValue}>{earlyExitPenalty}</span>
             </div>
             <div className={styles.derivedRow}>
@@ -372,13 +468,16 @@ export default function CreateCommitmentStepConfigure({
             type="button"
             className={styles.continueButton}
             onClick={onNext}
-            disabled={!isValid}
-            aria-disabled={!isValid}
+            disabled={!canAdvance}
+            aria-disabled={!canAdvance}
+            data-testid="configure-continue"
           >
-            Continue
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+            {serverValidating ? 'Validating…' : 'Continue'}
+            {!serverValidating && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            )}
           </button>
         </div>
       </div>

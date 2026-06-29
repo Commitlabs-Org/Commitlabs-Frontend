@@ -30,7 +30,7 @@ const TRUST_LEVELS: Array<{
     label: "Self-Reported",
     description:
       "This seller has not yet completed the verification process. Exercise caution.",
-    colorClass: "text-white/40",
+    colorClass: "text-white/60",
   },
 ];
 
@@ -108,7 +108,7 @@ describe("TrustBadge", () => {
 
     const badge = screen.getByRole("status", { name: "Self-Reported" });
     expect(badge).toHaveTextContent("Self-Reported");
-    expect(badge.className).toContain("text-white/40");
+    expect(badge.className).toContain("text-white/60");
   });
 
   it("handles empty className without breaking layout classes", () => {

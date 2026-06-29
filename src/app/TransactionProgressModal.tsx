@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import TransactionStepTimeline, { type TransactionTimelinePhase } from '@/components/transaction/TransactionStepTimeline';
 import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
 
 export type TransactionState =
@@ -86,9 +87,49 @@ export default function TransactionProgressModal({
   onRetry,
   onSuccessAction,
 }: TransactionProgressModalProps) {
+  const [timelinePhase, setTimelinePhase] = React.useState<TransactionTimelinePhase>('build');
+
+  React.useEffect(() => {
+    if (!isOpen || state === 'IDLE') {
+      setTimelinePhase('build');
+      return;
+    }
+
+    if (state === 'AWAITING_SIGNATURE') {
+      setTimelinePhase('sign');
+      return;
+    }
+
+    if (state === 'SUBMITTING') {
+      setTimelinePhase('submit');
+      return;
+    }
+
+    if (state === 'PROCESSING' || state === 'SUCCESS') {
+      setTimelinePhase('confirm');
+      return;
+    }
+
+    if (state === 'ERROR') {
+      setTimelinePhase((current) => (current === 'build' ? 'sign' : current));
+    }
+  }, [isOpen, state]);
+
   if (!isOpen || state === 'IDLE') return null;
 
   const txExplorerUrl = buildExplorerUrl('tx', txHash);
+
+  const handleCopyHash = async (hash: string) => {
+    if (!hash) return;
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(hash);
+      } catch {
+        // Ignore clipboard failures and keep the affordance available.
+      }
+    }
+  };
 
   // -- State Configuration Helpers --
   const getHeader = () => {
@@ -293,6 +334,13 @@ export default function TransactionProgressModal({
           <p className="text-sm text-white/60 max-w-[300px] leading-relaxed">
             {getHelperText()}
           </p>
+
+          <TransactionStepTimeline
+            currentPhase={timelinePhase}
+            state={state === 'SUCCESS' ? 'success' : state === 'ERROR' ? 'error' : 'in_progress'}
+            txHash={txHash}
+            onCopyHash={handleCopyHash}
+          />
 
           {/* Explorer Link Slot */}
           {txExplorerUrl && (state === 'SUCCESS' || state === 'ERROR' || state === 'PROCESSING') && (

@@ -78,11 +78,27 @@ api/
 - `src/lib/backend/cors.ts` defines `CorsRoutePolicy` objects that gate endpoints as `first-party` or `public`.
 - Rate limiting is applied per-IP via `checkRateLimit()` (`src/lib/backend/rateLimit.ts`).
 - Validation uses `zod` schemas at the top of each route handler.
-- API responses use helper functions `ok()` and `fail()` from `src/lib/backend/apiResponse.ts`.
+- API responses use helper functions `ok()`, `fail()`, and `attachSecurityHeaders()` from `src/lib/backend/apiResponse.ts`.
+- **Module Map / Canonical Utilities**: The `src/lib/backend/` directory is the single canonical source of truth for all API-related utilities and handlers. To prevent duplication and drift, backend utilities should not be placed or duplicated in `src/utils/`.
 
 ---
 
+## Fonts & typography
+
+Fonts are loaded via `next/font/google` in `src/app/layout.tsx` to avoid render-blocking `@import` of remote Google Fonts stylesheets.
+
+- `Inter` and `Roboto Mono` are self-hosted and configured with `display: swap`.
+- Tailwind’s font theme uses the existing `--font-roboto` CSS variable.
+
+## Image Conventions
+
+- Raster assets (PNG, JPG, WebP) should always be rendered using `next/image` rather than raw HTML `<img>` tags or CSS `background-image` attributes.
+- Use explicit `width` and `height` properties or the `fill` layout with an explicit container size to prevent Cumulative Layout Shift (CLS).
+- Always provide descriptive `alt` text for accessibility, or an empty string `alt=""` for purely decorative images.
+- Remote images (e.g., from IPFS gateways) are configured under `images.remotePatterns` in `next.config.js`.
+
 ## Wallet & Auth State Flow
+
 
 ### Auth flow
 
@@ -226,8 +242,11 @@ Footer
 
 ## Shared Components
 
+Component file convention: shared React components in `src/` should use TypeScript (`.ts`/`.tsx`) rather than untyped `.jsx` files.
+
 | Component | File | Usage |
 |-----------|------|-------|
+| `EmptyState` | `src/components/ui/EmptyState.tsx` | Shared empty-state primitive used by `MyCommitmentsGrid`, `MarketplaceGrid`, `RecentAttestationsPanel`; accepts `title`, `description`, `icon`, `cta` (href or onClick) |
 | `ErrorLayout` | `src/components/ErrorLayout.tsx` | 500, 404, network-error, transaction-error pages |
 | `ErrorButton` | `src/components/ErrorButton.tsx` | Buttons on all error pages (supports `href`, `onClick`, `isExternal`) |
 | `Skeleton` | `src/components/Skeleton.tsx` | Generic shimmer placeholder |

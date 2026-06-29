@@ -1,40 +1,56 @@
-
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
-import { validateAttestationData, type AttestationData } from '@/lib/backend/attestationSchemas';
-import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { ok, methodNotAllowed } from "@/lib/backend/apiResponse";
+import {
+  validateAttestationData,
+  type AttestationData,
+} from "@/lib/backend/attestationSchemas";
+import {
+  createCorsOptionsHandler,
+  type CorsRoutePolicy,
+} from "@/lib/backend/cors";
 import {
   ApiError,
+  PayloadTooLargeError,
   TooManyRequestsError,
   ValidationError,
   normalizeBackendError,
   toBackendErrorResponse,
-} from '@/lib/backend/errors';
-import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
-import { getMockData } from '@/lib/backend/mockDb';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
+} from "@/lib/backend/errors";
+import {
+  parseJsonWithLimit,
+  JSON_BODY_LIMITS,
+} from "@/lib/backend/jsonBodyLimit";
+import { getMockData } from "@/lib/backend/mockDb";
+import { checkRateLimit } from "@/lib/backend/rateLimit";
 import {
   getCommitmentFromChain,
   recordAttestationOnChain,
   type RecordAttestationOnChainParams,
-} from '@/lib/backend/services/contracts';
-import { validateStellarAddress } from '@/lib/backend/validation';
-import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ATTESTATION_TYPES, type AttestationType } from '@/lib/types/domain';
+} from "@/lib/backend/services/contracts";
+import { validateStellarAddress } from "@/lib/backend/validation";
+import {
+  PaginationParseError,
+  paginateArray,
+  parsePaginationParams,
+} from "@/lib/backend/pagination";
+import { withApiHandler } from "@/lib/backend/withApiHandler";
+import { ATTESTATION_TYPES, type AttestationType } from "@/lib/types/domain";
 
 export type { AttestationType };
 
 const ATTESTATIONS_CORS_POLICY = {
-  GET: { access: 'public' },
-  POST: { access: 'first-party' },
+  GET: { access: "public" },
+  POST: { access: "first-party" },
 } satisfies CorsRoutePolicy;
 
 export const OPTIONS = createCorsOptionsHandler(ATTESTATIONS_CORS_POLICY);
 
 function isAttestationType(value: unknown): value is AttestationType {
-  return typeof value === 'string' &&
-    (ATTESTATION_TYPES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (ATTESTATION_TYPES as readonly string[]).includes(value)
+  );
 }
 
 interface RecordAttestationRequestBody {
@@ -46,11 +62,10 @@ interface RecordAttestationRequestBody {
 }
 
 function ensureNonEmptyString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new ValidationError(
-      `Field "${field}" must be a non-empty string.`,
-      { field },
-    );
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ValidationError(`Field "${field}" must be a non-empty string.`, {
+      field,
+    });
   }
 
   return value.trim();
@@ -58,37 +73,33 @@ function ensureNonEmptyString(value: unknown, field: string): string {
 
 function parseAndValidateBody(raw: unknown): RecordAttestationRequestBody {
   const body =
-    raw !== null && typeof raw === 'object'
+    raw !== null && typeof raw === "object"
       ? (raw as Record<string, unknown>)
       : null;
 
   if (!body) {
-    throw new ValidationError('Request body must be a JSON object.');
+    throw new ValidationError("Request body must be a JSON object.");
   }
 
-  const commitmentId = ensureNonEmptyString(
-    body.commitmentId,
-    'commitmentId',
-  );
+  const commitmentId = ensureNonEmptyString(body.commitmentId, "commitmentId");
 
   const attestationType = body.attestationType;
 
   if (!isAttestationType(attestationType)) {
     throw new ValidationError(
-      `Invalid attestationType. Must be one of: ${ATTESTATION_TYPES.join(', ')}.`,
+      `Invalid attestationType. Must be one of: ${ATTESTATION_TYPES.join(", ")}.`,
     );
   }
 
   if (
     body.data === null ||
     body.data === undefined ||
-    typeof body.data !== 'object' ||
+    typeof body.data !== "object" ||
     Array.isArray(body.data)
   ) {
-    throw new ValidationError(
-      'Field "data" must be an object.',
-      { field: 'data' },
-    );
+    throw new ValidationError('Field "data" must be an object.', {
+      field: "data",
+    });
   }
 
   let data: AttestationData;
@@ -97,24 +108,17 @@ function parseAndValidateBody(raw: unknown): RecordAttestationRequestBody {
     data = validateAttestationData(attestationType, body.data);
   } catch (err) {
     if (err instanceof z.ZodError) {
-      throw new ValidationError(
-        'Invalid attestation data.',
-        { issues: err.issues },
-      );
+      throw new ValidationError("Invalid attestation data.", {
+        issues: err.issues,
+      });
     }
 
     throw err;
   }
 
-  const verifiedBy = ensureNonEmptyString(
-    body.verifiedBy,
-    'verifiedBy',
-  );
+  const verifiedBy = ensureNonEmptyString(body.verifiedBy, "verifiedBy");
 
-  const signature = ensureNonEmptyString(
-    body.signature,
-    'signature',
-  );
+  const signature = ensureNonEmptyString(body.signature, "signature");
 
   return {
     commitmentId,
@@ -125,24 +129,40 @@ function parseAndValidateBody(raw: unknown): RecordAttestationRequestBody {
   };
 }
 
+function parseCommitmentIdFilter(
+  searchParams: URLSearchParams,
+): string | undefined {
+  const raw = searchParams.get("commitmentId");
+
+  if (raw === null) {
+    return undefined;
+  }
+
+  const trimmed = raw.trim();
+
+  if (trimmed === "") {
+    throw new ValidationError(
+      '"commitmentId" must be a non-empty string when provided.',
+      { field: "commitmentId" },
+    );
+  }
+
+  return trimmed;
+}
+
 function mapToRecordParams(
   body: RecordAttestationRequestBody,
 ): RecordAttestationOnChainParams {
   const details = body.data as Record<string, unknown>;
 
   const complianceScore =
-    typeof details.complianceScore === 'number'
-      ? details.complianceScore
-      : 0;
+    typeof details.complianceScore === "number" ? details.complianceScore : 0;
 
   const violation =
-    body.attestationType === 'violation' ||
-    details.violation === true;
+    body.attestationType === "violation" || details.violation === true;
 
   const feeEarned =
-    typeof details.feeEarned === 'string'
-      ? details.feeEarned
-      : undefined;
+    typeof details.feeEarned === "string" ? details.feeEarned : undefined;
 
   return {
     commitmentId: body.commitmentId,
@@ -159,16 +179,38 @@ function mapToRecordParams(
 }
 
 export const GET = withApiHandler(
-  async (_req: NextRequest, _context, correlationId) => {
-    if (!(await checkRateLimit('anonymous', 'api/attestations'))) {
+  async (req: NextRequest, _context, correlationId) => {
+    if (!(await checkRateLimit("anonymous", "api/attestations"))) {
       throw new TooManyRequestsError();
     }
 
+    const { searchParams } = new URL(req.url);
+
+    let pagination;
+    try {
+      pagination = parsePaginationParams(searchParams, { maxPageSize: 100 });
+    } catch (err) {
+      if (err instanceof PaginationParseError) {
+        throw new ValidationError(err.message, { details: err.errors });
+      }
+      throw err;
+    }
+
+    const commitmentId = parseCommitmentIdFilter(searchParams);
     const { attestations } = await getMockData();
+    const filtered = commitmentId
+      ? attestations.filter(
+          (attestation) => attestation.commitmentId === commitmentId,
+        )
+      : attestations;
+    const paginated = paginateArray(filtered, pagination);
 
     return ok(
-      { attestations },
-      undefined,
+      {
+        attestations: paginated.data,
+        total: paginated.meta.total,
+      },
+      paginated.meta,
       200,
       correlationId,
     );
@@ -181,7 +223,7 @@ export const GET = withApiHandler(
 
 export const POST = withApiHandler(
   async (req: NextRequest, _context, correlationId) => {
-    if (!(await checkRateLimit('anonymous', 'api/attestations'))) {
+    if (!(await checkRateLimit("anonymous", "api/attestations"))) {
       throw new TooManyRequestsError();
     }
 
@@ -194,49 +236,49 @@ export const POST = withApiHandler(
 
       body = parseAndValidateBody(raw);
 
-      validateStellarAddress(
-        body.verifiedBy,
-        'verifiedBy',
-      );
+      validateStellarAddress(body.verifiedBy, "verifiedBy");
 
       // Signature verification will be added here
-
     } catch (err) {
       if (err instanceof ApiError) {
         throw err;
       }
 
-      throw new ValidationError(
-        'Invalid JSON in request body.',
-      );
+      const errorCode =
+        typeof err === "object" && err !== null && "code" in err
+          ? (err as { code?: unknown }).code
+          : undefined;
+
+      if (errorCode === "PAYLOAD_TOO_LARGE") {
+        throw new PayloadTooLargeError(
+          err instanceof Error ? err.message : "Request body is too large.",
+        );
+      }
+
+      throw new ValidationError("Invalid JSON in request body.");
     }
 
     try {
-      await getCommitmentFromChain(
-        body.commitmentId,
-        { requestId: correlationId },
-      );
+      await getCommitmentFromChain(body.commitmentId, {
+        requestId: correlationId,
+      });
     } catch (err) {
       const normalized = normalizeBackendError(err, {
-        code: 'BLOCKCHAIN_CALL_FAILED',
-        message:
-          'Invalid commitment or unable to fetch commitment from chain.',
+        code: "BLOCKCHAIN_CALL_FAILED",
+        message: "Invalid commitment or unable to fetch commitment from chain.",
         status: 502,
         details: {
           commitmentId: body.commitmentId,
         },
       });
 
-      return NextResponse.json(
-        toBackendErrorResponse(normalized),
-        { status: normalized.status },
-      );
+      return NextResponse.json(toBackendErrorResponse(normalized), {
+        status: normalized.status,
+      });
     }
 
     try {
-      const result = await recordAttestationOnChain(
-        mapToRecordParams(body),
-      );
+      const result = await recordAttestationOnChain(mapToRecordParams(body));
 
       return ok(
         {
@@ -247,7 +289,6 @@ export const POST = withApiHandler(
             violation: result.violation,
             feeEarned: result.feeEarned,
             recordedAt: result.recordedAt,
-            contractVersion: result.contractVersion,
           },
           txReference: result.txHash ?? null,
         },
@@ -257,8 +298,8 @@ export const POST = withApiHandler(
       );
     } catch (err) {
       const normalized = normalizeBackendError(err, {
-        code: 'BLOCKCHAIN_CALL_FAILED',
-        message: 'Failed to record attestation on chain.',
+        code: "BLOCKCHAIN_CALL_FAILED",
+        message: "Failed to record attestation on chain.",
         status: 502,
         details: {
           commitmentId: body.commitmentId,
@@ -266,19 +307,14 @@ export const POST = withApiHandler(
         },
       });
 
-      return NextResponse.json(
-        toBackendErrorResponse(normalized),
-        { status: normalized.status },
-      );
+      return NextResponse.json(toBackendErrorResponse(normalized), {
+        status: normalized.status,
+      });
     }
   },
   { cors: ATTESTATIONS_CORS_POLICY },
 );
 
-const _405 = methodNotAllowed(['GET', 'POST']);
+const _405 = methodNotAllowed(["GET", "POST"]);
 
-export {
-  _405 as PUT,
-  _405 as PATCH,
-  _405 as DELETE,
-};
+export { _405 as PUT, _405 as PATCH, _405 as DELETE };

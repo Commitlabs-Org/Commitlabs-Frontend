@@ -1,6 +1,7 @@
+// @vitest-environment happy-dom
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { HeroSection } from '@/src/components/landing-page/sections/HeroSection';
+import { HeroSection } from '@/components/landing-page/sections/HeroSection';
 
 describe('HeroSection CTA hierarchy', () => {
   it('renders primary and secondary CTA buttons with correct links', () => {

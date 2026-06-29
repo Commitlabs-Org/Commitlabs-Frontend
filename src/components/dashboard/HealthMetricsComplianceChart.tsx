@@ -53,19 +53,19 @@ export const HealthMetricsComplianceChart: React.FC<HealthMetricsComplianceChart
                         stroke="#333"
                         vertical={false}
                     />
-                    <XAxis
-                        dataKey="date"
-                        stroke="#666"
-                        tick={{ fill: '#666', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={10}
-                    />
-                    <YAxis
-                        stroke="#666"
-                        tick={{ fill: '#666', fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
+                        <XAxis
+                            dataKey="date"
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
+                            tickLine={false}
+                            axisLine={false}
+                            dy={10}
+                        />
+                        <YAxis
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
+                            tickLine={false}
+                            axisLine={false}
                         domain={[0, 100]}
                     />
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#333' }} />

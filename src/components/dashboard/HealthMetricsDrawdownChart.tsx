@@ -33,7 +33,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
         return (
             <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
                 <p className="text-[#99a1af] text-sm mb-1">{label}</p>
-                <p className="text-[#DC2626] text-sm font-medium">
+                <p className="text-[#f87171] text-sm font-medium">
                     Drawdown: {(payload[0].value * 100).toFixed(1)}%
                 </p>
             </div>
@@ -68,15 +68,15 @@ export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProp
                         />
                         <XAxis
                             dataKey="date"
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             dy={10}
                         />
                         <YAxis
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             domain={[0, 1]}

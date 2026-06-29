@@ -1,0 +1,53 @@
+name: ✨ Feature Request
+description: Propose a new feature or improvement for CommitLabs.
+title: "[Feature]: "
+labels: ["type-feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make CommitLabs better? We'd love to hear it! Before submitting, please ensure you have read the [Developer Guide](https://github.com/Commitlabs-Org/Commitlabs-Frontend/blob/master/DEVELOPER_GUIDE.md).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem or limitation? Please describe.
+      placeholder: E.g., I'm frustrated when...
+    validations:
+      required: false
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution or new feature you would like to see implemented.
+      placeholder: Describe the feature, user flow, or improvement in detail.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or workarounds you've considered.
+      placeholder: Any other ways this could be solved.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, designs, or mockups here.
+      placeholder: Drag and drop screenshots or design specs.
+    validations:
+      required: false
+  - type: checkboxes
+    id: campaign-checklist
+    attributes:
+      label: Contributor & Campaign Agreement
+      description: Please review and check the following requirements before submitting.
+      options:
+        - label: I have reviewed the [Developer Guide](https://github.com/Commitlabs-Org/Commitlabs-Frontend/blob/master/DEVELOPER_GUIDE.md) and will adhere to the project's coding/styling standards.
+          required: true
+        - label: I agree to deliver the changes within the campaign's 96-hour timeframe if assigned.
+          required: true
+        - label: I understand that any new or modified logic requires a minimum of 95% test coverage.
+          required: true

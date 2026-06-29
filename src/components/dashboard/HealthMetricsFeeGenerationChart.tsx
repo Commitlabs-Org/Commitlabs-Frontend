@@ -74,15 +74,15 @@ export const HealthMetricsFeeGenerationChart: React.FC<HealthMetricsFeeGeneratio
                         />
                         <XAxis
                             dataKey="date"
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             dy={10}
                         />
                         <YAxis
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             tickFormatter={(value) => `${value}`}

@@ -1,12 +1,39 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import dynamic from "next/dynamic";
+import { TrendingUp, TrendingDown, DollarSign, CheckCircle } from "lucide-react";
+import HealthMetricsSkeleton from "../HealthMetricsSkeleton";
+import { ChartExportMenu } from "./ChartExportMenu";
+import type { HealthMetricsExportData } from "@/utils/chartExport";
 import HealthMetricsRangeSelector, { type RangeKey } from "./HealthMetricsRangeSelector";
 import { useHealthMetricsRange } from "./useHealthMetricsRange";
-import { HealthMetricsValueHistoryChart } from "./HealthMetricsValueHistoryChart";
-import { HealthMetricsDrawdownChart } from "./HealthMetricsDrawdownChart";
-import { HealthMetricsFeeGenerationChart } from "./HealthMetricsFeeGenerationChart";
-import { HealthMetricsComplianceChart } from "./HealthMetricsComplianceChart";
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const HealthMetricsValueHistoryChart = dynamic(
+  () => import("./HealthMetricsValueHistoryChart").then((mod) => mod.HealthMetricsValueHistoryChart),
+  { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
+
+const HealthMetricsDrawdownChart = dynamic(
+  () => import("./HealthMetricsDrawdownChart").then((mod) => mod.HealthMetricsDrawdownChart),
+  { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
+
+const HealthMetricsFeeGenerationChart = dynamic(
+  () => import("./HealthMetricsFeeGenerationChart").then((mod) => mod.HealthMetricsFeeGenerationChart),
+  { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
+
+const HealthMetricsComplianceChart = dynamic(
+  () => import("./HealthMetricsComplianceChart").then((mod) => mod.HealthMetricsComplianceChart),
+  { ssr: false, loading: () => <HealthMetricsSkeleton /> }
+);
 
 export interface TimeSeriesPoint {
   date: string;
@@ -18,27 +45,20 @@ export interface TimeSeriesPoint {
   complianceScore?: number;
 }
 
-export interface CommitmentHealthMetricsProps {
-  commitmentId?: string;
-  valueHistory?: TimeSeriesPoint[];
-  drawdownHistory?: TimeSeriesPoint[];
-  feeGenerationHistory?: TimeSeriesPoint[];
-  complianceHistory?: TimeSeriesPoint[];
-  valueHistoryData?: TimeSeriesPoint[];
-  drawdownData?: TimeSeriesPoint[];
-  feeGenerationData?: TimeSeriesPoint[];
-  complianceData?: TimeSeriesPoint[];
-  thresholdPercent?: number;
-  volatilityPercent?: number;
-}
+type TabType = "value" | "drawdown" | "fee" | "compliance";
 
-type TabKey = "value" | "drawdown" | "fee" | "compliance";
+const tabIcons: Record<TabType, React.ReactNode> = {
+  value: <TrendingUp size={16} />,
+  drawdown: <TrendingDown size={16} />,
+  fee: <DollarSign size={16} />,
+  compliance: <CheckCircle size={16} />,
+};
 
-const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: "value", label: "Value History" },
-  { key: "drawdown", label: "Drawdown" },
-  { key: "fee", label: "Fee Generation" },
-  { key: "compliance", label: "Compliance" },
+const TABS: Array<{ id: TabType; label: string }> = [
+  { id: "value", label: "Value History" },
+  { id: "drawdown", label: "Drawdown" },
+  { id: "fee", label: "Fee Generation" },
+  { id: "compliance", label: "Compliance" },
 ];
 
 const EmptyChart: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => (
@@ -61,78 +81,102 @@ function formatRangeLabel(range: RangeKey): string {
   return range === "all" ? "full history" : `${range.replace("d", " days")}`;
 }
 
-export const CommitmentHealthMetrics: React.FC<CommitmentHealthMetricsProps> = ({
+interface CommitmentHealthMetricsProps {
+  commitmentId: string;
+  complianceData: TimeSeriesPoint[];
+  drawdownData: TimeSeriesPoint[];
+  valueHistoryData: TimeSeriesPoint[];
+  feeGenerationData: TimeSeriesPoint[];
+  thresholdPercent?: number;
+  volatilityPercent?: number;
+  isLoading?: boolean;
+}
+
+export default function CommitmentHealthMetrics({
   commitmentId,
-  valueHistory,
-  drawdownHistory,
-  feeGenerationHistory,
-  complianceHistory,
-  valueHistoryData,
-  drawdownData,
-  feeGenerationData,
   complianceData,
+  drawdownData,
+  valueHistoryData,
+  feeGenerationData,
   thresholdPercent,
   volatilityPercent,
-}) => {
-  const [activeTab, setActiveTab] = useState<TabKey>("value");
+  isLoading = false,
+}: CommitmentHealthMetricsProps) {
+  const [activeTab, setActiveTab] = useState<TabType>("value");
   const { selectedRange, setRange, filterByRange } = useHealthMetricsRange();
 
-  const resolvedValueHistory = valueHistoryData ?? valueHistory ?? [];
-  const resolvedDrawdownHistory = drawdownData ?? drawdownHistory ?? [];
-  const resolvedFeeGenerationHistory = feeGenerationData ?? feeGenerationHistory ?? [];
-  const resolvedComplianceHistory = complianceData ?? complianceHistory ?? [];
+  const valueChartRef = useRef<HTMLDivElement>(null);
+  const drawdownChartRef = useRef<HTMLDivElement>(null);
+  const feeChartRef = useRef<HTMLDivElement>(null);
+  const complianceChartRef = useRef<HTMLDivElement>(null);
 
   const rangeLabel = useMemo(() => formatRangeLabel(selectedRange), [selectedRange]);
 
   const filteredValueHistory = useMemo(
-    () => filterByRange(resolvedValueHistory, (point) => normalizeDate(point.date)),
-    [filterByRange, resolvedValueHistory],
+    () => filterByRange(valueHistoryData, (point) => normalizeDate(point.date)),
+    [filterByRange, valueHistoryData]
   );
-
   const filteredDrawdownHistory = useMemo(
-    () => filterByRange(resolvedDrawdownHistory, (point) => normalizeDate(point.date)),
-    [filterByRange, resolvedDrawdownHistory],
+    () => filterByRange(drawdownData, (point) => normalizeDate(point.date)),
+    [filterByRange, drawdownData]
   );
-
   const filteredFeeGenerationHistory = useMemo(
-    () => filterByRange(resolvedFeeGenerationHistory, (point) => normalizeDate(point.date)),
-    [filterByRange, resolvedFeeGenerationHistory],
+    () => filterByRange(feeGenerationData, (point) => normalizeDate(point.date)),
+    [filterByRange, feeGenerationData]
+  );
+  const filteredComplianceHistory = useMemo(
+    () => filterByRange(complianceData, (point) => normalizeDate(point.date)),
+    [filterByRange, complianceData]
   );
 
-  const filteredComplianceHistory = useMemo(
-    () => filterByRange(resolvedComplianceHistory, (point) => normalizeDate(point.date)),
-    [filterByRange, resolvedComplianceHistory],
-  );
+  // Export menu always exports the full (unfiltered) dataset, not just the active range.
+  const exportData: HealthMetricsExportData = {
+    complianceData,
+    drawdownData,
+    valueHistoryData,
+    feeGenerationData,
+  };
 
   return (
-    <div className="w-full rounded-2xl border border-[#222] bg-[#0a0a0a] p-6">
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="w-full bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h2 className="text-2xl font-semibold text-white">Health Metrics</h2>
-        <HealthMetricsRangeSelector selected={selectedRange} onChange={setRange} />
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <HealthMetricsRangeSelector selected={selectedRange} onChange={setRange} />
+
+          <div className="flex flex-wrap gap-2 p-1 bg-[#111] rounded-lg border border-[#222]">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                id={`tab-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200",
+                  activeTab === tab.id
+                    ? "bg-[#222] text-[#0ff0fc] shadow-sm"
+                    : "text-[#8892a0] hover:text-[#99a1af] hover:bg-[#1a1a1a]"
+                )}
+              >
+                {tabIcons[tab.id]}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div aria-label="Metric type" className="flex gap-2 rounded-lg border border-[#222] bg-[#111] p-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            id={`tab-${tab.key}`}
-            onClick={() => setActiveTab(tab.key)}
-            className={[
-              "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0ff0fc]",
-              activeTab === tab.key
-                ? "bg-[#222] text-[#0ff0fc] shadow-sm"
-                : "text-[#666] hover:bg-[#1a1a1a] hover:text-[#99a1af]",
-            ].join(" ")}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-6 w-full">
+      <div className="w-full">
         {activeTab === "value" && (
-          <div id="tabpanel-value">
+          <div id="tabpanel-value" className="relative" ref={valueChartRef}>
+            <ChartExportMenu
+              commitmentId={commitmentId}
+              tab="value"
+              data={exportData}
+              disabled={isLoading}
+              chartContainerRef={valueChartRef}
+            />
             {filteredValueHistory.length === 0 ? (
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
@@ -145,7 +189,14 @@ export const CommitmentHealthMetrics: React.FC<CommitmentHealthMetricsProps> = (
         )}
 
         {activeTab === "drawdown" && (
-          <div id="tabpanel-drawdown">
+          <div id="tabpanel-drawdown" className="relative" ref={drawdownChartRef}>
+            <ChartExportMenu
+              commitmentId={commitmentId}
+              tab="drawdown"
+              data={exportData}
+              disabled={isLoading}
+              chartContainerRef={drawdownChartRef}
+            />
             {filteredDrawdownHistory.length === 0 ? (
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
@@ -159,7 +210,14 @@ export const CommitmentHealthMetrics: React.FC<CommitmentHealthMetricsProps> = (
         )}
 
         {activeTab === "fee" && (
-          <div id="tabpanel-fee">
+          <div id="tabpanel-fee" className="relative" ref={feeChartRef}>
+            <ChartExportMenu
+              commitmentId={commitmentId}
+              tab="fee"
+              data={exportData}
+              disabled={isLoading}
+              chartContainerRef={feeChartRef}
+            />
             {filteredFeeGenerationHistory.length === 0 ? (
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
@@ -172,7 +230,14 @@ export const CommitmentHealthMetrics: React.FC<CommitmentHealthMetricsProps> = (
         )}
 
         {activeTab === "compliance" && (
-          <div id="tabpanel-compliance">
+          <div id="tabpanel-compliance" className="relative" ref={complianceChartRef}>
+            <ChartExportMenu
+              commitmentId={commitmentId}
+              tab="compliance"
+              data={exportData}
+              disabled={isLoading}
+              chartContainerRef={complianceChartRef}
+            />
             {filteredComplianceHistory.length === 0 ? (
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
@@ -185,6 +250,4 @@ export const CommitmentHealthMetrics: React.FC<CommitmentHealthMetricsProps> = (
       </div>
     </div>
   );
-};
-
-export default CommitmentHealthMetrics;
+}

@@ -1,8 +1,9 @@
 "use client";
+import { ReputationDisplay } from "./ReputationDisplay";
 
 import { memo, useState } from "react";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
-import Link from "next/link";
+import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
 import { TrustBadge, TrustLevel } from "./TrustBadge";
 
 export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
@@ -10,7 +11,9 @@ export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 export interface MarketplaceCardProps {
   id: string;
   type: CommitmentType;
-  score: number;
+  score: number; // reputation score (0-100)
+  totalCommitments?: number; // optional seller total commitments
+  successRate?: number; // optional seller success rate percentage
   amount: string;
   duration: string;
   yield: string;
@@ -20,6 +23,12 @@ export interface MarketplaceCardProps {
   forSale: boolean;
   tradeHref?: string;
   trustLevel?: TrustLevel;
+  /** Called when user confirms a purchase. Receives the commitment id and
+   *  must return (or resolve to) a tx hash string, or undefined on failure. */
+  onPurchase?: (id: string) => Promise<string | undefined> | string | undefined;
+  compareSelected?: boolean;
+  compareDisabled?: boolean;
+  onCompareToggle?: () => void;
 }
 
 function clampScore(score: number) {
@@ -163,10 +172,31 @@ function DollarSignIcon() {
   );
 }
 
+function CompareIcon({ selected }: { selected: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M2 4H14M2 8H14M2 12H10"
+        stroke={selected ? "#0FF0FC" : "currentColor"}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function MarketplaceCardComponent({
   id,
   type,
   score,
+  totalCommitments,
+  successRate,
   amount,
   duration,
   yield: apy,
@@ -176,8 +206,15 @@ function MarketplaceCardComponent({
   forSale,
   tradeHref,
   trustLevel,
+  onPurchase,
+  compareSelected = false,
+  compareDisabled = false,
+  onCompareToggle,
 }: MarketplaceCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPurchaseSuccessOpen, setIsPurchaseSuccessOpen] = useState(false);
+  const [purchaseTxHash, setPurchaseTxHash] = useState<string | undefined>();
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const clampedScore = clampScore(score);
   const cardBorderClass =
@@ -204,6 +241,21 @@ function MarketplaceCardComponent({
   const resolvedTradeHref =
     tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
 
+  async function handleTrade() {
+    if (onPurchase) {
+      setIsPurchasing(true);
+      try {
+        const hash = await onPurchase(id);
+        setPurchaseTxHash(hash);
+        setIsPurchaseSuccessOpen(true);
+      } finally {
+        setIsPurchasing(false);
+      }
+    } else {
+      window.location.href = resolvedTradeHref;
+    }
+  }
+
   return (
     <article
       className={`focus-ring-container relative flex flex-col h-full rounded-[14px] p-[18px] bg-[#0A0A0AE5] border border-[rgba(255,255,255,0.08)] ${cardBorderClass} transition-[transform,box-shadow,border-color] duration-180 ease-[ease] overflow-visible hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_24px_60px_rgba(0,0,0,0.62),0_0_30px_rgba(255,255,255,0.08),inset_0_0_0_1px_rgba(255,255,255,0.06)]`}
@@ -217,16 +269,42 @@ function MarketplaceCardComponent({
           <TypeIcon type={type} />
         </div>
         <div className="flex flex-col items-end gap-2">
+          {onCompareToggle && (
+            <button
+              type="button"
+              className={`focus-ring inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-colors ${
+                compareSelected
+                  ? "border-[#0FF0FC]/50 bg-[#0FF0FC]/15 text-[#0FF0FC]"
+                  : compareDisabled
+                    ? "border-white/10 bg-white/[0.02] text-white/30 cursor-not-allowed"
+                    : "border-white/15 bg-white/[0.04] text-white/70 hover:bg-white/[0.08]"
+              }`}
+              onClick={onCompareToggle}
+              disabled={compareDisabled && !compareSelected}
+              aria-pressed={compareSelected}
+              aria-label={
+                compareDisabled && !compareSelected
+                  ? `Compare limit reached. Cannot add ${id}`
+                  : compareSelected
+                    ? `Remove ${id} from compare`
+                    : `Add ${id} to compare`
+              }
+            >
+              <CompareIcon selected={compareSelected} />
+              {compareSelected ? "Comparing" : "Compare"}
+            </button>
+          )}
           <span
             className={`text-[12px] tracking-[0.02em] font-[650] px-3 py-2 rounded-full ${badgeClass}`}
           >
             {type}
           </span>
-          <span
-            className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}
-          >
-            {clampedScore}%
-          </span>
+            {/* Compact reputation display */}
+            {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
+              <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>"{clampedScore}%"</span>
+            ) : (
+              <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">New seller</span>
+            )}
         </div>
       </header>
 
@@ -268,6 +346,15 @@ function MarketplaceCardComponent({
                 level={trustLevel ?? "unverified"}
                 showTooltip={false}
               />
+              {/* Render ReputationDisplay compactly when data available */}
+              {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' && (
+                <ReputationDisplay
+                  score={clampedScore}
+                  totalCommitments={totalCommitments}
+                  successRate={successRate}
+                  className="mt-2"
+                />
+              )}
             </dd>
           </div>
         </dl>
@@ -296,13 +383,15 @@ function MarketplaceCardComponent({
                 View
               </button>
 
-              <Link
-                className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px"
-                href={resolvedTradeHref}
+              <button
+                type="button"
+                onClick={handleTrade}
+                disabled={isPurchasing}
+                className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
                 aria-label={`Trade ${id}`}
               >
-                <DollarSignIcon /> Trade
-              </Link>
+                <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
+              </button>
             </div>
           </>
         ) : (
@@ -357,7 +446,24 @@ function MarketplaceCardComponent({
             statusVariant: "ok",
           },
         ]}
+        // Pass reputation data to modal
+        reputationScore={clampedScore}
+        totalCommitments={totalCommitments}
+        successRate={successRate}
         TypeIcon={TypeIcon}
+      />
+
+      <PurchaseSuccessModal
+        isOpen={isPurchaseSuccessOpen}
+        onClose={() => setIsPurchaseSuccessOpen(false)}
+        commitmentId={id}
+        commitmentType={`${type} Commitment`}
+        pricePaid={price}
+        txHash={purchaseTxHash}
+        onViewCommitments={() => {
+          setIsPurchaseSuccessOpen(false);
+          window.location.href = '/commitments';
+        }}
       />
     </article>
   );

@@ -111,11 +111,37 @@ Fix all errors before committing. Warnings are informational but should be addre
 - Update that document whenever the settlement or early-exit API contracts, modal copy, or confirmation safeguards change.
 ## 🧪 Testing Procedures
 
-*(Note: Testing framework setup is currently in progress)*
+This project uses **Vitest** for unit and integration testing, **React Testing Library** for component tests, and **happy-dom** for a lightweight test environment.
 
--   **Unit Tests**: We plan to use Vitest + React Testing Library.
--   **Integration Tests**: Test user flows (e.g., creating a commitment) end-to-end.
--   **Linting**: Run `pnpm lint` before committing to ensure code quality.
+### Running Tests
+
+```bash
+# Run all tests once
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Generate coverage report (95% threshold)
+pnpm test:coverage
+```
+
+### Test Organization
+
+-   **Component Tests**: Place alongside components or in `tests/components/` (suffix: `.test.tsx`)
+-   **API Route Tests**: Place in `tests/api/` (suffix: `.test.ts`)
+-   **Library Tests**: Place in `tests/lib/` (suffix: `.test.ts`)
+
+### Testing Guidelines
+
+For comprehensive patterns and best practices—including mocking fetch, Freighter wallet API, fake timers, and React Testing Library queries—refer to **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)**.
+
+Key points:
+- Use accessibility-first queries (`getByRole`, `getByLabelText`)
+- Mock external dependencies (fetch, wallet API, services)
+- Maintain 95% coverage on covered files
+- Write tests from the user's perspective, not implementation details
+- Linting: Run `pnpm lint` before committing to ensure code quality.
 
 ## 🔄 Contribution Workflow
 

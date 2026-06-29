@@ -364,3 +364,67 @@ The backend source of truth remains `src/lib/backend/errorCodes.ts` and the Soro
 ---
 
 *This document was created as part of issue #133. Update it as new error types are introduced.*
+
+---
+
+## Client Error Reporting
+
+**Reference:** [#792 – Add a client error boundary with structured error reporting](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/792)
+
+`src/lib/observability/reportError.ts` centralises client-side error capture into a tested, redaction-aware reporter that is called automatically by the Next.js route error boundary (`src/app/error.tsx`).
+
+### Structured record
+
+Every captured error produces a `ClientErrorRecord`:
+
+```ts
+interface ClientErrorRecord {
+  message: string        // redacted error message
+  digest: string | undefined  // Next.js error digest (if available)
+  route: string          // window.location.pathname at time of error
+  timestamp: string      // ISO 8601 UTC timestamp
+  stack?: string         // stack trace — omitted in production
+}
+```
+
+### Redaction
+
+The `message` field is scanned for `key=value` / `key: value` patterns. Any key matching the sensitive denylist is replaced with `[REDACTED]` before the record leaves the browser.
+
+Sensitive keys: `token`, `authorization`, `password`, `secret`, `key`, `privatekey`, `publickey`, `mnemonic`, `seed`, `auth`, `bearer`, `apikey`, `api_key`, `session`, `cookie`, `csrf`, `signature`, `nonce`.
+
+### Transport (pluggable)
+
+The default transport writes to `console.error`. Replace it before your app mounts with `setErrorTransport`:
+
+```ts
+import { setErrorTransport } from '@/lib/observability/reportError'
+
+// Wire up your observability sink (Sentry, Datadog, custom ingest…)
+setErrorTransport((record) => {
+  fetch('/api/client-errors', {
+    method: 'POST',
+    body: JSON.stringify(record),
+  })
+})
+```
+
+No runtime dependency is added — the transport is a plain function and the default is a console call.
+
+### How it is wired
+
+`src/app/error.tsx` calls `reportError` inside a `useEffect` that re-runs whenever the `error` prop changes:
+
+```ts
+useEffect(() => {
+  reportError(error, window.location.pathname)
+}, [error])
+```
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/observability/reportError.ts` | Reporter, `ClientErrorRecord` type, `setErrorTransport` |
+| `src/lib/observability/__tests__/reportError.test.ts` | Unit tests (transport, redaction, stack-trace behaviour) |
+| `src/app/error.tsx` | Route error boundary — calls `reportError` on mount/update |

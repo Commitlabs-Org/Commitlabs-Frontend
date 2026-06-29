@@ -1,16 +1,168 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto+Mono:wght@400;500;600&display=swap");
+
 @import "tailwindcss";
 
 @theme {
-  --font-roboto: "Roboto Mono", sans-serif;
+  --font-roboto: var(--font-roboto);
+
+  --color-surface: var(--surface-base);
+  --color-surface-card: var(--surface-card);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-tooltip: var(--surface-tooltip);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-medium: var(--border-medium);
+  --color-border-strong: var(--border-strong);
+
+  --color-hover-surface: var(--hover-surface);
+  --color-hover-surface-strong: var(--hover-surface-strong);
+
+  --color-status-positive: var(--status-positive);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-green: var(--accent-green);
+  --color-accent-mint: var(--accent-mint);
+  --color-accent-blue: var(--accent-blue-alt);
+  --color-accent-orange: var(--accent-orange);
+
+  --color-overlay: var(--surface-overlay);
 }
 
 :root {
-  --focus-ring-color: #0ff0fc;
+  /* Surfaces */
+  --surface-primary: #0a0a0a;
+  --surface-secondary: rgba(15, 23, 42, 0.5);
+  --surface-secondary-hover: rgba(15, 23, 42, 0.8);
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accents */
+  --accent-teal: #0ff0fc;
+  --accent-teal-rgb: 15, 240, 252;
+  --accent-green: #00ff7a;
+  --accent-green-rgb: 0, 255, 122;
+  --accent-blue: #3b82f6;
+  --accent-purple: #a855f7;
+  --accent-orange: #f97316;
+  --accent-neutral: #94a3b8;
+  --accent-danger: #ef4444;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-teal: rgba(94, 234, 212, 0.1);
+
+  /* Focus Ring */
+  --focus-ring-color: var(--accent-teal);
+
+  color-scheme: dark;
+
+  /* ==========================================================================
+     Design Tokens – Colors (WCAG AA on #0a0a0a surface)
+     ========================================================================== */
+
+  /* Surface */
+  --surface-base: #0a0a0a;
+  --surface-card: #111111;
+  --surface-tooltip: #1a1a1a;
+
+  /* Text – measured against --surface-base (#0a0a0a) */
+  --text-primary: #ffffff;           /* 19.5:1 */
+  --text-secondary: #99a1af;         /*  7.38:1 */
+  --text-tertiary: #8892a0;          /*  6.29:1 – replaces #666 (3.45:1 FAIL) */
+  --text-muted: #808b9e;             /*  5.76:1 – replaces #64748b (4.16:1 FAIL) */
+
+  /* Status */
+  --status-positive: #05DF72;        /* 11.0:1 */
+  --status-warning: #ff8904;         /*  7.92:1 */
+  --status-danger: #f87171;          /*  6.06:1 – replaces #ef4444 (5.26:1 marginal) */
+  --status-info: #51a2ff;            /*  8.11:1 */
+
+  /* Accent */
+  --accent-cyan: #0ff0fc;
+  --accent-green: #4ADE80;
+
+  --focus-ring-color: var(--accent-cyan);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
-  --focus-ring-shadow: 0 0 0 4px rgba(15, 240, 252, 0.22);
+  --focus-ring-shadow: 0 0 0 4px rgba(var(--accent-teal-rgb), 0.22);
   --focus-ring-z-index: 4;
+
+  /* Surface elevations */
+  --surface-elevated: #050505;
+  --surface-elevated-2: #161616;
+  --surface-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-medium: rgba(255, 255, 255, 0.2);
+  --border-strong: rgba(255, 255, 255, 0.3);
+
+  /* Hover states */
+  --hover-surface: rgba(255, 255, 255, 0.05);
+  --hover-surface-strong: rgba(255, 255, 255, 0.1);
+
+  /* Accent variants */
+  --accent-mint: #00d4aa;
+  --accent-blue-alt: #51A2FF;
+  --accent-orange: #FF8A04;
+
+  /* Status variants */
+  --status-positive-alt: #00C950;
+  --status-danger-alt: #ef4444;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  color-scheme: light;
+  --surface-base: #f8f9fa;
+  --surface-card: #ffffff;
+  --surface-tooltip: #e9ecef;
+
+  --text-primary: #0a0a0a;
+  --text-secondary: #495057;
+  --text-tertiary: #6c757d;
+  --text-muted: #868e96;
+
+  --status-positive: #059669;
+  --status-warning: #d97706;
+  --status-danger: #dc2626;
+  --status-info: #2563eb;
+
+  --accent-cyan: #0891b2;
+  --accent-green: #16a34a;
+
+  --focus-ring-shadow: 0 0 0 4px rgba(8, 145, 178, 0.22);
+
+  --surface-elevated: #ffffff;
+  --surface-elevated-2: #e9ecef;
+  --surface-overlay: rgba(0, 0, 0, 0.2);
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-medium: rgba(0, 0, 0, 0.2);
+  --border-strong: rgba(0, 0, 0, 0.3);
+
+  --hover-surface: rgba(0, 0, 0, 0.05);
+  --hover-surface-strong: rgba(0, 0, 0, 0.1);
+
+  --accent-mint: #059669;
+  --accent-blue-alt: #3b82f6;
+  --accent-orange: #ea580c;
+
+  --status-positive-alt: #059669;
+  --status-danger-alt: #dc2626;
 }
 
 /* * {
@@ -31,7 +183,7 @@ body {
 }
 
 body {
-  background: #0a0a0a;
+  background: var(--surface-primary);
   min-height: 100vh;
 }
 
@@ -43,7 +195,7 @@ a {
 /* Accessibility */
 
 body {
-  background: #0a0a0a;
+  background: var(--surface-primary);
   min-height: 100vh;
 }
 
@@ -170,14 +322,14 @@ button {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #0A0A0A;
+  background: var(--surface-primary);
   border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #4A6B8A;
   border-radius: 9999px;
-  border: 2px solid #0A0A0A;
+  border: 2px solid var(--surface-primary);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -187,5 +339,16 @@ button {
 /* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #4A6B8A #0A0A0A;
+  scrollbar-color: #4A6B8A var(--surface-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -3,9 +3,11 @@
  */
 
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { CommitmentDetailActions } from '@/components/CommitmentDetailActions';
+
+const fetchMock = vi.fn();
 
 function renderActions(
   overrides: Partial<{
@@ -15,6 +17,9 @@ function renderActions(
     onExportData: () => void;
     onReportIssue: () => void;
     earlyExitDisabledReason: string;
+    commitmentId: string;
+    onSettle: () => void;
+    settleDisabledReason: string;
   }> = {},
 ) {
   const props = {
@@ -24,6 +29,9 @@ function renderActions(
     onExportData: vi.fn(),
     onReportIssue: vi.fn(),
     earlyExitDisabledReason: 'Early exit is unavailable',
+    commitmentId: '1',
+    onSettle: vi.fn(),
+    settleDisabledReason: 'Settlement is unavailable until maturity',
     ...overrides,
   };
 
@@ -32,8 +40,18 @@ function renderActions(
 }
 
 describe('CommitmentDetailActions', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: { eligible: true, reason: null, estimatedSettlement: '1200' } }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   it('renders all action buttons', () => {
@@ -61,6 +79,7 @@ describe('CommitmentDetailActions', () => {
     expect(
       screen.getByRole('button', { name: 'Report an Issue' }),
     ).toBeTruthy();
+    expect(screen.getByText('Settlement preview')).toBeTruthy();
   });
 
   it('invokes onEarlyExit when Early Exit is clicked and canEarlyExit is true', () => {

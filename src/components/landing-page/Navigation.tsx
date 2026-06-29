@@ -3,11 +3,16 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
 
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
+import { useCommandPalette } from "@/hooks/useCommandPalette";
+import { WalletAccountMenu } from "@/components/wallet/WalletAccountMenu";
 
 export const Navigation: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { open: openPalette } = useCommandPalette();
 
   const handleToggle = () => setMenuOpen((open) => !open);
   const handleNavClick = () => setMenuOpen(false);
@@ -80,7 +85,20 @@ export const Navigation: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3 justify-self-end">
+          <button
+            type="button"
+            onClick={openPalette}
+            aria-label="Open command palette (Ctrl+K)"
+            title="Search (Ctrl+K)"
+            className="hidden sm:inline-flex items-center gap-2 px-3 py-[0.45rem] rounded-[10px] border border-[rgba(0,212,255,0.2)] bg-[rgba(255,255,255,0.03)] text-white/40 text-[12px] transition-colors duration-200 hover:border-[rgba(0,212,255,0.45)] hover:text-white/70 focus-visible:border-[rgba(0,212,255,0.6)] focus-visible:outline-none"
+          >
+            <Search size={13} aria-hidden="true" />
+            <span>Search</span>
+            <kbd className="ml-1 text-[10px] text-white/20">⌘K</kbd>
+          </button>
+          <ThemeToggle />
           <WalletConnectButton />
+          <WalletAccountMenu />
           {/* Mobile menu button */}
           <button
             type="button"

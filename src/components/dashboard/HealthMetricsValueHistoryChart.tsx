@@ -71,15 +71,15 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                         />
                         <XAxis
                             dataKey="date"
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             dy={10}
                         />
                         <YAxis
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             tickFormatter={(value) => `${value.toLocaleString()}`}
@@ -98,7 +98,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-3 h-3 rounded-full border-2 border-[#666] border-dashed" />
-                                        <span className="text-[#666] text-sm">
+                                        <span className="text-[#8892a0] text-sm">
                                             Initial Amount
                                         </span>
                                     </div>
@@ -110,7 +110,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                             type="monotone"
                             dataKey="initialAmount"
                             name="Initial Amount"
-                            stroke="#666"
+                            stroke="#8892a0"
                             strokeWidth={2}
                             strokeDasharray="5 5"
                             dot={false}

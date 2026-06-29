@@ -5,6 +5,7 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Documentation Index (docs/README.md)](docs/README.md)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
@@ -12,9 +13,12 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [Project Structure](#project-structure)
 - [Backend API Changelog](#backend-api-changelog)
 - [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md)
+- [Error Page Recovery Flows](ERROR_PAGES_README.md)
 - [Contributing](#contributing)
+- [Community & Contributing](#community--contributing)
 - [API Reference](#api-reference)
 - [License](#license)
+
 
 ## 🔭 Overview
 
@@ -33,6 +37,7 @@ This frontend interacts with the CommitLabs Soroban smart contracts to:
 - **Marketplace**: Browse and filter active commitments available for purchase.
 - **Wallet Integration**: Connect with Stellar wallets (e.g., Freighter) to sign transactions.
 - **Settlement and Early Exit Flows**: Guided settlement eligibility, settlement success, and early-exit confirmation surfaces backed by preview and execution endpoints. See [Settlement and Early Exit UI Flows](docs/settlement-and-early-exit-flows.md).
+- **Error Page Recovery Flows**: App Router error boundaries and recovery pages are documented in [ERROR_PAGES_README.md](ERROR_PAGES_README.md).
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 
 ## 🏗 Architecture
@@ -58,42 +63,23 @@ This project uses **Vitest** for unit and integration testing of API routes.
 
 ```bash
 # Run all tests
-npm test
+pnpm test
 
 # Run tests in watch mode (re-runs on file changes)
-npm run test:watch
+pnpm run test:watch
 
 # Run tests with coverage report
-npm run test:coverage
+pnpm run test:coverage
 ```
 
-### Test Structure
+**Coverage Requirements**: The project enforces a **95% threshold** on statements, branches, functions, and lines.
 
-Tests are organized in the `tests/` directory:
-
-```
-tests/
-└── api/
-    ├── helpers.ts           # Test utilities and mock request helpers
-    ├── health.test.ts       # Tests for /api/health route
-    └── commitments.test.ts  # Tests for /api/commitments route
-```
-
-### API Routes
-
-- **GET /api/health** - Health check endpoint returning status and version
-- **GET /api/commitments** - Fetch commitments with optional filtering and pagination
-- **POST /api/commitments** - Create a new commitment (mocked for now)
-
-### Test Examples
-
-Tests demonstrate:
-- Mocking Next.js API routes without network requests
-- Testing request/response handling
-- Parameter validation and error handling
-- Mock data without external dependencies
-
-To add new API route tests, create a `.test.ts` file in `tests/api/` following the same pattern.
+**For detailed testing conventions, patterns, and best practices**, see **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)**, which covers:
+- Mocking fetch and external APIs
+- Mocking the Freighter wallet API
+- Using fake timers for async testing
+- React Testing Library patterns and accessibility-first queries
+- Test organization and naming conventions
 
 ## 🔄 Backend API Changelog
 
@@ -190,9 +176,7 @@ See [docs/FRONTEND_ARCHITECTURE.md](./docs/FRONTEND_ARCHITECTURE.md) for a
 detailed page→component→API-route map and state/data-flow conventions.
 ```
 
-## 🤝 Contributing
-
-## Security Headers
+## 🔒 Security Headers
 
 This project includes a reusable helper to attach standard security headers to HTTP responses.
 
@@ -227,30 +211,55 @@ This project includes a reusable helper to attach standard security headers to H
 - **Disabling/Modifying Headers:**
   The `attachSecurityHeaders` function returns the modified `Response` object. You can further modify headers on the returned object if needed, or update the `src/utils/response.ts` file to change default behaviors globally.
 
-## License
-
-We welcome contributions! Please see our [Developer Guide](./DEVELOPER_GUIDE.md) for detailed instructions on coding standards, testing procedures, and the pull request process.
-
 ## 📡 API Reference
 
 A description of the backend endpoints exposed under `/api` can be found in:
-
 - [docs/backend-api-reference.md](./docs/backend-api-reference.md)
 - [docs/backend-cors-policy.md](./docs/backend-cors-policy.md)
 - [docs/backend-storage.md](./docs/backend-storage.md)
 
-This document includes available routes, required parameters, and example
-requests/responses.  It is intended for developers building against or testing
-the backend.
+This document includes available routes, required parameters, and example requests/responses. It is intended for developers building against or testing the backend.
 
+## 🤝 Contributing
+
+We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) and check out the **[Documentation Index (docs/README.md)](docs/README.md)** for details on all available documentation, coding standards, naming conventions, and testing guidelines.
+
+To standardize submissions and streamline reviews, we use structured templates:
+- **Bug Reports**: Use the [Bug Report Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-bug&projects=&template=bug_report.yml) to report issues.
+- **Feature Requests**: Use the [Feature Request Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-feature&projects=&template=feature_request.yml) to suggest enhancements.
+- **Pull Requests**: Every pull request must follow the checklist in our [Pull Request Template](https://github.com/Commitlabs-Org/Commitlabs-Frontend/blob/master/.github/PULL_REQUEST_TEMPLATE.md) (verifying 95% test coverage, the 96-hour campaign timeframe, lint checks, etc.).
+- **Discussions**: Have questions or need support? Join our [CommitLabs Discord](https://discord.gg/WV7tdYkJk) server.
+
+### Steps to Contribute
+1. **Fork** the repository and clone it to your local machine.
+2. **Create a branch** for your changes:
+   ```bash
+   git checkout -b feat/your-feature-name
+   ```
+3. **Develop & Test** following the conventions in the [Developer Guide](./DEVELOPER_GUIDE.md). Ensure any new or modified logic meets the **minimum 95% test coverage** requirement.
+4. **Lint** your code:
+   ```bash
+   pnpm lint
+   ```
+5. **Commit and Push** your changes to your fork.
+6. **Open a Pull Request** pointing to the upstream repository's `master` branch.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Contributing
-Fork the repository and clone it to your local machine
-Create a new branch for your changes
-Make and test your updates following the project guidelines
-Commit and push your changes to your fork
-Open a Pull Request with a clear description
+## 🤝 Community & Contributing
+
+We welcome contributions! Please review our community guidelines before getting started:
+
+- **[Contributing Guidelines](./CONTRIBUTING.md)**: Details on branching, PR flow, and test expectations.
+- **[Code of Conduct](./CODE_OF_CONDUCT.md)**: Our expectations for community interactions.
+- **[Security Policy](./SECURITY.md)**: How to report vulnerabilities privately.
+- **[Developer Guide](./DEVELOPER_GUIDE.md)**: Instructions on local setup, testing, and architecture.
+
+### Quick Start
+1. Fork the repository and clone it to your local machine.
+2. Create a new branch for your changes.
+3. Make and test your updates following the project guidelines.
+4. Commit and push your changes to your fork.
+5. Open a Pull Request with a clear description.
