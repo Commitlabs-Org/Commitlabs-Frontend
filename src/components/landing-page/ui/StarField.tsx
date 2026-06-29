@@ -1,10 +1,9 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 // Decorative only — hidden from assistive tech, never intercepts pointer events.
-// Animation is opt-in via motion-safe so prefers-reduced-motion:reduce users
-// always see static stars (no layout thrash; pure CSS transform/opacity).
+// Supports reduced-motion, tab visibility, and mobile viewport optimization.
 
-const stars = [
+const allStars = [
   { left: 1056.99, top: 101.12, opacity: 0.57 },
   { left: 1184.99, top: 65.96, opacity: 0.76 },
   { left: 1262.27, top: 384.25, opacity: 0.5 },
@@ -57,21 +56,73 @@ const stars = [
   { left: 1007.94, top: 714.24, opacity: 0.51 },
 ];
 
-export const StarField: React.FC = () => (
-  <div
-    aria-hidden="true"
-    className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none"
-  >
-    {stars.map((star, index) => (
-      <div
-        key={index}
-        className="absolute bg-white rounded-full w-[0.998px] h-[0.998px] motion-safe:animate-pulse"
-        style={{
-          left: `${(star.left / 1680) * 100}%`,
-          top: `${(star.top / 823.333) * 100}%`,
-          opacity: star.opacity,
-        }}
-      />
-    ))}
-  </div>
-);
+export const StarField: React.FC = () => {
+  const [isReduced, setIsReduced] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(true);
+
+  // Detect and monitor prefers-reduced-motion preference
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    // Set initial state
+    setIsReduced(mediaQuery.matches);
+
+    // Handle runtime changes
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsReduced(e.matches);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
+  }, []);
+
+  // Pause animation when tab becomes hidden, resume when visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsAnimating(false);
+      } else if (!isReduced) {
+        // Resume animation only if reduced-motion is not active
+        setIsAnimating(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isReduced]);
+
+  // Determine star count based on viewport width
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const starCount = isMobile ? 40 : 150;
+  const starsToDraw = allStars.slice(0, starCount);
+
+  // Determine animation state: show animation only if reduced-motion is off and tab is visible
+  const shouldAnimate = !isReduced && isAnimating;
+
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none"
+    >
+      {starsToDraw.map((star, index) => (
+        <div
+          key={index}
+          className={`absolute bg-white rounded-full w-[0.998px] h-[0.998px] ${
+            shouldAnimate ? "motion-safe:animate-pulse" : ""
+          }`}
+          style={{
+            left: `${(star.left / 1680) * 100}%`,
+            top: `${(star.top / 823.333) * 100}%`,
+            opacity: star.opacity,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
