@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import ScrollToTopButton from "@/components/landing-page/ui/ScrollToTop"
-import { ThemeProvider } from "@/components/theme/ThemeProvider"
-import { ToastProvider } from "@/components/toast/ToastProvider"
-import { CommandPaletteProvider } from "@/components/CommandPalette"
-import { NetworkMismatchBanner } from "@/components/wallet/NetworkMismatchBanner"
+import ScrollToTopButton from '@/components/landing-page/ui/ScrollToTop'
+import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { ToastProvider } from '@/components/toast/ToastProvider'
+import { CommandPaletteProvider } from '@/components/CommandPalette'
+import { NetworkMismatchBanner } from '@/components/wallet/NetworkMismatchBanner'
 import { Inter, Roboto_Mono } from 'next/font/google'
-import { MotionProvider } from "@/components/MotionProvider"
+import { MotionProvider } from '@/components/MotionProvider'
+import { AppShellConnectionStatus } from '@/components/shell/AppShellConnectionStatus'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -77,24 +78,24 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={["scroll-smooth", inter.variable, robotoMono.variable].join(' ')}
+      className={['scroll-smooth', inter.variable, robotoMono.variable].join(' ')}
     >
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "CommitLabs",
-              "description": "Transform passive liquidity into enforceable, attestable, and composable on-chain commitments",
-              "url": "https://commitlabs.com",
-              "publisher": {
-                "@type": "Organization",
-                "name": "CommitLabs",
-                "url": "https://commitlabs.com"
-              }
-            })
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'CommitLabs',
+              description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
+              url: 'https://commitlabs.com',
+              publisher: {
+                '@type': 'Organization',
+                name: 'CommitLabs',
+                url: 'https://commitlabs.com',
+              },
+            }),
           }}
         />
       </head>
@@ -102,16 +103,15 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <ThemeProvider>
           <MotionProvider>
-          <ToastProvider>
-            <NetworkMismatchBanner />
-            {children}
-            <ScrollToTopButton />
-            <CommandPaletteProvider />
-          </ToastProvider>
+            <ToastProvider>
+              <NetworkMismatchBanner />
+              <AppShellConnectionStatus>{children}</AppShellConnectionStatus>
+              <ScrollToTopButton />
+              <CommandPaletteProvider />
+            </ToastProvider>
           </MotionProvider>
         </ThemeProvider>
       </body>
     </html>
   )
 }
-
