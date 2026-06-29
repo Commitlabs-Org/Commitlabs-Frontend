@@ -8,6 +8,8 @@ servers:
   - url: /
     description: Local development server
 
+security: []
+
 components:
   securitySchemes:
     cookieAuth:
@@ -183,44 +185,6 @@ paths:
       description: >
         Search and filter commitments by asset, status, and risk type with
         stable sorting and pagination. Mirrors the marketplace filtering contract.
-  /api/commitments/{id}/fund:
-    post:
-      summary: Fund a Created Commitment
-      description: Submit the on-chain `fund_escrow` transaction for a previously created commitment.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Commitment identifier.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                callerAddress:
-                  type: string
-                  example: "GOWNER..."
-      responses:
-        '200':
-          description: Commitment funded successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessEnvelope'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/BadRequest'
-        '429':
-          $ref: '#/components/responses/RateLimited'
       parameters:
         - name: ownerAddress
           in: query
@@ -326,6 +290,45 @@ paths:
                               sortBy: { type: string }
                               sortOrder: { type: string }
         '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/commitments/{id}/fund:
+    post:
+      summary: Fund a Created Commitment
+      description: Submit the on-chain `fund_escrow` transaction for a previously created commitment.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Commitment identifier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callerAddress:
+                  type: string
+                  example: "GOWNER..."
+      responses:
+        '200':
+          description: Commitment funded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
           $ref: '#/components/responses/BadRequest'
         '429':
           $ref: '#/components/responses/RateLimited'
@@ -593,6 +596,381 @@ paths:
       responses:
         '200':
           description: Attestation logged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/admin/audit-events:
+    get:
+      summary: List audit events
+      responses:
+        '200':
+          description: Audit events retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/analytics/user:
+    options:
+      summary: Analytics user CORS preflight
+      responses:
+        '204':
+          description: CORS preflight response.
+
+  /api/attestations/recent:
+    get:
+      summary: Recent attestations
+      responses:
+        '200':
+          description: Recent attestations retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/auth:
+    post:
+      summary: Authenticate wallet session
+      responses:
+        '200':
+          description: Session established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/auth/csrf:
+    get:
+      summary: CSRF token
+      responses:
+        '200':
+          description: CSRF token issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/auth/logout:
+    post:
+      summary: End session
+      responses:
+        '200':
+          description: Session ended.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/auth/nonce:
+    post:
+      summary: Request auth nonce
+      responses:
+        '200':
+          description: Nonce issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/auth/verify:
+    post:
+      summary: Verify wallet signature
+      responses:
+        '200':
+          description: Signature verified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/export:
+    get:
+      summary: Export commitments
+      responses:
+        '200':
+          description: Commitments exported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/validate:
+    post:
+      summary: Validate commitment draft
+      responses:
+        '200':
+          description: Validation result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/{id}:
+    get:
+      summary: Get commitment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Commitment retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/commitments/{id}/dispute:
+    post:
+      summary: Dispute commitment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dispute recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/{id}/early-exit/preview:
+    get:
+      summary: Early exit preview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Early exit preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/{id}/events:
+    get:
+      summary: Commitment events (SSE)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/commitments/{id}/history:
+    get:
+      summary: Commitment lifecycle history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated lifecycle events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/{id}/resolve:
+    post:
+      summary: Resolve commitment dispute
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Commitment resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/commitments/{id}/status:
+    get:
+      summary: Commitment status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current commitment status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/config/supported:
+    get:
+      summary: Supported configuration
+      responses:
+        '200':
+          description: Supported config values.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/login:
+    options:
+      summary: Login CORS preflight
+      responses:
+        '204':
+          description: CORS preflight response.
+
+  /api/marketplace:
+    options:
+      summary: Marketplace CORS preflight
+      responses:
+        '204':
+          description: CORS preflight response.
+
+  /api/marketplace/featured:
+    get:
+      summary: Featured marketplace listings
+      responses:
+        '200':
+          description: Featured listings retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/marketplace/listings:
+    get:
+      summary: List marketplace listings
+      responses:
+        '200':
+          description: Listings retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+    post:
+      summary: Create marketplace listing
+      responses:
+        '201':
+          description: Listing created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/marketplace/listings/{id}:
+    delete:
+      summary: Delete marketplace listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Listing deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/marketplace/stats:
+    get:
+      summary: Marketplace statistics
+      responses:
+        '200':
+          description: Marketplace stats retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/notifications:
+    get:
+      summary: User notifications
+      responses:
+        '200':
+          description: Notifications retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/protocol/constants:
+    get:
+      summary: Protocol constants
+      responses:
+        '200':
+          description: Protocol constants retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/ready:
+    get:
+      summary: Readiness probe
+      responses:
+        '200':
+          description: Service is ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/seed:
+    post:
+      summary: Seed mock data
+      responses:
+        '200':
+          description: Data seeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/user/preferences:
+    get:
+      summary: Get user preferences
+      responses:
+        '200':
+          description: Preferences retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+    put:
+      summary: Update user preferences
+      responses:
+        '200':
+          description: Preferences updated.
           content:
             application/json:
               schema:

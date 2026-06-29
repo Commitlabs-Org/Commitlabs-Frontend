@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
+import { useReducedMotion } from '@/lib/a11y/useReducedMotion';
 
 interface HealthMetricsValueHistoryChartProps {
     data: Array<{ date: string; currentValue: number; initialAmount?: number }>;
@@ -56,6 +57,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
     data,
     volatilityPercent,
 }) => {
+    const reducedMotion = useReducedMotion();
     return (
         <>
             <div className="w-full h-full min-h-[350px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222] shadow-sm">
@@ -115,6 +117,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                             strokeDasharray="5 5"
                             dot={false}
                             activeDot={false}
+                            isAnimationActive={!reducedMotion}
                         />
                         {/* Current Value Line (Teal) */}
                         <Line
@@ -125,6 +128,7 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                             strokeWidth={2}
                             dot={{ r: 4, fill: '#0ff0fc', stroke: '#111', strokeWidth: 2 }}
                             activeDot={{ r: 6, fill: '#0ff0fc', stroke: '#111', strokeWidth: 2 }}
+                            isAnimationActive={!reducedMotion}
                         />
                     </LineChart>
                 </ResponsiveContainer>

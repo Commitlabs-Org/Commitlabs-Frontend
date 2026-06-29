@@ -47,7 +47,7 @@ export function badGatewayError(details?: string): ApiErrorResponse {
         error: {
         code: 502,
         type: "BAD_GATEWAY",
-        message: "A upstream service returned an invalid response. Please try again later.",
+        message: "An upstream service returned an invalid response. Please try again later.",
         ...(details && process.env.NODE_ENV === "development" ? { details } : {}),
         },
     };

@@ -97,10 +97,13 @@ export const GET = withApiHandler(async (req: NextRequest, { params }) => {
   }
 
   const protocol = getProtocolConstants();
+  const defaultTier = protocol.penalties[0];
+  if (!defaultTier) {
+    throw new ConflictError("Protocol penalty configuration is missing");
+  }
   const tier: PenaltyTier = (commitment as any).type
-    ? (protocol.penalties.find((t) => t.type === (commitment as any).type) ??
-      protocol.penalties[0])
-    : protocol.penalties[0];
+    ? (protocol.penalties.find((t) => t.type === (commitment as any).type) ?? defaultTier)
+    : defaultTier;
 
   const principal = Number(commitment.amount);
   const penaltyPercent = getPenaltyPercent(

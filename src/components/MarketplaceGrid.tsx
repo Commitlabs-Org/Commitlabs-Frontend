@@ -7,6 +7,7 @@ export interface MarketplaceGridProps {
   isComparePinned?: (id: string) => boolean
   isCompareFull?: boolean
   onCompareToggle?: (listing: MarketplaceCardProps) => void
+  onView?: (id: string) => void
 }
 
 export function MarketplaceGrid({
@@ -14,6 +15,7 @@ export function MarketplaceGrid({
   isComparePinned,
   isCompareFull = false,
   onCompareToggle,
+  onView,
 }: MarketplaceGridProps) {
   if (!items || items.length === 0) {
     return (
@@ -41,6 +43,7 @@ export function MarketplaceGrid({
                 onCompareToggle={
                   onCompareToggle ? () => onCompareToggle(item) : undefined
                 }
+                onView={onView}
               />
             </li>
           )

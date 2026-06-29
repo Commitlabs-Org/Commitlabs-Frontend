@@ -230,6 +230,9 @@ describe('CommitmentCreatedModal', () => {
     // Click retry
     fireEvent.click(screen.getByRole('button', { name: 'Retry funding' }));
 
+    // Click fund again since we are back in idle/ready state
+    fireEvent.click(await screen.findByRole('button', { name: 'Fund escrow now' }));
+
     // Retry should go back via idle then fund again → success
     expect(await screen.findByRole('status', { name: /escrow funded successfully/i })).toBeTruthy();
     expect(screen.getByText(/0xretried/i)).toBeTruthy();

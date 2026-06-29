@@ -26,11 +26,12 @@ interface TooltipPayload {
 
 const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
     if (active && payload && payload.length) {
+        const entry = payload[0];
         return (
             <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
                 <p className="text-[#99a1af] text-sm mb-1">{label}</p>
                 <p className="text-[#4ADE80] text-sm font-medium">
-                    Score: {payload[0].value}
+                    Score: {entry?.value}
                 </p>
             </div>
         );

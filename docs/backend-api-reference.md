@@ -7,6 +7,38 @@ base; they exist primarily for analytics hooks and development/testing.
 Each entry includes the HTTP method, path, expected request body (if any), and
 an example response. All endpoints return JSON.
 
+## OpenAPI Spec & CI
+
+The machine-readable API contract lives in [`openapi.yaml`](../openapi.yaml) at
+the repo root. CI enforces two checks on every PR:
+
+1. **Spec validity** — `validate-openapi.sh` runs Redocly lint against
+   `openapi.yaml` and fails on schema or structural errors.
+2. **Route coverage** — `scripts/check-route-coverage.sh` discovers every
+   `src/app/api/**/route.ts` file, maps it to an `/api/...` path (dynamic
+   segments become `{param}`), and fails if that path is absent from
+   `openapi.yaml`.
+
+### Adding a new API route
+
+When you add `src/app/api/<segments>/route.ts`:
+
+1. Add a matching path entry under `paths:` in `openapi.yaml` (use `{id}` for
+   dynamic segments, e.g. `src/app/api/foo/[id]/bar` → `/api/foo/{id}/bar`).
+2. Run locally before pushing:
+
+   ```bash
+   bash validate-openapi.sh
+   bash scripts/check-route-coverage.sh
+   ```
+
+3. Update this document with request/response examples if the endpoint is
+   user-facing.
+
+Undocumented routes block merge until the spec is updated.
+
+---
+
 ## CORS Summary
 
 - Public browser routes return wildcard CORS without credentials.

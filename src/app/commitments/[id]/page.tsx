@@ -12,7 +12,7 @@ import { CommitmentDetailActions } from '@/components/CommitmentDetailActions';
 import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
 import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal';
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal';
-import CommitmentDisputeModal from '@/components/modals/CommitmentDisputeModal';
+import DisputeModal from '@/components/modals/DisputeModal';
 import DisputeStatusTracker, { type DisputeInfo } from '@/components/dispute/DisputeStatusTracker';
 import { openExplorerUrl } from '@/utils/explorerLinks';
 import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
@@ -143,7 +143,8 @@ export default function CommitmentDetailPage({
     const commitment = getCommitmentById(params.id)
     if (!commitment) notFound()
 
-    const dispute = MOCK_DISPUTES[params.id] ?? null;
+    const [dispute, setDispute] = useState<DisputeInfo | null>(() => MOCK_DISPUTES[params.id] ?? null);
+    const [commitmentStatusOverride, setCommitmentStatusOverride] = useState<string | null>(null);
 
     const durationLabel = `${commitment.duration} days`
     const maxLossLabel = `${commitment.maxLoss}%`
@@ -184,6 +185,17 @@ export default function CommitmentDetailPage({
         setDisputeModalOpen(true);
     }, []);
 
+    const handleDisputeSubmitted = useCallback(() => {
+        setDispute({
+            stage: 'under_review',
+            filedAt: new Date().toISOString(),
+            reasonCategory: 'Pending review',
+            reviewStartedAt: new Date().toISOString(),
+        });
+        setCommitmentStatusOverride('Disputed');
+        setDisputeModalOpen(false);
+    }, []);
+
     const handleEarlyExit = useCallback(() => {
         setEarlyExitModalOpen(true);
     }, []);
@@ -215,7 +227,7 @@ export default function CommitmentDetailPage({
                                 </p>
                             </div>
                             <div className="hidden sm:block">
-                                <StatusBadge />
+                                <StatusBadge statusOverride={commitmentStatusOverride ?? undefined} />
                             </div>
                         </div>
                     </header>
@@ -312,16 +324,17 @@ export default function CommitmentDetailPage({
                     />
                 )}
 
-                <CommitmentDisputeModal
+                <DisputeModal
                     isOpen={disputeModalOpen}
                     commitmentId={commitment.id}
                     onClose={() => setDisputeModalOpen(false)}
+                    onSubmitted={handleDisputeSubmitted}
                 />
             </main>
         </CommitmentStatusProvider>
     );
 
-function StatusBadge() {
+function StatusBadge({ statusOverride }: { statusOverride?: string }) {
     const { status, isLoading } = useCommitmentStatus();
     if (isLoading || !status) {
         return (
@@ -330,23 +343,26 @@ function StatusBadge() {
             </span>
         );
     }
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
+    const visibleStatus = statusOverride ?? status.status;
+    const getStatusColor = (label: string) => {
+        switch (label.toLowerCase()) {
             case 'active':
                 return 'text-[#0ff0fc] border-[#0ff0fc]/30';
             case 'settled':
                 return 'text-[#4ade80] border-[#4ade80]/30';
             case 'violated':
+            case 'disputed':
                 return 'text-[#f87171] border-[#f87171]/30';
             case 'early exit':
+            case 'under review':
                 return 'text-[#fbbf24] border-[#fbbf24]/30';
             default:
                 return 'text-[#99a1af] border-[#222]';
         }
     };
     return (
-        <span className={`px-4 py-2 bg-[#1a1a1a] border rounded-lg text-sm font-medium ${getStatusColor(status.status)}`}>
-            {status.status}
+        <span className={`px-4 py-2 bg-[#1a1a1a] border rounded-lg text-sm font-medium ${getStatusColor(visibleStatus)}`}>
+            {visibleStatus}
         </span>
     );
 }

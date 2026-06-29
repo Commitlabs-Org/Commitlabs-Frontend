@@ -53,7 +53,8 @@ export default function RiskProfileComparison({ selectedType, onSelectType }: Pr
       (e.currentTarget.parentElement?.children[prev] as HTMLElement)?.focus();
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      const type = ID_MAP[profiles[idx].id];
+      const profile = profiles[idx];
+      const type = profile ? ID_MAP[profile.id] : undefined;
       if (type) onSelectType(type);
     }
   };

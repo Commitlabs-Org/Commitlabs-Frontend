@@ -11,6 +11,7 @@ import {
     LucideIcon 
 } from 'lucide-react';
 import styles from './KPICard.module.css';
+import { formatNumber, formatCurrency, formatPercent } from '@/utils/format';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -315,16 +316,16 @@ export const KPICard: React.FC<KPICardProps> = ({
         if (value === undefined || value === null) return '--';
         
         switch (format) {
-            case 'currency':
-                return formatCurrency(value, unit || 'USD', decimals);
+           case 'currency':
+                return formatCurrency(value, { currency: unit || 'USD', decimals });
             case 'percentage':
-                return formatPercentage(value, decimals);
+                return formatPercent(value, { decimals });
             case 'count':
-                return formatCompact(value);
+                return formatNumber(value, { compact: true });
             case 'score':
-                return formatNumber(value, decimals);
+                return formatNumber(value, { decimals });
             default:
-                return formatNumber(value, decimals);
+                return formatNumber(value, { decimals });
         }
     })();
 

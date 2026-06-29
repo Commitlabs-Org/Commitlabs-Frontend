@@ -13,6 +13,8 @@ import { TrustBadge } from '@/components/TrustBadge'
 import { CompareTray } from '@/components/marketplace/CompareTray'
 import { useCompareListings } from '@/hooks/useCompareListings'
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard'
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
+import { RecentlyViewedRail } from '@/components/marketplace/RecentlyViewedRail'
 
 // Interfaces matching the components
 interface Filters {
@@ -358,6 +360,12 @@ export default function Marketplace() {
     removeListing,
     clearAll: clearCompareListings,
   } = useCompareListings()
+
+  const {
+    recentIds,
+    addView,
+    clearAll: clearRecentListings,
+  } = useRecentlyViewed()
   const [filters, setFilters] = useState<Filters>({
     sortBy: 'price',
     commitmentType: ['balanced'],
@@ -390,12 +398,14 @@ export default function Marketplace() {
       }
 
       const numericPrice = parseInt(item.price.replace(/[$,—]/g, '')) || 0
-      if (item.forSale && (numericPrice < filters.priceRange[0] || numericPrice > filters.priceRange[1])) {
+      const [priceMin, priceMax] = filters.priceRange
+      if (item.forSale && (numericPrice < priceMin || numericPrice > priceMax)) {
         return false
       }
 
       const numericDuration = parseInt(item.duration) || 0
-      if (numericDuration < filters.durationRange[0] || numericDuration > filters.durationRange[1]) {
+      const [durationMin, durationMax] = filters.durationRange
+      if (numericDuration < durationMin || numericDuration > durationMax) {
         return false
       }
 
@@ -481,29 +491,38 @@ export default function Marketplace() {
                 cardCount={9}
               />
             ) : (
-              <MarketplaceResultsLayout
-                totalCount={filteredListings.length}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              >
-                {viewMode === 'grid' ? (
-                  <ErrorBoundary>
-                    <MarketplaceGrid
-                      items={pagedListings}
-                      isComparePinned={isPinned}
-                      isCompareFull={isCompareFull}
-                      onCompareToggle={(listing: MarketplaceCardProps) => toggleListing(listing)}
-                    />
-                  </ErrorBoundary>
-                ) : (
-                  <ErrorBoundary>
-                    <MarketplaceListView items={pagedListings} />
-                  </ErrorBoundary>
-                )}
-              </MarketplaceResultsLayout>
+              <>
+                <RecentlyViewedRail
+                  recentIds={recentIds}
+                  listings={mockListings}
+                  onClear={clearRecentListings}
+                  onViewListing={addView}
+                />
+                <MarketplaceResultsLayout
+                  totalCount={filteredListings.length}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                >
+                  {viewMode === 'grid' ? (
+                    <ErrorBoundary>
+                      <MarketplaceGrid
+                        items={pagedListings}
+                        isComparePinned={isPinned}
+                        isCompareFull={isCompareFull}
+                        onCompareToggle={(listing: MarketplaceCardProps) => toggleListing(listing)}
+                        onView={addView}
+                      />
+                    </ErrorBoundary>
+                  ) : (
+                    <ErrorBoundary>
+                      <MarketplaceListView items={pagedListings} />
+                    </ErrorBoundary>
+                  )}
+                </MarketplaceResultsLayout>
+              </>
             )}
           </div>
         </div>

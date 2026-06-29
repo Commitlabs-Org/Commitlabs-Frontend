@@ -1,11 +1,11 @@
 "use client";
 import { ReputationDisplay } from "./ReputationDisplay";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
 import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
 import { TrustBadge, TrustLevel } from "./TrustBadge";
-
+import { formatPercent } from '@/utils/format';
 export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 
 export interface MarketplaceCardProps {
@@ -29,6 +29,7 @@ export interface MarketplaceCardProps {
   compareSelected?: boolean;
   compareDisabled?: boolean;
   onCompareToggle?: () => void;
+  onView?: (id: string) => void;
 }
 
 function clampScore(score: number) {
@@ -210,11 +211,18 @@ function MarketplaceCardComponent({
   compareSelected = false,
   compareDisabled = false,
   onCompareToggle,
+  onView,
 }: MarketplaceCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPurchaseSuccessOpen, setIsPurchaseSuccessOpen] = useState(false);
   const [purchaseTxHash, setPurchaseTxHash] = useState<string | undefined>();
   const [isPurchasing, setIsPurchasing] = useState(false);
+
+  useEffect(() => {
+    if (isModalOpen && onView) {
+      onView(id);
+    }
+  }, [isModalOpen, id, onView]);
 
   const clampedScore = clampScore(score);
   const cardBorderClass =
@@ -301,7 +309,7 @@ function MarketplaceCardComponent({
           </span>
             {/* Compact reputation display */}
             {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
-              <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>"{clampedScore}%"</span>
+            <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>{formatPercent(clampedScore, { decimals: 0 })}</span>
             ) : (
               <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">New seller</span>
             )}

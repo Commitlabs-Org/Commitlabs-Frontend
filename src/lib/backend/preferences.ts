@@ -181,7 +181,7 @@ export function requireWalletAuth(authHeader: string | null): string {
     }
 
     const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+    if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer') {
         throw new UnauthorizedError(
             'Authorization header must be in format: Bearer <token>',
         );

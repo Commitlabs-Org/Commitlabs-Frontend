@@ -98,7 +98,7 @@ describe("badGatewayError", () => {
     expect(result.error.code).toBe(502);
     expect(result.error.type).toBe("BAD_GATEWAY");
     expect(result.error.message).toBe(
-      "A upstream service returned an invalid response. Please try again later."
+      "An upstream service returned an invalid response. Please try again later."
     );
   });
 
@@ -209,6 +209,54 @@ describe("resolveServerError", () => {
     const result = resolveServerError(502, "bad upstream");
     expect(result.error.details).toBe("bad upstream");
   });
+
+  it.each([
+    [
+      502,
+      "BAD_GATEWAY",
+      "An upstream service returned an invalid response. Please try again later.",
+    ],
+    [
+      503,
+      "SERVICE_UNAVAILABLE",
+      "The service is temporarily unavailable. Please try again later.",
+    ],
+    [504, "GATEWAY_TIMEOUT", "The request timed out. Please try again."],
+    [
+      599,
+      "INTERNAL_SERVER_ERROR",
+      "An unexpected error occurred. Please try again later.",
+    ],
+  ])(
+    "maps status %i to the expected user-facing %s message",
+    (statusCode, errorType, message) => {
+      const result = resolveServerError(statusCode);
+
+      expect(result.success).toBe(false);
+      expect(result.error.code).toBe(
+        statusCode === 599 ? 500 : statusCode
+      );
+      expect(result.error.type).toBe(errorType);
+      expect(result.error.message).toBe(message);
+    }
+  );
+
+  it.each([502, 503, 504, 599])(
+    "does not leak sensitive internals in production for status %i",
+    (statusCode) => {
+      process.env.NODE_ENV = "production";
+      const internalDetails =
+        "postgres://admin:secret@db.internal stacktrace token=abc123";
+      const result = resolveServerError(statusCode, internalDetails);
+      const serializedResponse = JSON.stringify(result);
+
+      expect(result.error.details).toBeUndefined();
+      expect(serializedResponse).not.toContain("postgres://");
+      expect(serializedResponse).not.toContain("secret");
+      expect(serializedResponse).not.toContain("stacktrace");
+      expect(serializedResponse).not.toContain("abc123");
+    }
+  );
 });
 
 // ── getErrorHeaders ───────────────────────────────────────────────────────────

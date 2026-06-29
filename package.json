@@ -2,20 +2,35 @@
   "name": "commitlabs-frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "deadcode": "knip",
+    "circular": "madge --circular --extensions ts,tsx src",
+    "size": "size-limit",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
     "test:contracts:deploy": "node contracts/scripts/deploy-testnet.smoke.mjs",
     "seed:mock": "tsx scripts/seed-backend-mock.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "bash -c 'tsc --noEmit'"
+    ]
   },
   "dependencies": {
-
     "@stellar/freighter-api": "^1.6.0",
     "@stellar/stellar-sdk": "^11.2.2",
     "@tailwindcss/postcss": "^4.1.18",
@@ -34,7 +49,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
     "@playwright/test": "^1.61.1",
+    "@size-limit/file": "^12.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -42,16 +60,22 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "^4.1.5",
-    "@vitest/ui": "^4.0.18",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/ui": "^2.1.8",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
     "happy-dom": "^20.7.0",
+    "husky": "^9.1.7",
     "ioredis": "^5.11.0",
+    "lint-staged": "^15.2.10",
     "jsdom": "^29.1.1",
+    "knip": "^6.23.0",
+    "madge": "^8.0.0",
     "node-fetch": "^3.3.2",
+    "size-limit": "^12.1.0",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",
-    "vitest": "^4.0.18"
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
   }
 }

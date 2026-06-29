@@ -1,4 +1,6 @@
 export { AppSidebar } from './AppSidebar'
 export type { AppSidebarProps } from './AppSidebar'
+export { AppShellConnectionStatus } from './AppShellConnectionStatus'
 export { AppShellLayout } from './AppShellLayout'
 export type { AppShellLayoutProps } from './AppShellLayout'
+export { ConnectionStatusBanner } from './ConnectionStatusBanner'

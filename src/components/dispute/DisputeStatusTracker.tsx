@@ -115,7 +115,6 @@ export default function DisputeStatusTracker({ dispute }: DisputeStatusTrackerPr
       key: 'under_review' as const,
       label: 'Under Review',
       timestamp: formatTimestamp(dispute.reviewStartedAt),
-      detail: undefined,
     },
     {
       key: 'resolved' as const,

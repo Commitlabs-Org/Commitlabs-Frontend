@@ -1,6 +1,7 @@
 'use client'
 
 import styles from './VolatilityExposureMeter.module.css'
+import { useReducedMotion } from '@/lib/a11y/useReducedMotion'
 
 export interface VolatilityExposureMeterProps {
   /** Current exposure as a percentage (0–100). Clamped when rendering. */
@@ -27,6 +28,7 @@ export default function VolatilityExposureMeter({
   const percent = clamp(valuePercent)
   const level = exposureLevel(percent)
   const ariaLabel = `Volatility exposure: ${percent}%, ${level} range.`
+  const reducedMotion = useReducedMotion()
 
   return (
     <section
@@ -52,7 +54,11 @@ export default function VolatilityExposureMeter({
       >
         <div
           className={styles.barMask}
-          style={{ width: `${percent}%` }}
+          style={{
+            width: `${percent}%`,
+            // Honor the motion policy: live updates still apply, just without animation.
+            transition: reducedMotion ? 'none' : undefined,
+          }}
         >
              <div className={styles.barGradient} />
         </div>
