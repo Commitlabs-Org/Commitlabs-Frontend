@@ -14,6 +14,7 @@ import ResumeDraftPrompt from "@/components/create/ResumeDraftPrompt";
 import { useGuidedTour } from "@/hooks/useGuidedTour";
 import { GuidedTour } from "@/components/onboarding/GuidedTour";
 import { HelpCircle } from "lucide-react";
+import { type CommitmentPreset } from "@/components/create/commitmentPresets";
 
 type CommitmentType = "safe" | "balanced" | "aggressive";
 
@@ -180,6 +181,13 @@ export default function CreateCommitment() {
     setCommitmentType(type);
   };
 
+  const handleApplyPreset = (preset: CommitmentPreset) => {
+    setSelectedType(preset.type);
+    setCommitmentType(preset.type);
+    setDurationDays(preset.durationDays);
+    setMaxLossPercent(preset.maxLossPercent);
+  };
+
   const handleNextStep = () => {
     if (step < 3) {
       setStep(step + 1);
@@ -270,6 +278,7 @@ export default function CreateCommitment() {
           onNext={handleNextStep}
           onBack={handleBack}
           initialFocusField={initialFocusField || undefined}
+          onApplyPreset={handleApplyPreset}
         />
       )}
 

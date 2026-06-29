@@ -1,8 +1,9 @@
 'use client';
 import { useRef, useEffect } from 'react';
-import { Shield, TrendingUp, Flame, ArrowRight, ChevronLeft, Info } from 'lucide-react';
+import { Shield, TrendingUp, Flame, ArrowRight, ChevronLeft, Info, Zap } from 'lucide-react';
 import WizardStepper from './WizardStepper';
 import styles from './CreateCommitmentStepSelectType.module.css';
+import { COMMITMENT_PRESETS, SCRATCH_OPTION_ID, type CommitmentPreset } from './create/commitmentPresets';
 
 interface CommitmentType {
   id: 'safe' | 'balanced' | 'aggressive';
@@ -23,6 +24,7 @@ interface CreateCommitmentStepSelectTypeProps {
   onNext: (type: 'safe' | 'balanced' | 'aggressive') => void;
   onBack: () => void;
   initialFocusField?: string;
+  onApplyPreset?: (preset: CommitmentPreset) => void;
 }
 
 const commitmentTypes: CommitmentType[] = [
@@ -70,6 +72,7 @@ export default function CreateCommitmentStepSelectType({
   onNext,
   onBack,
   initialFocusField,
+  onApplyPreset,
 }: CreateCommitmentStepSelectTypeProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -93,6 +96,15 @@ export default function CreateCommitmentStepSelectType({
     }
   };
 
+  const handlePresetSelect = (preset: CommitmentPreset) => {
+    onSelectType(preset.type);
+    onApplyPreset?.(preset);
+  };
+
+  const handleScratchSelect = () => {
+    // Just select without prefilling — user configures from defaults
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
@@ -109,6 +121,57 @@ export default function CreateCommitmentStepSelectType({
         </div>
 
         <WizardStepper currentStep={1} />
+
+        {/* Preset / Template Picker */}
+        <div className={styles.titleSection}>
+          <h2 className={styles.sectionTitle} tabIndex={-1}>
+            <Zap size={18} style={{ display: 'inline', marginRight: '0.4rem', verticalAlign: 'middle' }} />
+            Quick-start Templates
+          </h2>
+          <p className={styles.sectionSubtitle}>
+            Choose a preset to prefill the next step, or start from scratch.
+          </p>
+        </div>
+
+        <div
+          role="radiogroup"
+          aria-label="Commitment templates"
+          className={styles.presetsContainer}
+          data-testid="presets-container"
+        >
+          {COMMITMENT_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              role="radio"
+              aria-checked={selectedType === preset.type}
+              data-testid={`preset-${preset.id}`}
+              className={`${styles.presetBtn} ${selectedType === preset.type ? styles.presetBtnSelected : ''}`}
+              onClick={() => handlePresetSelect(preset)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handlePresetSelect(preset);
+                }
+              }}
+            >
+              <span className={styles.presetLabel}>{preset.label}</span>
+              <span className={styles.presetDesc}>{preset.description}</span>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            role="radio"
+            aria-checked={false}
+            data-testid={`preset-${SCRATCH_OPTION_ID}`}
+            className={styles.presetBtn}
+            onClick={handleScratchSelect}
+          >
+            <span className={styles.presetLabel}>Start from scratch</span>
+            <span className={styles.presetDesc}>Pick a type below and configure every field yourself.</span>
+          </button>
+        </div>
 
         <div className={styles.titleSection}>
           <h2 ref={headingRef} tabIndex={-1} className={styles.sectionTitle}>Choose Your Commitment Type</h2>
