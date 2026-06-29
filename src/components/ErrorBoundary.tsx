@@ -3,6 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import ErrorLayout from './ErrorLayout';
 import ErrorButton from './ErrorButton';
+import { reportError } from '@/lib/observability/reportError';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -51,6 +52,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // Log error to console (client-side pattern)
     console.error('[ErrorBoundary] Caught an error:', error);
     console.error('[ErrorBoundary] Error info:', errorInfo);
+
+    // Forward to the pluggable error-monitoring seam. The default transport is
+    // a no-op-ish console sink; operators can swap in Sentry/Datadog/etc. via
+    // `setErrorTransport` without touching this component. See
+    // docs/observability/ERROR_MONITORING.md.
+    const route =
+      typeof window !== 'undefined' ? window.location.pathname : '';
+    reportError(error, route);
 
     // Call custom error handler if provided
     if (this.props.onError) {
