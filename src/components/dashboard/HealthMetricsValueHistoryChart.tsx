@@ -10,7 +10,9 @@ import {
     Tooltip,
     ResponsiveContainer,
     Legend,
+    ReferenceLine,
 } from 'recharts';
+import type { LifecycleEvent } from './HealthMetricsDrawdownChart';
 
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
 import { useReducedMotion } from '@/lib/a11y/useReducedMotion';
@@ -18,10 +20,8 @@ import { useReducedMotion } from '@/lib/a11y/useReducedMotion';
 interface HealthMetricsValueHistoryChartProps {
     data: Array<{ date: string; currentValue: number; initialAmount?: number }>;
     volatilityPercent?: number;
-    /** Optional benchmark series keyed by date. Values merged onto the data points. */
-    benchmarkData?: Array<{ date: string; benchmarkValue: number }>;
-    /** Label shown in legend and tooltip for the benchmark line. */
-    benchmarkLabel?: string;
+    /** Vertical annotation lines for lifecycle events. */
+    lifecycleEvents?: LifecycleEvent[];
 }
 
 interface TooltipPayload {
@@ -60,8 +60,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
 export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryChartProps> = ({
     data,
     volatilityPercent,
-    benchmarkData,
-    benchmarkLabel = 'Benchmark',
+    lifecycleEvents = [],
 }) => {
     const reducedMotion = useReducedMotion();
 
@@ -131,6 +130,21 @@ export const HealthMetricsValueHistoryChart: React.FC<HealthMetricsValueHistoryC
                                 </div>
                             )}
                         />
+                        {lifecycleEvents.map((ev) => (
+                            <ReferenceLine
+                                key={ev.date}
+                                x={ev.date}
+                                stroke={ev.color ?? '#F59E0B'}
+                                strokeWidth={1.5}
+                                strokeDasharray="4 3"
+                                label={{
+                                    value: ev.label,
+                                    position: 'top',
+                                    fill: ev.color ?? '#F59E0B',
+                                    fontSize: 10,
+                                }}
+                            />
+                        ))}
                         {/* Initial Amount Line (Dashed) */}
                         <Line
                             type="monotone"

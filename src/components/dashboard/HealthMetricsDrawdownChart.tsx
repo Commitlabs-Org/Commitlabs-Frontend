@@ -15,10 +15,21 @@ import {
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
 import type { CommitmentExposureResult } from '@/utils/exposure';
 
+export interface LifecycleEvent {
+    /** Date string matching a point in the chart data (e.g. "2024-01"). */
+    date: string;
+    /** Short label shown on the annotation line (e.g. "Inception", "Rebalance"). */
+    label: string;
+    /** Optional colour override. Defaults to amber (#F59E0B). */
+    color?: string;
+}
+
 interface HealthMetricsDrawdownChartProps {
     data: Array<{ date: string; drawdownPercent: number }>;
     thresholdPercent?: number;
-    exposure?: CommitmentExposureResult;
+    volatilityPercent?: number;
+    /** Vertical annotation lines for lifecycle events (inception, rebalances, etc.). */
+    lifecycleEvents?: LifecycleEvent[];
 }
 
 interface TooltipPayload {
@@ -47,7 +58,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
 export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProps> = ({
     data,
     thresholdPercent,
-    exposure,
+    volatilityPercent,
+    lifecycleEvents = [],
 }) => {
     return (
         <>
@@ -106,6 +118,21 @@ export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProp
                                 opacity={0.6}
                             />
                         )}
+                        {lifecycleEvents.map((ev) => (
+                            <ReferenceLine
+                                key={ev.date}
+                                x={ev.date}
+                                stroke={ev.color ?? '#F59E0B'}
+                                strokeWidth={1.5}
+                                strokeDasharray="4 3"
+                                label={{
+                                    value: ev.label,
+                                    position: 'top',
+                                    fill: ev.color ?? '#F59E0B',
+                                    fontSize: 10,
+                                }}
+                            />
+                        ))}
                         <Area
                             type="monotone"
                             dataKey="drawdownPercent"

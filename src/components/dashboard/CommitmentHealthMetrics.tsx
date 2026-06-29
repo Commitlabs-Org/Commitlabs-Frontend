@@ -95,10 +95,8 @@ interface CommitmentHealthMetricsProps {
   thresholdPercent?: number;
   volatilityPercent?: number;
   isLoading?: boolean;
-  /** Optional benchmark series for the value-history chart (e.g. portfolio average). */
-  benchmarkData?: BenchmarkPoint[];
-  /** Label for the benchmark overlay line. */
-  benchmarkLabel?: string;
+  /** Lifecycle event annotations passed through to both value-history and drawdown charts. */
+  lifecycleEvents?: import('./HealthMetricsDrawdownChart').LifecycleEvent[];
 }
 
 export default function CommitmentHealthMetrics({
@@ -110,8 +108,7 @@ export default function CommitmentHealthMetrics({
   thresholdPercent,
   volatilityPercent,
   isLoading = false,
-  benchmarkData,
-  benchmarkLabel = "Portfolio Average",
+  lifecycleEvents,
 }: CommitmentHealthMetricsProps) {
   const [activeTab, setActiveTab] = useState<TabType>("value");
   const { selectedRange, setRange, filterByRange } = useHealthMetricsRange();
@@ -215,8 +212,7 @@ export default function CommitmentHealthMetrics({
               <HealthMetricsValueHistoryChart
                 data={filteredValueHistory as Array<{ date: string; currentValue: number; initialAmount?: number }>}
                 volatilityPercent={volatilityPercent}
-                benchmarkData={showBenchmark && hasBenchmark ? benchmarkData : undefined}
-                benchmarkLabel={benchmarkLabel}
+                lifecycleEvents={lifecycleEvents}
               />
             )}
           </div>
@@ -238,6 +234,7 @@ export default function CommitmentHealthMetrics({
                 data={filteredDrawdownHistory as Array<{ date: string; drawdownPercent: number }>}
                 thresholdPercent={thresholdPercent}
                 volatilityPercent={volatilityPercent}
+                lifecycleEvents={lifecycleEvents}
               />
             )}
           </div>
