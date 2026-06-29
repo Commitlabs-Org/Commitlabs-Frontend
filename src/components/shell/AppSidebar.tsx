@@ -96,8 +96,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
     const focusableElements = sidebar.querySelectorAll<HTMLElement>(
       'a, button, [tabindex]:not([tabindex="-1"])'
     )
-    const firstElement = focusableElements[0]
-    const lastElement = focusableElements[focusableElements.length - 1]
+    const firstElement = focusableElements[0] as HTMLElement | undefined
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {

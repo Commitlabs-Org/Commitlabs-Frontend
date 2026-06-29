@@ -178,8 +178,9 @@ export function TourStep({
           'button, [tabindex="0"]'
         );
         if (focusable.length === 0) return;
-        const first = focusable[0] as HTMLElement;
-        const last = focusable[focusable.length - 1] as HTMLElement;
+        const first = focusable[0] as HTMLElement | undefined;
+        const last = focusable[focusable.length - 1] as HTMLElement | undefined;
+        if (!first || !last) return;
 
         if (e.shiftKey) {
           if (document.activeElement === first) {

@@ -173,3 +173,44 @@ Interaction with smart contracts is handled in `src/utils/soroban.ts`.
 
 -   We use `@stellar/freighter-api` to communicate with the user's wallet.
 -   Ensure you handle cases where the wallet is not installed or the user rejects a transaction.
+
+## 🔒 Strict TypeScript Flags
+
+`tsconfig.json` enables several flags beyond `strict: true`. Here is the rationale for each:
+
+### `noUncheckedIndexedAccess`
+Array and object index access (e.g. `arr[0]`, `obj[key]`) returns `T | undefined` instead of `T`. This catches a real class of runtime errors in a data-heavy app that indexes arrays of commitments, attestations, and chart payloads.
+
+**Required pattern:** guard or destructure before use.
+```ts
+// ❌ fails — value may be undefined at runtime
+const tier = protocol.penalties[0];
+
+// ✅ guard first
+const defaultTier = protocol.penalties[0];
+if (!defaultTier) throw new Error("Missing penalty config");
+
+// ✅ or destructure a known-length tuple
+const [min, max] = filters.priceRange;
+```
+
+### `exactOptionalPropertyTypes`
+An optional property `foo?: string` means the key may be **absent** — it does not mean it may be set to `undefined`. This prevents accidentally widening an object's type and keeps serialisation (e.g. JSON.stringify) predictable.
+
+**Required pattern:** omit the key rather than setting it to `undefined`.
+```ts
+// ❌ fails
+const payload = { penaltyAmount: undefined, exitedBy: addr };
+
+// ✅ omit the key
+const payload = { exitedBy: addr };
+```
+
+### `noImplicitOverride`
+Derived class methods that override a base class method must use the `override` keyword. Prevents silent method shadowing when a base class signature changes.
+
+### `noFallthroughCasesInSwitch`
+Every non-empty `switch` case must end with `break`, `return`, or `throw`. Prevents accidental fallthrough bugs.
+
+### Keeping the build clean
+Run `tsc --noEmit` before submitting a PR. No `as any` escape hatches — use proper narrowing, type guards, or `satisfies`.

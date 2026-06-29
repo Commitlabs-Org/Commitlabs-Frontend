@@ -32,11 +32,12 @@ interface TooltipPayload {
 
 const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
     if (active && payload && payload.length) {
+        const entry = payload[0];
         return (
             <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
                 <p className="text-[#99a1af] text-sm mb-1">{label}</p>
                 <p className="text-[#0ff0fc] text-sm font-medium">
-                    Fees: ${payload[0].value.toLocaleString()}
+                    Fees: ${(entry?.value ?? 0).toLocaleString()}
                 </p>
             </div>
         );

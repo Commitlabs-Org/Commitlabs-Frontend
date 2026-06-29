@@ -398,12 +398,14 @@ export default function Marketplace() {
       }
 
       const numericPrice = parseInt(item.price.replace(/[$,—]/g, '')) || 0
-      if (item.forSale && (numericPrice < filters.priceRange[0] || numericPrice > filters.priceRange[1])) {
+      const [priceMin, priceMax] = filters.priceRange
+      if (item.forSale && (numericPrice < priceMin || numericPrice > priceMax)) {
         return false
       }
 
       const numericDuration = parseInt(item.duration) || 0
-      if (numericDuration < filters.durationRange[0] || numericDuration > filters.durationRange[1]) {
+      const [durationMin, durationMax] = filters.durationRange
+      if (numericDuration < durationMin || numericDuration > durationMax) {
         return false
       }
 

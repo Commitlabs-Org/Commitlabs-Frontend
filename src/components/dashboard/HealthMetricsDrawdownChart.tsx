@@ -30,11 +30,12 @@ interface TooltipPayload {
 
 const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
     if (active && payload && payload.length) {
+        const entry = payload[0];
         return (
             <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
                 <p className="text-[#99a1af] text-sm mb-1">{label}</p>
                 <p className="text-[#f87171] text-sm font-medium">
-                    Drawdown: {(payload[0].value * 100).toFixed(1)}%
+                    Drawdown: {((entry?.value ?? 0) * 100).toFixed(1)}%
                 </p>
             </div>
         );

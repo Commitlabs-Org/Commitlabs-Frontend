@@ -62,6 +62,38 @@ export default function CommitmentDisputeModal({
     }
   }, [commitmentId, reason]);
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && status !== 'submitting') {
+      onClose();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const focusableElements = Array.from(
+      dialog.querySelectorAll<HTMLElement>(focusableSelector)
+    );
+
+    if (focusableElements.length === 0) return;
+
+    const first = focusableElements[0] as HTMLElement | undefined;
+    const last = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
+    if (!first || !last) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  if (!isOpen) return null;
+
   const isSubmitting = status === 'submitting';
 
   return (
