@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-function stableSerialize(value: unknown): string {
+export function stableSerialize(value: unknown): string {
   if (value === undefined) {
     return 'null';
   }
