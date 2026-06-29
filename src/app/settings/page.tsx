@@ -6,6 +6,7 @@ import { NotificationToggle } from '@/components/settings/NotificationToggle'
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { AccountWalletSection } from '@/components/settings/AccountWalletSection'
+import { DataPrivacySection } from '@/components/settings/DataPrivacySection'
 import { 
   ShieldAlert, 
   Clock, 
@@ -160,6 +161,9 @@ export default function SettingsPage() {
             onChange={() => handleToggle('priceAlerts')}
           />
         </NotificationSection>
+
+        {/* Data & Privacy */}
+        <DataPrivacySection />
 
         {/* Privacy Messaging */}
         <motion.section
