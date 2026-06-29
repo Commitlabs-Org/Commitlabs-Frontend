@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { apiGet } from '@/lib/apiClient';
 import { CommitmentDetailOverview } from "@/components/CommitmentDetailOverview";
 import { AtRiskCommitments } from "@/components/dashboard/AtRiskCommitments";
+import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
 import { Commitment } from "@/lib/types/domain";
 
 export default function CommitmentOverviewPage() {
@@ -32,6 +33,9 @@ export default function CommitmentOverviewPage() {
       <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-6">
         <div className="w-full">
           <AtRiskCommitments commitments={commitments} />
+        </div>
+        <div className="w-full">
+          <RecentActivityFeed commitments={commitments} />
         </div>
         <CommitmentDetailOverview
           commitmentTypeLabel="Safe Commitment"
