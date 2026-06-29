@@ -244,6 +244,21 @@ Footer
 
 Component file convention: shared React components in `src/` should use TypeScript (`.ts`/`.tsx`) rather than untyped `.jsx` files.
 
+### Foldered Component Convention
+
+For components with associated styles, tests, or sub-components, use a foldered structure:
+```
+src/components/
+└── ComponentName/
+    ├── ComponentName.tsx  # Primary component implementation
+    ├── ComponentName.module.css  # Styles (if using CSS Modules)
+    ├── ComponentName.test.tsx  # Tests
+    ├── SubComponent.tsx  # Sub-components used only by this component
+    └── index.ts  # Optional: Export the component for easier imports
+```
+
+This convention keeps related files grouped together, making the codebase more organized and maintainable.
+
 | Component | File | Usage |
 |-----------|------|-------|
 | `EmptyState` | `src/components/ui/EmptyState.tsx` | Shared empty-state primitive used by `MyCommitmentsGrid`, `MarketplaceGrid`, `RecentAttestationsPanel`; accepts `title`, `description`, `icon`, `cta` (href or onClick) |
