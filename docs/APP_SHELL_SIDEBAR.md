@@ -138,6 +138,7 @@ The sidebar follows the CommitLabs design system:
 
 ### Keyboard Navigation
 
+- **Skip to main content**: First tab stop moves focus directly to the main region
 - **Tab**: Navigate through navigation items
 - **Escape**: Close mobile drawer
 - **Enter/Space**: Activate navigation links
@@ -151,6 +152,8 @@ The sidebar follows the CommitLabs design system:
 
 ### Focus Management
 
+- App shell routes expose a visually-hidden skip link before the sidebar and a
+  focusable `#main-content` landmark target
 - Focus trap active in mobile drawer
 - First focusable element receives focus when drawer opens
 - Focus returns to trigger button when drawer closes
