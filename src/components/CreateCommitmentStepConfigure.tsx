@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import WizardStepper from './WizardStepper'
 import AllocationConstraintsEditor from './create/AllocationConstraintsEditor'
+import CostYieldEstimator from './create/CostYieldEstimator'
 import styles from './CreateCommitmentStepConfigure.module.css'
 import GlossaryTerm from './GlossaryTerm'
 
@@ -347,6 +348,14 @@ export default function CreateCommitmentStepConfigure({
             amount={amount}
             asset={asset}
             onChangeMaxLoss={onChangeMaxLoss}
+          />
+
+          {/* Live Cost and Yield Estimator */}
+          <CostYieldEstimator
+            amount={amount}
+            durationDays={durationDays}
+            maxLossPercent={maxLossPercent}
+            asset={asset}
           />
 
           {/* Advanced Risk Settings */}
