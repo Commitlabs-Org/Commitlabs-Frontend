@@ -78,6 +78,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[accessibility/CONTRAST_AUDIT.md](accessibility/CONTRAST_AUDIT.md)** — Verification report on text color contrast ratios.
 - **[accessibility/CREATE_WIZARD_A11Y.md](accessibility/CREATE_WIZARD_A11Y.md)** — Keyboard controls, screen-reader descriptions, and aria labels for form steps.
 - **[accessibility/MARKETPLACE_A11Y.md](accessibility/MARKETPLACE_A11Y.md)** — Focus traps and accessible properties for comparing search items.
+- **[performance/BUNDLE_BUDGET.md](performance/BUNDLE_BUDGET.md)** — Enforced client bundle-size budget with size-limit: budgets, CI gate, calibration, and regression triage.
 - **[performance/GRID_RENDER.md](performance/GRID_RENDER.md)** — Virtualization, rendering limits, and performance improvements for large listing grids.
 - **[performance/LAZY_HEALTH_CHARTS.md](performance/LAZY_HEALTH_CHARTS.md)** — Lazy loading strategies and performance metrics for dashboard metrics rendering.
 - **[performance/LIGHTHOUSE.md](performance/LIGHTHOUSE.md)** — Lighthouse metrics checks and automated page speed scoring results.
