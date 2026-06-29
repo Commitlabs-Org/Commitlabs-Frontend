@@ -19,7 +19,6 @@ export default function CommitmentOverviewPage() {
           } else if (Array.isArray(data)) {
             setCommitments(data);
           }
-        }
       } catch (err) {
         console.error("Failed to load commitments", err);
       }
@@ -28,7 +27,7 @@ export default function CommitmentOverviewPage() {
   }, []);
 
   return (
-    <main className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
+    <main id="main-content" className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
       <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-6">
         <div className="w-full">
           <AtRiskCommitments commitments={commitments} />
