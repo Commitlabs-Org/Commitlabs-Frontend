@@ -1,10 +1,77 @@
 'use client';
 
 import React, { useCallback, useEffect, useId, useState } from 'react';
-import { AlertCircle, CheckCircle2, Download, Loader2, X } from 'lucide-react';
+import { AlertCircle, Bell, CheckCircle2, Download, Loader2, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 
 type ExportStatus = 'idle' | 'loading' | 'success' | 'error';
+
+export const ALL_EXPORT_COLUMNS = [
+  'Commitment ID',
+  'Owner',
+  'Asset',
+  'Amount',
+  'Status',
+  'Compliance Score',
+  'Current Value',
+  'Fee Earned',
+  'Violation Count',
+  'Created At',
+  'Expires At',
+] as const;
+
+export type ExportColumn = (typeof ALL_EXPORT_COLUMNS)[number];
+
+export type ScheduleInterval = 'never' | 'daily' | 'weekly' | 'monthly';
+
+const SCHEDULE_OPTIONS: { value: ScheduleInterval; label: string }[] = [
+  { value: 'never', label: 'No reminder' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
+
+const PREFS_STORAGE_KEY = 'commitlabs.exportPreferences';
+
+interface ExportPreferences {
+  selectedColumns: ExportColumn[];
+  scheduleInterval: ScheduleInterval;
+}
+
+function loadExportPreferences(): ExportPreferences {
+  if (typeof window === 'undefined') {
+    return { selectedColumns: [...ALL_EXPORT_COLUMNS], scheduleInterval: 'never' };
+  }
+  try {
+    const raw = window.localStorage.getItem(PREFS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<ExportPreferences>;
+      const selectedColumns = Array.isArray(parsed.selectedColumns)
+        ? (parsed.selectedColumns.filter((c) =>
+            (ALL_EXPORT_COLUMNS as readonly string[]).includes(c),
+          ) as ExportColumn[])
+        : [...ALL_EXPORT_COLUMNS];
+      const scheduleInterval =
+        parsed.scheduleInterval &&
+        SCHEDULE_OPTIONS.some((o) => o.value === parsed.scheduleInterval)
+          ? parsed.scheduleInterval
+          : 'never';
+      return { selectedColumns, scheduleInterval };
+    }
+  } catch {
+    // ignore malformed storage
+  }
+  return { selectedColumns: [...ALL_EXPORT_COLUMNS], scheduleInterval: 'never' };
+}
+
+function saveExportPreferences(prefs: ExportPreferences): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 interface ExportCommitmentsModalProps {
   isOpen: boolean;
@@ -69,6 +136,31 @@ function getExportErrorMessage(status: number): string {
   return 'Export failed. Try again in a moment.';
 }
 
+function scheduleReminderNotification(interval: ScheduleInterval): void {
+  if (interval === 'never' || typeof window === 'undefined') return;
+  if (!('Notification' in window)) return;
+
+  const intervalMs: Record<Exclude<ScheduleInterval, 'never'>, number> = {
+    daily: 24 * 60 * 60 * 1000,
+    weekly: 7 * 24 * 60 * 60 * 1000,
+    monthly: 30 * 24 * 60 * 60 * 1000,
+  };
+
+  const ms = intervalMs[interval as Exclude<ScheduleInterval, 'never'>];
+  if (!ms) return;
+
+  Notification.requestPermission().then((permission) => {
+    if (permission !== 'granted') return;
+    setTimeout(() => {
+      // eslint-disable-next-line no-new
+      new Notification('CommitLabs export reminder', {
+        body: `Your ${interval} commitment export reminder is ready.`,
+        icon: '/favicon.ico',
+      });
+    }, ms);
+  });
+}
+
 export default function ExportCommitmentsModal({
   isOpen,
   onClose,
@@ -78,17 +170,44 @@ export default function ExportCommitmentsModal({
 }: ExportCommitmentsModalProps) {
   const titleId = useId();
   const descriptionId = useId();
+  const columnSectionId = useId();
+  const scheduleSectionId = useId();
+
   const [status, setStatus] = useState<ExportStatus>('idle');
   const [message, setMessage] = useState('');
+  const [selectedColumns, setSelectedColumns] = useState<ExportColumn[]>([...ALL_EXPORT_COLUMNS]);
+  const [scheduleInterval, setScheduleInterval] = useState<ScheduleInterval>('never');
 
+  // Restore preferences when modal opens
   useEffect(() => {
     if (!isOpen) return;
-
     setStatus('idle');
     setMessage('');
+    const prefs = loadExportPreferences();
+    setSelectedColumns(prefs.selectedColumns);
+    setScheduleInterval(prefs.scheduleInterval);
   }, [isOpen]);
 
+  const toggleColumn = useCallback((column: ExportColumn) => {
+    setSelectedColumns((prev) =>
+      prev.includes(column) ? prev.filter((c) => c !== column) : [...prev, column],
+    );
+  }, []);
+
+  const allChecked = selectedColumns.length === ALL_EXPORT_COLUMNS.length;
+  const noneChecked = selectedColumns.length === 0;
+
+  const toggleAll = useCallback(() => {
+    setSelectedColumns(allChecked ? [] : [...ALL_EXPORT_COLUMNS]);
+  }, [allChecked]);
+
   const handleExport = useCallback(async () => {
+    if (noneChecked) {
+      setStatus('error');
+      setMessage('Select at least one column before exporting.');
+      return;
+    }
+
     const normalizedAddress = ownerAddress?.trim();
     const resolvedToken = sessionToken?.trim() || getStoredSessionToken();
 
@@ -104,12 +223,17 @@ export default function ExportCommitmentsModal({
       return;
     }
 
+    const prefs: ExportPreferences = { selectedColumns, scheduleInterval };
+    saveExportPreferences(prefs);
+    scheduleReminderNotification(scheduleInterval);
+
     setStatus('loading');
     setMessage('');
 
     try {
       const url = new URL(endpoint, window.location.origin);
       url.searchParams.set('ownerAddress', normalizedAddress);
+      url.searchParams.set('columns', selectedColumns.join(','));
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -136,13 +260,13 @@ export default function ExportCommitmentsModal({
       setMessage(
         recordCount === 0
           ? 'Export ready. No commitment rows found, so a header-only CSV was downloaded.'
-          : `Export ready. ${recordCount} commitment${recordCount === 1 ? '' : 's'} downloaded as CSV.`
+          : `Export ready. ${recordCount} commitment${recordCount === 1 ? '' : 's'} downloaded as CSV.`,
       );
     } catch {
       setStatus('error');
       setMessage('Export failed. Try again in a moment.');
     }
-  }, [endpoint, ownerAddress, sessionToken]);
+  }, [endpoint, ownerAddress, sessionToken, selectedColumns, scheduleInterval, noneChecked]);
 
   const isLoading = status === 'loading';
 
@@ -177,7 +301,8 @@ export default function ExportCommitmentsModal({
       </div>
 
       <p id={descriptionId} className="mt-4 text-sm leading-6 text-white/70">
-        Download a CSV snapshot for the connected owner address. Large portfolios may take a moment to prepare.
+        Download a CSV snapshot for the connected owner address. Choose which columns to
+        include and optionally set a reminder to export regularly.
       </p>
 
       <div className="mt-6 grid gap-4">
@@ -223,6 +348,90 @@ export default function ExportCommitmentsModal({
         </div>
       </div>
 
+      {/* Column selection */}
+      <section aria-labelledby={columnSectionId} className="mt-6">
+        <div className="flex items-center justify-between">
+          <h3
+            id={columnSectionId}
+            className="text-sm font-semibold uppercase tracking-[0.14em] text-white/60"
+          >
+            Columns
+          </h3>
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="text-xs text-[#0FF0FC] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
+            aria-label={allChecked ? 'Deselect all columns' : 'Select all columns'}
+          >
+            {allChecked ? 'Deselect all' : 'Select all'}
+          </button>
+        </div>
+
+        {noneChecked && (
+          <p role="alert" className="mt-2 text-xs text-[#FECACA]">
+            Select at least one column to enable export.
+          </p>
+        )}
+
+        <ul
+          className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2"
+          aria-label="Export column selection"
+        >
+          {ALL_EXPORT_COLUMNS.map((col) => {
+            const checked = selectedColumns.includes(col);
+            return (
+              <li key={col}>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-white/80 hover:text-white">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleColumn(col)}
+                    aria-label={col}
+                    className="accent-[#0FF0FC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
+                  />
+                  {col}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* Schedule / reminder */}
+      <section aria-labelledby={scheduleSectionId} className="mt-6">
+        <h3
+          id={scheduleSectionId}
+          className="text-sm font-semibold uppercase tracking-[0.14em] text-white/60"
+        >
+          Export reminder
+        </h3>
+        <p className="mt-1 text-xs text-white/40">
+          A browser notification reminds you to export again. No data is sent automatically.
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-labelledby={scheduleSectionId}>
+          {SCHEDULE_OPTIONS.map(({ value, label }) => {
+            const selected = scheduleInterval === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setScheduleInterval(value)}
+                aria-pressed={selected}
+                className={`flex items-center gap-1.5 rounded-[10px] border px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] ${
+                  selected
+                    ? 'border-[#0FF0FC66] bg-[#0FF0FC1A] text-white'
+                    : 'border-white/10 text-white/50 hover:border-white/30 hover:text-white/80'
+                }`}
+              >
+                {value !== 'never' && <Bell size={12} aria-hidden />}
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {message ? (
         <div
           role={status === 'error' ? 'alert' : 'status'}
@@ -253,7 +462,8 @@ export default function ExportCommitmentsModal({
         <button
           type="button"
           onClick={handleExport}
-          disabled={isLoading}
+          disabled={isLoading || noneChecked}
+          aria-disabled={noneChecked}
           className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#0FF0FC66] bg-[#0FF0FC1A] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(15,240,252,0.22)] transition-all hover:bg-[#0FF0FC26] hover:shadow-[0_0_24px_rgba(15,240,252,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
