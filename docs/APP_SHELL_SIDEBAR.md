@@ -10,6 +10,7 @@ The App Shell Sidebar provides a persistent, collapsible navigation interface fo
 
 - **Persistent Navigation**: Always visible on authenticated routes (`/marketplace`, `/create`, `/commitments`, `/settings`)
 - **Active Route Highlighting**: Automatically highlights the current page using Next.js `usePathname`
+- **Global Search**: Inline debounced search input (`SidebarSearch`) queries `/api/commitments/search` — see [SIDEBAR_SEARCH.md](./SIDEBAR_SEARCH.md)
 - **Collapsible State**: Desktop users can collapse the sidebar to icon-only mode
 - **Session Persistence**: Collapsed/expanded state persists across page navigations using `sessionStorage`
 - **Responsive Design**: Automatically converts to a mobile drawer on smaller screens
