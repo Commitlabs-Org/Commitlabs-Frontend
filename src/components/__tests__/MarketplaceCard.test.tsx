@@ -94,7 +94,7 @@ describe("MarketplaceCard", () => {
     });
 
     it("handles empty, whitespace, and missing (null/undefined) owner addresses gracefully by displaying an empty label", () => {
-      let { rerender, container } = render(<MarketplaceCard {...makeListing({ owner: "" })} />);
+      const { rerender, container } = render(<MarketplaceCard {...makeListing({ owner: "" })} />);
       let ownerSpan = container.querySelector("span[class*='font-mono']");
       expect(ownerSpan).toHaveTextContent("");
 
