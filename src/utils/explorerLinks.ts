@@ -54,3 +54,52 @@ export function openExplorerUrl(
   window.open(url, '_blank', 'noopener,noreferrer')
   return true
 }
+
+/**
+ * Validates and sanitizes externally-sourced URLs (e.g., from NFT metadata or commitment fields).
+ * Only allows http/https schemes and optionally restricts to known explorer hosts.
+ * Returns null for invalid URLs to prevent javascript:/data: schemes and open-redirect attacks.
+ *
+ * @param url - The URL to validate (can be null/undefined)
+ * @param allowedHosts - Optional set of allowed hostnames (e.g., ['stellar.expert']). If omitted, only http(s) scheme is enforced.
+ * @returns The validated URL string, or null if invalid
+ */
+export function safeExternalUrl(
+  url: string | null | undefined,
+  allowedHosts?: Set<string>,
+): string | null {
+  if (!url || typeof url !== 'string') {
+    return null
+  }
+
+  try {
+    const parsed = new URL(url)
+
+    // Reject dangerous schemes
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null
+    }
+
+    // If allowedHosts is provided, enforce host allowlist
+    if (allowedHosts && allowedHosts.size > 0) {
+      if (!allowedHosts.has(parsed.hostname)) {
+        return null
+      }
+    }
+
+    return url
+  } catch {
+    // Invalid URL syntax
+    return null
+  }
+}
+
+/**
+ * Known safe explorer hosts for external link validation.
+ * Extend this set as new explorers are integrated.
+ */
+export const KNOWN_EXPLORER_HOSTS = new Set([
+  'stellar.expert',
+  'steexp.com',
+  'lumenscope.io',
+])

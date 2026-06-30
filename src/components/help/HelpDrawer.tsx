@@ -95,7 +95,7 @@ export const HelpDrawer: React.FC = () => {
             <a
               href="https://discord.gg/WV7tdYkJk"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm font-medium text-cyan-300 transition hover:text-cyan-200"
             >
               <CircleHelp size={16} aria-hidden="true" />
