@@ -64,10 +64,26 @@ export const userPreferencesSchema = z.object({
         .regex(/^[a-z]{2,3}(-[A-Z]{2,3})?$/, 'language must be a valid BCP-47 tag (e.g. "en", "en-US")')
         .optional(),
     seenWizardTour: z.boolean().optional(),
+    overviewWidgetLayout: z
+        .array(
+            z.object({
+                id: z.string(),
+                label: z.string(),
+                visible: z.boolean(),
+                order: z.number().int().nonnegative(),
+            })
+        )
+        .optional(),
 });
 
 /** Shape returned/stored for a single wallet. */
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+
+/** Default ordered widget layout for the overview page. */
+export const DEFAULT_OVERVIEW_WIDGET_LAYOUT: NonNullable<UserPreferences['overviewWidgetLayout']> = [
+    { id: 'at-risk', label: 'At-Risk Commitments', visible: true, order: 0 },
+    { id: 'commitment-detail', label: 'Commitment Detail', visible: true, order: 1 },
+];
 
 /** The defaults applied when no preferences exist yet. */
 export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
@@ -77,6 +93,7 @@ export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
     theme: 'system',
     language: 'en',
     seenWizardTour: false,
+    overviewWidgetLayout: DEFAULT_OVERVIEW_WIDGET_LAYOUT,
 };
 
 // ─── Storage Adapter Interface ───────────────────────────────────────────────

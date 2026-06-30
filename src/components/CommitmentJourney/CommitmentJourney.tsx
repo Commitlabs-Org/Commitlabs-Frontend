@@ -25,7 +25,7 @@ const CommitmentJourney: React.FC = () => {
   return (
     <section className={styles.journeySection}>
       <div className={styles.badge}>USER JOURNEY</div>
-      <h1 className={styles.mainHeader}>Alice&apos;s Commitment Journey</h1>
+      <h2 className={styles.mainHeader}>Alice&apos;s Commitment Journey</h2>
       <p className={styles.subtitle}>
         See how Alice deploys $100,000 with predictable behavior and full control
       </p>

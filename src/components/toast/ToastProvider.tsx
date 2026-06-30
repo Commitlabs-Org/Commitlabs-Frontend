@@ -9,12 +9,20 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { Toast, ToastOptions, ToastContextValue, ToastSeverity } from './types';
+import {
+  Toast,
+  ToastOptions,
+  ToastContextValue,
+  ToastSeverity,
+  ToastHistoryEntry,
+} from './types';
 import ToastItem from './ToastItem';
 import './toast.css';
 
 const MAX_VISIBLE_TOASTS = 5;
 const DEFAULT_DURATION = 5000;
+/** Maximum number of dismissed toasts retained in the history store. */
+const MAX_HISTORY_ENTRIES = 50;
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
@@ -32,10 +40,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
   const [announcer, setAnnouncer] = useState<AnnouncerState>({ polite: '', assertive: '' });
+  const [history, setHistory] = useState<ToastHistoryEntry[]>([]);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const timerStartedAtRef = useRef<Map<string, number>>(new Map());
   const timerRemainingRef = useRef<Map<string, number>>(new Map());
   const reducedMotion = useRef<boolean>(false);
+  /** Keep a ref copy of toasts so dismiss callbacks can read it without
+   *  needing toasts in their dependency arrays (avoids stale-closure issues). */
+  const toastsRef = useRef<Toast[]>([]);
+
+  useEffect(() => {
+    toastsRef.current = toasts;
+  }, [toasts]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -47,30 +63,64 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
-  const dismiss = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-    setVisibleIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
+  /** Record a dismissed toast into the bounded history store. */
+  const recordHistory = useCallback((toast: Toast) => {
+    const entry: ToastHistoryEntry = {
+      id: toast.id,
+      severity: toast.severity,
+      title: toast.title,
+      description: toast.description,
+      createdAt: toast.createdAt,
+      dismissedAt: Date.now(),
+      read: false,
+      source: 'toast',
+    };
+    setHistory((prev) => {
+      // Guard against duplicate entries (e.g. double-dismiss).
+      if (prev.some((e) => e.id === entry.id)) return prev;
+      const next = [entry, ...prev];
+      return next.length > MAX_HISTORY_ENTRIES ? next.slice(0, MAX_HISTORY_ENTRIES) : next;
     });
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
-    timerStartedAtRef.current.delete(id);
-    timerRemainingRef.current.delete(id);
   }, []);
 
+  const dismiss = useCallback(
+    (id: string) => {
+      // Capture the toast before removing it so we can archive it.
+      const toast = toastsRef.current.find((t) => t.id === id);
+
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+      setVisibleIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      const timer = timersRef.current.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        timersRef.current.delete(id);
+      }
+      timerStartedAtRef.current.delete(id);
+      timerRemainingRef.current.delete(id);
+
+      if (toast) {
+        recordHistory(toast);
+      }
+    },
+    [recordHistory]
+  );
+
   const dismissAll = useCallback(() => {
+    // Archive all currently visible toasts before clearing.
+    const current = toastsRef.current;
     timersRef.current.forEach((timer) => clearTimeout(timer));
     timersRef.current.clear();
     timerStartedAtRef.current.clear();
     timerRemainingRef.current.clear();
     setToasts([]);
     setVisibleIds(new Set());
-  }, []);
+
+    current.forEach((toast) => recordHistory(toast));
+  }, [recordHistory]);
 
   const startTimer = useCallback(
     (id: string, duration: number) => {
@@ -163,6 +213,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [toasts, startTimer]
   );
 
+  const clearHistory = useCallback(() => setHistory([]), []);
+
+  const markHistoryRead = useCallback((id: string) => {
+    setHistory((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, read: true } : entry))
+    );
+  }, []);
+
+  const markAllHistoryRead = useCallback(() => {
+    setHistory((prev) => prev.map((entry) => ({ ...entry, read: true })));
+  }, []);
+
   const success = useCallback(
     (options: ToastOptions) => showToast('success', options),
     [showToast]
@@ -187,6 +249,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     warning,
     dismiss,
     dismissAll,
+    history,
+    clearHistory,
+    markHistoryRead,
+    markAllHistoryRead,
   };
 
   return (

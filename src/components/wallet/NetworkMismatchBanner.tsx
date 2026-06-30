@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { getValidatedClientEnv } from '@/lib/clientEnv';
 
@@ -15,9 +15,15 @@ function getAppPassphrase(): string {
   }
 }
 
-export const NetworkMismatchBanner: React.FC = () => {
+interface NetworkMismatchBannerProps {
+  onAutoSwitch?: (targetPassphrase: string) => Promise<void>;
+}
+
+export const NetworkMismatchBanner: React.FC<NetworkMismatchBannerProps> = ({ onAutoSwitch }) => {
   const { connected, walletNetwork } = useWallet();
   const [dismissed, setDismissed] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const appPassphrase = getAppPassphrase();
   const isMismatch = connected && walletNetwork !== null && walletNetwork !== appPassphrase;
@@ -26,8 +32,22 @@ export const NetworkMismatchBanner: React.FC = () => {
   useEffect(() => {
     if (isMismatch) {
       setDismissed(false);
+      setSwitchError(null);
     }
   }, [walletNetwork]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAutoSwitch = useCallback(async () => {
+    if (!onAutoSwitch) return;
+    setSwitching(true);
+    setSwitchError(null);
+    try {
+      await onAutoSwitch(appPassphrase);
+    } catch (err) {
+      setSwitchError(err instanceof Error ? err.message : 'Switch failed');
+    } finally {
+      setSwitching(false);
+    }
+  }, [onAutoSwitch, appPassphrase]);
 
   if (!isMismatch || dismissed) return null;
 
@@ -40,16 +60,29 @@ export const NetworkMismatchBanner: React.FC = () => {
       <span>
         Your wallet is on a different network than this app. Please switch your
         Freighter wallet to the correct network before making any transactions.
+        {switchError && <span className="ml-1 text-red-300">({switchError})</span>}
       </span>
       <div className="flex items-center gap-2 shrink-0">
-        <a
-          href="https://www.freighter.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline font-medium hover:text-yellow-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded"
-        >
-          Switch in wallet
-        </a>
+        {onAutoSwitch ? (
+          <button
+            aria-busy={switching}
+            disabled={switching}
+            onClick={handleAutoSwitch}
+            type="button"
+            className="underline font-medium hover:text-yellow-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded disabled:opacity-60"
+          >
+            {switching ? 'Switching…' : 'Switch network'}
+          </button>
+        ) : (
+          <a
+            href="https://www.freighter.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-medium hover:text-yellow-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded"
+          >
+            Switch in wallet
+          </a>
+        )}
         <button
           type="button"
           aria-label="Dismiss network mismatch warning"

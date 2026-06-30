@@ -14,10 +14,11 @@ import {
 } from 'recharts';
 
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
+import type { CommitmentExposureResult } from '@/utils/exposure';
 
 interface HealthMetricsFeeGenerationChartProps {
     data: Array<{ date: string; feeAmount: number }>;
-    volatilityPercent?: number;
+    exposure?: CommitmentExposureResult;
 }
 
 interface TooltipPayload {
@@ -47,7 +48,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
 
 export const HealthMetricsFeeGenerationChart: React.FC<HealthMetricsFeeGenerationChartProps> = ({
     data,
-    volatilityPercent,
+    exposure,
 }) => {
     return (
         <>
@@ -126,10 +127,12 @@ export const HealthMetricsFeeGenerationChart: React.FC<HealthMetricsFeeGeneratio
                 </div>
             </div>
 
-            {volatilityPercent !== undefined && (
+            {exposure && (
                 <div className="mt-4">
                     <VolatilityExposureMeter
-                        valuePercent={volatilityPercent}
+                        insufficientData={exposure.status === 'insufficient_data'}
+                        valuePercent={exposure.exposurePercent}
+                        zoneThresholds={exposure.zoneThresholds}
                         description="Current exposure to volatile assets based on allocation and market conditions."
                     />
                 </div>

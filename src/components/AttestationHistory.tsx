@@ -2,17 +2,35 @@
 
 import { useState, useEffect } from 'react'
 import AttestationFilterBar, { type AttestationFilterBarProps } from './attestation/AttestationFilterBar'
-import { type Attestation, type AttestationSeverity, type AttestationType, ATTESTATION_TYPES } from '@/lib/types/domain'
+import { type Attestation, type AttestationSeverity, type AttestationType } from '@/lib/types/domain'
 
 interface AttestationHistoryProps {
   commitmentId: string
 }
 
+type ObservedTimestamp = string | Date | null | undefined
+
+function parseTimestamp(timestamp: ObservedTimestamp): number | null {
+  if (!timestamp) {
+    return null
+  }
+
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
+  const time = date.getTime()
+
+  return Number.isFinite(time) ? time : null
+}
+
 // Utility function to format relative time
-function formatRelativeTime(timestamp: string | Date): string {
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
+function formatRelativeTime(timestamp: ObservedTimestamp): string {
+  const timestampMs = parseTimestamp(timestamp)
+
+  if (timestampMs === null) {
+    return 'Timestamp unavailable'
+  }
+
   const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const diffMs = Math.max(0, now.getTime() - timestampMs)
   const diffSeconds = Math.floor(diffMs / 1000)
   const diffMinutes = Math.floor(diffSeconds / 60)
   const diffHours = Math.floor(diffMinutes / 60)
@@ -36,6 +54,25 @@ function formatRelativeTime(timestamp: string | Date): string {
     const diffYears = Math.floor(diffMonths / 12)
     return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`
   }
+}
+
+function compareAttestationsByObservedAtDesc(a: Attestation, b: Attestation): number {
+  const aTime = parseTimestamp(a.observedAt)
+  const bTime = parseTimestamp(b.observedAt)
+
+  if (aTime !== null && bTime !== null && aTime !== bTime) {
+    return bTime - aTime
+  }
+
+  if (aTime !== null && bTime === null) {
+    return -1
+  }
+
+  if (aTime === null && bTime !== null) {
+    return 1
+  }
+
+  return a.id.localeCompare(b.id)
 }
 
 // Utility function to truncate hash
@@ -137,11 +174,13 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
   }, [commitmentId])
 
   // Apply filters
-  const filteredAttestations = attestations.filter((attestation: Attestation) => {
-    const severityMatch = filters.severity === 'all' || attestation.severity === filters.severity
-    const typeMatch = filters.type === 'all' || attestation.kind === filters.type
-    return severityMatch && typeMatch
-  })
+  const filteredAttestations = attestations
+    .filter((attestation: Attestation) => {
+      const severityMatch = filters.severity === 'all' || attestation.severity === filters.severity
+      const typeMatch = filters.type === 'all' || attestation.kind === filters.type
+      return severityMatch && typeMatch
+    })
+    .sort(compareAttestationsByObservedAtDesc)
 
   // Calculate compliance trend summary
   const complianceSummary = {
@@ -253,6 +292,7 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
               key={attestation.id}
               className={`p-4 rounded-lg border-l-4 ${getSeverityClass(attestation.severity)}`}
               role="listitem"
+              aria-label={`${attestation.title || attestation.kind || 'Attestation'} ${attestation.severity || 'unknown'} severity`}
             >
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-1" aria-hidden="true">
@@ -294,4 +334,3 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
     </div>
   )
 }
-

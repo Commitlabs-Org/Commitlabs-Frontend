@@ -1,6 +1,8 @@
 import React from "react";
 import { Commitment } from "@/types/commitment";
+import { MaturityCountdown } from './MaturityCountdown';
 import type { MarketplaceListing } from "@/types/marketplace";
+import RelistPriceEditor from './marketplace/RelistPriceEditor';
 import Link from "next/link";
 import {
   SafeIcon,
@@ -20,6 +22,7 @@ interface MyCommitmentCardProps {
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
   onListForSale?: (id: string) => void;
+  onListingPriceUpdated?: (id: string, newPrice: string) => void;
 }
 
 const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
@@ -30,6 +33,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   onAttestations,
   onEarlyExit,
   onListForSale,
+  onListingPriceUpdated,
 }) => {
   const {
     id,
@@ -40,7 +44,6 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
     currentValue,
     changePercent,
     durationProgress,
-    daysRemaining,
     complianceScore,
     maxLoss,
     currentDrawdown,
@@ -80,7 +83,25 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
       : "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
 
   return (
-    <div className="relative flex flex-col gap-5 rounded-[16px] border border-white/10 bg-[rgba(13,13,13,0.8)] p-6 text-white backdrop-blur-[10px] overflow-hidden transition-[transform,border-color] duration-200 ease-[ease] hover:border-[rgba(15,240,252,0.3)]">
+    <div 
+      className={`relative flex flex-col gap-5 rounded-[16px] border bg-[rgba(13,13,13,0.8)] p-6 text-white backdrop-blur-[10px] overflow-hidden transition-[transform,border-color] duration-200 ease-[ease] ${
+        isSelected 
+          ? 'border-[#0FF0FC]/50 ring-2 ring-[#0FF0FC]/20' 
+          : 'border-white/10 hover:border-[rgba(15,240,252,0.3)]'
+      }`}
+    >
+      {/* Selection checkbox */}
+      <div className="absolute top-4 right-4 z-10">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelect}
+          onClick={(e) => e.stopPropagation()}
+          className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#0FF0FC] focus:ring-2 focus:ring-[#0FF0FC] focus:ring-offset-0 focus:ring-offset-[#0a0a0a] cursor-pointer"
+          aria-label={`Select commitment ${id}`}
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <div
           className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${typeBadgeClass}`}
@@ -154,7 +175,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
               Duration Progress
             </span>
             <span className="text-white font-medium font-roboto">
-              {daysRemaining} days left
+              <MaturityCountdown maturityTimestamp={new Date(expiryDate).getTime()} />
             </span>
           </div>
           <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
@@ -288,8 +309,4 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   );
 };
 
-// Memoized so that filtering/sorting a large list only re-renders cards whose
-// props actually changed. `commitment` keeps a stable reference across filter/
-// sort operations, and the callbacks are stabilized with useCallback by the
-// parent, so React.memo's shallow prop comparison skips unchanged cards.
 export default React.memo(MyCommitmentCard);

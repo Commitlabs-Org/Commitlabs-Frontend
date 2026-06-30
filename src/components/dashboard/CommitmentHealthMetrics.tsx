@@ -45,6 +45,11 @@ export interface TimeSeriesPoint {
   complianceScore?: number;
 }
 
+export interface BenchmarkPoint {
+  date: string;
+  benchmarkValue: number;
+}
+
 type TabType = "value" | "drawdown" | "fee" | "compliance";
 
 const tabIcons: Record<TabType, React.ReactNode> = {
@@ -90,6 +95,8 @@ interface CommitmentHealthMetricsProps {
   thresholdPercent?: number;
   volatilityPercent?: number;
   isLoading?: boolean;
+  /** Lifecycle event annotations passed through to both value-history and drawdown charts. */
+  lifecycleEvents?: import('./HealthMetricsDrawdownChart').LifecycleEvent[];
 }
 
 export default function CommitmentHealthMetrics({
@@ -101,9 +108,11 @@ export default function CommitmentHealthMetrics({
   thresholdPercent,
   volatilityPercent,
   isLoading = false,
+  lifecycleEvents,
 }: CommitmentHealthMetricsProps) {
   const [activeTab, setActiveTab] = useState<TabType>("value");
   const { selectedRange, setRange, filterByRange } = useHealthMetricsRange();
+  const [showBenchmark, setShowBenchmark] = useState(true);
 
   const valueChartRef = useRef<HTMLDivElement>(null);
   const drawdownChartRef = useRef<HTMLDivElement>(null);
@@ -137,6 +146,8 @@ export default function CommitmentHealthMetrics({
     feeGenerationData,
   };
 
+  const hasBenchmark = benchmarkData && benchmarkData.length > 0;
+
   return (
     <div className="w-full bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -144,6 +155,24 @@ export default function CommitmentHealthMetrics({
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <HealthMetricsRangeSelector selected={selectedRange} onChange={setRange} />
+
+          {/* Benchmark toggle — only shown on value tab when benchmark data is available */}
+          {activeTab === "value" && hasBenchmark && (
+            <button
+              type="button"
+              aria-pressed={showBenchmark}
+              onClick={() => setShowBenchmark((v) => !v)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                showBenchmark
+                  ? "bg-[#f5a623]/10 border-[#f5a623]/40 text-[#f5a623]"
+                  : "bg-transparent border-[#333] text-[#8892a0] hover:border-[#555]"
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-[#f5a623]" aria-hidden="true" />
+              {showBenchmark ? "Hide" : "Show"} {benchmarkLabel}
+            </button>
+          )}
 
           <div className="flex flex-wrap gap-2 p-1 bg-[#111] rounded-lg border border-[#222]">
             {TABS.map((tab) => (
@@ -183,6 +212,7 @@ export default function CommitmentHealthMetrics({
               <HealthMetricsValueHistoryChart
                 data={filteredValueHistory as Array<{ date: string; currentValue: number; initialAmount?: number }>}
                 volatilityPercent={volatilityPercent}
+                lifecycleEvents={lifecycleEvents}
               />
             )}
           </div>
@@ -204,6 +234,7 @@ export default function CommitmentHealthMetrics({
                 data={filteredDrawdownHistory as Array<{ date: string; drawdownPercent: number }>}
                 thresholdPercent={thresholdPercent}
                 volatilityPercent={volatilityPercent}
+                lifecycleEvents={lifecycleEvents}
               />
             )}
           </div>

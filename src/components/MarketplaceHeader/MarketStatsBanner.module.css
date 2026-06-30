@@ -1,0 +1,31 @@
+.root {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+}
+
+.errorContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-error, #ef4444);
+  padding: 0.5rem 0;
+}
+
+.retryButton {
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  opacity: 0.8;
+}
+
+.retryButton:hover {
+  opacity: 1;
+}

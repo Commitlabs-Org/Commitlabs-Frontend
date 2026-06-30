@@ -231,6 +231,59 @@ export function revokeSession(token: string): boolean {
   return sessionStore.delete(token);
 }
 
+export interface PublicSessionInfo {
+  id: string;
+  address: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+/**
+ * Return all non-expired sessions for a given address, excluding the current token.
+ */
+export function listOtherSessions(
+  currentToken: string,
+): PublicSessionInfo[] {
+  const now = new Date();
+  const current = sessionStore.get(currentToken);
+  if (!current) return [];
+
+  const result: PublicSessionInfo[] = [];
+  for (const [token, record] of sessionStore.entries()) {
+    if (token === currentToken) continue;
+    if (record.address !== current.address) continue;
+    if (record.expiresAt < now) {
+      sessionStore.delete(token);
+      continue;
+    }
+    result.push({
+      id: token,
+      address: record.address,
+      createdAt: record.createdAt.toISOString(),
+      expiresAt: record.expiresAt.toISOString(),
+    });
+  }
+  return result;
+}
+
+/**
+ * Revoke all sessions for the same address except the current token.
+ * Returns the number of sessions revoked.
+ */
+export function revokeOtherSessions(currentToken: string): number {
+  const current = sessionStore.get(currentToken);
+  if (!current) return 0;
+
+  let count = 0;
+  for (const [token, record] of sessionStore.entries()) {
+    if (token === currentToken) continue;
+    if (record.address !== current.address) continue;
+    sessionStore.delete(token);
+    count++;
+  }
+  return count;
+}
+
 export function _clearStores(): void {
   sessionStore.clear();
 }

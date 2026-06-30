@@ -84,6 +84,7 @@ describe("GET /api/protocol/constants — response shape", () => {
     expect(typeof commitmentLimits.minDurationDays).toBe("number");
     expect(typeof commitmentLimits.maxDurationDays).toBe("number");
     expect(typeof commitmentLimits.maxLossPercentCeiling).toBe("number");
+    expect(typeof commitmentLimits.earlyExitGracePeriodDays).toBe("number");
 
     // Sanity: min < max
     expect(commitmentLimits.minAmountXlm).toBeLessThan(commitmentLimits.maxAmountXlm);
@@ -142,6 +143,14 @@ describe("GET /api/protocol/constants — default values", () => {
 
     expect(data.data.fees.platformFeePercent).toBe(0);
   });
+
+  it("should default early exit grace period to 7 days", async () => {
+    const req = createMockRequest("http://localhost:3000/api/protocol/constants");
+    const res = await GET(req, { params: {} });
+    const { data } = await parseResponse(res);
+
+    expect(data.data.commitmentLimits.earlyExitGracePeriodDays).toBe(7);
+  });
 });
 
 // ─── Environment variable overrides ──────────────────────────────────────────
@@ -165,6 +174,16 @@ describe("GET /api/protocol/constants — env overrides", () => {
     const { data } = await parseResponse(res);
 
     expect(data.data.commitmentLimits.minAmountXlm).toBe(50);
+  });
+
+  it("should respect COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS override", async () => {
+    vi.stubEnv("COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS", "5");
+
+    const req = createMockRequest("http://localhost:3000/api/protocol/constants");
+    const res = await GET(req, { params: {} });
+    const { data } = await parseResponse(res);
+
+    expect(data.data.commitmentLimits.earlyExitGracePeriodDays).toBe(5);
   });
 
   it("should respect COMMITLABS_PENALTY_TIERS_JSON override", async () => {

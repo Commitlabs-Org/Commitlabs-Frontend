@@ -161,3 +161,24 @@ export type HistoryEvent =
   | AttestationEvent
   | EarlyExitEvent
   | SettlementEvent;
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export type NotificationSeverity = 'info' | 'warning' | 'critical';
+
+export type NotificationType = 'expiry' | 'violation' | 'health_check' | 'marketplace';
+
+export interface Notification {
+  id: string;
+  ownerAddress: string;
+  title: string;
+  message: string;
+  severity: NotificationSeverity;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+  relatedCommitmentId?: string;
+  relatedListingId?: string;
+}

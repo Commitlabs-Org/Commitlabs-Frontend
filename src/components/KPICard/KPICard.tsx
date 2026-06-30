@@ -57,14 +57,63 @@ export interface KPICardProps {
     // Optional metadata
     description?: string;
     tooltip?: string;
-    
+
+    // Sparkline — array of recent numeric values rendered as a mini trend line
+    sparklineData?: number[];
+
+    // Drilldown navigation link
+    drilldownHref?: string;
+    drilldownLabel?: string;
+
     // Callbacks
     onRetry?: () => void;
     onClick?: () => void;
-    
+
     // Accessibility
     ariaLabel?: string;
 }
+
+// ============================================================================
+// SPARKLINE COMPONENT
+// ============================================================================
+
+interface SparklineProps {
+    data: number[];
+    width?: number;
+    height?: number;
+}
+
+const Sparkline: React.FC<SparklineProps> = ({ data, width = 80, height = 28 }) => {
+    if (data.length < 2) return null;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const pts = data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((v - min) / range) * height;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const isPositive = data[data.length - 1] >= data[0];
+    const color = isPositive ? '#22c55e' : '#ef4444';
+    return (
+        <svg
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            aria-hidden="true"
+            className="overflow-visible"
+        >
+            <polyline
+                points={pts.join(' ')}
+                fill="none"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+};
 
 // ============================================================================
 // FORMAT UTILITIES
@@ -307,6 +356,9 @@ export const KPICard: React.FC<KPICardProps> = ({
     decimals = 0,
     description,
     tooltip,
+    sparklineData,
+    drilldownHref,
+    drilldownLabel = 'View details',
     onRetry,
     onClick,
     ariaLabel,
@@ -400,6 +452,24 @@ export const KPICard: React.FC<KPICardProps> = ({
             {/* Description (optional) */}
             {description && (
                 <p className={styles.description}>{description}</p>
+            )}
+
+            {/* Sparkline */}
+            {sparklineData && sparklineData.length >= 2 && (
+                <div className="mt-2 flex justify-end" aria-hidden="true">
+                    <Sparkline data={sparklineData} />
+                </div>
+            )}
+
+            {/* Drilldown link */}
+            {drilldownHref && (
+                <a
+                    href={drilldownHref}
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-[#51A2FF] hover:underline focus:outline-none focus:ring-1 focus:ring-[#51A2FF] rounded"
+                    aria-label={`${drilldownLabel} for ${label}`}
+                >
+                    {drilldownLabel} →
+                </a>
             )}
         </div>
     );

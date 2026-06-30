@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { NotificationSection } from '@/components/settings/NotificationSection'
 import { NotificationToggle } from '@/components/settings/NotificationToggle'
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { AccountWalletSection } from '@/components/settings/AccountWalletSection'
+import { ActiveSessionsSection } from '@/components/settings/ActiveSessionsSection'
+import type { ActiveSession } from '@/components/settings/ActiveSessionsSection'
 import { 
   ShieldAlert, 
   Clock, 
@@ -17,6 +19,17 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function SettingsPage() {
+  const [sessions, setSessions] = useState<ActiveSession[]>([])
+
+  useEffect(() => {
+    fetch('/api/auth/sessions', { credentials: 'same-origin' })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.sessions) setSessions(data.sessions)
+      })
+      .catch(() => {/* silently ignore fetch errors */})
+  }, [])
+
   const [preferences, setPreferences] = useState({
     violationAlerts: true,
     securityThresholds: true,
@@ -80,6 +93,22 @@ export default function SettingsPage() {
 
         {/* Account & Wallet */}
         <AccountWalletSection />
+
+        {/* Active Sessions */}
+        <ActiveSessionsSection
+          sessions={sessions}
+          onRevokeOthers={async () => {
+            const res = await fetch('/api/auth/sessions/revoke-others', {
+              method: 'POST',
+              credentials: 'same-origin',
+            })
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              throw new Error(data?.error?.message ?? 'Failed to revoke other sessions')
+            }
+            setSessions((prev) => prev.filter((s) => s.isCurrent))
+          }}
+        />
 
         {/* Violations & Security */}
         <NotificationSection 
@@ -160,6 +189,9 @@ export default function SettingsPage() {
             onChange={() => handleToggle('priceAlerts')}
           />
         </NotificationSection>
+
+        {/* Data & Privacy */}
+        <DataPrivacySection />
 
         {/* Privacy Messaging */}
         <motion.section

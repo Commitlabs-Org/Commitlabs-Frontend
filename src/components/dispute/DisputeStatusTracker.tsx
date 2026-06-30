@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useDisputeSSE } from '@/hooks/useDisputeSSE';
 
 export type DisputeStage = 'filed' | 'under_review' | 'resolved';
 export type DisputeResolution =
@@ -19,6 +20,11 @@ export interface DisputeInfo {
 
 interface DisputeStatusTrackerProps {
   dispute: DisputeInfo | null;
+  /**
+   * When provided, the component subscribes to /api/events?commitmentId=<id>
+   * via SSE and live-updates the displayed dispute status.
+   */
+  commitmentId?: string;
 }
 
 const STAGE_INDEX: Record<DisputeStage, number> = {
@@ -99,7 +105,12 @@ function StepIndicator({ state }: StepIndicatorProps) {
   );
 }
 
-export default function DisputeStatusTracker({ dispute }: DisputeStatusTrackerProps) {
+export default function DisputeStatusTracker({ dispute: initialDispute, commitmentId }: DisputeStatusTrackerProps) {
+  const { dispute, connected, error } = useDisputeSSE({
+    commitmentId: commitmentId ?? '',
+    initialDispute,
+  });
+
   if (!dispute) return null;
 
   const currentIndex = STAGE_INDEX[dispute.stage];
@@ -129,12 +140,28 @@ export default function DisputeStatusTracker({ dispute }: DisputeStatusTrackerPr
       aria-labelledby="dispute-tracker-heading"
       className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#FF8A04]/20"
     >
-      <h2
-        id="dispute-tracker-heading"
-        className="text-sm font-semibold uppercase tracking-[0.18em] text-[#FF8A04] mb-6"
-      >
-        Dispute Status
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2
+          id="dispute-tracker-heading"
+          className="text-sm font-semibold uppercase tracking-[0.18em] text-[#FF8A04]"
+        >
+          Dispute Status
+        </h2>
+        {commitmentId && (
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full border ${
+              error
+                ? 'border-red-500/30 text-red-400'
+                : connected
+                  ? 'border-green-500/30 text-green-400'
+                  : 'border-[#333] text-[#99a1af]'
+            }`}
+            aria-live="polite"
+          >
+            {error ? 'Reconnecting…' : connected ? 'Live' : 'Connecting…'}
+          </span>
+        )}
+      </div>
 
       <ol className="flex items-start" aria-label="Dispute lifecycle steps">
         {steps.map((step, index) => {

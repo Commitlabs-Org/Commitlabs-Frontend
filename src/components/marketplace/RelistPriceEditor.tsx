@@ -5,11 +5,19 @@ import { Pencil, RotateCcw, Loader2, X, Check } from 'lucide-react';
 import type { MarketplaceListing } from '@/types/marketplace';
 import { useToast } from '@/components/toast/ToastProvider';
 
+export interface MarketplaceStats {
+  floorPrice: string;
+  medianPrice: string;
+  lastSoldPrice?: string;
+  activeSellers: number;
+}
+
 interface RelistPriceEditorProps {
   listing: MarketplaceListing;
   sellerAddress: string;
   commitmentAsset: string;
   onPriceUpdated?: (newPrice: string) => void;
+  marketplaceStats?: MarketplaceStats;
 }
 
 const MIN_PRICE = 0.01;
@@ -30,6 +38,7 @@ export default function RelistPriceEditor({
   sellerAddress,
   commitmentAsset,
   onPriceUpdated,
+  marketplaceStats,
 }: RelistPriceEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [price, setPrice] = useState(listing.price);
@@ -188,6 +197,15 @@ export default function RelistPriceEditor({
           {commitmentAsset}
         </span>
       </div>
+      {marketplaceStats && (
+        <div className="rounded-[6px] border border-white/5 bg-white/3 px-3 py-2 text-[11px] text-[#94A3B8]" aria-label="Marketplace price hints">
+          <span className="mr-3">Floor: <strong className="text-white/80">{marketplaceStats.floorPrice} {commitmentAsset}</strong></span>
+          <span className="mr-3">Median: <strong className="text-white/80">{marketplaceStats.medianPrice} {commitmentAsset}</strong></span>
+          {marketplaceStats.lastSoldPrice && (
+            <span>Last sold: <strong className="text-white/80">{marketplaceStats.lastSoldPrice} {commitmentAsset}</strong></span>
+          )}
+        </div>
+      )}
       {validationError && (
         <p
           id={`${inputId}-error`}

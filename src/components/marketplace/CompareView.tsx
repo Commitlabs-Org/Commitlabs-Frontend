@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard';
 import { TrustBadge } from '@/components/TrustBadge';
+
+function buildShareUrl(listingIds: string[]): string {
+  const params = new URLSearchParams({ compare: listingIds.join(',') });
+  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+}
 
 interface CompareViewProps {
   listings: MarketplaceCardProps[];
@@ -41,6 +46,26 @@ function truncateAddress(addr: string) {
 export function CompareView({ listings, isOpen, onClose, onRemove }: CompareViewProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyShareUrl = useCallback(async () => {
+    const url = buildShareUrl(listings.map((l) => l.id));
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback: select a temporary input
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [listings]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -82,15 +107,25 @@ export function CompareView({ listings, isOpen, onClose, onRemove }: CompareView
           <h2 id="compare-view-title" className="text-xl font-semibold text-white">
             Compare Listings
           </h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            className="focus-ring rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/5"
-            onClick={onClose}
-            aria-label="Close comparison view"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="focus-ring rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/5"
+              onClick={handleCopyShareUrl}
+              aria-label="Copy shareable comparison URL"
+            >
+              {copied ? 'Copied!' : 'Share'}
+            </button>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="focus-ring rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/5"
+              onClick={onClose}
+              aria-label="Close comparison view"
+            >
+              Close
+            </button>
+          </div>
         </header>
 
         <div className="overflow-x-auto p-6">

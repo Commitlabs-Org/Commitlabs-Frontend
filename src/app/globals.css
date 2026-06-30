@@ -199,6 +199,36 @@ body {
   min-height: 100vh;
 }
 
+.skip-link {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1000;
+  transform: translateY(calc(-100% - 2rem));
+  border: 1px solid var(--focus-ring-color);
+  border-radius: 0.5rem;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--focus-ring-shadow);
+  transition: transform 120ms ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
+
 *:focus-visible {
   outline-offset: var(--focus-ring-offset);
 }

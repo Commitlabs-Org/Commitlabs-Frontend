@@ -14,3 +14,18 @@ Commitments are evaluated against the following criteria to determine if they ar
 - It accepts a list of commitments and fetches the latest protocol constants for dynamic threshold evaluation where applicable.
 - If no commitments are at risk, a reassuring "All Commitments Healthy" state is displayed.
 - The widget lists the specific risk categories triggered and provides a deep link directly to the commitment detail page.
+
+---
+
+## Configurable Thresholds (issue #957)
+
+Users can now tune the sensitivity of the at-risk widget without code changes. See `docs/AT_RISK_THRESHOLDS.md` for the full feature reference.
+
+### Quick summary
+
+| Threshold | Default | Valid range |
+|---|---|---|
+| `complianceScoreThreshold` | `70` | `0` – `100` |
+| `daysRemainingThreshold` | `7` | `0` – `365` |
+
+Clicking **Configure Thresholds** in the widget header reveals the threshold controls. Changes are applied immediately and re-filter the list. A warning toast fires once when a commitment newly enters at-risk status (deduped so it does not repeat for already-known items).
