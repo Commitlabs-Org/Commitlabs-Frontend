@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { buildExplorerUrl, openExplorerUrl } from '../explorerLinks'
+import { buildExplorerUrl, openExplorerUrl, safeExternalUrl, KNOWN_EXPLORER_HOSTS } from '../explorerLinks'
 
 const ALLOWED_HOST = 'stellar.expert'
 const validAccount = `G${'A'.repeat(55)}`
@@ -77,5 +77,64 @@ describe('explorerLinks — external-link policy', () => {
 
     expect(ok).toBe(false)
     expect(openSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('safeExternalUrl — external-link policy', () => {
+  it('rejects javascript: and data: schemes to prevent XSS', () => {
+    expect(safeExternalUrl('javascript:alert(1)')).toBeNull()
+    expect(safeExternalUrl('javascript:document.cookie')).toBeNull()
+    expect(safeExternalUrl('data:text/html,<script>alert(1)</script>')).toBeNull()
+    expect(safeExternalUrl('data:application/json,{"test":1}')).toBeNull()
+  })
+
+  it('rejects other dangerous schemes', () => {
+    expect(safeExternalUrl('vbscript:msgbox(1)')).toBeNull()
+    expect(safeExternalUrl('file:///etc/passwd')).toBeNull()
+    expect(safeExternalUrl('ftp://example.com')).toBeNull()
+    expect(safeExternalUrl('mailto:test@example.com')).toBeNull()
+  })
+
+  it('enforces host allowlist when provided to prevent open redirects', () => {
+    const allowedHosts = new Set(['stellar.expert'])
+    
+    expect(safeExternalUrl('https://stellar.expert/tx/abc', allowedHosts)).toBe('https://stellar.expert/tx/abc')
+    expect(safeExternalUrl('https://evil.com', allowedHosts)).toBeNull()
+    expect(safeExternalUrl('https://stellar.expert.evil.com', allowedHosts)).toBeNull()
+    expect(safeExternalUrl('//evil.com', allowedHosts)).toBeNull()
+  })
+
+  it('prevents host smuggling via @ syntax', () => {
+    expect(safeExternalUrl('https://example.com@evil.com')).toBeNull()
+    expect(safeExternalUrl('https://example.com:80@evil.com')).toBeNull()
+    expect(safeExternalUrl('http://user@example.com@evil.com')).toBeNull()
+  })
+
+  it('only allows http and https protocols', () => {
+    expect(safeExternalUrl('http://example.com')).toBe('http://example.com')
+    expect(safeExternalUrl('https://example.com')).toBe('https://example.com')
+    expect(safeExternalUrl('HTTP://example.com')).toBe('http://example.com')
+    expect(safeExternalUrl('HTTPS://example.com')).toBe('https://example.com')
+  })
+
+  it('rejects null, undefined, and empty inputs', () => {
+    expect(safeExternalUrl(null)).toBeNull()
+    expect(safeExternalUrl(undefined)).toBeNull()
+    expect(safeExternalUrl('')).toBeNull()
+  })
+
+  it('rejects malformed URLs that could cause parsing errors', () => {
+    expect(safeExternalUrl('not-a-url')).toBeNull()
+    expect(safeExternalUrl('http://')).toBeNull()
+    expect(safeExternalUrl('://example.com')).toBeNull()
+    expect(safeExternalUrl('http:///')).toBeNull()
+  })
+
+  it('KNOWN_EXPLORER_HOSTS allowlist prevents off-host links', () => {
+    expect(safeExternalUrl('https://stellar.expert/tx/abc', KNOWN_EXPLORER_HOSTS)).toBe('https://stellar.expert/tx/abc')
+    expect(safeExternalUrl('https://steexp.com/account/xyz', KNOWN_EXPLORER_HOSTS)).toBe('https://steexp.com/account/xyz')
+    expect(safeExternalUrl('https://lumenscope.io/tx/123', KNOWN_EXPLORER_HOSTS)).toBe('https://lumenscope.io/tx/123')
+    expect(safeExternalUrl('https://evil.com', KNOWN_EXPLORER_HOSTS)).toBeNull()
+    expect(safeExternalUrl('https://phishing-site.com', KNOWN_EXPLORER_HOSTS)).toBeNull()
   })
 })
