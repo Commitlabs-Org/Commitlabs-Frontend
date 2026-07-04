@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -17,6 +18,7 @@ import {
   Search,
   ArrowRight,
   Loader2,
+  History,
 } from 'lucide-react';
 
 import { Dialog } from '@/components/ui/Dialog';
@@ -43,7 +45,30 @@ interface CommitmentResult {
   amount: string;
 }
 
-type PaletteItem = StaticAction | CommitmentResult;
+interface RecentCommand {
+  kind: 'recent';
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  icon: React.ReactNode;
+  count: number;
+  lastSelectedAt: number;
+}
+
+type PaletteItem = StaticAction | CommitmentResult | RecentCommand;
+
+interface CommandHistoryEntry {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  count: number;
+  lastSelectedAt: number;
+}
+
+const COMMAND_HISTORY_KEY = 'commitlabs.commandPalette.history';
+const COMMAND_HISTORY_LIMIT = 8;
 
 // ─── Static navigation actions ────────────────────────────────────────────────
 
@@ -112,6 +137,99 @@ function statusLabel(status: string): string {
   };
   return map[status] ?? status;
 }
+function paletteItemId(item: PaletteItem): string {
+  if (item.kind === 'action') return `action:${item.id}`;
+  if (item.kind === 'commitment') return `commitment:${item.commitmentId}`;
+  return item.id;
+}
+
+function paletteItemHref(item: PaletteItem): string {
+  if (item.kind === 'action' || item.kind === 'recent') return item.href;
+  return `/commitments/${item.commitmentId}`;
+}
+
+function paletteItemLabel(item: PaletteItem): string {
+  if (item.kind === 'commitment') return item.commitmentId;
+  return item.label;
+}
+
+function paletteItemDescription(item: PaletteItem): string {
+  if (item.kind === 'commitment') {
+    return `${item.asset} · ${statusLabel(item.status)} · ${item.amount}`;
+  }
+  return item.description;
+}
+
+function sortCommandHistory(entries: CommandHistoryEntry[]): CommandHistoryEntry[] {
+  return [...entries]
+    .sort((a, b) => b.count - a.count || b.lastSelectedAt - a.lastSelectedAt)
+    .slice(0, COMMAND_HISTORY_LIMIT);
+}
+
+function readCommandHistory(): CommandHistoryEntry[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COMMAND_HISTORY_KEY) ?? '[]');
+    if (!Array.isArray(parsed)) return [];
+
+    return sortCommandHistory(
+      parsed.filter((entry): entry is CommandHistoryEntry => (
+        entry &&
+        typeof entry.id === 'string' &&
+        typeof entry.label === 'string' &&
+        typeof entry.description === 'string' &&
+        typeof entry.href === 'string' &&
+        typeof entry.count === 'number' &&
+        typeof entry.lastSelectedAt === 'number'
+      )),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeCommandHistory(entries: CommandHistoryEntry[]): CommandHistoryEntry[] {
+  const ranked = sortCommandHistory(entries);
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(COMMAND_HISTORY_KEY, JSON.stringify(ranked));
+  }
+  return ranked;
+}
+
+function recordCommandHistory(item: PaletteItem): CommandHistoryEntry[] {
+  const existing = readCommandHistory();
+  const id = paletteItemId(item);
+  const now = Date.now();
+  const next = existing.filter((entry) => entry.id !== id);
+  const previous = existing.find((entry) => entry.id === id);
+
+  next.push({
+    id,
+    label: paletteItemLabel(item),
+    description: paletteItemDescription(item),
+    href: paletteItemHref(item),
+    count: (previous?.count ?? 0) + 1,
+    lastSelectedAt: now,
+  });
+
+  return writeCommandHistory(next);
+}
+
+function toRecentCommand(entry: CommandHistoryEntry): RecentCommand {
+  const action = STATIC_ACTIONS.find((candidate) => `action:${candidate.id}` === entry.id);
+
+  return {
+    kind: 'recent',
+    id: entry.id,
+    label: action?.label ?? entry.label,
+    description: action?.description ?? entry.description,
+    href: action?.href ?? entry.href,
+    icon: action?.icon ?? <History size={16} aria-hidden="true" />,
+    count: entry.count,
+    lastSelectedAt: entry.lastSelectedAt,
+  };
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -137,6 +255,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [commandHistory, setCommandHistory] = useState<CommandHistoryEntry[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -148,6 +267,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       setCommitmentResults([]);
       setSearchError(null);
       setActiveIndex(0);
+      setCommandHistory(readCommandHistory());
     }
   }, [isOpen]);
 
@@ -214,7 +334,19 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   // Build the full flat list of items shown in the palette
   const filteredActions = filterStaticActions(query);
-  const items: PaletteItem[] = [...filteredActions, ...commitmentResults];
+  const recentCommands = useMemo(
+    () => commandHistory.map(toRecentCommand),
+    [commandHistory],
+  );
+  const showRecentSection = query.trim() === '' && recentCommands.length > 0;
+  const visibleRecentCommands = showRecentSection ? recentCommands : [];
+  const navigationOffset = visibleRecentCommands.length;
+  const commitmentOffset = navigationOffset + filteredActions.length;
+  const items: PaletteItem[] = [
+    ...visibleRecentCommands,
+    ...filteredActions,
+    ...commitmentResults,
+  ];
 
   // Keep activeIndex in bounds when list changes
   useEffect(() => {
@@ -231,10 +363,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   const handleSelect = useCallback(
     (item: PaletteItem) => {
-      const href =
-        item.kind === 'action'
-          ? item.href
-          : `/commitments/${item.commitmentId}`;
+      const href = paletteItemHref(item);
+      setCommandHistory(recordCommandHistory(item));
       onClose();
       router.push(href);
     },
@@ -274,7 +404,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   let statusMessage = '';
   if (!query.trim()) {
-    statusMessage = `${STATIC_ACTIONS.length} navigation options available`;
+    statusMessage = `${items.length} command${items.length !== 1 ? 's' : ''} available`;
   } else if (isSearching) {
     statusMessage = 'Searching commitments…';
   } else {
@@ -355,6 +485,28 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           aria-label="Command palette results"
           className="max-h-[360px] overflow-y-auto py-2 overscroll-contain"
         >
+          {/* Recent and frequent commands section */}
+          {showRecentSection && (
+            <>
+              <li
+                role="presentation"
+                className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-white/30 select-none"
+              >
+                Recent
+              </li>
+              {visibleRecentCommands.map((command, idx) => (
+                <PaletteRow
+                  key={command.id}
+                  item={command}
+                  index={idx}
+                  isActive={activeIndex === idx}
+                  onSelect={handleSelect}
+                  onHover={setActiveIndex}
+                />
+              ))}
+            </>
+          )}
+
           {/* Static navigation section */}
           {filteredActions.length > 0 && (
             <>
@@ -366,16 +518,20 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                   Navigation
                 </li>
               )}
-              {filteredActions.map((action, idx) => (
-                <PaletteRow
-                  key={action.id}
-                  item={action}
-                  index={idx}
-                  isActive={activeIndex === idx}
-                  onSelect={handleSelect}
-                  onHover={setActiveIndex}
-                />
-              ))}
+              {filteredActions.map((action, idx) => {
+                const itemIndex = navigationOffset + idx;
+
+                return (
+                  <PaletteRow
+                    key={action.id}
+                    item={action}
+                    index={itemIndex}
+                    isActive={activeIndex === itemIndex}
+                    onSelect={handleSelect}
+                    onHover={setActiveIndex}
+                  />
+                );
+              })}
             </>
           )}
 
@@ -392,8 +548,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 <PaletteRow
                   key={c.commitmentId}
                   item={c}
-                  index={filteredActions.length + idx}
-                  isActive={activeIndex === filteredActions.length + idx}
+                  index={commitmentOffset + idx}
+                  isActive={activeIndex === commitmentOffset + idx}
                   onSelect={handleSelect}
                   onHover={setActiveIndex}
                 />
@@ -473,7 +629,7 @@ function PaletteRow({
   onSelect,
   onHover,
 }: PaletteRowProps) {
-  const isAction = item.kind === 'action';
+  const isCommitment = item.kind === 'commitment';
 
   return (
     <li
@@ -499,31 +655,31 @@ function PaletteRow({
         ].join(' ')}
         aria-hidden="true"
       >
-        {isAction ? (
-          item.icon
-        ) : (
+        {isCommitment ? (
           <span className="font-mono font-medium">{item.asset.slice(0, 2)}</span>
+        ) : (
+          item.icon
         )}
       </span>
 
       {/* Label + description */}
       <span className="flex-1 min-w-0">
-        {isAction ? (
-          <>
-            <span className="block text-sm font-medium leading-snug truncate">
-              {item.label}
-            </span>
-            <span className="block text-xs text-white/40 truncate">
-              {item.description}
-            </span>
-          </>
-        ) : (
+        {isCommitment ? (
           <>
             <span className="block text-sm font-medium leading-snug truncate font-mono">
               {item.commitmentId}
             </span>
             <span className="block text-xs text-white/40 truncate">
               {item.asset} · {statusLabel(item.status)} · {item.amount}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="block text-sm font-medium leading-snug truncate">
+              {item.label}
+            </span>
+            <span className="block text-xs text-white/40 truncate">
+              {item.description}
             </span>
           </>
         )}
