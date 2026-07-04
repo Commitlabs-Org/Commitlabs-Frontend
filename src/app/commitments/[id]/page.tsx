@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import CommitmentDetailHeader from '@/components/Commitmentdetailheader';
 import CommitmentHealthMetrics from '@/components/dashboard/CommitmentHealthMetrics';
@@ -18,6 +18,7 @@ import { openExplorerUrl } from '@/utils/explorerLinks';
 import { computeCommitmentExposure } from '@/utils/exposure';
 import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
 import { useShareLink } from '@/hooks/useShareLink';
+import { recordRecentlyViewedCommitment } from '@/lib/recentlyViewedCommitments';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -153,6 +154,10 @@ export default function CommitmentDetailPage({
     const commitmentTypeLabel = commitment.type
     const earlyExitPenaltyLabel = `${commitment.earlyExitPenaltyPercent ?? 3}%`
     const { canEarlyExit } = commitment
+
+    useEffect(() => {
+        recordRecentlyViewedCommitment(commitment.id);
+    }, [commitment.id]);
 
     const exposure = computeCommitmentExposure({
         valueHistory: MOCK_VALUE_HISTORY_DATA,

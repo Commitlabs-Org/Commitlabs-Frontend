@@ -8,6 +8,7 @@ import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsSta
 import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters'
 import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
 import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton'
+import RecentlyViewedCommitments from '@/components/RecentlyViewedCommitments'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
 import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal'
 import ListForSaleModal from '@/components/modals/ListForSaleModal'
@@ -16,6 +17,7 @@ import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
 import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
 import { getValidatedClientEnv } from '@/lib/clientEnv'
+import { recordRecentlyViewedCommitment } from '@/lib/recentlyViewedCommitments'
 import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { sortCommitments, SortOption } from '@/utils/sortCommitments'
 
@@ -256,7 +258,10 @@ export default function MyCommitments() {
   // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
   // own commitment changes, not on every filter/sort that re-runs this page.
   const handleViewDetails = useCallback(
-    (id: string) => router.push(`/commitments/${id}`),
+    (id: string) => {
+      recordRecentlyViewedCommitment(id)
+      router.push(`/commitments/${id}`)
+    },
     [router]
   )
 
@@ -328,6 +333,8 @@ export default function MyCommitments() {
               avgComplianceScore={mockStats.avgComplianceScore}
               totalFeesGenerated={mockStats.totalFeesGenerated}
             />
+
+            <RecentlyViewedCommitments commitments={commitmentsList} />
 
             <MyCommitmentsFilters
               searchQuery={searchQuery}
