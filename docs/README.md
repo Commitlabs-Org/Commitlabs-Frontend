@@ -20,6 +20,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[CIRCULAR_DEPS.md](CIRCULAR_DEPS.md)** — Circular-dependency check with madge: config, the blocking CI gate, and how to break a reported cycle.
 - **[MODAL_SYSTEM.md](MODAL_SYSTEM.md)** — Architecture of the modal managers, custom context triggers, and backdrop animations.
 - **[TOAST_SYSTEM.md](TOAST_SYSTEM.md)** — Toast notification service, status emitters, and action triggers.
+- **[KEYBOARD_SHORTCUTS.md](KEYBOARD_SHORTCUTS.md)** — Global shortcut registry, `?` help overlay behavior, and accessibility notes.
 
 ## 🚀 Features & User Flows
 - **[settlement-and-early-exit-flows.md](settlement-and-early-exit-flows.md)** — Eligibility calculations, exit premiums, smart contract validations, and confirmation modal states.

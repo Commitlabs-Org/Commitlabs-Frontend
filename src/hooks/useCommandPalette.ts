@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import { COMMAND_PALETTE_SHORTCUTS, matchesKeyboardShortcut } from '@/lib/shortcuts';
+
 /**
  * Manages global command palette open/close state and wires up the
  * Cmd+K / Ctrl+K keyboard shortcut.
@@ -19,7 +21,7 @@ export function useCommandPalette() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Cmd+K (macOS) or Ctrl+K (Windows / Linux)
-      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+      if (COMMAND_PALETTE_SHORTCUTS.some((shortcut) => matchesKeyboardShortcut(event, shortcut))) {
         event.preventDefault();
         toggle();
       }

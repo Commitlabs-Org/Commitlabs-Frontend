@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppShellLayout } from './AppShellLayout'
 
 vi.mock('./AppSidebar', () => ({
@@ -10,7 +10,27 @@ vi.mock('./AppSidebar', () => ({
   ),
 }))
 
+function installMatchMedia() {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+}
+
 describe('AppShellLayout skip link', () => {
+  beforeEach(() => {
+    installMatchMedia()
+  })
+
   it('renders the skip link before sidebar navigation as the first focus target', () => {
     const { container } = render(
       <AppShellLayout>

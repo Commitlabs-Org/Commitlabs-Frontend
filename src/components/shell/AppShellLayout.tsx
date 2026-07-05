@@ -1,13 +1,30 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { AppSidebar } from './AppSidebar'
+import { KeyboardShortcutsOverlay } from './KeyboardShortcutsOverlay'
 
 export interface AppShellLayoutProps {
   children: React.ReactNode
 }
 
 export const AppShellLayout: React.FC<AppShellLayoutProps> = ({ children }) => {
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isKeyboardShortcutHelpEvent(event) || isEditableTarget(event.target)) {
+        return
+      }
+
+      event.preventDefault()
+      setIsShortcutsOpen(true)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const handleSkipToMain = (event: React.MouseEvent<HTMLAnchorElement>) => {
     const mainContent = document.getElementById('main-content')
 
@@ -33,6 +50,33 @@ export const AppShellLayout: React.FC<AppShellLayoutProps> = ({ children }) => {
       >
         {children}
       </main>
+      <KeyboardShortcutsOverlay
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+      />
     </div>
+  )
+}
+
+function isKeyboardShortcutHelpEvent(event: KeyboardEvent) {
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    return false
+  }
+
+  return event.key === '?' || (event.key === '/' && event.shiftKey)
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  const tagName = target.tagName.toLowerCase()
+
+  return (
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select' ||
+    target.isContentEditable
   )
 }
