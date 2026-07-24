@@ -43,7 +43,7 @@ function getStoredSessionToken(): string | undefined {
  * Coerce a partial user-entered price into a positive finite number.
  * Returns null when the value is empty, non-numeric, or not strictly positive.
  */
-function parsePrice(value: string): number | null {
+export function parsePrice(value: string): number | null {
   const normalized = value.replace(/[,\s]/g, "").trim();
   if (!normalized) return null;
   const parsed = Number.parseFloat(normalized);
