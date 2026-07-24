@@ -124,12 +124,7 @@ export type DisputeReasonInput = z.infer<typeof DisputeReasonSchema>;
 export type ResolveDisputeInput = z.infer<typeof ResolveDisputeSchema>;
 export type FilterParams = Record<string, string | number | boolean>;
 
-const addressSchema2 = z
-  .string()
-  .trim()
-  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
-    message: "Must be a valid Stellar address (G... format).",
-  });
+const addressSchema2 = addressSchema;
 
 const amountSchema2 = z.coerce
   .number()
@@ -140,7 +135,6 @@ const _paginationSchema2 = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-const supportedAssetCodes = SUPPORTED_ASSETS.map((asset) => asset.code);
 
 export const createCommitmentSchema = z.object({
   ownerAddress: addressSchema2,
@@ -148,8 +142,8 @@ export const createCommitmentSchema = z.object({
     .string()
     .trim()
     .transform((asset) => asset.toUpperCase())
-    .refine((asset) => supportedAssetCodes.includes(asset), {
-      message: `Asset is not supported. Supported assets: ${supportedAssetCodes.join(", ")}.`,
+    .refine((asset) => (SUPPORTED_ASSETS ?? []).map((a) => a.code).includes(asset), {
+      message: `Asset is not supported. Supported assets: ${(SUPPORTED_ASSETS ?? []).map((a) => a.code).join(", ")}.`,
     }),
   amount: amountSchema2,
   durationDays: z.coerce
@@ -427,7 +421,7 @@ export function validateSupportedAsset(
  * @example
  * z.object({ ownerAddress: stellarAddressSchema })
  */
-export { addressSchema2 as addressSchema, addressSchema2 as stellarAddressSchema };
+export { addressSchema, addressSchema as stellarAddressSchema };
 
 // Amount schema: accept number or numeric string and coerce to number
 const amountSchema3 = z.union([z.number(), z.string()]).transform((v) => {
@@ -513,8 +507,8 @@ export function handleValidationError(error: unknown) {
   }
   if (error instanceof z.ZodError) {
     const firstError = error.issues[0];
-    const field = firstError.path.join(".");
-    return Response.json({ error: firstError.message, field }, { status: 400 });
+    const field = firstError?.path.join(".");
+    return Response.json({ error: firstError?.message, field }, { status: 400 });
   }
   throw error; // Re-throw if not validation error
 }
