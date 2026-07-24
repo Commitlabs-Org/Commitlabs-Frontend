@@ -5,6 +5,13 @@
 CommitLabs uses **Next.js 14 App Router metadata API** for per-route SEO metadata (title,
 description, Open Graph, and Twitter cards).
 
+> **Web App Manifest:** installability metadata (name, icons, theme color) is served
+> by the App Router metadata route [`src/app/manifest.ts`](../src/app/manifest.ts) at
+> `/manifest.webmanifest`. Its `theme_color`/`background_color` track the
+> `--surface-base` design token (`#0a0a0a`), and its icon (`public/icon.svg`) is a
+> neutral placeholder intended to be replaced by final brand artwork. See the
+> [Web App Manifest](#web-app-manifest) section below.
+
 Since route pages that require client-side interactivity use `'use client'` (and therefore
 cannot export `metadata` directly), each such route **must have a sibling `layout.tsx`**
 that is a **server component** and exports the metadata.
@@ -161,3 +168,32 @@ This ensures that search engine crawlers receive up‑to‑date rules and a site
   are absent, entries have valid structure, and there are no duplicates.
 - When a new public route is added, the **drift detection test** will fail until
   `PUBLIC_ROUTES` in the test file is updated.
+
+## Web App Manifest
+
+The web app manifest makes CommitLabs installable as a PWA with consistent
+naming, icons, and colors across platforms. It is implemented as an App Router
+metadata route — [`src/app/manifest.ts`](../src/app/manifest.ts) — which Next.js
+serves at `/manifest.webmanifest` and links automatically from the document head.
+
+Key fields:
+
+- `name` / `short_name` / `description` — mirror the site metadata in
+  `src/app/layout.tsx`.
+- `start_url` `'/'` and `scope` `'/'` — the app launches at and is scoped to the
+  site root.
+- `display: 'standalone'` — installed app runs without browser chrome.
+- `theme_color` / `background_color` — `#0a0a0a`, kept in sync with the
+  `--surface-base` design token in `src/app/globals.css`.
+- `icons` — reference `public/icon.svg` (scalable, `purpose: any` and
+  `maskable`). This SVG is a **neutral placeholder**; replace it with final brand
+  artwork (and add raster `192x192` / `512x512` PNGs if broader launcher support
+  is required) without changing the manifest contract.
+
+### Testing
+
+[`src/app/__tests__/manifest.test.ts`](../src/app/__tests__/manifest.test.ts)
+asserts the required installability fields, that the colors match the design
+token, that a maskable icon is declared, and that **every referenced icon asset
+actually exists** in `public/` — so a manifest that points at a missing icon
+fails CI.

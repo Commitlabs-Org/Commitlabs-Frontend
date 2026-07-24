@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 
 import CommitmentHealthMetrics from './CommitmentHealthMetrics';
+import { EXPOSURE_ZONE_THRESHOLDS } from '@/utils/exposure';
 
 vi.mock('next/dynamic', () => ({
     default: (loader: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>) => {
@@ -73,25 +74,39 @@ import { HealthMetricsComplianceChart } from './HealthMetricsComplianceChart';
 // Fixtures
 // ---------------------------------------------------------------------------
 
+function isoDay(daysAgo: number): string {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return date.toISOString().slice(0, 10);
+}
+
 const valueHistoryData = [
-    { date: '2026-01-01', currentValue: 1000, initialAmount: 900 },
-    { date: '2026-02-01', currentValue: 1100, initialAmount: 900 },
+    { date: isoDay(3), currentValue: 1000, initialAmount: 900 },
+    { date: isoDay(15), currentValue: 1100, initialAmount: 900 },
 ];
 
 const drawdownData = [
-    { date: '2026-01-01', drawdownPercent: 2.5 },
-    { date: '2026-02-01', drawdownPercent: 4.1 },
+    { date: isoDay(3), drawdownPercent: 2.5 },
+    { date: isoDay(15), drawdownPercent: 4.1 },
 ];
 
 const feeGenerationData = [
-    { date: '2026-01-01', feeAmount: 12.5 },
-    { date: '2026-02-01', feeAmount: 9.75 },
+    { date: isoDay(3), feeAmount: 12.5 },
+    { date: isoDay(15), feeAmount: 9.75 },
 ];
 
 const complianceData = [
-    { date: '2026-01-01', complianceScore: 98 },
-    { date: '2026-02-01', complianceScore: 95 },
+    { date: isoDay(3), complianceScore: 98 },
+    { date: isoDay(15), complianceScore: 95 },
 ];
+
+const sampleExposure = {
+    status: 'ok' as const,
+    exposurePercent: 32,
+    level: 'low' as const,
+    drawdownThresholdPercent: 0.1,
+    zoneThresholds: EXPOSURE_ZONE_THRESHOLDS,
+};
 
 const baseProps = {
     commitmentId: 'commitment-1',
@@ -100,7 +115,7 @@ const baseProps = {
     feeGenerationData,
     complianceData,
     thresholdPercent: 10,
-    volatilityPercent: 3.2,
+    exposure: sampleExposure,
 };
 
 function renderComponent(overrides: Partial<typeof baseProps> = {}) {
@@ -155,12 +170,12 @@ describe('CommitmentHealthMetrics - initial render', () => {
         expect(drawdownButton.className).not.toContain('bg-[#222]');
     });
 
-    it('passes valueHistoryData and volatilityPercent to the value chart on initial render', () => {
+    it('passes valueHistoryData and exposure to the value chart on initial render', () => {
         renderComponent();
 
         expect((HealthMetricsValueHistoryChart as Mock).mock.calls[0][0]).toMatchObject({
                 data: valueHistoryData,
-                volatilityPercent: baseProps.volatilityPercent,
+                exposure: baseProps.exposure,
             });
     });
 });
@@ -184,7 +199,7 @@ describe('CommitmentHealthMetrics - tab switching via click', () => {
         expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({
                 data: drawdownData,
                 thresholdPercent: baseProps.thresholdPercent,
-                volatilityPercent: baseProps.volatilityPercent,
+                exposure: baseProps.exposure,
             });
     });
 
@@ -201,7 +216,7 @@ describe('CommitmentHealthMetrics - tab switching via click', () => {
 
         expect((HealthMetricsFeeGenerationChart as Mock).mock.calls[0][0]).toMatchObject({
                 data: feeGenerationData,
-                volatilityPercent: baseProps.volatilityPercent,
+                exposure: baseProps.exposure,
             });
     });
 
@@ -216,7 +231,7 @@ describe('CommitmentHealthMetrics - tab switching via click', () => {
         expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
         expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
 
-        // Compliance chart only ever takes `data` - no thresholdPercent/volatilityPercent.
+        // Compliance chart only ever takes `data` - no thresholdPercent/exposure.
         expect((HealthMetricsComplianceChart as Mock).mock.calls[0][0]).toEqual({ data: complianceData });
     });
 
@@ -307,41 +322,41 @@ describe('CommitmentHealthMetrics - keyboard interaction', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - empty datasets', () => {
-    it('renders the value chart with an empty array when valueHistoryData is empty', () => {
+    it('shows the empty state when valueHistoryData is empty', () => {
         renderComponent({ valueHistoryData: [] });
 
-        expect(screen.getByTestId('value-chart')).toBeInTheDocument();
-        expect((HealthMetricsValueHistoryChart as Mock).mock.calls[0][0]).toMatchObject({ data: [] });
+        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+        expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
     });
 
-    it('renders the drawdown chart with an empty array when drawdownData is empty', async () => {
+    it('shows the empty state when drawdownData is empty', async () => {
         const user = userEvent.setup();
         renderComponent({ drawdownData: [] });
 
         await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
 
-        expect(screen.getByTestId('drawdown-chart')).toBeInTheDocument();
-        expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({ data: [] });
+        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+        expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
     });
 
-    it('renders the fee chart with an empty array when feeGenerationData is empty', async () => {
+    it('shows the empty state when feeGenerationData is empty', async () => {
         const user = userEvent.setup();
         renderComponent({ feeGenerationData: [] });
 
         await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
 
-        expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
-        expect((HealthMetricsFeeGenerationChart as Mock).mock.calls[0][0]).toMatchObject({ data: [] });
+        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+        expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
     });
 
-    it('renders the compliance chart with an empty array when complianceData is empty', async () => {
+    it('shows the empty state when complianceData is empty', async () => {
         const user = userEvent.setup();
         renderComponent({ complianceData: [] });
 
         await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
 
-        expect(screen.getByTestId('compliance-chart')).toBeInTheDocument();
-        expect((HealthMetricsComplianceChart as Mock).mock.calls[0][0]).toEqual({ data: [] });
+        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
     });
 
     it('still renders all four tab buttons even when every dataset is empty', () => {
@@ -363,16 +378,16 @@ describe('CommitmentHealthMetrics - empty datasets', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - optional props', () => {
-    it('renders the drawdown chart without thresholdPercent/volatilityPercent when omitted', async () => {
+    it('renders the drawdown chart without thresholdPercent/exposure when omitted', async () => {
         const user = userEvent.setup();
-        renderComponent({ thresholdPercent: undefined, volatilityPercent: undefined });
+        renderComponent({ thresholdPercent: undefined, exposure: undefined });
 
         await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
 
         expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({
                 data: drawdownData,
                 thresholdPercent: undefined,
-                volatilityPercent: undefined,
+                exposure: undefined,
             });
     });
 });

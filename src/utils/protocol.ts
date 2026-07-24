@@ -15,6 +15,7 @@ export interface CommitmentLimits {
   minDurationDays: number;
   maxDurationDays: number;
   maxLossPercentCeiling: number;
+  earlyExitGracePeriodDays: number;
 }
 
 export interface ProtocolConstants {
@@ -32,4 +33,16 @@ export async function fetchProtocolConstants(): Promise<ProtocolConstants> {
     throw new Error(`Failed to fetch protocol constants: ${response.statusText}`);
   }
   return response.json();
+}
+
+export function getEarlyExitGracePeriodDays(
+  constants: ProtocolConstants | null | undefined,
+): number {
+  const value = constants?.commitmentLimits.earlyExitGracePeriodDays;
+
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(value));
 }

@@ -131,14 +131,34 @@ export async function appendAuditEvent(
   });
 }
 
-export async function getRecentAuditEvents(limit: number): Promise<RedactedAuditEvent[]> {
-  if (!isAuditLogEnabled()) return [];
-  return auditEventsStore.slice(-limit).reverse().map(redactAuditEvent);
+export interface AuditEventFilters {
+  actor?: string;
+  type?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
-export async function getAuditEventCount(): Promise<number> {
+export async function getRecentAuditEvents(limit: number, filters?: AuditEventFilters): Promise<RedactedAuditEvent[]> {
+  if (!isAuditLogEnabled()) return [];
+  let events = auditEventsStore;
+  if (filters) {
+    if (filters.actor) events = events.filter(e => e.actor === filters.actor);
+    if (filters.type) events = events.filter(e => e.action === filters.type);
+    if (filters.startTime) { const t = filters.startTime; events = events.filter(e => e.timestamp >= t); }
+    if (filters.endTime) { const t = filters.endTime; events = events.filter(e => e.timestamp <= t); }
+  }
+  return events.slice(-limit).reverse().map(redactAuditEvent);
+}
+
+export async function getAuditEventCount(filters?: AuditEventFilters): Promise<number> {
   if (!isAuditLogEnabled()) return 0;
-  return auditEventsStore.length;
+  if (!filters) return auditEventsStore.length;
+  let events = auditEventsStore;
+  if (filters.actor) events = events.filter(e => e.actor === filters.actor);
+  if (filters.type) events = events.filter(e => e.action === filters.type);
+  if (filters.startTime) { const t = filters.startTime; events = events.filter(e => e.timestamp >= t); }
+  if (filters.endTime) { const t = filters.endTime; events = events.filter(e => e.timestamp <= t); }
+  return events.length;
 }
 
 export function resetAuditStoreForTests(): void {

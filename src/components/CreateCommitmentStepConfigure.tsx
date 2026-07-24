@@ -23,17 +23,17 @@ interface CreateCommitmentStepConfigureProps {
   earlyExitPenalty: string
   estimatedFees: string
   isValid: boolean
-  ownerAddress?: string
-  commitmentType?: 'safe' | 'balanced' | 'aggressive'
+  ownerAddress?: string | undefined
+  commitmentType?: 'safe' | 'balanced' | 'aggressive' | undefined
   onChangeAmount: (value: string) => void
   onChangeAsset: (asset: string) => void
   onChangeDuration: (value: number) => void
   onChangeMaxLoss: (value: number) => void
   onBack: () => void
   onNext: () => void
-  amountError?: string
-  maxLossWarning?: boolean
-  initialFocusField?: string
+  amountError?: string | undefined
+  maxLossWarning?: boolean | undefined
+  initialFocusField?: string | undefined
 }
 
 // Per-type constraints surfaced as copy

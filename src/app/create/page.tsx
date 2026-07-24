@@ -255,94 +255,96 @@ export default function CreateCommitment() {
 
   return (
     <AppShellLayout>
-      {showResumePrompt && draft && (
-        <ResumeDraftPrompt
-          draft={draft}
-          onResume={handleResumeDraft}
-          onStartFresh={handleStartFresh}
-        />
-      )}
+      <main id="main-content" className="flex flex-col flex-1 relative">
+        {showResumePrompt && draft && (
+          <ResumeDraftPrompt
+            draft={draft}
+            onResume={handleResumeDraft}
+            onStartFresh={handleStartFresh}
+          />
+        )}
 
-      {!showResumePrompt && step === 1 && (
-        <CreateCommitmentStepSelectType
-          selectedType={selectedType}
-          onSelectType={handleSelectType}
-          onNext={handleNextStep}
-          onBack={handleBack}
-          initialFocusField={initialFocusField || undefined}
-        />
-      )}
-
-      {!showResumePrompt && step === 2 && (
-        <CreateCommitmentStepConfigure
-          amount={amount}
-          asset={asset}
-          availableBalance={availableBalance}
-          durationDays={durationDays}
-          maxLossPercent={maxLossPercent}
-          earlyExitPenalty={earlyExitPenalty}
-          estimatedFees={estimatedFees}
-          isValid={isStep2Valid}
-          ownerAddress={ownerAddress}
-          commitmentType={commitmentType}
-          onChangeAmount={setAmount}
-          onChangeAsset={setAsset}
-          onChangeDuration={setDurationDays}
-          onChangeMaxLoss={setMaxLossPercent}
-          onBack={handleBack}
-          onNext={handleNextStep}
-          amountError={amountError}
-          maxLossWarning={maxLossWarning}
-          initialFocusField={initialFocusField || undefined}
-        />
-      )}
-
-      {!showResumePrompt && step === 3 && selectedType && (
-        <>
-          <CreateCommitmentStepReview
-            {...getReviewData()}
-            isSubmitting={isSubmitting}
+        {!showResumePrompt && step === 1 && (
+          <CreateCommitmentStepSelectType
+            selectedType={selectedType}
+            onSelectType={handleSelectType}
+            onNext={handleNextStep}
             onBack={handleBack}
-            onSubmit={handleSubmit}
-            onEditStep={handleEditStep}
+            {...(initialFocusField ? { initialFocusField } : {})}
           />
+        )}
 
-          <CommitmentCreatedModal
-            isOpen={showSuccessModal}
-            commitmentId={commitmentId}
-            callerAddress={callerAddress}
-            onViewCommitment={handleViewCommitment}
-            onCreateAnother={handleCreateAnother}
-            onClose={handleCloseModal}
-            onFundLater={handleFundLater}
-            onViewOnExplorer={commitmentExplorerUrl ? handleViewOnExplorer : undefined}
+        {!showResumePrompt && step === 2 && (
+          <CreateCommitmentStepConfigure
+            amount={amount}
+            asset={asset}
+            availableBalance={availableBalance}
+            durationDays={durationDays}
+            maxLossPercent={maxLossPercent}
+            earlyExitPenalty={earlyExitPenalty}
+            estimatedFees={estimatedFees}
+            isValid={isStep2Valid}
+            ownerAddress={ownerAddress}
+            commitmentType={commitmentType}
+            onChangeAmount={setAmount}
+            onChangeAsset={setAsset}
+            onChangeDuration={setDurationDays}
+            onChangeMaxLoss={setMaxLossPercent}
+            onBack={handleBack}
+            onNext={handleNextStep}
+            amountError={amountError}
+            maxLossWarning={maxLossWarning}
+            {...(initialFocusField ? { initialFocusField } : {})}
           />
-        </>
-      )}
+        )}
 
-      {/* Help button to re-launch tour */}
-      <button
-        type="button"
-        onClick={startTour}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full border border-[rgba(0,212,255,0.4)] bg-[rgba(10,10,11,0.9)] px-4 py-2.5 text-sm font-semibold text-[#0ff0fc] shadow-[0_0_15px_rgba(0,212,255,0.2)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(0,212,255,0.8)] hover:shadow-[0_0_20px_rgba(0,212,255,0.5)] focus:outline-none focus:ring-2 focus:ring-[#0ff0fc]"
-        aria-label="Start guided tour"
-        title="Start guided tour"
-        data-testid="tour-help-button"
-      >
-        <HelpCircle size={18} />
-        <span>Tour Guide</span>
-      </button>
+        {!showResumePrompt && step === 3 && selectedType && (
+          <>
+            <CreateCommitmentStepReview
+              {...getReviewData()}
+              isSubmitting={isSubmitting}
+              onBack={handleBack}
+              onSubmit={handleSubmit}
+              onEditStep={handleEditStep}
+            />
 
-      {/* Guided Tour Tooltip Controller */}
-      <GuidedTour
-        isActive={tourActive}
-        currentStepIndex={currentStepIndex}
-        currentStepConfig={currentStepConfig}
-        totalSteps={totalSteps}
-        onNext={nextStep}
-        onBack={prevStep}
-        onSkip={skipTour}
-      />
+            <CommitmentCreatedModal
+              isOpen={showSuccessModal}
+              commitmentId={commitmentId}
+              {...(callerAddress ? { callerAddress } : {})}
+              onViewCommitment={handleViewCommitment}
+              onCreateAnother={handleCreateAnother}
+              onClose={handleCloseModal}
+              onFundLater={handleFundLater}
+              {...(commitmentExplorerUrl ? { onViewOnExplorer: handleViewOnExplorer } : {})}
+            />
+          </>
+        )}
+
+        {/* Help button to re-launch tour */}
+        <button
+          type="button"
+          onClick={startTour}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full border border-[rgba(0,212,255,0.4)] bg-[rgba(10,10,11,0.9)] px-4 py-2.5 text-sm font-semibold text-[#0ff0fc] shadow-[0_0_15px_rgba(0,212,255,0.2)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(0,212,255,0.8)] hover:shadow-[0_0_20px_rgba(0,212,255,0.5)] focus:outline-none focus:ring-2 focus:ring-[#0ff0fc]"
+          aria-label="Start guided tour"
+          title="Start guided tour"
+          data-testid="tour-help-button"
+        >
+          <HelpCircle size={18} />
+          <span>Tour Guide</span>
+        </button>
+
+        {/* Guided Tour Tooltip Controller */}
+        <GuidedTour
+          isActive={tourActive}
+          currentStepIndex={currentStepIndex}
+          currentStepConfig={currentStepConfig}
+          totalSteps={totalSteps}
+          onNext={nextStep}
+          onBack={prevStep}
+          onSkip={skipTour}
+        />
+      </main>
     </AppShellLayout>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SidebarSearch } from './SidebarSearch'
 
 interface NavItem {
   href: string
@@ -59,9 +60,11 @@ const navItems: NavItem[] = [
 
 export interface AppSidebarProps {
   className?: string
+  /** Wallet/owner address used to scope the commitment search. */
+  ownerAddress?: string
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
+export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAddress }) => {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -96,8 +99,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
     const focusableElements = sidebar.querySelectorAll<HTMLElement>(
       'a, button, [tabindex]:not([tabindex="-1"])'
     )
-    const firstElement = focusableElements[0]
-    const lastElement = focusableElements[focusableElements.length - 1]
+    const firstElement = focusableElements[0] as HTMLElement | undefined
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -235,6 +238,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
                   <X size={20} />
                 </button>
               </div>
+            </div>
+
+            {/* Global Search */}
+            <div className="border-b border-white/10">
+              <SidebarSearch
+                ownerAddress={ownerAddress}
+                isCollapsed={isCollapsed}
+                onResultSelect={() => setIsMobileOpen(false)}
+              />
             </div>
 
             {/* Navigation Items */}

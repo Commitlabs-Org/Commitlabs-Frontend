@@ -244,6 +244,21 @@ Footer
 
 Component file convention: shared React components in `src/` should use TypeScript (`.ts`/`.tsx`) rather than untyped `.jsx` files.
 
+### Foldered Component Convention
+
+For components with associated styles, tests, or sub-components, use a foldered structure:
+```
+src/components/
+└── ComponentName/
+    ├── ComponentName.tsx  # Primary component implementation
+    ├── ComponentName.module.css  # Styles (if using CSS Modules)
+    ├── ComponentName.test.tsx  # Tests
+    ├── SubComponent.tsx  # Sub-components used only by this component
+    └── index.ts  # Optional: Export the component for easier imports
+```
+
+This convention keeps related files grouped together, making the codebase more organized and maintainable.
+
 | Component | File | Usage |
 |-----------|------|-------|
 | `EmptyState` | `src/components/ui/EmptyState.tsx` | Shared empty-state primitive used by `MyCommitmentsGrid`, `MarketplaceGrid`, `RecentAttestationsPanel`; accepts `title`, `description`, `icon`, `cta` (href or onClick) |
@@ -297,3 +312,34 @@ Component file convention: shared React components in `src/` should use TypeScri
 | Notification preferences API | `src/app/api/user/preferences/route.ts` |
 | TypeScript types | `src/types/commitment.ts`, `src/types/marketplace.ts` |
 | Test setup | `tests/setup/vitest.setup.ts` |
+
+## Formatting Utilities
+
+All numeric, currency, percentage, and date formatting is centralised in
+`src/utils/format.ts`. Components must use these helpers instead of
+inline `toLocaleString`, `toFixed`, or manual string construction.
+
+### Available helpers
+
+| Helper | Signature | Example output |
+|--------|-----------|----------------|
+| `formatNumber` | `(value, options?) → string` | `"1,234,567"` |
+| `formatCurrency` | `(value, options?) → string` | `"$9,500.00"` |
+| `formatPercent` | `(value, options?) → string` | `"12.3%"` |
+| `formatDate` | `(value, options?) → string` | `"Jun 29, 2026"` |
+
+### Fallback behaviour
+
+All helpers return `"--"` when passed `null`, `undefined`, `NaN`, or `Infinity`. Call sites never need to guard against bad input.
+
+### Options
+
+- **`formatNumber`**: `decimals` (default 0), `locale` (default `"en-US"`), `compact` (default `false`)
+- **`formatCurrency`**: `currency` (default `"USD"`), `decimals` (default 2), `locale`, `compact`
+- **`formatPercent`**: `decimals` (default 1), `isDecimal`, `showSign`, `locale`
+- **`formatDate`**: `style` (`"short"` | `"medium"` | `"long"` | `"full"`), `includeTime`, `locale`
+
+### Migrated components
+
+- `src/components/KPICard/KPICard.tsx` — uses `formatNumber`, `formatCurrency`, `formatPercent`
+- `src/components/MarketplaceCard.tsx` — uses `formatPercent`
