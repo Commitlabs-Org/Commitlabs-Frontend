@@ -21,16 +21,14 @@ export function useTestNotification(channelId: string) {
       await new Promise(resolve => setTimeout(resolve, 800))
 
       if (!res.ok && res.status !== 404) {
-        // If it's a real error (not just missing mock endpoint), throw
-        // For testing purposes without a real API, we can just assume success
-        // or check if it's 404 and treat it as success for the UI demo.
+        throw new Error(`Request failed with status ${res.status}`)
       }
 
       success({
         title: 'Test Sent',
         description: `Test notification sent successfully to the ${channelId} channel.`,
       })
-    } catch (err) {
+    } catch (_err) {
       error({
         title: 'Test Failed',
         description: `Failed to send test notification to ${channelId}.`,

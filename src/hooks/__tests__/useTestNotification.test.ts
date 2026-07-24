@@ -106,6 +106,47 @@ describe('useTestNotification', () => {
     expect(mockSuccess).toHaveBeenCalledOnce();
   });
 
+  it('shows error toast when fetch returns a non-ok, non-404 response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response),
+    );
+
+    const { result } = renderHook(() => useTestNotification('email'));
+
+    await act(async () => {
+      const sendPromise = result.current.sendTest();
+      vi.advanceTimersByTime(1000);
+      await sendPromise;
+    });
+
+    expect(result.current.isSending).toBe(false);
+    expect(mockError).toHaveBeenCalledOnce();
+    expect(mockError).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Test Failed' }),
+    );
+    expect(mockSuccess).not.toHaveBeenCalled();
+  });
+
+  it('shows success toast when fetch returns 404 (missing mock endpoint)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response),
+    );
+
+    const { result } = renderHook(() => useTestNotification('email'));
+
+    await act(async () => {
+      const sendPromise = result.current.sendTest();
+      vi.advanceTimersByTime(1000);
+      await sendPromise;
+    });
+
+    expect(result.current.isSending).toBe(false);
+    expect(mockSuccess).toHaveBeenCalledOnce();
+    expect(mockError).not.toHaveBeenCalled();
+  });
+
   it('does nothing when channelId is empty', async () => {
     const { result } = renderHook(() => useTestNotification(''));
 
