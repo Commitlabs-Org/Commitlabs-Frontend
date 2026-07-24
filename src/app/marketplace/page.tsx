@@ -440,6 +440,8 @@ export default function Marketplace() {
         <div className="md:hidden mb-6">
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
+            aria-expanded={showMobileFilters}
+            aria-controls="marketplace-filters"
             className="w-full flex items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors active:scale-[0.98]"
           >
             <span className="text-base font-semibold">{showMobileFilters ? 'Hide Filters' : 'Show Filters'}</span>
@@ -449,7 +451,7 @@ export default function Marketplace() {
         {/* Main Content: Two Columns */}
         <div className="flex flex-col gap-6 md:flex-row items-start">
           {/* Sidebar Filters */}
-          <aside className={`
+          <aside id="marketplace-filters" className={`
             md:w-[280px] lg:w-[320px] md:shrink-0 md:sticky md:top-[120px] 
             md:max-h-[calc(100vh-140px)] md:overflow-y-auto custom-scrollbar
             ${showMobileFilters ? 'block' : 'hidden md:block'}
