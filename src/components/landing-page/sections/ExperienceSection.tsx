@@ -137,17 +137,17 @@ export const ExperienceSection: React.FC = () => {
           <ActionCard
             icon={<FaGithub size={40} />}
             label="View on Github"
-            href="#"
+            href="https://github.com/muhsar27/Commitlabs-Frontend"
           />
           <ActionCard
             icon={<IoDocumentText size={40} />}
             label="Read Docs"
-            href="#"
+            href="/docs"
           />
           <ActionCard
             icon={<FaEnvelope size={40} />}
             label="Get in Touch"
-            href="#"
+            href="mailto:hello@commitlabs.com"
           />
         </motion.div>
       </motion.div>
