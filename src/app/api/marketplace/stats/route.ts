@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { ok } from "@/lib/backend/apiResponse";
+import { TooManyRequestsError } from "@/lib/backend/errors";
 import { checkRateLimit } from "@/lib/backend/rateLimit";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
 import { marketplaceService } from "@/lib/backend/services/marketplace";
@@ -25,16 +26,7 @@ export const GET = withApiHandler(async (req: NextRequest) => {
   const isAllowed = await checkRateLimit(ip, "api/marketplace/stats");
 
   if (!isAllowed) {
-    return Response.json(
-      {
-        success: false,
-        error: {
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many requests",
-        },
-      },
-      { status: 429 },
-    );
+    throw new TooManyRequestsError();
   }
 
   // Attempt to retrieve from cache first.
