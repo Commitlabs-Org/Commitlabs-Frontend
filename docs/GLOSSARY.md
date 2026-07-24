@@ -1,6 +1,6 @@
 # Glossary
 
-This document outlines the standard protocol terminology used across the application. 
+This document outlines the standard protocol terminology used across the application.
 By maintaining a single source of truth, we ensure consistency in the UI and documentation.
 
 ## Defined Terms
@@ -12,4 +12,5 @@ By maintaining a single source of truth, we ensure consistency in the UI and doc
 - **Early Exit**: Terminating a commitment before its scheduled duration completes, usually incurring a penalty.
 
 ## Usage in UI
+
 The terms above should be wrapped in the `<GlossaryTerm>` component whenever they appear in key creation or detail contexts, so users can learn the protocol without leaving the flow.

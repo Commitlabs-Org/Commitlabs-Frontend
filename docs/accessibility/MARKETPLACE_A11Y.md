@@ -4,15 +4,15 @@ This document summarizes the audit and fixes for keyboard navigation and `:focus
 
 ## Audit findings
 
-| Component | Issue | Fix |
-| :--- | :--- | :--- |
-| `MarketplaceFilters` | Section headers were non-focusable `div` click targets | Replaced with `button` toggles using `aria-expanded` / `aria-controls` |
-| `MarketplaceFilters` | Reset control lacked explicit button semantics | Added `type="button"` and retained `focus-ring` |
-| `MarketplaceResultsLayout` | Icon-only view toggles lacked accessible names | Added `aria-label` for grid/list view buttons |
-| `MarketplaceResultsLayout` | Pagination controls used ad-hoc focus styles | Standardized on shared `focus-ring` utility |
-| `MarketplaceCard` | Card wrapper was an extra tab stop (`tabIndex={0}`) | Removed wrapper tab stop; actions remain keyboard reachable |
-| `MarketplaceCard` | View actions missing explicit button type | Added `type="button"` to view controls |
-| `MarketplaceGrid` | Empty results had no programmatic focus target | Added focusable empty-state container (`tabIndex={-1}`) |
+| Component                  | Issue                                                  | Fix                                                                    |
+| :------------------------- | :----------------------------------------------------- | :--------------------------------------------------------------------- |
+| `MarketplaceFilters`       | Section headers were non-focusable `div` click targets | Replaced with `button` toggles using `aria-expanded` / `aria-controls` |
+| `MarketplaceFilters`       | Reset control lacked explicit button semantics         | Added `type="button"` and retained `focus-ring`                        |
+| `MarketplaceResultsLayout` | Icon-only view toggles lacked accessible names         | Added `aria-label` for grid/list view buttons                          |
+| `MarketplaceResultsLayout` | Pagination controls used ad-hoc focus styles           | Standardized on shared `focus-ring` utility                            |
+| `MarketplaceCard`          | Card wrapper was an extra tab stop (`tabIndex={0}`)    | Removed wrapper tab stop; actions remain keyboard reachable            |
+| `MarketplaceCard`          | View actions missing explicit button type              | Added `type="button"` to view controls                                 |
+| `MarketplaceGrid`          | Empty results had no programmatic focus target         | Added focusable empty-state container (`tabIndex={-1}`)                |
 
 ## Keyboard expectations
 

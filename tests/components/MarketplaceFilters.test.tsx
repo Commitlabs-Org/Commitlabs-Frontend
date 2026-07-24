@@ -72,16 +72,12 @@ describe('MarketplaceFilters', () => {
     fireEvent.change(screen.getByLabelText('Minimum compliance score'), {
       target: { value: '70' },
     });
-    expect(onFilterChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ minCompliance: 70 }),
-    );
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({ minCompliance: 70 }));
 
     fireEvent.change(screen.getByLabelText('Maximum loss threshold'), {
       target: { value: '35' },
     });
-    expect(onFilterChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ maxLoss: 35 }),
-    );
+    expect(onFilterChange).toHaveBeenLastCalledWith(expect.objectContaining({ maxLoss: 35 }));
 
     fireEvent.click(screen.getByRole('button', { name: /reset filters/i }));
     expect(onFilterChange).toHaveBeenLastCalledWith(defaultFilters);

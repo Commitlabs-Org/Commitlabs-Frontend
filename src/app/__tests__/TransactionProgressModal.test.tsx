@@ -7,21 +7,18 @@ import TransactionProgressModal from '../TransactionProgressModal';
 vi.mock('@/components/transaction/TransactionStepTimeline', () => ({
   default: (txProps: any) => (
     <div data-testid="transaction-timeline" data-hash={txProps.txHash} data-state={txProps.state}>
-      {(txProps.state === 'error' && txProps.txHash) && (
-        <button
-          onClick={() => txProps.onCopyHash?.(txProps.txHash)}>
-            Copy hash
-          </button>
+      {txProps.state === 'error' && txProps.txHash && (
+        <button onClick={() => txProps.onCopyHash?.(txProps.txHash)}>Copy hash</button>
       )}
     </div>
-  )
+  ),
 }));
 
 describe('TransactionProgressModal', () => {
   const mockOnClose = vi.fn();
   const mockOnRetry = vi.fn();
   const mockOnSuccessAction = vi.fn();
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock clipboard
@@ -40,7 +37,7 @@ describe('TransactionProgressModal', () => {
         state="IDLE"
         actionName="Testing"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -52,7 +49,7 @@ describe('TransactionProgressModal', () => {
         state="IDLE"
         actionName="Testing"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -64,7 +61,7 @@ describe('TransactionProgressModal', () => {
         state="AWAITING_SIGNATURE"
         actionName="Testing Action"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(screen.getByText(/Confirm in Freighter/i)).toBeInTheDocument();
     expect(screen.getByText(/Please sign the transaction in your wallet./i)).toBeInTheDocument();
@@ -81,7 +78,7 @@ describe('TransactionProgressModal', () => {
         actionName="Testing Action"
         txHash="test-hash-123"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(screen.getByText(/Testing Action in Progress/i)).toBeInTheDocument();
     expect(screen.getByText(/Sending to the Stellar Network.../i)).toBeInTheDocument();
@@ -95,7 +92,7 @@ describe('TransactionProgressModal', () => {
         actionName="Testing Action"
         txHash="test-hash-123"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(screen.getByText(/Confirming Transaction/i)).toBeInTheDocument();
   });
@@ -110,7 +107,7 @@ describe('TransactionProgressModal', () => {
         txHash="test-hash-123"
         onClose={mockOnClose}
         onSuccessAction={mockOnSuccessAction}
-      />
+      />,
     );
     expect(screen.getByText(/Testing Action Successful!/i)).toBeInTheDocument();
     expect(screen.getByText(/Custom success message/i)).toBeInTheDocument();
@@ -126,7 +123,7 @@ describe('TransactionProgressModal', () => {
         state="SUCCESS"
         actionName="Testing Action"
         onClose={mockOnClose}
-      />
+      />,
     );
     const viewDetailsButton = screen.getByText(/View Details/i);
     fireEvent.click(viewDetailsButton);
@@ -142,7 +139,7 @@ describe('TransactionProgressModal', () => {
         errorCode="UNKNOWN_ERROR"
         txHash="test-hash-456"
         onClose={mockOnClose}
-      />
+      />,
     );
     const copyButton = screen.getByText(/Copy hash/i);
     await fireEvent.click(copyButton);
@@ -159,7 +156,7 @@ describe('TransactionProgressModal', () => {
         errorCode="UNKNOWN_ERROR"
         txHash="test-hash-789"
         onClose={mockOnClose}
-      />
+      />,
     );
     const copyButton = screen.getByText(/Copy hash/i);
     await fireEvent.click(copyButton);
@@ -173,7 +170,7 @@ describe('TransactionProgressModal', () => {
         state="SUCCESS"
         actionName="Testing Action"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(screen.queryByText(/Copy hash/i)).not.toBeInTheDocument();
   });
@@ -187,7 +184,7 @@ describe('TransactionProgressModal', () => {
         errorCode="USER_REJECTED"
         onClose={mockOnClose}
         onRetry={mockOnRetry}
-      />
+      />,
     );
     expect(screen.getByText(/Transaction Failed/i)).toBeInTheDocument();
     const tryAgainButton = screen.getByText(/Try Again/i);
@@ -203,7 +200,7 @@ describe('TransactionProgressModal', () => {
         actionName="Testing Action"
         onClose={mockOnClose}
         onRetry={mockOnRetry}
-      />
+      />,
     );
     expect(screen.getByText(/Unexpected Error/i)).toBeInTheDocument();
   });
@@ -217,7 +214,7 @@ describe('TransactionProgressModal', () => {
         errorCode="RPC_TIMEOUT"
         txHash="test-hash"
         onClose={mockOnClose}
-      />
+      />,
     );
     expect(screen.getByText(/Network Timeout/i)).toBeInTheDocument();
   });
@@ -229,7 +226,7 @@ describe('TransactionProgressModal', () => {
         state="AWAITING_SIGNATURE"
         actionName="Testing Action"
         onClose={mockOnClose}
-      />
+      />,
     );
     const closeButton = screen.getByRole('button', { name: /Close modal/i });
     fireEvent.click(closeButton);

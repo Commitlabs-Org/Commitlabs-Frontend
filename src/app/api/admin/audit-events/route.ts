@@ -47,11 +47,7 @@ import {
   getRecentAuditEvents,
   getAuditEventCount,
 } from '@/lib/backend/auditLog';
-import {
-  ForbiddenError,
-  TooManyRequestsError,
-  ValidationError,
-} from '@/lib/backend/errors';
+import { ForbiddenError, TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -67,15 +63,15 @@ function parseLimit(searchParams: URLSearchParams): number {
 
   const parsed = Number(raw);
   if (!Number.isInteger(parsed) || !Number.isFinite(parsed)) {
-    throw new ValidationError(
-      `"limit" must be an integer between ${MIN_LIMIT} and ${MAX_LIMIT}.`,
-      { field: 'limit', received: raw }
-    );
+    throw new ValidationError(`"limit" must be an integer between ${MIN_LIMIT} and ${MAX_LIMIT}.`, {
+      field: 'limit',
+      received: raw,
+    });
   }
   if (parsed < MIN_LIMIT || parsed > MAX_LIMIT) {
     throw new ValidationError(
       `"limit" must be between ${MIN_LIMIT} and ${MAX_LIMIT}. Received: ${parsed}.`,
-      { field: 'limit', min: MIN_LIMIT, max: MAX_LIMIT, received: parsed }
+      { field: 'limit', min: MIN_LIMIT, max: MAX_LIMIT, received: parsed },
     );
   }
   return parsed;
@@ -87,10 +83,10 @@ function parseTimestampParam(searchParams: URLSearchParams, paramName: string): 
 
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) {
-    throw new ValidationError(
-      `"${paramName}" must be a valid ISO 8601 timestamp.`,
-      { field: paramName, received: raw }
-    );
+    throw new ValidationError(`"${paramName}" must be a valid ISO 8601 timestamp.`, {
+      field: paramName,
+      received: raw,
+    });
   }
 
   return parsed.toISOString();
@@ -117,10 +113,11 @@ function parseAuditEventFilters(searchParams: URLSearchParams): AuditEventFilter
   }
 
   if (startTime && endTime && new Date(startTime) > new Date(endTime)) {
-    throw new ValidationError(
-      '"startTime" must be earlier than or equal to "endTime".',
-      { field: 'timeRange', startTime, endTime }
-    );
+    throw new ValidationError('"startTime" must be earlier than or equal to "endTime".', {
+      field: 'timeRange',
+      startTime,
+      endTime,
+    });
   }
 
   const filters: AuditEventFilters = {};

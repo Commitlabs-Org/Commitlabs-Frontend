@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 
 // Decorative only — hidden from assistive tech, never intercepts pointer events.
 // Supports reduced-motion, tab visibility, and mobile viewport optimization.
@@ -62,7 +62,7 @@ export const StarField: React.FC = () => {
 
   // Detect and monitor prefers-reduced-motion preference
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     // Set initial state
     setIsReduced(mediaQuery.matches);
@@ -72,10 +72,10 @@ export const StarField: React.FC = () => {
       setIsReduced(e.matches);
     };
 
-    mediaQuery.addEventListener("change", handleChange);
+    mediaQuery.addEventListener('change', handleChange);
 
     return () => {
-      mediaQuery.removeEventListener("change", handleChange);
+      mediaQuery.removeEventListener('change', handleChange);
     };
   }, []);
 
@@ -90,15 +90,15 @@ export const StarField: React.FC = () => {
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isReduced]);
 
   // Determine star count based on viewport width
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const starCount = isMobile ? 40 : 150;
   const starsToDraw = allStars.slice(0, starCount);
 
@@ -114,7 +114,7 @@ export const StarField: React.FC = () => {
         <div
           key={index}
           className={`absolute bg-white rounded-full w-[0.998px] h-[0.998px] ${
-            shouldAnimate ? "motion-safe:animate-pulse" : ""
+            shouldAnimate ? 'motion-safe:animate-pulse' : ''
           }`}
           style={{
             left: `${(star.left / 1680) * 100}%`,

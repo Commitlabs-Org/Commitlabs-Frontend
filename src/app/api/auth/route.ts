@@ -12,15 +12,18 @@ const AUTH_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(AUTH_CORS_POLICY);
 
-export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  const ip = getClientIp(req);
+export const POST = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    const ip = getClientIp(req);
 
-  if (!(await checkRateLimit(ip, 'api/auth'))) {
-    throw new TooManyRequestsError();
-  }
+    if (!(await checkRateLimit(ip, 'api/auth'))) {
+      throw new TooManyRequestsError();
+    }
 
-  return ok({ message: 'Authentication successful.' }, undefined, 200, correlationId);
-}, { cors: AUTH_CORS_POLICY });
+    return ok({ message: 'Authentication successful.' }, undefined, 200, correlationId);
+  },
+  { cors: AUTH_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['POST']);
 export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

@@ -13,10 +13,7 @@ export interface GraceCountdownBannerProps {
 const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
 
-export function GraceCountdownBanner({
-  maturityDate,
-  gracePeriodDays,
-}: GraceCountdownBannerProps) {
+export function GraceCountdownBanner({ maturityDate, gracePeriodDays }: GraceCountdownBannerProps) {
   const reducedMotion = useReducedMotion();
   const [now, setNow] = useState(() => new Date());
 
@@ -31,12 +28,13 @@ export function GraceCountdownBanner({
   }, [reducedMotion]);
 
   const status = useMemo(
-    () => getGraceCountdownStatus({
-      gracePeriodDays,
-      maturityDate,
-      now,
-      reducedMotion,
-    }),
+    () =>
+      getGraceCountdownStatus({
+        gracePeriodDays,
+        maturityDate,
+        now,
+        reducedMotion,
+      }),
     [gracePeriodDays, maturityDate, now, reducedMotion],
   );
 
@@ -64,12 +62,8 @@ export function GraceCountdownBanner({
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <p className="text-[12px] font-bold uppercase tracking-widest">
-            {status.title}
-          </p>
-          <p className="mt-1 text-[13px] font-medium leading-snug text-white/75">
-            {status.detail}
-          </p>
+          <p className="text-[12px] font-bold uppercase tracking-widest">{status.title}</p>
+          <p className="mt-1 text-[13px] font-medium leading-snug text-white/75">{status.detail}</p>
           {status.targetDate && (
             <p className="mt-2 text-[12px] leading-snug text-white/45">
               Target date: {status.targetDate.toLocaleDateString()}

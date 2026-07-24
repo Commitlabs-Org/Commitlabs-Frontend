@@ -12,22 +12,27 @@ This guide documents the testing conventions, patterns, and best practices for t
 ## 🚀 Running Tests
 
 ### Run all tests once
+
 ```bash
 pnpm test
 ```
 
 ### Run tests in watch mode
+
 Watch mode re-runs tests automatically when files change. Ideal for development.
+
 ```bash
 pnpm test:watch
 ```
 
 ### Generate coverage report
+
 ```bash
 pnpm test:coverage
 ```
 
 Coverage reports are generated in HTML format and opened in your browser. The project enforces a **95% threshold** across:
+
 - Statements
 - Branches
 - Functions
@@ -175,7 +180,7 @@ describe('API Integration', () => {
     // ... your test code
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/endpoint',
-      expect.objectContaining({ method: 'GET' })
+      expect.objectContaining({ method: 'GET' }),
     );
   });
 
@@ -239,14 +244,12 @@ describe('Wallet Integration', () => {
     // ... your test code
     expect(signTransaction).toHaveBeenCalledWith(
       expect.stringContaining('Transaction'),
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 
   it('handles wallet not installed', async () => {
-    vi.mocked(isConnected).mockRejectedValue(
-      new Error('Freighter is not installed')
-    );
+    vi.mocked(isConnected).mockRejectedValue(new Error('Freighter is not installed'));
 
     // ... expect graceful error handling
   });
@@ -267,10 +270,7 @@ vi.mock('@/lib/backend/contracts', () => ({
 }));
 
 // Now you can import and use mocked versions
-import {
-  getCommitmentFromChain,
-  createCommitmentOnChain,
-} from '@/lib/backend/contracts';
+import { getCommitmentFromChain, createCommitmentOnChain } from '@/lib/backend/contracts';
 
 describe('Commitment Service', () => {
   it('retrieves commitment', async () => {
@@ -287,9 +287,7 @@ describe('Commitment Service', () => {
 
 ```typescript
 vi.mock('@/lib/backend/validation', async (importActual) => {
-  const actual = await importActual<
-    typeof import('@/lib/backend/validation')
-  >();
+  const actual = await importActual<typeof import('@/lib/backend/validation')>();
 
   return {
     ...actual,
@@ -616,26 +614,31 @@ describe('POST /api/my-route', () => {
 ## 🐛 Debugging Tips
 
 ### Run a single test
+
 ```bash
 pnpm test -- hero-section.test.tsx
 ```
 
 ### Run tests matching a pattern
+
 ```bash
 pnpm test -- --grep "renders"
 ```
 
 ### Run with UI dashboard
+
 ```bash
 pnpm test:ui
 ```
 
 ### Enable verbose output
+
 ```bash
 pnpm test -- --reporter=verbose
 ```
 
 ### Debug in VS Code
+
 Add this to `.vscode/launch.json`:
 
 ```json

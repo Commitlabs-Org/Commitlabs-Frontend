@@ -10,26 +10,26 @@ create-commitment wizard:
 
 ### 1. Label associations for every interactive input
 
-| Component | Input | Label mechanism |
-|-----------|-------|-----------------|
-| Configure | Amount (`#amount`) | `<label htmlFor="amount">` |
-| Configure | Asset selector | `aria-label="Select asset"` |
-| Configure | Duration (`#duration`) | `<label htmlFor="duration">` |
-| Configure | Max loss (`#maxLoss`) | `<label htmlFor="maxLoss">` |
-| Configure | Slippage (`#slippage`) | `<label htmlFor="slippage">` |
-| Configure | Liquidation buffer (`#liquidationBuffer`) | `<label htmlFor="liquidationBuffer">` |
-| SelectType | Risk profile cards | `role="radiogroup"` + `role="radio"` with text content as accessible name |
+| Component  | Input                                     | Label mechanism                                                           |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| Configure  | Amount (`#amount`)                        | `<label htmlFor="amount">`                                                |
+| Configure  | Asset selector                            | `aria-label="Select asset"`                                               |
+| Configure  | Duration (`#duration`)                    | `<label htmlFor="duration">`                                              |
+| Configure  | Max loss (`#maxLoss`)                     | `<label htmlFor="maxLoss">`                                               |
+| Configure  | Slippage (`#slippage`)                    | `<label htmlFor="slippage">`                                              |
+| Configure  | Liquidation buffer (`#liquidationBuffer`) | `<label htmlFor="liquidationBuffer">`                                     |
+| SelectType | Risk profile cards                        | `role="radiogroup"` + `role="radio"` with text content as accessible name |
 
 ### 2. aria-describedby error / hint associations
 
 Each input that can carry validation feedback has a dynamic `aria-describedby`
 value that points only to elements that are currently rendered.
 
-| Input | Normal state | Error state | Warning state |
-|-------|-------------|-------------|---------------|
-| Amount | `amount-helper` | `amount-error` | — |
-| Duration | `duration-hint` | `duration-error` | — |
-| Max loss | `maxloss-hint` | `maxloss-error` | `maxloss-warning` |
+| Input    | Normal state    | Error state      | Warning state     |
+| -------- | --------------- | ---------------- | ----------------- |
+| Amount   | `amount-helper` | `amount-error`   | —                 |
+| Duration | `duration-hint` | `duration-error` | —                 |
+| Max loss | `maxloss-hint`  | `maxloss-error`  | `maxloss-warning` |
 
 The max-loss `aria-describedby` is computed dynamically so that the ID always
 corresponds to a rendered element:
@@ -48,13 +48,14 @@ aria-describedby={
 
 ### 3. aria-invalid toggles with validation
 
-Every validated input sets `aria-invalid={!!error}`.  Paired with
+Every validated input sets `aria-invalid={!!error}`. Paired with
 `role="alert"` on the error `<span>`, screen readers announce the error
 immediately when it appears.
 
 ### 4. Focus management on step transitions
 
 Each step component focuses its primary section heading on mount so that:
+
 - Screen-reader users hear the heading immediately when the step renders.
 - Keyboard-only users' focus position is well defined after navigation.
 
@@ -62,16 +63,21 @@ Pattern used in all three step components:
 
 ```tsx
 const headingRef = useRef<HTMLHeadingElement>(null);
-useEffect(() => { headingRef.current?.focus(); }, []);
+useEffect(() => {
+  headingRef.current?.focus();
+}, []);
 
 // render:
-<h2 ref={headingRef} tabIndex={-1}>…</h2>
+<h2 ref={headingRef} tabIndex={-1}>
+  …
+</h2>;
 ```
 
 `tabIndex={-1}` makes the heading programmatically focusable without placing it
 in the tab sequence.
 
 Focused headings per step:
+
 - **Step 1** – "Choose Your Commitment Type"
 - **Step 2** – "Configure Parameters"
 - **Step 3** – "Review & Confirm"
@@ -79,21 +85,22 @@ Focused headings per step:
 ### 5. Accessible custom checkboxes (Review step)
 
 The review step's terms and risk-acknowledgment controls are custom `<div>`
-elements that were previously click-only.  They now satisfy the ARIA checkbox
+elements that were previously click-only. They now satisfy the ARIA checkbox
 pattern:
 
-| Attribute / handler | Value |
-|---------------------|-------|
-| `role` | `"checkbox"` |
-| `aria-checked` | reflects boolean state |
-| `aria-labelledby` | points to an `id`-bearing `<span>` containing the label text |
-| `tabIndex` | `0` |
-| `onClick` | toggles state |
-| `onKeyDown` | toggles on `Enter` or `Space` (calls `preventDefault`) |
+| Attribute / handler | Value                                                        |
+| ------------------- | ------------------------------------------------------------ |
+| `role`              | `"checkbox"`                                                 |
+| `aria-checked`      | reflects boolean state                                       |
+| `aria-labelledby`   | points to an `id`-bearing `<span>` containing the label text |
+| `tabIndex`          | `0`                                                          |
+| `onClick`           | toggles state                                                |
+| `onKeyDown`         | toggles on `Enter` or `Space` (calls `preventDefault`)       |
 
 ### 6. Accessible review section links (edit buttons)
 
 Each review section contains an edit button with:
+
 - A concise, unique `aria-label` (e.g. `"Edit commitment type"`)
 - A `title` tooltip describing the navigation effect (e.g. `"Return to step 1 to edit commitment type"`)
 - Standard `<button>` element, so Enter/Space activation works natively

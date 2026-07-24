@@ -1,63 +1,59 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
-import { useWallet } from "@/hooks/useWallet";
+import React, { useEffect, useRef, useState } from 'react';
+import { useWallet } from '@/hooks/useWallet';
 
 const truncateAddress = (address: string) =>
-  address ? `${address.slice(0, 4)}…${address.slice(-4)}` : "";
+  address ? `${address.slice(0, 4)}…${address.slice(-4)}` : '';
 
 const walletErrorMessage = (error: string | null) => {
-  if (!error) return "";
+  if (!error) return '';
 
   const normalized = error.toLowerCase();
 
   if (
-    normalized.includes("freighter") ||
-    normalized.includes("not installed") ||
-    normalized.includes("not found")
+    normalized.includes('freighter') ||
+    normalized.includes('not installed') ||
+    normalized.includes('not found')
   ) {
-    return "Freighter is not available. Install it from freighter.app and refresh to continue.";
+    return 'Freighter is not available. Install it from freighter.app and refresh to continue.';
   }
 
   if (
-    normalized.includes("reject") ||
-    normalized.includes("denied") ||
-    normalized.includes("cancel")
+    normalized.includes('reject') ||
+    normalized.includes('denied') ||
+    normalized.includes('cancel')
   ) {
-    return "Connection canceled in Freighter. Try again when you are ready.";
+    return 'Connection canceled in Freighter. Try again when you are ready.';
   }
 
-  return "Unable to connect your wallet. Try again or check Freighter in your browser.";
+  return 'Unable to connect your wallet. Try again or check Freighter in your browser.';
 };
 
 export const WalletConnectButton: React.FC = () => {
-  const { connected, address, connect, disconnect, error, connecting } =
-    useWallet();
+  const { connected, address, connect, disconnect, error, connecting } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     };
 
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setMenuOpen(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEsc);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
     };
   }, []);
 
@@ -120,7 +116,7 @@ export const WalletConnectButton: React.FC = () => {
           disabled={connecting}
           aria-live="polite"
         >
-          {connecting ? "Connecting…" : "Connect Wallet"}
+          {connecting ? 'Connecting…' : 'Connect Wallet'}
         </button>
       )}
 

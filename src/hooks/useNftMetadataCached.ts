@@ -41,8 +41,8 @@ export function useNftMetadataCached({
   maxRetries = 3,
   retryDelayMs = 500,
 }: UseNftMetadataOptions): UseNftMetadataReturn {
-  const [metadata, setMetadata] = useState<Record<string, unknown> | null>(
-    () => (metadataUrl ? (memCache.get(metadataUrl) ?? null) : null),
+  const [metadata, setMetadata] = useState<Record<string, unknown> | null>(() =>
+    metadataUrl ? (memCache.get(metadataUrl) ?? null) : null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

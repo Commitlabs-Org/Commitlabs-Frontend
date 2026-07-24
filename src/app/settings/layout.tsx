@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Settings — CommitLabs',
@@ -6,8 +6,7 @@ export const metadata: Metadata = {
     'Manage your CommitLabs notification preferences, security thresholds, and account settings. Stay informed about violations, expiries, and marketplace activity.',
   openGraph: {
     title: 'Settings — CommitLabs',
-    description:
-      'Manage your CommitLabs notification preferences and security settings.',
+    description: 'Manage your CommitLabs notification preferences and security settings.',
     url: 'https://commitlabs.com/settings',
     siteName: 'CommitLabs',
     images: [
@@ -24,16 +23,11 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Settings — CommitLabs',
-    description:
-      'Manage your CommitLabs notification preferences and security settings.',
+    description: 'Manage your CommitLabs notification preferences and security settings.',
     images: ['/og-image.jpg'],
   },
-}
+};
 
-export default function SettingsLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return children
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

@@ -1,6 +1,7 @@
 # Marketplace Saved Searches
 
 This feature allows users to:
+
 - Persist marketplace filter state in the URL
 - Save and manage named search presets
 
@@ -8,14 +9,14 @@ This feature allows users to:
 
 The marketplace page uses the following URL query parameters:
 
-| Parameter           | Type                          | Example                        | Description                                  |
-|---------------------|-------------------------------|--------------------------------|----------------------------------------------|
-| `sortBy`            | string                        | `sortBy=compliance`            | Sort order                                   |
-| `commitmentType`    | comma-separated string        | `commitmentType=balanced,safe` | Selected commitment types                    |
-| `priceRange`        | comma-separated numbers       | `priceRange=0,500000`          | Min and max price range                      |
-| `durationRange`     | comma-separated numbers       | `durationRange=0,60`           | Min and max duration remaining (days)        |
-| `minCompliance`     | number                        | `minCompliance=80`             | Minimum compliance score                     |
-| `maxLoss`           | number                        | `maxLoss=50`                   | Maximum loss threshold                       |
+| Parameter        | Type                    | Example                        | Description                           |
+| ---------------- | ----------------------- | ------------------------------ | ------------------------------------- |
+| `sortBy`         | string                  | `sortBy=compliance`            | Sort order                            |
+| `commitmentType` | comma-separated string  | `commitmentType=balanced,safe` | Selected commitment types             |
+| `priceRange`     | comma-separated numbers | `priceRange=0,500000`          | Min and max price range               |
+| `durationRange`  | comma-separated numbers | `durationRange=0,60`           | Min and max duration remaining (days) |
+| `minCompliance`  | number                  | `minCompliance=80`             | Minimum compliance score              |
+| `maxLoss`        | number                  | `maxLoss=50`                   | Maximum loss threshold                |
 
 ## User Preferences API
 

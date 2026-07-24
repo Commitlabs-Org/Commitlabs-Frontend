@@ -115,7 +115,9 @@ export function makeAttestationDto(overrides: Partial<AttestationDto> = {}): Att
 // makeMarketplaceCard — UI props (src/components/MarketplaceCard.tsx)
 // ---------------------------------------------------------------------------
 
-export function makeMarketplaceCard(overrides: Partial<MarketplaceCardProps> = {}): MarketplaceCardProps {
+export function makeMarketplaceCard(
+  overrides: Partial<MarketplaceCardProps> = {},
+): MarketplaceCardProps {
   return {
     id: '1',
     type: 'Safe',

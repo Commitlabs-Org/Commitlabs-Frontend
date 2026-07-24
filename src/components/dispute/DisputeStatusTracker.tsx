@@ -5,9 +5,7 @@ import { useDisputeSSE } from '@/hooks/useDisputeSSE';
 
 export type DisputeStage = 'filed' | 'under_review' | 'resolved';
 export type DisputeResolution =
-  | 'resolved_in_favor_of_owner'
-  | 'resolved_in_favor_of_counterparty'
-  | 'dismissed';
+  'resolved_in_favor_of_owner' | 'resolved_in_favor_of_counterparty' | 'dismissed';
 
 export interface DisputeInfo {
   stage: DisputeStage;
@@ -105,7 +103,10 @@ function StepIndicator({ state }: StepIndicatorProps) {
   );
 }
 
-export default function DisputeStatusTracker({ dispute: initialDispute, commitmentId }: DisputeStatusTrackerProps) {
+export default function DisputeStatusTracker({
+  dispute: initialDispute,
+  commitmentId,
+}: DisputeStatusTrackerProps) {
   const { dispute, connected, error } = useDisputeSSE({
     commitmentId: commitmentId ?? '',
     initialDispute,

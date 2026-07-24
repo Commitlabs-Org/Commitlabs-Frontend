@@ -1,11 +1,12 @@
 # Findings — Create Commitment Wizard
 
 Flow code:
-* [`src/app/create/page.tsx`](../../../src/app/create/page.tsx)
-* [`src/components/CreateCommitmentStepSelectType.tsx`](../../../src/components/CreateCommitmentStepSelectType.tsx)
-* [`src/components/CreateCommitmentStepConfigure.tsx`](../../../src/components/CreateCommitmentStepConfigure.tsx)
-* [`src/components/CreateCommitmentStepReview.tsx`](../../../src/components/CreateCommitmentStepReview.tsx)
-* [`src/components/modals/Commitmentcreatedmodal.tsx`](../../../src/components/modals/Commitmentcreatedmodal.tsx)
+
+- [`src/app/create/page.tsx`](../../../src/app/create/page.tsx)
+- [`src/components/CreateCommitmentStepSelectType.tsx`](../../../src/components/CreateCommitmentStepSelectType.tsx)
+- [`src/components/CreateCommitmentStepConfigure.tsx`](../../../src/components/CreateCommitmentStepConfigure.tsx)
+- [`src/components/CreateCommitmentStepReview.tsx`](../../../src/components/CreateCommitmentStepReview.tsx)
+- [`src/components/modals/Commitmentcreatedmodal.tsx`](../../../src/components/modals/Commitmentcreatedmodal.tsx)
 
 This is the highest-density flow in the audit, with five Critical / High findings.
 
@@ -13,17 +14,17 @@ This is the highest-density flow in the audit, with five Critical / High finding
 
 ### F-02-01 — Continue button uses `disabled` attribute, removing it from the tab order
 
-| | |
-| :---- | :---- |
-| Severity | **Critical** |
-| Effort | S |
-| WCAG | 3.3.1 (Error Identification), 4.1.3 (Status Messages) |
+|          |                                                                                                          |
+| :------- | :------------------------------------------------------------------------------------------------------- |
+| Severity | **Critical**                                                                                             |
+| Effort   | S                                                                                                        |
+| WCAG     | 3.3.1 (Error Identification), 4.1.3 (Status Messages)                                                    |
 | Location | [`CreateCommitmentStepConfigure.tsx:442–453`](../../../src/components/CreateCommitmentStepConfigure.tsx) |
 
 **Observation.** The Continue button uses both `disabled={!isValid}` and
 `aria-disabled={!isValid}`. Native `disabled` removes the element from the tab order and
 from the accessibility tree (in most browsers). A keyboard / screen-reader user cannot
-reach the button to discover that it is disabled, nor learn *why*.
+reach the button to discover that it is disabled, nor learn _why_.
 
 **User impact.** A keyboard user tabs through the configure step, never lands on Continue,
 and has no signal that they cannot advance. They must mouse to discover the state. A
@@ -42,14 +43,14 @@ valid and invalid states.
 
 ### F-02-02 — Step 1 of the wizard is rendered outside `<main id="main-content">`
 
-| | |
-| :---- | :---- |
-| Severity | **Critical** |
-| Effort | S |
-| WCAG | 2.4.1 (Bypass Blocks) |
+|          |                                                                       |
+| :------- | :-------------------------------------------------------------------- |
+| Severity | **Critical**                                                          |
+| Effort   | S                                                                     |
+| WCAG     | 2.4.1 (Bypass Blocks)                                                 |
 | Location | [`src/app/create/page.tsx:191–198`](../../../src/app/create/page.tsx) |
 
-**Observation.** The page renders `<CreateCommitmentStepSelectType>` directly, *outside*
+**Observation.** The page renders `<CreateCommitmentStepSelectType>` directly, _outside_
 any `<main>` landmark, when `step === 1`. The site-wide skip link
 ([`layout.tsx:77`](../../../src/app/layout.tsx)) targets `#main-content`. On step 1 the
 target does not exist; activating the skip link fails silently.
@@ -68,11 +69,11 @@ Focus must land on the main content of step 1, not stay at the top.
 
 ### F-02-03 — Stepper does not expose the active step to assistive tech
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 1.3.1 (Info and Relationships) |
+|          |                                                                       |
+| :------- | :-------------------------------------------------------------------- |
+| Severity | High                                                                  |
+| Effort   | S                                                                     |
+| WCAG     | 1.3.1 (Info and Relationships)                                        |
 | Location | [`src/app/create/page.tsx:212–237`](../../../src/app/create/page.tsx) |
 
 **Observation.** The stepper is wrapped in `<nav aria-label="Progress">` (good), but the
@@ -93,11 +94,11 @@ announce "Step 2, Configure, current step".
 
 ### F-02-04 — Step transitions are not announced
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 4.1.3 (Status Messages) |
+|          |                                                                       |
+| :------- | :-------------------------------------------------------------------- |
+| Severity | High                                                                  |
+| Effort   | S                                                                     |
+| WCAG     | 4.1.3 (Status Messages)                                               |
 | Location | [`src/app/create/page.tsx:135–139`](../../../src/app/create/page.tsx) |
 
 **Observation.** When the user clicks Continue, the entire viewport content swaps to the
@@ -119,11 +120,11 @@ must announce the new step number and name within 1 second.
 
 ### F-02-05 — Tooltip uses `title` attribute on a `<span>`
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | M |
-| WCAG | 1.4.13 (Content on Hover or Focus), 2.1.1 (Keyboard) |
+|          |                                                                                                                                                    |
+| :------- | :------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | High                                                                                                                                               |
+| Effort   | M                                                                                                                                                  |
+| WCAG     | 1.4.13 (Content on Hover or Focus), 2.1.1 (Keyboard)                                                                                               |
 | Location | [`CreateCommitmentStepConfigure.tsx:158`](../../../src/components/CreateCommitmentStepConfigure.tsx) (and similar tooltip icons in Configure step) |
 
 **Observation.** The "i" tooltip on the duration label is a `<span>` with the `title`
@@ -135,9 +136,10 @@ dismissible, and is not persistable per 1.4.13.
 **Recommended fix.** Convert the icon to a `<button type="button">` that toggles a real
 tooltip (`role="tooltip"` with `aria-describedby` linking the form control to the tooltip
 content). Provide:
-* `Esc` to dismiss
-* Hoverable tooltip surface (so the user can move from the trigger into the tooltip)
-* Persistent on focus
+
+- `Esc` to dismiss
+- Hoverable tooltip surface (so the user can move from the trigger into the tooltip)
+- Persistent on focus
 
 This is a pattern; a single `<Tooltip>` primitive applied here also unblocks every other
 `title`-based tooltip in the codebase (a fast follow audit).
@@ -149,11 +151,11 @@ visible. `Esc` dismisses. Mouse-hover and keyboard-focus produce the same conten
 
 ### F-02-06 — Slider lacks `aria-valuetext` for human-readable units
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 1.3.1 (Info and Relationships), 4.1.2 (Name, Role, Value) |
+|          |                                                                                                                                                                                               |
+| :------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | High                                                                                                                                                                                          |
+| Effort   | S                                                                                                                                                                                             |
+| WCAG     | 1.3.1 (Info and Relationships), 4.1.2 (Name, Role, Value)                                                                                                                                     |
 | Location | [`CreateCommitmentStepConfigure.tsx:167–178`](../../../src/components/CreateCommitmentStepConfigure.tsx) (Duration slider, similar issue on Max Loss / Slippage / Liquidation Buffer sliders) |
 
 **Observation.** Each `<input type="range">` exposes its native `value`/`min`/`max`, so
@@ -174,11 +176,11 @@ percent, slippage, and liquidation buffer. Keep the visible label.
 
 ### F-02-07 — `aria-describedby` references an element that may not exist
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 1.3.1 (Info and Relationships) |
+|          |                                                                                                          |
+| :------- | :------------------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                                   |
+| Effort   | S                                                                                                        |
+| WCAG     | 1.3.1 (Info and Relationships)                                                                           |
 | Location | [`CreateCommitmentStepConfigure.tsx:128–151`](../../../src/components/CreateCommitmentStepConfigure.tsx) |
 
 **Observation.** The amount input declares `aria-describedby="amount-helper amount-error"`
@@ -202,11 +204,11 @@ announced. Trigger the error — both helper and error are announced.
 
 ### F-02-08 — Advanced toggle has `aria-expanded` but no `aria-controls`
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 1.3.1 (Info and Relationships) |
+|          |                                                                                                          |
+| :------- | :------------------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                                   |
+| Effort   | S                                                                                                        |
+| WCAG     | 1.3.1 (Info and Relationships)                                                                           |
 | Location | [`CreateCommitmentStepConfigure.tsx:206–211`](../../../src/components/CreateCommitmentStepConfigure.tsx) |
 
 **Observation.** The "Advanced Risk Parameters" toggle declares `aria-expanded` but
@@ -226,11 +228,11 @@ relationship resolves to the parameters region.
 
 ### F-02-09 — Required-field marker is purely visual
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 1.3.1 (Info and Relationships), 3.3.2 (Labels or Instructions) |
+|          |                                                                                                                                     |
+| :------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                                                              |
+| Effort   | S                                                                                                                                   |
+| WCAG     | 1.3.1 (Info and Relationships), 3.3.2 (Labels or Instructions)                                                                      |
 | Location | [`CreateCommitmentStepConfigure.tsx:115`](../../../src/components/CreateCommitmentStepConfigure.tsx) (Amount label, Duration label) |
 
 **Observation.** Required fields are marked with `<span className={styles.required}>*</span>`
@@ -251,11 +253,11 @@ the form (referenced via `aria-describedby` if needed).
 
 ### F-02-10 — `maxLossWarning` threshold change is silent
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 4.1.3 (Status Messages) |
+|          |                                                                                                |
+| :------- | :--------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                         |
+| Effort   | S                                                                                              |
+| WCAG     | 4.1.3 (Status Messages)                                                                        |
 | Location | [`src/app/create/page.tsx:127`](../../../src/app/create/page.tsx) and Configure step rendering |
 
 **Observation.** `maxLossWarning` flips when the slider passes 80%. The visual treatment
@@ -275,11 +277,11 @@ selected. Most commitments use 50% or less.` (or similar — needs copy review).
 
 ### F-02-11 — Type cards (step 1) keyboard semantics
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | M |
-| WCAG | 4.1.2 (Name, Role, Value), 2.1.1 (Keyboard) |
+|          |                                                                                                    |
+| :------- | :------------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                             |
+| Effort   | M                                                                                                  |
+| WCAG     | 4.1.2 (Name, Role, Value), 2.1.1 (Keyboard)                                                        |
 | Location | [`CreateCommitmentStepSelectType.tsx`](../../../src/components/CreateCommitmentStepSelectType.tsx) |
 
 **Observation.** The three commitment-type cards (Safe / Balanced / Aggressive) are a
@@ -301,19 +303,19 @@ arrow-key navigation between options for free.
 
 ## Summary
 
-| ID | Severity | Effort |
-| :- | :------- | :----- |
-| F-02-01 | Critical | S |
-| F-02-02 | Critical | S |
-| F-02-03 | High | S |
-| F-02-04 | High | S |
-| F-02-05 | High | M |
-| F-02-06 | High | S |
-| F-02-07 | Medium | S |
-| F-02-08 | Medium | S |
-| F-02-09 | Medium | S |
-| F-02-10 | Medium | S |
-| F-02-11 | Medium | M |
+| ID      | Severity | Effort |
+| :------ | :------- | :----- |
+| F-02-01 | Critical | S      |
+| F-02-02 | Critical | S      |
+| F-02-03 | High     | S      |
+| F-02-04 | High     | S      |
+| F-02-05 | High     | M      |
+| F-02-06 | High     | S      |
+| F-02-07 | Medium   | S      |
+| F-02-08 | Medium   | S      |
+| F-02-09 | Medium   | S      |
+| F-02-10 | Medium   | S      |
+| F-02-11 | Medium   | M      |
 
 **Recommendation:** the create wizard owns 2 of the 5 Critical findings. A single
 focused PR addressing F-02-01 through F-02-06 (six items, mostly S effort) would close

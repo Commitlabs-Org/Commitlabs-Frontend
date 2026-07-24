@@ -1,20 +1,20 @@
 // src/app/api/marketplace/route.ts
-import { NextRequest } from "next/server";
-import { methodNotAllowed } from "@/lib/backend/apiResponse";
+import { NextRequest } from 'next/server';
+import { methodNotAllowed } from '@/lib/backend/apiResponse';
 import {
   applyCorsPolicy,
   createCorsOptionsHandler,
   enforceCorsRequestPolicy,
   toCorsErrorResponse,
   type CorsRoutePolicy,
-} from "@/lib/backend/cors";
+} from '@/lib/backend/cors';
 import {
   validatePagination,
   validateFilters,
   validateAmount,
   handleValidationError,
   createMarketplaceListingSchema,
-} from "@/lib/backend/validation";
+} from '@/lib/backend/validation';
 
 const MARKETPLACE_CORS_POLICY = {
   GET: { access: 'public' },
@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const page = searchParams.get("page") ?? undefined;
-    const limit = searchParams.get("limit") ?? undefined;
-    const category = searchParams.get("category");
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
+    const page = searchParams.get('page') ?? undefined;
+    const limit = searchParams.get('limit') ?? undefined;
+    const category = searchParams.get('category');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
 
     // Validate pagination
     const pagination = validatePagination(page, limit);
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Mock response
     const listings = [
-      { id: "1", title: "Sample Listing", category: "impact", price: 50 },
+      { id: '1', title: 'Sample Listing', category: 'impact', price: 50 },
       // ... more
     ];
 
@@ -66,14 +66,10 @@ export async function GET(request: NextRequest) {
         filters,
         total: listings.length,
       }),
-      MARKETPLACE_CORS_POLICY
+      MARKETPLACE_CORS_POLICY,
     );
   } catch (error) {
-    return applyCorsPolicy(
-      request,
-      handleValidationError(error),
-      MARKETPLACE_CORS_POLICY
-    );
+    return applyCorsPolicy(request, handleValidationError(error), MARKETPLACE_CORS_POLICY);
   }
 }
 
@@ -94,7 +90,7 @@ export async function POST(request: NextRequest) {
     const newListing = {
       id: Date.now().toString(),
       title: validatedData.title,
-      description: validatedData.description || "",
+      description: validatedData.description || '',
       price: validatedData.price,
       category: validatedData.category,
       seller: validatedData.sellerAddress,
@@ -104,14 +100,10 @@ export async function POST(request: NextRequest) {
     return applyCorsPolicy(
       request,
       Response.json(newListing, { status: 201 }),
-      MARKETPLACE_CORS_POLICY
+      MARKETPLACE_CORS_POLICY,
     );
   } catch (error) {
-    return applyCorsPolicy(
-      request,
-      handleValidationError(error),
-      MARKETPLACE_CORS_POLICY
-    );
+    return applyCorsPolicy(request, handleValidationError(error), MARKETPLACE_CORS_POLICY);
   }
 }
 

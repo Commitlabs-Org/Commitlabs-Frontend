@@ -12,12 +12,14 @@ const defaultWidgets: WidgetConfig[] = [
   { id: 'commitment-detail', label: 'Commitment Detail', visible: true, order: 1 },
 ];
 
-const renderGrid = (overrides: {
-  widgets?: WidgetConfig[];
-  onReorder?: (from: number, to: number) => void;
-  onToggleVisibility?: (id: string) => void;
-  onReset?: () => void;
-} = {}) => {
+const renderGrid = (
+  overrides: {
+    widgets?: WidgetConfig[];
+    onReorder?: (from: number, to: number) => void;
+    onToggleVisibility?: (id: string) => void;
+    onReset?: () => void;
+  } = {},
+) => {
   const onReorder = overrides.onReorder ?? vi.fn();
   const onToggleVisibility = overrides.onToggleVisibility ?? vi.fn();
   const onReset = overrides.onReset ?? vi.fn();
@@ -31,7 +33,7 @@ const renderGrid = (overrides: {
       onReset={onReset}
     >
       {(id) => <div data-testid={`widget-${id}`}>{id} content</div>}
-    </OverviewWidgetGrid>
+    </OverviewWidgetGrid>,
   );
 
   return { ...result, onReorder, onToggleVisibility, onReset };

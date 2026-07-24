@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'My Commitments — CommitLabs',
@@ -24,16 +24,11 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'My Commitments — CommitLabs',
-    description:
-      'Manage your active liquidity commitments on CommitLabs.',
+    description: 'Manage your active liquidity commitments on CommitLabs.',
     images: ['/og-image.jpg'],
   },
-}
+};
 
-export default function CommitmentsLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return children
+export default function CommitmentsLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

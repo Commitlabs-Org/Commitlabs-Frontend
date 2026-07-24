@@ -114,9 +114,7 @@ export function NotificationList({
       <div className="text-center py-16">
         <Bell size={48} className="mx-auto text-white/20 mb-4" />
         <h3 className="text-lg font-medium text-white mb-2">No notifications</h3>
-        <p className="text-white/60 text-sm">
-          You're all caught up! Check back later for updates.
-        </p>
+        <p className="text-white/60 text-sm">You're all caught up! Check back later for updates.</p>
       </div>
     );
   }
@@ -227,16 +225,12 @@ export function NotificationList({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-4 mb-2">
-                    <h3 className="font-medium text-white truncate">
-                      {notification.title}
-                    </h3>
+                    <h3 className="font-medium text-white truncate">{notification.title}</h3>
                     <span className="text-white/40 text-xs whitespace-nowrap">
                       {new Date(notification.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-white/60 text-sm mb-3 line-clamp-2">
-                    {notification.message}
-                  </p>
+                  <p className="text-white/60 text-sm mb-3 line-clamp-2">{notification.message}</p>
 
                   {/* Action buttons */}
                   <div className="flex items-center gap-2">
@@ -261,9 +255,7 @@ export function NotificationList({
                     )}
 
                     {(notification.relatedCommitmentId || notification.relatedListingId) && (
-                      <span className="text-white/40 text-xs">
-                        → View details
-                      </span>
+                      <span className="text-white/40 text-xs">→ View details</span>
                     )}
                   </div>
                 </div>

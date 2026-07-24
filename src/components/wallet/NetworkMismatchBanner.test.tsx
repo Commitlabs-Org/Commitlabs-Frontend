@@ -66,9 +66,7 @@ describe('NetworkMismatchBanner', () => {
     setup(true, MAINNET);
     render(<NetworkMismatchBanner />);
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      /wallet is on a different network/i,
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent(/wallet is on a different network/i);
   });
 
   it('has a focusable "Switch in wallet" link', () => {

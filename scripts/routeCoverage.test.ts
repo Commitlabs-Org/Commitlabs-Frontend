@@ -52,17 +52,33 @@ describe('routeCoverage', () => {
     const openApiPath = join(tempRoot, 'openapi.yaml');
     writeFileSync(
       openApiPath,
-      ['openapi: 3.0.0', 'info:', '  title: test', 'paths:', '  /api/marketplace/featured:', '    get:'].join('\n'),
+      [
+        'openapi: 3.0.0',
+        'info:',
+        '  title: test',
+        'paths:',
+        '  /api/marketplace/featured:',
+        '    get:',
+      ].join('\n'),
     );
 
     const result = checkRouteCoverage(apiRoot, openApiPath);
 
     expect(result.undocumented).toEqual([]);
-    expect(formatUndocumentedReport(result.undocumented)).toContain('All API routes are documented');
+    expect(formatUndocumentedReport(result.undocumented)).toContain(
+      'All API routes are documented',
+    );
   });
 
   it('ignores non-path lines until the paths section begins', () => {
-    const sample = ['openapi: 3.0.0', 'info:', '  title: test', 'paths:', '  /api/ready:', '    get:'].join('\n');
+    const sample = [
+      'openapi: 3.0.0',
+      'info:',
+      '  title: test',
+      'paths:',
+      '  /api/ready:',
+      '    get:',
+    ].join('\n');
 
     expect([...parseOpenApiPaths(sample)]).toEqual(['/api/ready']);
   });

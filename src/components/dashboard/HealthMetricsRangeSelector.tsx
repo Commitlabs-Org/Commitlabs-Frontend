@@ -11,11 +11,11 @@
  * • Arrow-key navigation (←/→) moves focus between segments and activates the new range.
  */
 
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type RangeKey = "7d" | "30d" | "90d" | "all";
+export type RangeKey = '7d' | '30d' | '90d' | 'all';
 
 export interface RangeOption {
   key: RangeKey;
@@ -25,10 +25,10 @@ export interface RangeOption {
 }
 
 export const RANGE_OPTIONS: RangeOption[] = [
-  { key: "7d",  label: "7 D",  days: 7   },
-  { key: "30d", label: "30 D", days: 30  },
-  { key: "90d", label: "90 D", days: 90  },
-  { key: "all", label: "All",  days: null },
+  { key: '7d', label: '7 D', days: 7 },
+  { key: '30d', label: '30 D', days: 30 },
+  { key: '90d', label: '90 D', days: 90 },
+  { key: 'all', label: 'All', days: null },
 ];
 
 export interface HealthMetricsRangeSelectorProps {
@@ -42,17 +42,19 @@ export interface HealthMetricsRangeSelectorProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const HealthMetricsRangeSelector: React.FC<
-  HealthMetricsRangeSelectorProps
-> = ({ selected, onChange, className = "" }) => {
+export const HealthMetricsRangeSelector: React.FC<HealthMetricsRangeSelectorProps> = ({
+  selected,
+  onChange,
+  className = '',
+}) => {
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
       let next = -1;
-      if (e.key === "ArrowRight") {
+      if (e.key === 'ArrowRight') {
         next = (index + 1) % RANGE_OPTIONS.length;
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === 'ArrowLeft') {
         next = (index - 1 + RANGE_OPTIONS.length) % RANGE_OPTIONS.length;
       }
       if (next >= 0) {
@@ -62,7 +64,7 @@ export const HealthMetricsRangeSelector: React.FC<
         buttonRefs.current[next]?.focus();
       }
     },
-    [onChange]
+    [onChange],
   );
 
   return (
@@ -77,18 +79,20 @@ export const HealthMetricsRangeSelector: React.FC<
         return (
           <button
             key={option.key}
-            ref={(el) => { buttonRefs.current[index] = el; }}
+            ref={(el) => {
+              buttonRefs.current[index] = el;
+            }}
             type="button"
             aria-pressed={isActive}
             data-testid={`range-btn-${option.key}`}
             onClick={() => onChange(option.key)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={[
-              "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1",
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
               isActive
-                ? "bg-white text-blue-700 shadow-sm"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
-            ].join(" ")}
+                ? 'bg-white text-blue-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
+            ].join(' ')}
           >
             {option.label}
           </button>

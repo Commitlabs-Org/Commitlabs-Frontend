@@ -16,25 +16,25 @@
 
 `RecentAttestationsPanel` accepts one new optional prop:
 
-| Prop           | Type     | Default | Description                                              |
-|----------------|----------|---------|----------------------------------------------------------|
+| Prop           | Type     | Default | Description                                                   |
+| -------------- | -------- | ------- | ------------------------------------------------------------- |
 | `commitmentId` | `string` | `''`    | Used to build the download filename. Sanitized automatically. |
 
 All other existing props are unchanged.
 
 ## Utility Functions (src/utils/chartExport.ts)
 
-| Export                           | Signature                                                    | Description                                             |
-|----------------------------------|--------------------------------------------------------------|---------------------------------------------------------|
-| `ATTESTATION_CSV_HEADERS`        | `readonly string[]`                                          | Column headers: ID, Title, Description, TX Hash, Timestamp, Severity |
-| `buildAttestationCsvRows`        | `(attestations: Attestation[]) => CsvRow[]`                  | Maps attestations to raw CSV rows.                      |
-| `buildAttestationCsvContent`     | `(attestations: Attestation[]) => string`                    | Produces a complete CSV string (headers + rows).        |
-| `buildAttestationExportFilename` | `(commitmentId: string) => string`                           | Builds a sanitized filename with today's date.          |
+| Export                           | Signature                                   | Description                                                          |
+| -------------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| `ATTESTATION_CSV_HEADERS`        | `readonly string[]`                         | Column headers: ID, Title, Description, TX Hash, Timestamp, Severity |
+| `buildAttestationCsvRows`        | `(attestations: Attestation[]) => CsvRow[]` | Maps attestations to raw CSV rows.                                   |
+| `buildAttestationCsvContent`     | `(attestations: Attestation[]) => string`   | Produces a complete CSV string (headers + rows).                     |
+| `buildAttestationExportFilename` | `(commitmentId: string) => string`          | Builds a sanitized filename with today's date.                       |
 
 ## Usage Example
 
 ```tsx
-import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel'
+import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
 
 <RecentAttestationsPanel
   attestations={filteredAttestations}
@@ -42,7 +42,7 @@ import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/Recent
   summary={{ complianceCount: 3, warningCount: 1, violationCount: 0 }}
   onSelectAttestation={(id) => router.push(`/attestations/${id}`)}
   onViewAll={() => router.push('/attestations')}
-/>
+/>;
 ```
 
 ## Accessibility
@@ -56,10 +56,10 @@ import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/Recent
 
 ## Edge Cases
 
-| Scenario                       | Behaviour                                                            |
-|--------------------------------|----------------------------------------------------------------------|
-| Empty attestations list        | Button is disabled; no download triggered.                           |
-| Filtered / partial list        | Only the passed `attestations` appear in the CSV — not the full set. |
-| Fields containing commas       | Wrapped in double-quotes per RFC 4180.                               |
-| Formula-injection (`=`, `+`, `-`, `@`) | Prepended with `'` to neutralize spreadsheet formula execution. |
-| Special chars in `commitmentId`| Replaced with `-` via `sanitizeExportFilename`.                      |
+| Scenario                               | Behaviour                                                            |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| Empty attestations list                | Button is disabled; no download triggered.                           |
+| Filtered / partial list                | Only the passed `attestations` appear in the CSV — not the full set. |
+| Fields containing commas               | Wrapped in double-quotes per RFC 4180.                               |
+| Formula-injection (`=`, `+`, `-`, `@`) | Prepended with `'` to neutralize spreadsheet formula execution.      |
+| Special chars in `commitmentId`        | Replaced with `-` via `sanitizeExportFilename`.                      |

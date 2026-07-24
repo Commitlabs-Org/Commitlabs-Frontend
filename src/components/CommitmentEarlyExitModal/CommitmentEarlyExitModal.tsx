@@ -3,10 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, X, Info } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
-import {
-  fetchProtocolConstants,
-  getEarlyExitGracePeriodDays,
-} from '@/utils/protocol';
+import { fetchProtocolConstants, getEarlyExitGracePeriodDays } from '@/utils/protocol';
 import { ExitTimingPreview } from './ExitTimingPreview';
 import { GraceCountdownBanner } from './GraceCountdownBanner';
 
@@ -30,7 +27,7 @@ function formatScreenReaderText(val: string): string {
     .replace(/\bXLM\b/gi, 'Stellar Lumens')
     .replace(/\bUSDC\b/gi, 'USD Coin')
     .replace(/%/g, ' percent')
-    .replace(/-/g, 'minus ')
+    .replace(/-/g, 'minus ');
 }
 
 export default function CommitmentEarlyExitModal({
@@ -47,10 +44,10 @@ export default function CommitmentEarlyExitModal({
   onClose,
   maturityDate,
 }: CommitmentEarlyExitModalProps) {
-  const [confirmationInput, setConfirmationInput] = useState('')
-  const [gracePeriodDays, setGracePeriodDays] = useState<number | null>(null)
-  const hasTypedConfirmation = confirmationInput.trim() === commitmentId
-  const canConfirm = hasAcknowledged && hasTypedConfirmation
+  const [confirmationInput, setConfirmationInput] = useState('');
+  const [gracePeriodDays, setGracePeriodDays] = useState<number | null>(null);
+  const hasTypedConfirmation = confirmationInput.trim() === commitmentId;
+  const canConfirm = hasAcknowledged && hasTypedConfirmation;
 
   const parsedOriginalAmount = parseFloat(originalAmount.replace(/,/g, ''));
   const parsedPenaltyPercent = parseFloat(penaltyPercent);
@@ -99,7 +96,10 @@ export default function CommitmentEarlyExitModal({
             <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF8A04]" strokeWidth={2.5} />
           </div>
           <div>
-            <h2 id="early-exit-title" className="text-[20px] sm:text-[24px] font-bold tracking-tight text-white leading-tight">
+            <h2
+              id="early-exit-title"
+              className="text-[20px] sm:text-[24px] font-bold tracking-tight text-white leading-tight"
+            >
               Early Exit Warning
             </h2>
             <p className="text-[13px] sm:text-[14px] text-white/50 font-medium mt-1 leading-snug">
@@ -119,47 +119,87 @@ export default function CommitmentEarlyExitModal({
       {/* Content Body */}
       <div className="px-6 sm:px-10 pb-8">
         {/* Summary Table - Semantic financial breakdown for accessibility */}
-        <table className="w-full text-left border-collapse mb-8" aria-label="Early exit penalty breakdown">
-          <caption className="sr-only">Financial breakdown of early exit penalty and final refund amount</caption>
+        <table
+          className="w-full text-left border-collapse mb-8"
+          aria-label="Early exit penalty breakdown"
+        >
+          <caption className="sr-only">
+            Financial breakdown of early exit penalty and final refund amount
+          </caption>
           <thead>
             <tr className="border-b border-white/10">
-              <th scope="col" className="text-[12px] font-bold uppercase tracking-wider text-white/40 pb-3">Item</th>
-              <th scope="col" className="text-[12px] font-bold uppercase tracking-wider text-white/40 pb-3 text-right">Value</th>
+              <th
+                scope="col"
+                className="text-[12px] font-bold uppercase tracking-wider text-white/40 pb-3"
+              >
+                Item
+              </th>
+              <th
+                scope="col"
+                className="text-[12px] font-bold uppercase tracking-wider text-white/40 pb-3 text-right"
+              >
+                Value
+              </th>
             </tr>
           </thead>
           <tbody>
             {/* Commitment ID */}
             <tr className="border-b border-white/5">
-              <th scope="row" className="py-3 text-[14px] text-white/40 font-medium">Commitment ID</th>
-              <td className="py-3 text-[14px] font-mono text-white/80 font-bold text-right" aria-label={`Commitment ID ${commitmentId}`}>
+              <th scope="row" className="py-3 text-[14px] text-white/40 font-medium">
+                Commitment ID
+              </th>
+              <td
+                className="py-3 text-[14px] font-mono text-white/80 font-bold text-right"
+                aria-label={`Commitment ID ${commitmentId}`}
+              >
                 {commitmentId.slice(0, 8)}...{commitmentId.slice(-6)}
               </td>
             </tr>
             {/* Before Early Exit */}
             <tr className="border-b border-white/5">
-              <th scope="row" className="py-3 text-[14px] text-white/40 font-medium">Before Early Exit (Committed Amount)</th>
-              <td className="py-3 text-[14px] text-white font-bold text-right" aria-label={`Committed amount: ${formatScreenReaderText(originalAmount)}`}>
+              <th scope="row" className="py-3 text-[14px] text-white/40 font-medium">
+                Before Early Exit (Committed Amount)
+              </th>
+              <td
+                className="py-3 text-[14px] text-white font-bold text-right"
+                aria-label={`Committed amount: ${formatScreenReaderText(originalAmount)}`}
+              >
                 {originalAmount}
               </td>
             </tr>
             {/* Penalty Rate */}
             <tr className="border-b border-white/5">
-              <th scope="row" className="py-3 text-[14px] text-[#FF8A04]/80 font-medium">Penalty Rate</th>
-              <td className="py-3 text-[14px] text-[#FF8A04] font-bold text-right" aria-label={`Penalty rate: ${formatScreenReaderText(penaltyPercent)}`}>
+              <th scope="row" className="py-3 text-[14px] text-[#FF8A04]/80 font-medium">
+                Penalty Rate
+              </th>
+              <td
+                className="py-3 text-[14px] text-[#FF8A04] font-bold text-right"
+                aria-label={`Penalty rate: ${formatScreenReaderText(penaltyPercent)}`}
+              >
                 {penaltyPercent}
               </td>
             </tr>
             {/* Penalty Deduction */}
             <tr className="border-b border-white/5">
-              <th scope="row" className="py-3 text-[14px] text-[#FF8A04]/80 font-medium">Penalty Deduction</th>
-              <td className="py-3 text-[14px] text-[#FF8A04] font-bold text-right" aria-label={`Penalty deduction: minus ${formatScreenReaderText(penaltyAmount)}`}>
+              <th scope="row" className="py-3 text-[14px] text-[#FF8A04]/80 font-medium">
+                Penalty Deduction
+              </th>
+              <td
+                className="py-3 text-[14px] text-[#FF8A04] font-bold text-right"
+                aria-label={`Penalty deduction: minus ${formatScreenReaderText(penaltyAmount)}`}
+              >
                 -{penaltyAmount}
               </td>
             </tr>
             {/* After Early Exit */}
             <tr>
-              <th scope="row" className="py-4 text-[15px] text-white font-bold tracking-tight">After Early Exit (Net Refund)</th>
-              <td className="py-4 text-[18px] text-[#0FF0FC] font-extrabold tracking-tight text-right" aria-label={`Net refund amount: ${formatScreenReaderText(netReceiveAmount)}`}>
+              <th scope="row" className="py-4 text-[15px] text-white font-bold tracking-tight">
+                After Early Exit (Net Refund)
+              </th>
+              <td
+                className="py-4 text-[18px] text-[#0FF0FC] font-extrabold tracking-tight text-right"
+                aria-label={`Net refund amount: ${formatScreenReaderText(netReceiveAmount)}`}
+              >
                 {netReceiveAmount}
               </td>
             </tr>
@@ -183,14 +223,16 @@ export default function CommitmentEarlyExitModal({
         <div className="bg-[#FF8A04]/10 border border-[#FF8A04]/20 rounded-2xl p-5 mb-8 group hover:bg-[#FF8A04]/15 transition-colors">
           <div className="flex items-center gap-2.5 mb-4 text-[#FF8A04]">
             <Info className="w-4 h-4" />
-            <span className="text-[13px] font-bold uppercase tracking-widest">Important consequences</span>
+            <span className="text-[13px] font-bold uppercase tracking-widest">
+              Important consequences
+            </span>
           </div>
           <ul className="space-y-2.5">
             {[
               'You will lose the penalty amount shown above immediately.',
               'The commitment will be recorded as an Early Exit on-chain.',
               'This action cannot be reversed or modified.',
-              'You forfeit future yield and continue to hold reduced value.'
+              'You forfeit future yield and continue to hold reduced value.',
             ].map((text, i) => (
               <li key={i} className="flex items-start gap-2.5 leading-snug">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#FF8A04]/40 mt-1.5 shrink-0" />
@@ -209,15 +251,22 @@ export default function CommitmentEarlyExitModal({
               checked={hasAcknowledged}
               onChange={(e) => onChangeAcknowledged(e.target.checked)}
             />
-            <X className="absolute h-3.5 w-3.5 text-black opacity-0 peer-checked:opacity-100 left-0.5 top-0.5 pointer-events-none" strokeWidth={4} />
+            <X
+              className="absolute h-3.5 w-3.5 text-black opacity-0 peer-checked:opacity-100 left-0.5 top-0.5 pointer-events-none"
+              strokeWidth={4}
+            />
           </div>
           <span className="text-[14px] text-white/70 font-medium leading-snug select-none group-hover:text-white transition-colors">
-            I understand this will record an early exit on-chain and deduct {penaltyPercent} from the committed amount.
+            I understand this will record an early exit on-chain and deduct {penaltyPercent} from
+            the committed amount.
           </span>
         </label>
 
         <div className="mb-6 rounded-2xl border border-white/[0.04] bg-white/[0.02] p-4">
-          <label htmlFor="confirmation-input" className="block text-[13px] font-semibold text-white/60 mb-2">
+          <label
+            htmlFor="confirmation-input"
+            className="block text-[13px] font-semibold text-white/60 mb-2"
+          >
             Type the commitment ID to confirm
           </label>
           <input
@@ -230,7 +279,8 @@ export default function CommitmentEarlyExitModal({
             autoComplete="off"
           />
           <p className="mt-2 text-[12px] text-white/40">
-            Confirming this action requires the exact commitment ID: <span className="font-mono text-[#0FF0FC]">{commitmentId}</span>
+            Confirming this action requires the exact commitment ID:{' '}
+            <span className="font-mono text-[#0FF0FC]">{commitmentId}</span>
           </p>
         </div>
 
@@ -252,5 +302,5 @@ export default function CommitmentEarlyExitModal({
         </div>
       </div>
     </Dialog>
-  )
+  );
 }

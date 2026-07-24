@@ -29,19 +29,25 @@ describe('MarketplaceGridSkeleton', () => {
 
   it('has an accessible role=status label', () => {
     render(<MarketplaceGridSkeleton />);
-    expect(screen.getByRole('status', { name: /loading marketplace listings/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: /loading marketplace listings/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders filters skeleton when showFilters is true (default)', () => {
     const { container } = render(<MarketplaceGridSkeleton showFilters={true} />);
     // FiltersSkeleton renders 5 Skeleton children; confirm its wrapper is present
-    const filterSkeletonItems = container.querySelectorAll('[aria-label="Loading marketplace listings"] .flex.flex-wrap');
+    const filterSkeletonItems = container.querySelectorAll(
+      '[aria-label="Loading marketplace listings"] .flex.flex-wrap',
+    );
     expect(filterSkeletonItems.length).toBeGreaterThan(0);
   });
 
   it('does not render filter section when showFilters is false', () => {
     const { container } = render(<MarketplaceGridSkeleton showFilters={false} />);
-    const filterSkeletonItems = container.querySelectorAll('[aria-label="Loading marketplace listings"] .flex.flex-wrap');
+    const filterSkeletonItems = container.querySelectorAll(
+      '[aria-label="Loading marketplace listings"] .flex.flex-wrap',
+    );
     expect(filterSkeletonItems.length).toBe(0);
   });
 
@@ -84,7 +90,9 @@ describe('MyCommitmentsGridSkeleton', () => {
   });
 
   it('does not render stats section when showStats is false', () => {
-    const { container } = render(<MyCommitmentsGridSkeleton showStats={false} showFilters={false} />);
+    const { container } = render(
+      <MyCommitmentsGridSkeleton showStats={false} showFilters={false} />,
+    );
     // Without stats and filters, only the count placeholder + grid should remain
     const statGrids = container.querySelectorAll('.grid.grid-cols-2');
     // The only remaining grid should be the card grid (grid-cols-3)

@@ -27,8 +27,8 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
   onExportSelected,
   isExporting = false,
 }) => {
-  const visibleIds = commitments.map(c => c.id);
-  
+  const visibleIds = commitments.map((c) => c.id);
+
   const {
     selectedIds,
     selectedCount,
@@ -77,7 +77,7 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
             </span>
           </label>
         </div>
-        
+
         {selectedCount > 0 && (
           <div className="flex items-center gap-2 text-sm text-[#0FF0FC]">
             <Check size={16} />
@@ -85,7 +85,7 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
           </div>
         )}
       </div>
-      
+
       {commitments.length > 0 ? (
         <div className="grid grid-cols-3 gap-6 max-[1200px]:grid-cols-2 max-[768px]:grid-cols-1">
           {commitments.map((commitment) => (

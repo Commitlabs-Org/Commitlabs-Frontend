@@ -45,7 +45,7 @@ describe("TrustBadge Accessibility", () => {
 
 ### 2. Testing React Portals & Overlay Components (e.g., Dialogs, Modals)
 
-If a component uses a React portal (e.g., `createPortal` targeting `document.body`), its content is rendered outside the standard testing `container` wrapper. 
+If a component uses a React portal (e.g., `createPortal` targeting `document.body`), its content is rendered outside the standard testing `container` wrapper.
 
 In this case, query `document.body` instead of `container`:
 

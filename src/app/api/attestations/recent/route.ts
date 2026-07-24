@@ -1,4 +1,3 @@
-
 /**
  * GET /api/attestations/recent
  *
@@ -41,11 +40,7 @@ import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { getMockData } from '@/lib/backend/mockDb';
-import {
-  ValidationError,
-  TooManyRequestsError,
-  UnauthorizedError,
-} from '@/lib/backend/errors';
+import { ValidationError, TooManyRequestsError, UnauthorizedError } from '@/lib/backend/errors';
 import {
   parsePaginationParams,
   paginateArray,
@@ -66,10 +61,9 @@ function parseOwnerAddress(searchParams: URLSearchParams): string | undefined {
 
   const trimmed = raw.trim();
   if (trimmed === '') {
-    throw new ValidationError(
-      '"ownerAddress" must be a non-empty string when provided.',
-      { field: 'ownerAddress' }
-    );
+    throw new ValidationError('"ownerAddress" must be a non-empty string when provided.', {
+      field: 'ownerAddress',
+    });
   }
   return trimmed;
 }
@@ -125,7 +119,7 @@ export const GET = withApiHandler(async (req: NextRequest) => {
     const token = extractBearerToken(req);
     if (!token) {
       throw new UnauthorizedError(
-        'Authentication is required to filter attestations by ownerAddress.'
+        'Authentication is required to filter attestations by ownerAddress.',
       );
     }
     // TODO: validate token against session store (JWT / Redis) in production
@@ -140,15 +134,12 @@ export const GET = withApiHandler(async (req: NextRequest) => {
     ? attestations.filter(
         (a) =>
           typeof a.details?.ownerAddress === 'string' &&
-          a.details.ownerAddress.toLowerCase() === ownerAddress.toLowerCase()
+          a.details.ownerAddress.toLowerCase() === ownerAddress.toLowerCase(),
       )
     : attestations;
 
   const sorted = sortByTimestampDesc(filtered);
   const paginated = paginateArray(sorted, pagination);
 
-  return ok(
-    { attestations: paginated.data, total: paginated.meta.total },
-    paginated.meta
-  );
+  return ok({ attestations: paginated.data, total: paginated.meta.total }, paginated.meta);
 });

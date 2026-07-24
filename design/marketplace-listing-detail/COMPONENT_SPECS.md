@@ -57,15 +57,15 @@ interface ListingDetailPageProps {
 ```typescript
 interface CommitmentSummaryProps {
   listingId: string;
-  commitmentType: "Safe" | "Balanced" | "Aggressive";
+  commitmentType: 'Safe' | 'Balanced' | 'Aggressive';
   amount: string; // Formatted: "$50,000"
   yield: string; // Formatted: "5.2%"
   duration: string; // Formatted: "25 days"
   maxLoss: string; // Formatted: "2%" or "100%"
   assetName: string; // E.g., "Stellar Lumens (XLM)"
-  network: "mainnet" | "testnet";
+  network: 'mainnet' | 'testnet';
   healthScore?: number; // 0-100, optional
-  complianceStatus?: "on-track" | "at-risk" | "default";
+  complianceStatus?: 'on-track' | 'at-risk' | 'default';
   lastAttestation?: Date;
   attestationCount?: number;
 }
@@ -127,7 +127,7 @@ interface CommitmentSummaryProps {
 interface SellerInfoProps {
   sellerAddress: string; // Full address (0x...)
   sellerName?: string; // Optional display name
-  trustLevel: "verified" | "reputable" | "unverified";
+  trustLevel: 'verified' | 'reputable' | 'unverified';
   reputationScore: number; // 0-100
   totalCommitments: number;
   successRate: number; // Percentage (0-100)
@@ -189,13 +189,13 @@ interface SellerInfoProps {
 ```typescript
 interface PurchaseCtaProps {
   listingId: string;
-  listingStatus: "available" | "not-for-sale" | "delisted";
-  userStatus: "authenticated" | "unauthenticated";
+  listingStatus: 'available' | 'not-for-sale' | 'delisted';
+  userStatus: 'authenticated' | 'unauthenticated';
   walletConnected: boolean;
   walletAddress?: string;
   sellerAddress: string;
   userHasSufficientBalance?: boolean;
-  ctaState: "eligible" | "ineligible" | "needs-wallet" | "unauthenticated";
+  ctaState: 'eligible' | 'ineligible' | 'needs-wallet' | 'unauthenticated';
   ineligibleReason?: string; // E.g., "You cannot purchase your own commitments"
   onPurchaseClick: () => void;
   onConnectWalletClick: () => void;
@@ -207,15 +207,15 @@ interface PurchaseCtaProps {
 ### CTA State Logic
 
 ```typescript
-type CtaState = "eligible" | "ineligible" | "needs-wallet" | "unauthenticated";
+type CtaState = 'eligible' | 'ineligible' | 'needs-wallet' | 'unauthenticated';
 
 function computeCtaState(props: PurchaseCtaProps): CtaState {
-  if (!props.userStatus === "unauthenticated") return "unauthenticated";
-  if (!props.walletConnected) return "needs-wallet";
-  if (props.listingStatus !== "available") return "ineligible";
-  if (props.walletAddress === props.sellerAddress) return "ineligible";
-  if (!props.userHasSufficientBalance) return "ineligible";
-  return "eligible";
+  if (!props.userStatus === 'unauthenticated') return 'unauthenticated';
+  if (!props.walletConnected) return 'needs-wallet';
+  if (props.listingStatus !== 'available') return 'ineligible';
+  if (props.walletAddress === props.sellerAddress) return 'ineligible';
+  if (!props.userHasSufficientBalance) return 'ineligible';
+  return 'eligible';
 }
 ```
 
@@ -295,7 +295,7 @@ interface AttestationHistorySectionProps {
 
 interface Attestation {
   id: string;
-  event: "created" | "verified" | "settled" | "disputed" | "default";
+  event: 'created' | 'verified' | 'settled' | 'disputed' | 'default';
   timestamp: Date;
   details?: string;
   transactionHash?: string;
@@ -391,7 +391,7 @@ interface ListingDetailSkeletonProps {
 
 ```typescript
 interface ListingDetailErrorProps {
-  type: "not-found" | "network-error" | "permission-denied" | "unknown";
+  type: 'not-found' | 'network-error' | 'permission-denied' | 'unknown';
   onRetry?: () => void;
   onGoHome?: () => void;
   onBrowseMarketplace?: () => void;
@@ -485,13 +485,13 @@ interface ExternalLinkBadgeProps {
 // Core listing data
 interface Listing {
   id: string;
-  commitmentType: "Safe" | "Balanced" | "Aggressive";
+  commitmentType: 'Safe' | 'Balanced' | 'Aggressive';
   amount: number; // In USD or base units
   yield: number; // Annual percentage
   duration: number; // In days
   maxLoss: number; // Percentage (0-100)
   assetName: string;
-  network: "mainnet" | "testnet";
+  network: 'mainnet' | 'testnet';
   sellerAddress: string;
   forSale: boolean;
   createdAt: Date;
@@ -501,7 +501,7 @@ interface Listing {
 // Seller reputation data
 interface SellerReputation {
   address: string;
-  trustLevel: "verified" | "reputable" | "unverified";
+  trustLevel: 'verified' | 'reputable' | 'unverified';
   score: number; // 0-100
   totalCommitments: number;
   successRate: number; // 0-100
@@ -512,7 +512,7 @@ interface SellerReputation {
 interface Attestation {
   id: string;
   listingId: string;
-  event: "created" | "verified" | "settled" | "disputed" | "default";
+  event: 'created' | 'verified' | 'settled' | 'disputed' | 'default';
   timestamp: Date;
   details?: string;
   transactionHash?: string;
@@ -526,7 +526,7 @@ interface ListingDetailPageData {
 }
 
 // CTA state for purchase button
-type CtaState = "eligible" | "ineligible" | "needs-wallet" | "unauthenticated";
+type CtaState = 'eligible' | 'ineligible' | 'needs-wallet' | 'unauthenticated';
 ```
 
 ---

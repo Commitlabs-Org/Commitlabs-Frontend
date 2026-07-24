@@ -13,17 +13,15 @@
  * @see src/lib/backend/services/contracts.ts
  */
 
-import { getContractAddress } from "../lib/backend/config";
-import { getValidatedClientEnv } from "../lib/clientEnv";
+import { getContractAddress } from '../lib/backend/config';
+import { getValidatedClientEnv } from '../lib/clientEnv';
 
 const clientEnv = getValidatedClientEnv();
 
 export const rpcUrl =
-  clientEnv.NEXT_PUBLIC_SOROBAN_RPC_URL ||
-  "https://soroban-testnet.stellar.org:443";
+  clientEnv.NEXT_PUBLIC_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org:443';
 export const networkPassphrase =
-  clientEnv.NEXT_PUBLIC_NETWORK_PASSPHRASE ||
-  "Test SDF Network ; September 2015";
+  clientEnv.NEXT_PUBLIC_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015';
 
 /**
  * Lazily-loaded contract addresses to avoid build-time errors when env vars aren't set.
@@ -32,23 +30,23 @@ export const networkPassphrase =
 export const contractAddresses = {
   get commitmentNFT() {
     try {
-      return getContractAddress("commitmentNFT");
+      return getContractAddress('commitmentNFT');
     } catch {
-      return "";
+      return '';
     }
   },
   get commitmentCore() {
     try {
-      return getContractAddress("commitmentCore");
+      return getContractAddress('commitmentCore');
     } catch {
-      return "";
+      return '';
     }
   },
   get attestationEngine() {
     try {
-      return getContractAddress("attestationEngine");
+      return getContractAddress('attestationEngine');
     } catch {
-      return "";
+      return '';
     }
   },
 };

@@ -52,56 +52,58 @@ export default function NotificationsPage() {
   }, [address, readState]);
 
   // Persist read state to user preferences
-  const persistReadState = useCallback(async (notificationId: string, read: boolean) => {
-    if (!sessionToken || !authenticated) return;
+  const persistReadState = useCallback(
+    async (notificationId: string, read: boolean) => {
+      if (!sessionToken || !authenticated) return;
 
-    try {
-      // Get current preferences
-      const prefsResponse = await fetch('/api/user/preferences', {
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-        },
-      });
+      try {
+        // Get current preferences
+        const prefsResponse = await fetch('/api/user/preferences', {
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+          },
+        });
 
-      if (!prefsResponse.ok) return;
+        if (!prefsResponse.ok) return;
 
-      const prefsData = await prefsResponse.json();
-      const currentPrefs = prefsData.data?.preferences || prefsData.preferences || {};
+        const prefsData = await prefsResponse.json();
+        const currentPrefs = prefsData.data?.preferences || prefsData.preferences || {};
 
-      // Update lastSeenNotification timestamp
-      const updatedPrefs = {
-        ...currentPrefs,
-        lastSeenNotification: new Date().toISOString(),
-      };
+        // Update lastSeenNotification timestamp
+        const updatedPrefs = {
+          ...currentPrefs,
+          lastSeenNotification: new Date().toISOString(),
+        };
 
-      await fetch('/api/user/preferences', {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedPrefs),
-      });
-    } catch (err) {
-      console.error('Failed to persist read state:', err);
-    }
-  }, [sessionToken, authenticated]);
+        await fetch('/api/user/preferences', {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedPrefs),
+        });
+      } catch (err) {
+        console.error('Failed to persist read state:', err);
+      }
+    },
+    [sessionToken, authenticated],
+  );
 
   // Mark notification as read
-  const handleMarkRead = useCallback((id: string) => {
-    setReadState((prev) => ({ ...prev, [id]: true }));
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-    persistReadState(id, true);
-  }, [persistReadState]);
+  const handleMarkRead = useCallback(
+    (id: string) => {
+      setReadState((prev) => ({ ...prev, [id]: true }));
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      persistReadState(id, true);
+    },
+    [persistReadState],
+  );
 
   // Mark notification as unread
   const handleMarkUnread = useCallback((id: string) => {
     setReadState((prev) => ({ ...prev, [id]: false }));
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: false } : n))
-    );
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: false } : n)));
   }, []);
 
   // Fetch notifications on mount and when address changes
@@ -118,9 +120,7 @@ export default function NotificationsPage() {
         <main className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-2">Authentication Required</h1>
-            <p className="text-white/60">
-              Please connect your wallet to view notifications.
-            </p>
+            <p className="text-white/60">Please connect your wallet to view notifications.</p>
           </div>
         </main>
       </AppShellLayout>

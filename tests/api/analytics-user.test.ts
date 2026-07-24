@@ -32,7 +32,9 @@ describe('GET /api/analytics/user', () => {
 
   it('returns 404 when feature flag disabled', async () => {
     isFeatureEnabled.mockReturnValue(false);
-    const req = createMockRequest('http://localhost/api/analytics/user?ownerAddress=GOWNER', { method: 'GET' });
+    const req = createMockRequest('http://localhost/api/analytics/user?ownerAddress=GOWNER', {
+      method: 'GET',
+    });
     const response = await GET(req);
     const result = await parseResponse(response);
     expect(response.status).toBe(404);
@@ -41,7 +43,9 @@ describe('GET /api/analytics/user', () => {
 
   it('returns zeroed analytics when no commitments', async () => {
     getUserCommitmentsFromChain.mockResolvedValue([]);
-    const req = createMockRequest('http://localhost/api/analytics/user?ownerAddress=GOWNER', { method: 'GET' });
+    const req = createMockRequest('http://localhost/api/analytics/user?ownerAddress=GOWNER', {
+      method: 'GET',
+    });
     const response = await GET(req);
     const result = await parseResponse(response);
     expect(response.status).toBe(200);
@@ -81,7 +85,9 @@ describe('GET /api/analytics/user', () => {
       },
     ];
     getUserCommitmentsFromChain.mockResolvedValue(mockCommitments);
-    const req = createMockRequest('http://localhost/api/analytics/user?ownerAddress=GOWNER', { method: 'GET' });
+    const req = createMockRequest('http://localhost/api/analytics/user?ownerAddress=GOWNER', {
+      method: 'GET',
+    });
     const response = await GET(req);
     const result = await parseResponse(response);
     expect(response.status).toBe(200);

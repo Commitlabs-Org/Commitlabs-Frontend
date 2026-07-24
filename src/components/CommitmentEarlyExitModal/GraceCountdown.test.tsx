@@ -11,9 +11,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const mockExitTimingPreview = vi.hoisted(() => vi.fn());
 
 vi.mock('@/utils/protocol', async () => {
-  const actual = await vi.importActual<typeof import('@/utils/protocol')>(
-    '@/utils/protocol',
-  );
+  const actual = await vi.importActual<typeof import('@/utils/protocol')>('@/utils/protocol');
 
   return {
     ...actual,
@@ -66,9 +64,7 @@ describe('GraceCountdownBanner', () => {
     );
 
     expect(screen.getByRole('status')).toHaveTextContent('Penalty-free grace period');
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'You are inside the 7-day grace period.',
-    );
+    expect(screen.getByRole('status')).toHaveTextContent('You are inside the 7-day grace period.');
   });
 
   it('shows a ticking countdown before the grace period opens', () => {
@@ -98,9 +94,7 @@ describe('GraceCountdownBanner', () => {
     );
 
     expect(screen.getByRole('status')).toHaveTextContent('Penalty applies now');
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'no penalty-free grace period',
-    );
+    expect(screen.getByRole('status')).toHaveTextContent('no penalty-free grace period');
   });
 
   it('honors reduced motion by omitting seconds from the live countdown', async () => {
@@ -161,9 +155,7 @@ describe('GraceCountdownBanner', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      '5-day penalty-free grace period',
-    );
+    expect(screen.getByRole('status')).toHaveTextContent('5-day penalty-free grace period');
     expect(mockExitTimingPreview).toHaveBeenLastCalledWith(
       expect.objectContaining({ gracePeriodDays: 5 }),
     );

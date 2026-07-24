@@ -114,9 +114,7 @@ describe('useCommandPalette', () => {
     const { result } = renderHook(() => useCommandPalette());
 
     act(() => {
-      window.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'k', bubbles: true }),
-      );
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true }));
     });
 
     expect(result.current.isOpen).toBe(false);
@@ -128,10 +126,7 @@ describe('useCommandPalette', () => {
     const { unmount } = renderHook(() => useCommandPalette());
     unmount();
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      'keydown',
-      expect.any(Function),
-    );
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
   });
 
   it('does not respond to keyboard events after unmount', () => {

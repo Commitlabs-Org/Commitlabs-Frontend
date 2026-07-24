@@ -1,16 +1,11 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { FaTwitter, FaGithub } from "react-icons/fa";
+import React from 'react';
+import Link from 'next/link';
+import { FaTwitter, FaGithub } from 'react-icons/fa';
 
 const ForumIcon = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 40 40"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
+  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path
       d="M16.5832 26.6664C18.1737 27.4823 20.0032 27.7033 21.7422 27.2895C23.4812 26.8758 25.0153 25.8546 26.068 24.4099C27.1206 22.9652 27.6227 21.192 27.4837 19.4098C27.3446 17.6277 26.5737 15.9539 25.3097 14.6899C24.0457 13.4259 22.3718 12.6549 20.5897 12.5159C18.8076 12.3769 17.0344 12.8789 15.5897 13.9316C14.145 14.9843 13.1237 16.5183 12.71 18.2573C12.2963 19.9963 12.5173 21.8259 13.3332 23.4164L11.6665 28.333L16.5832 26.6664Z"
       stroke="currentColor"
@@ -34,37 +29,37 @@ interface SocialLink {
 }
 
 const resourceLinks: FooterLink[] = [
-  { label: "Documentation", href: "#" },
-  { label: "Whitepaper", href: "#" },
-  { label: "GitHub", href: "https://github.com/commitlabs" },
-  { label: "Blog", href: "#" },
+  { label: 'Documentation', href: '#' },
+  { label: 'Whitepaper', href: '#' },
+  { label: 'GitHub', href: 'https://github.com/commitlabs' },
+  { label: 'Blog', href: '#' },
 ];
 
 const communityLinks: FooterLink[] = [
-  { label: "Twitter", href: "#" },
-  { label: "Discord", href: "#" },
-  { label: "Telegram", href: "#" },
-  { label: "Forum", href: "#" },
+  { label: 'Twitter', href: '#' },
+  { label: 'Discord', href: '#' },
+  { label: 'Telegram', href: '#' },
+  { label: 'Forum', href: '#' },
 ];
 
 const socialLinks: SocialLink[] = [
   {
     icon: FaTwitter,
-    href: "https://twitter.com/commitlabs",
-    label: "Twitter",
-    sizeClass: "w-5 h-5",
+    href: 'https://twitter.com/commitlabs',
+    label: 'Twitter',
+    sizeClass: 'w-5 h-5',
   },
   {
     icon: FaGithub,
-    href: "https://github.com/commitlabs",
-    label: "GitHub",
-    sizeClass: "w-5 h-5",
+    href: 'https://github.com/commitlabs',
+    label: 'GitHub',
+    sizeClass: 'w-5 h-5',
   },
   {
     icon: ForumIcon,
-    href: "#",
-    label: "Forum",
-    sizeClass: "w-10 h-10",
+    href: '#',
+    label: 'Forum',
+    sizeClass: 'w-10 h-10',
   },
 ];
 
@@ -81,18 +76,13 @@ export const Footer: React.FC = () => {
                 className="relative grid h-[38px] w-[38px] place-items-center rounded-full border border-[#0ff0fc] bg-[rgba(8,12,16,0.95)] shadow-[0_0_14px_rgba(0,212,255,0.35)]"
                 aria-hidden="true"
               >
-                <span className="font-roboto text-[18px] font-normal text-white">
-                  C
-                </span>
+                <span className="font-roboto text-[18px] font-normal text-white">C</span>
               </span>
-              <span className="font-roboto text-xl font-bold text-white">
-                CommitLabs
-              </span>
+              <span className="font-roboto text-xl font-bold text-white">CommitLabs</span>
             </Link>
             <p className="font-['Inter',sans-serif] text-sm leading-6 text-[#99a1af]">
-              Building core DeFi infrastructure that transforms passive
-              liquidity into enforceable, attestable, and composable on-chain
-              commitments.
+              Building core DeFi infrastructure that transforms passive liquidity into enforceable,
+              attestable, and composable on-chain commitments.
             </p>
           </div>
 

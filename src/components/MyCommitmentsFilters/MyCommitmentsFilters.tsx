@@ -71,9 +71,7 @@ const MyCommitmentsFilters: React.FC<MyCommitmentsFiltersProps> = ({
           <ChevronDown className={styles.chevronIcon} size={16} />
         </div>
 
-        {onSortByChange && (
-          <SortMenu sortBy={sortBy} onSortByChange={onSortByChange} />
-        )}
+        {onSortByChange && <SortMenu sortBy={sortBy} onSortByChange={onSortByChange} />}
       </div>
     </div>
   );

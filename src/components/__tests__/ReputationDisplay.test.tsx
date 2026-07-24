@@ -11,17 +11,8 @@ const GREEN = 'text-[#00C950]'; // score >= 90
 const BLUE = 'text-[#51A2FF]'; // score >= 75
 const ORANGE = 'text-[#FF8904]'; // score < 75
 
-function renderDisplay(
-  props: Partial<React.ComponentProps<typeof ReputationDisplay>> = {},
-) {
-  return render(
-    <ReputationDisplay
-      score={90}
-      totalCommitments={12}
-      successRate={98}
-      {...props}
-    />,
-  );
+function renderDisplay(props: Partial<React.ComponentProps<typeof ReputationDisplay>> = {}) {
+  return render(<ReputationDisplay score={90} totalCommitments={12} successRate={98} {...props} />);
 }
 
 // The score is rendered as `{score}/100` inside a single span, so the span's

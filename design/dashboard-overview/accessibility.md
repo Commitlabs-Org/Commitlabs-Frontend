@@ -135,11 +135,11 @@ Run this list at **320 px**, **768 px**, and **1280 px** with both pointer and k
 
 ## Tools
 
-* **axe DevTools** for color contrast and ARIA violations.
-* **VoiceOver / NVDA** smoke test on the populated and empty states.
-* **Keyboard-only** walkthrough from page load to creating a commitment via the empty-state
+- **axe DevTools** for color contrast and ARIA violations.
+- **VoiceOver / NVDA** smoke test on the populated and empty states.
+- **Keyboard-only** walkthrough from page load to creating a commitment via the empty-state
   CTA.
-* **`prefers-reduced-motion`** simulated via the OS or DevTools to confirm animations stop.
+- **`prefers-reduced-motion`** simulated via the OS or DevTools to confirm animations stop.
 
 ---
 
@@ -147,9 +147,9 @@ Run this list at **320 px**, **768 px**, and **1280 px** with both pointer and k
 
 If during QA any of the following are true, **block the design from shipping**:
 
-* A KPI cannot be read by a screen reader without ambiguity (e.g., compact notation with no
+- A KPI cannot be read by a screen reader without ambiguity (e.g., compact notation with no
   long-form `aria-label`).
-* A chart has no text equivalent.
-* A state change relies on color or motion alone.
-* Tab order skips an interactive element or traps focus inside one.
-* The empty (onboarding) state has no primary CTA reachable above the fold at 360 px width.
+- A chart has no text equivalent.
+- A state change relies on color or motion alone.
+- Tab order skips an interactive element or traps focus inside one.
+- The empty (onboarding) state has no primary CTA reachable above the fold at 360 px width.

@@ -47,7 +47,7 @@ export class PersistentCounters implements CountersAdapter {
       await this.getKey('rate_limit_blocks'),
       await this.getKey('auth_failures'),
       await this.getKey('chain_failures'),
-      await this.getKey('successful_actions')
+      await this.getKey('successful_actions'),
     );
 
     return {

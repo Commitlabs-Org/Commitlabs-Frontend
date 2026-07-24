@@ -36,7 +36,7 @@ describe('Dialog Primitive', () => {
       <Dialog isOpen={true} onClose={vi.fn()} labelledById="title" describedById="desc">
         <div id="title">Title</div>
         <div id="desc">Desc</div>
-      </Dialog>
+      </Dialog>,
     );
 
     const dialog = screen.getByRole('dialog');
@@ -50,18 +50,18 @@ describe('Dialog Primitive', () => {
     render(
       <Dialog isOpen={false} onClose={vi.fn()}>
         <div>Content</div>
-      </Dialog>
+      </Dialog>,
     );
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('locks scroll by setting overflow hidden on body, and restores it on close', () => {
     document.body.style.overflow = 'auto'; // Initial
-    
+
     const { rerender } = render(
       <Dialog isOpen={true} onClose={vi.fn()}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     expect(document.body.style.overflow).toBe('hidden');
@@ -69,7 +69,7 @@ describe('Dialog Primitive', () => {
     rerender(
       <Dialog isOpen={false} onClose={vi.fn()}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     expect(document.body.style.overflow).toBe('auto');
@@ -83,7 +83,7 @@ describe('Dialog Primitive', () => {
     const { rerender } = render(
       <Dialog isOpen={true} onClose={vi.fn()}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     expect(sibling.hasAttribute('inert')).toBe(true);
@@ -92,12 +92,12 @@ describe('Dialog Primitive', () => {
     rerender(
       <Dialog isOpen={false} onClose={vi.fn()}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     expect(sibling.hasAttribute('inert')).toBe(false);
     expect(sibling.hasAttribute('aria-hidden')).toBe(false);
-    
+
     document.body.removeChild(sibling);
   });
 
@@ -106,7 +106,7 @@ describe('Dialog Primitive', () => {
     render(
       <Dialog isOpen={true} onClose={onClose}>
         <button>Inside Panel</button>
-      </Dialog>
+      </Dialog>,
     );
 
     // The backdrop is the element with role="presentation"
@@ -125,7 +125,7 @@ describe('Dialog Primitive', () => {
     render(
       <Dialog isOpen={true} onClose={onClose}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -137,7 +137,7 @@ describe('Dialog Primitive', () => {
     render(
       <Dialog isOpen={true} onClose={onClose} closeOnEscape={false}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -146,7 +146,7 @@ describe('Dialog Primitive', () => {
 
   it('focuses the initialFocusRef if provided on mount', () => {
     vi.useFakeTimers();
-    
+
     const Wrapper = () => {
       const btnRef = useRef<HTMLButtonElement>(null);
       return (
@@ -158,28 +158,28 @@ describe('Dialog Primitive', () => {
     };
 
     render(<Wrapper />);
-    
+
     vi.advanceTimersByTime(100);
-    
+
     expect(document.activeElement?.textContent).toBe('B');
-    
+
     vi.useRealTimers();
   });
 
   it('falls back to the first focusable element if initialFocusRef is not provided', () => {
     vi.useFakeTimers();
-    
+
     render(
       <Dialog isOpen={true} onClose={vi.fn()}>
         <button>A</button>
         <button>B</button>
-      </Dialog>
+      </Dialog>,
     );
-    
+
     vi.advanceTimersByTime(100);
-    
+
     expect(document.activeElement?.textContent).toBe('A');
-    
+
     vi.useRealTimers();
   });
 
@@ -189,7 +189,7 @@ describe('Dialog Primitive', () => {
         <button>First</button>
         <button>Second</button>
         <button>Third</button>
-      </Dialog>
+      </Dialog>,
     );
 
     const first = screen.getByText('First');
@@ -212,24 +212,24 @@ describe('Dialog Primitive', () => {
     const trigger = document.createElement('button');
     trigger.textContent = 'Trigger';
     document.body.appendChild(trigger);
-    
+
     trigger.focus();
     expect(document.activeElement).toBe(trigger);
 
     const { rerender } = render(
       <Dialog isOpen={true} onClose={vi.fn()}>
         <button>Inside</button>
-      </Dialog>
+      </Dialog>,
     );
 
     rerender(
       <Dialog isOpen={false} onClose={vi.fn()}>
         <button>Inside</button>
-      </Dialog>
+      </Dialog>,
     );
 
     expect(document.activeElement).toBe(trigger);
-    
+
     document.body.removeChild(trigger);
   });
 
@@ -252,7 +252,7 @@ describe('Dialog Primitive', () => {
     render(
       <Dialog isOpen={true} onClose={vi.fn()}>
         Content
-      </Dialog>
+      </Dialog>,
     );
 
     const backdrop = screen.getByRole('presentation');
@@ -267,7 +267,7 @@ describe('Dialog Primitive', () => {
       <Dialog isOpen={true} onClose={vi.fn()} labelledById="title" describedById="desc">
         <h2 id="title">Dialog Title</h2>
         <p id="desc">Dialog Description</p>
-      </Dialog>
+      </Dialog>,
     );
     const results = await axe(document.body);
     expect(results).toHaveNoViolations();

@@ -59,9 +59,7 @@ describe('ConnectionStatusBanner', () => {
   });
 
   it('hides the offline banner when dismissed', () => {
-    const { container, rerender } = render(
-      <ConnectionStatusBanner isOnline={false} />,
-    );
+    const { container, rerender } = render(<ConnectionStatusBanner isOnline={false} />);
 
     expect(screen.getByRole('status')).toBeInTheDocument();
 
@@ -73,9 +71,7 @@ describe('ConnectionStatusBanner', () => {
   });
 
   it('shows reconnect after coming back online even if previously dismissed', () => {
-    const { container, rerender } = render(
-      <ConnectionStatusBanner isOnline={false} />,
-    );
+    const { container, rerender } = render(<ConnectionStatusBanner isOnline={false} />);
 
     // Dismiss while offline
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));

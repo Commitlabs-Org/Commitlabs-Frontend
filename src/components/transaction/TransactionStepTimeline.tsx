@@ -23,7 +23,11 @@ const STEPS: TimelineStep[] = [
   { key: 'confirm', label: 'Confirm', description: 'Waiting for ledger confirmation' },
 ];
 
-function getStatus(step: TimelineStep, currentPhase: TransactionTimelinePhase, state: TransactionTimelineStatus): TransactionTimelineStatus {
+function getStatus(
+  step: TimelineStep,
+  currentPhase: TransactionTimelinePhase,
+  state: TransactionTimelineStatus,
+): TransactionTimelineStatus {
   if (state === 'error') {
     return step.key === currentPhase ? 'failed' : step.key < currentPhase ? 'done' : 'pending';
   }
@@ -99,7 +103,9 @@ export default function TransactionStepTimeline({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-white">Transaction timeline</p>
-            <p className="text-xs text-white/60">{activeStep.label} • {activeLabel}</p>
+            <p className="text-xs text-white/60">
+              {activeStep.label} • {activeLabel}
+            </p>
           </div>
           {state === 'in_progress' && !reducedMotion && (
             <span className="text-xs text-[#00C950]">{formatElapsed(elapsedSeconds)}</span>

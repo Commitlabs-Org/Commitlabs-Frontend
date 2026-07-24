@@ -19,12 +19,10 @@ describe('usePaginatedListings', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve(mockResponses[callCount++]),
-      } as Response)
+      } as Response),
     );
 
-    const { result } = renderHook(() =>
-      usePaginatedListings({}, 2)
-    );
+    const { result } = renderHook(() => usePaginatedListings({}, 2));
 
     // Initial load - wait until listings are populated
     await waitFor(() => {
@@ -37,12 +35,7 @@ describe('usePaginatedListings', () => {
       result.current.loadMore();
     });
     await waitFor(() => {
-      expect(result.current.listings).toEqual([
-        { id: '1' },
-        { id: '2' },
-        { id: '3' },
-        { id: '4' },
-      ]);
+      expect(result.current.listings).toEqual([{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }]);
     });
     expect(result.current.hasMore).toBe(true);
   });
@@ -54,9 +47,7 @@ describe('usePaginatedListings', () => {
       json: () => Promise.resolve(mockResponse),
     } as Response);
 
-    const { result } = renderHook(() =>
-      usePaginatedListings({}, 5)
-    );
+    const { result } = renderHook(() => usePaginatedListings({}, 5));
 
     await waitFor(() => {
       expect(result.current.listings).toEqual([{ id: '1' }]);

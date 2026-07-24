@@ -3,27 +3,26 @@
 // Comprehensive tests for GET /api/commitments/search
 // Covers: filter combinations, pagination, sorting, caching, validation, and edge cases.
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest } from "next/server";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
 // ─── Mock chain service ───────────────────────────────────────────────────────
 
 const mockGetUserCommitmentsFromChain = vi.fn();
 
-vi.mock("@/lib/backend/services/contracts", () => ({
-  getUserCommitmentsFromChain: (...args: unknown[]) =>
-    mockGetUserCommitmentsFromChain(...args),
+vi.mock('@/lib/backend/services/contracts', () => ({
+  getUserCommitmentsFromChain: (...args: unknown[]) => mockGetUserCommitmentsFromChain(...args),
 }));
 
 // ─── Mock rate limiter (always allow) ─────────────────────────────────────────
 
-vi.mock("@/lib/backend/rateLimit", () => ({
+vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn().mockResolvedValue(true),
 }));
 
 // ─── Mock CORS ────────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/backend/cors", () => ({
+vi.mock('@/lib/backend/cors', () => ({
   createCorsOptionsHandler: () => () => new Response(null, { status: 204 }),
   applyCorsPolicy: (_req: unknown, res: Response) => res,
   enforceCorsRequestPolicy: () => {},
@@ -32,7 +31,7 @@ vi.mock("@/lib/backend/cors", () => ({
 
 // ─── Mock cache (no-op) ───────────────────────────────────────────────────────
 
-vi.mock("@/lib/backend/cache/factory", () => ({
+vi.mock('@/lib/backend/cache/factory', () => ({
   cache: {
     get: vi.fn().mockResolvedValue(null),
     set: vi.fn().mockResolvedValue(undefined),
@@ -43,44 +42,79 @@ vi.mock("@/lib/backend/cache/factory", () => ({
 
 // ─── Import the handler under test ────────────────────────────────────────────
 
-import { GET } from "@/app/api/commitments/search/route";
-import { cache } from "@/lib/backend/cache/factory";
-import { checkRateLimit } from "@/lib/backend/rateLimit";
+import { GET } from '@/app/api/commitments/search/route';
+import { cache } from '@/lib/backend/cache/factory';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 
 function makeCommitment(overrides: Record<string, unknown> = {}) {
   return {
-    id: "c1",
-    ownerAddress: "GABC123",
-    asset: "XLM",
-    amount: "1000",
-    status: "ACTIVE",
+    id: 'c1',
+    ownerAddress: 'GABC123',
+    asset: 'XLM',
+    amount: '1000',
+    status: 'ACTIVE',
     complianceScore: 85,
-    currentValue: "1050",
-    feeEarned: "5",
+    currentValue: '1050',
+    feeEarned: '5',
     violationCount: 0,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    expiresAt: "2026-06-01T00:00:00.000Z",
+    createdAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2026-06-01T00:00:00.000Z',
     ...overrides,
   };
 }
 
 const SAMPLE_COMMITMENTS = [
-  makeCommitment({ id: "c1", asset: "XLM", status: "ACTIVE", complianceScore: 85, amount: "1000", createdAt: "2026-01-01T00:00:00.000Z" }),
-  makeCommitment({ id: "c2", asset: "USDC", status: "SETTLED", complianceScore: 92, amount: "5000", createdAt: "2026-02-01T00:00:00.000Z" }),
-  makeCommitment({ id: "c3", asset: "XLM", status: "VIOLATED", complianceScore: 45, amount: "2500", createdAt: "2026-03-01T00:00:00.000Z" }),
-  makeCommitment({ id: "c4", asset: "USDC", status: "ACTIVE", complianceScore: 99, amount: "8000", createdAt: "2026-04-01T00:00:00.000Z" }),
-  makeCommitment({ id: "c5", asset: "ETH", status: "EARLY_EXIT", complianceScore: 60, amount: "3000", createdAt: "2026-05-01T00:00:00.000Z" }),
+  makeCommitment({
+    id: 'c1',
+    asset: 'XLM',
+    status: 'ACTIVE',
+    complianceScore: 85,
+    amount: '1000',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  }),
+  makeCommitment({
+    id: 'c2',
+    asset: 'USDC',
+    status: 'SETTLED',
+    complianceScore: 92,
+    amount: '5000',
+    createdAt: '2026-02-01T00:00:00.000Z',
+  }),
+  makeCommitment({
+    id: 'c3',
+    asset: 'XLM',
+    status: 'VIOLATED',
+    complianceScore: 45,
+    amount: '2500',
+    createdAt: '2026-03-01T00:00:00.000Z',
+  }),
+  makeCommitment({
+    id: 'c4',
+    asset: 'USDC',
+    status: 'ACTIVE',
+    complianceScore: 99,
+    amount: '8000',
+    createdAt: '2026-04-01T00:00:00.000Z',
+  }),
+  makeCommitment({
+    id: 'c5',
+    asset: 'ETH',
+    status: 'EARLY_EXIT',
+    complianceScore: 60,
+    amount: '3000',
+    createdAt: '2026-05-01T00:00:00.000Z',
+  }),
 ];
 
 function makeRequest(params: Record<string, string> = {}): NextRequest {
-  const url = new URL("http://localhost:3000/api/commitments/search");
-  url.searchParams.set("ownerAddress", "GABC123");
+  const url = new URL('http://localhost:3000/api/commitments/search');
+  url.searchParams.set('ownerAddress', 'GABC123');
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
-  return new NextRequest(url, { method: "GET" });
+  return new NextRequest(url, { method: 'GET' });
 }
 
 async function parseJson(response: Response) {
@@ -94,11 +128,11 @@ beforeEach(() => {
   mockGetUserCommitmentsFromChain.mockResolvedValue(SAMPLE_COMMITMENTS);
 });
 
-describe("GET /api/commitments/search", () => {
+describe('GET /api/commitments/search', () => {
   // ─── Basic success ────────────────────────────────────────────────────────
 
-  describe("basic responses", () => {
-    it("returns 200 with all commitments when no filters are applied", async () => {
+  describe('basic responses', () => {
+    it('returns 200 with all commitments when no filters are applied', async () => {
       const res = await GET(makeRequest(), { params: {} });
       expect(res.status).toBe(200);
 
@@ -108,7 +142,7 @@ describe("GET /api/commitments/search", () => {
       expect(body.data.meta.total).toBe(5);
     });
 
-    it("includes filter metadata in response", async () => {
+    it('includes filter metadata in response', async () => {
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
@@ -117,12 +151,12 @@ describe("GET /api/commitments/search", () => {
         status: null,
         riskType: null,
         minCompliance: null,
-        sortBy: "createdAt",
-        sortOrder: "desc",
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
       });
     });
 
-    it("returns empty data array when no commitments match", async () => {
+    it('returns empty data array when no commitments match', async () => {
       mockGetUserCommitmentsFromChain.mockResolvedValue([]);
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
@@ -134,74 +168,74 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Asset filter ─────────────────────────────────────────────────────────
 
-  describe("asset filter", () => {
-    it("filters by asset (case-insensitive)", async () => {
-      const res = await GET(makeRequest({ asset: "xlm" }), { params: {} });
+  describe('asset filter', () => {
+    it('filters by asset (case-insensitive)', async () => {
+      const res = await GET(makeRequest({ asset: 'xlm' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(2);
-      expect(body.data.data.every((c: any) => c.asset === "XLM")).toBe(true);
+      expect(body.data.data.every((c: any) => c.asset === 'XLM')).toBe(true);
     });
 
-    it("filters by USDC asset", async () => {
-      const res = await GET(makeRequest({ asset: "USDC" }), { params: {} });
+    it('filters by USDC asset', async () => {
+      const res = await GET(makeRequest({ asset: 'USDC' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(2);
-      expect(body.data.data.every((c: any) => c.asset === "USDC")).toBe(true);
+      expect(body.data.data.every((c: any) => c.asset === 'USDC')).toBe(true);
     });
 
     it("returns empty when asset doesn't match", async () => {
-      const res = await GET(makeRequest({ asset: "BTC" }), { params: {} });
+      const res = await GET(makeRequest({ asset: 'BTC' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(0);
     });
 
-    it("reports asset in filters metadata", async () => {
-      const res = await GET(makeRequest({ asset: "XLM" }), { params: {} });
+    it('reports asset in filters metadata', async () => {
+      const res = await GET(makeRequest({ asset: 'XLM' }), { params: {} });
       const body = await parseJson(res);
 
-      expect(body.data.filters.asset).toBe("XLM");
+      expect(body.data.filters.asset).toBe('XLM');
     });
   });
 
   // ─── Status filter ────────────────────────────────────────────────────────
 
-  describe("status filter", () => {
-    it("filters by ACTIVE status", async () => {
-      const res = await GET(makeRequest({ status: "ACTIVE" }), { params: {} });
+  describe('status filter', () => {
+    it('filters by ACTIVE status', async () => {
+      const res = await GET(makeRequest({ status: 'ACTIVE' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(2);
-      expect(body.data.data.every((c: any) => c.status === "ACTIVE")).toBe(true);
+      expect(body.data.data.every((c: any) => c.status === 'ACTIVE')).toBe(true);
     });
 
-    it("filters by SETTLED status", async () => {
-      const res = await GET(makeRequest({ status: "SETTLED" }), { params: {} });
+    it('filters by SETTLED status', async () => {
+      const res = await GET(makeRequest({ status: 'SETTLED' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(1);
-      expect(body.data.data[0].status).toBe("SETTLED");
+      expect(body.data.data[0].status).toBe('SETTLED');
     });
 
-    it("filters by VIOLATED status", async () => {
-      const res = await GET(makeRequest({ status: "VIOLATED" }), { params: {} });
+    it('filters by VIOLATED status', async () => {
+      const res = await GET(makeRequest({ status: 'VIOLATED' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(1);
     });
 
-    it("filters by EARLY_EXIT status", async () => {
-      const res = await GET(makeRequest({ status: "EARLY_EXIT" }), { params: {} });
+    it('filters by EARLY_EXIT status', async () => {
+      const res = await GET(makeRequest({ status: 'EARLY_EXIT' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(1);
-      expect(body.data.data[0].status).toBe("EARLY_EXIT");
+      expect(body.data.data[0].status).toBe('EARLY_EXIT');
     });
 
-    it("rejects invalid status values", async () => {
-      const res = await GET(makeRequest({ status: "INVALID" }), { params: {} });
+    it('rejects invalid status values', async () => {
+      const res = await GET(makeRequest({ status: 'INVALID' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
@@ -211,25 +245,25 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Risk type filter ─────────────────────────────────────────────────────
 
-  describe("riskType filter", () => {
-    it("filters by Safe risk type (all defaults to Safe)", async () => {
-      const res = await GET(makeRequest({ riskType: "Safe" }), { params: {} });
+  describe('riskType filter', () => {
+    it('filters by Safe risk type (all defaults to Safe)', async () => {
+      const res = await GET(makeRequest({ riskType: 'Safe' }), { params: {} });
       const body = await parseJson(res);
 
       // All commitments default to "Safe" risk type
       expect(body.data.data).toHaveLength(5);
     });
 
-    it("returns empty for non-matching risk type", async () => {
-      const res = await GET(makeRequest({ riskType: "Aggressive" }), { params: {} });
+    it('returns empty for non-matching risk type', async () => {
+      const res = await GET(makeRequest({ riskType: 'Aggressive' }), { params: {} });
       const body = await parseJson(res);
 
       // Since all default to "Safe", Aggressive returns nothing
       expect(body.data.data).toHaveLength(0);
     });
 
-    it("rejects invalid risk type", async () => {
-      const res = await GET(makeRequest({ riskType: "InvalidType" }), { params: {} });
+    it('rejects invalid risk type', async () => {
+      const res = await GET(makeRequest({ riskType: 'InvalidType' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
@@ -239,9 +273,9 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Compliance filter ────────────────────────────────────────────────────
 
-  describe("minCompliance filter", () => {
-    it("filters by minimum compliance score", async () => {
-      const res = await GET(makeRequest({ minCompliance: "90" }), { params: {} });
+  describe('minCompliance filter', () => {
+    it('filters by minimum compliance score', async () => {
+      const res = await GET(makeRequest({ minCompliance: '90' }), { params: {} });
       const body = await parseJson(res);
 
       // c2 (92) and c4 (99) qualify
@@ -249,30 +283,30 @@ describe("GET /api/commitments/search", () => {
       expect(body.data.data.every((c: any) => c.complianceScore >= 90)).toBe(true);
     });
 
-    it("returns all when minCompliance is 0", async () => {
-      const res = await GET(makeRequest({ minCompliance: "0" }), { params: {} });
+    it('returns all when minCompliance is 0', async () => {
+      const res = await GET(makeRequest({ minCompliance: '0' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(5);
     });
 
-    it("returns none when minCompliance is very high", async () => {
-      const res = await GET(makeRequest({ minCompliance: "100" }), { params: {} });
+    it('returns none when minCompliance is very high', async () => {
+      const res = await GET(makeRequest({ minCompliance: '100' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(0);
     });
 
-    it("rejects compliance > 100", async () => {
-      const res = await GET(makeRequest({ minCompliance: "101" }), { params: {} });
+    it('rejects compliance > 100', async () => {
+      const res = await GET(makeRequest({ minCompliance: '101' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
       expect(body.success).toBe(false);
     });
 
-    it("rejects negative compliance", async () => {
-      const res = await GET(makeRequest({ minCompliance: "-1" }), { params: {} });
+    it('rejects negative compliance', async () => {
+      const res = await GET(makeRequest({ minCompliance: '-1' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
@@ -282,37 +316,30 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Combined filters ─────────────────────────────────────────────────────
 
-  describe("combined filters", () => {
-    it("applies asset + status filters together", async () => {
-      const res = await GET(
-        makeRequest({ asset: "USDC", status: "ACTIVE" }),
-        { params: {} },
-      );
+  describe('combined filters', () => {
+    it('applies asset + status filters together', async () => {
+      const res = await GET(makeRequest({ asset: 'USDC', status: 'ACTIVE' }), { params: {} });
       const body = await parseJson(res);
 
       // Only c4 matches (USDC + ACTIVE)
       expect(body.data.data).toHaveLength(1);
-      expect(body.data.data[0].asset).toBe("USDC");
-      expect(body.data.data[0].status).toBe("ACTIVE");
+      expect(body.data.data[0].asset).toBe('USDC');
+      expect(body.data.data[0].status).toBe('ACTIVE');
     });
 
-    it("applies asset + status + minCompliance filters", async () => {
-      const res = await GET(
-        makeRequest({ asset: "USDC", status: "ACTIVE", minCompliance: "95" }),
-        { params: {} },
-      );
+    it('applies asset + status + minCompliance filters', async () => {
+      const res = await GET(makeRequest({ asset: 'USDC', status: 'ACTIVE', minCompliance: '95' }), {
+        params: {},
+      });
       const body = await parseJson(res);
 
       // c4: USDC, ACTIVE, complianceScore 99
       expect(body.data.data).toHaveLength(1);
-      expect(body.data.data[0].commitmentId).toBe("c4");
+      expect(body.data.data[0].commitmentId).toBe('c4');
     });
 
-    it("returns empty when combined filters match nothing", async () => {
-      const res = await GET(
-        makeRequest({ asset: "ETH", status: "ACTIVE" }),
-        { params: {} },
-      );
+    it('returns empty when combined filters match nothing', async () => {
+      const res = await GET(makeRequest({ asset: 'ETH', status: 'ACTIVE' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(0);
@@ -321,12 +348,9 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Pagination ───────────────────────────────────────────────────────────
 
-  describe("pagination", () => {
-    it("paginates results correctly", async () => {
-      const res = await GET(
-        makeRequest({ page: "1", pageSize: "2" }),
-        { params: {} },
-      );
+  describe('pagination', () => {
+    it('paginates results correctly', async () => {
+      const res = await GET(makeRequest({ page: '1', pageSize: '2' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(2);
@@ -338,11 +362,8 @@ describe("GET /api/commitments/search", () => {
       expect(body.data.meta.hasPrevPage).toBe(false);
     });
 
-    it("returns second page correctly", async () => {
-      const res = await GET(
-        makeRequest({ page: "2", pageSize: "2" }),
-        { params: {} },
-      );
+    it('returns second page correctly', async () => {
+      const res = await GET(makeRequest({ page: '2', pageSize: '2' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(2);
@@ -351,11 +372,8 @@ describe("GET /api/commitments/search", () => {
       expect(body.data.meta.hasPrevPage).toBe(true);
     });
 
-    it("returns last page with remaining items", async () => {
-      const res = await GET(
-        makeRequest({ page: "3", pageSize: "2" }),
-        { params: {} },
-      );
+    it('returns last page with remaining items', async () => {
+      const res = await GET(makeRequest({ page: '3', pageSize: '2' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(1);
@@ -363,31 +381,22 @@ describe("GET /api/commitments/search", () => {
       expect(body.data.meta.hasPrevPage).toBe(true);
     });
 
-    it("returns empty data for page beyond total", async () => {
-      const res = await GET(
-        makeRequest({ page: "10", pageSize: "10" }),
-        { params: {} },
-      );
+    it('returns empty data for page beyond total', async () => {
+      const res = await GET(makeRequest({ page: '10', pageSize: '10' }), { params: {} });
       const body = await parseJson(res);
 
       expect(body.data.data).toHaveLength(0);
     });
 
-    it("rejects page < 1", async () => {
-      const res = await GET(
-        makeRequest({ page: "0" }),
-        { params: {} },
-      );
+    it('rejects page < 1', async () => {
+      const res = await GET(makeRequest({ page: '0' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
     });
 
-    it("rejects pageSize > 100", async () => {
-      const res = await GET(
-        makeRequest({ pageSize: "101" }),
-        { params: {} },
-      );
+    it('rejects pageSize > 100', async () => {
+      const res = await GET(makeRequest({ pageSize: '101' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
@@ -396,8 +405,8 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Sorting ──────────────────────────────────────────────────────────────
 
-  describe("sorting", () => {
-    it("sorts by createdAt desc by default", async () => {
+  describe('sorting', () => {
+    it('sorts by createdAt desc by default', async () => {
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
@@ -409,11 +418,8 @@ describe("GET /api/commitments/search", () => {
       }
     });
 
-    it("sorts by amount ascending", async () => {
-      const res = await GET(
-        makeRequest({ sortBy: "amount", sortOrder: "asc" }),
-        { params: {} },
-      );
+    it('sorts by amount ascending', async () => {
+      const res = await GET(makeRequest({ sortBy: 'amount', sortOrder: 'asc' }), { params: {} });
       const body = await parseJson(res);
 
       const amounts = body.data.data.map((c: any) => Number(c.amount));
@@ -422,11 +428,8 @@ describe("GET /api/commitments/search", () => {
       }
     });
 
-    it("sorts by amount descending", async () => {
-      const res = await GET(
-        makeRequest({ sortBy: "amount", sortOrder: "desc" }),
-        { params: {} },
-      );
+    it('sorts by amount descending', async () => {
+      const res = await GET(makeRequest({ sortBy: 'amount', sortOrder: 'desc' }), { params: {} });
       const body = await parseJson(res);
 
       const amounts = body.data.data.map((c: any) => Number(c.amount));
@@ -435,11 +438,10 @@ describe("GET /api/commitments/search", () => {
       }
     });
 
-    it("sorts by complianceScore ascending", async () => {
-      const res = await GET(
-        makeRequest({ sortBy: "complianceScore", sortOrder: "asc" }),
-        { params: {} },
-      );
+    it('sorts by complianceScore ascending', async () => {
+      const res = await GET(makeRequest({ sortBy: 'complianceScore', sortOrder: 'asc' }), {
+        params: {},
+      });
       const body = await parseJson(res);
 
       const scores = body.data.data.map((c: any) => c.complianceScore);
@@ -448,11 +450,8 @@ describe("GET /api/commitments/search", () => {
       }
     });
 
-    it("sorts by status alphabetically", async () => {
-      const res = await GET(
-        makeRequest({ sortBy: "status", sortOrder: "asc" }),
-        { params: {} },
-      );
+    it('sorts by status alphabetically', async () => {
+      const res = await GET(makeRequest({ sortBy: 'status', sortOrder: 'asc' }), { params: {} });
       const body = await parseJson(res);
 
       const statuses = body.data.data.map((c: any) => c.status);
@@ -460,11 +459,8 @@ describe("GET /api/commitments/search", () => {
       expect(statuses).toEqual(sorted);
     });
 
-    it("sorts by asset alphabetically", async () => {
-      const res = await GET(
-        makeRequest({ sortBy: "asset", sortOrder: "asc" }),
-        { params: {} },
-      );
+    it('sorts by asset alphabetically', async () => {
+      const res = await GET(makeRequest({ sortBy: 'asset', sortOrder: 'asc' }), { params: {} });
       const body = await parseJson(res);
 
       const assets = body.data.data.map((c: any) => c.asset);
@@ -473,51 +469,42 @@ describe("GET /api/commitments/search", () => {
       }
     });
 
-    it("rejects invalid sortBy field", async () => {
-      const res = await GET(
-        makeRequest({ sortBy: "invalidField" }),
-        { params: {} },
-      );
+    it('rejects invalid sortBy field', async () => {
+      const res = await GET(makeRequest({ sortBy: 'invalidField' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
     });
 
-    it("rejects invalid sortOrder", async () => {
-      const res = await GET(
-        makeRequest({ sortOrder: "random" }),
-        { params: {} },
-      );
+    it('rejects invalid sortOrder', async () => {
+      const res = await GET(makeRequest({ sortOrder: 'random' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
     });
 
-    it("provides stable sort (tiebreaker by commitmentId)", async () => {
+    it('provides stable sort (tiebreaker by commitmentId)', async () => {
       // Two commitments with the same amount
       mockGetUserCommitmentsFromChain.mockResolvedValue([
-        makeCommitment({ id: "b2", amount: "1000", createdAt: "2026-01-01T00:00:00.000Z" }),
-        makeCommitment({ id: "a1", amount: "1000", createdAt: "2026-01-01T00:00:00.000Z" }),
-        makeCommitment({ id: "c3", amount: "1000", createdAt: "2026-01-01T00:00:00.000Z" }),
+        makeCommitment({ id: 'b2', amount: '1000', createdAt: '2026-01-01T00:00:00.000Z' }),
+        makeCommitment({ id: 'a1', amount: '1000', createdAt: '2026-01-01T00:00:00.000Z' }),
+        makeCommitment({ id: 'c3', amount: '1000', createdAt: '2026-01-01T00:00:00.000Z' }),
       ]);
 
-      const res = await GET(
-        makeRequest({ sortBy: "amount", sortOrder: "asc" }),
-        { params: {} },
-      );
+      const res = await GET(makeRequest({ sortBy: 'amount', sortOrder: 'asc' }), { params: {} });
       const body = await parseJson(res);
 
       const ids = body.data.data.map((c: any) => c.commitmentId);
-      expect(ids).toEqual(["a1", "b2", "c3"]);
+      expect(ids).toEqual(['a1', 'b2', 'c3']);
     });
   });
 
   // ─── Validation ───────────────────────────────────────────────────────────
 
-  describe("validation", () => {
-    it("requires ownerAddress", async () => {
-      const url = new URL("http://localhost:3000/api/commitments/search");
-      const req = new NextRequest(url, { method: "GET" });
+  describe('validation', () => {
+    it('requires ownerAddress', async () => {
+      const url = new URL('http://localhost:3000/api/commitments/search');
+      const req = new NextRequest(url, { method: 'GET' });
       const res = await GET(req, { params: {} });
       const body = await parseJson(res);
 
@@ -525,20 +512,17 @@ describe("GET /api/commitments/search", () => {
       expect(body.success).toBe(false);
     });
 
-    it("rejects empty ownerAddress", async () => {
-      const url = new URL("http://localhost:3000/api/commitments/search");
-      url.searchParams.set("ownerAddress", "");
-      const req = new NextRequest(url, { method: "GET" });
+    it('rejects empty ownerAddress', async () => {
+      const url = new URL('http://localhost:3000/api/commitments/search');
+      url.searchParams.set('ownerAddress', '');
+      const req = new NextRequest(url, { method: 'GET' });
       const res = await GET(req, { params: {} });
 
       expect(res.status).toBe(400);
     });
 
-    it("rejects non-numeric minCompliance", async () => {
-      const res = await GET(
-        makeRequest({ minCompliance: "abc" }),
-        { params: {} },
-      );
+    it('rejects non-numeric minCompliance', async () => {
+      const res = await GET(makeRequest({ minCompliance: 'abc' }), { params: {} });
       const body = await parseJson(res);
 
       expect(res.status).toBe(400);
@@ -548,21 +532,35 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Caching ──────────────────────────────────────────────────────────────
 
-  describe("caching", () => {
-    it("caches search results after first call", async () => {
+  describe('caching', () => {
+    it('caches search results after first call', async () => {
       await GET(makeRequest(), { params: {} });
 
       expect(cache.set).toHaveBeenCalledTimes(1);
       const setCall = vi.mocked(cache.set).mock.calls[0];
-      expect(setCall[0]).toContain("commitlabs:commitment-search:");
+      expect(setCall[0]).toContain('commitlabs:commitment-search:');
       expect(setCall[2]).toBe(15); // TTL
     });
 
-    it("returns cached data when available", async () => {
+    it('returns cached data when available', async () => {
       const cachedPayload = {
-        data: [makeCommitment({ id: "cached" })],
-        meta: { page: 1, pageSize: 10, total: 1, totalPages: 1, hasNextPage: false, hasPrevPage: false },
-        filters: { asset: null, status: null, riskType: null, minCompliance: null, sortBy: "createdAt", sortOrder: "desc" },
+        data: [makeCommitment({ id: 'cached' })],
+        meta: {
+          page: 1,
+          pageSize: 10,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        filters: {
+          asset: null,
+          status: null,
+          riskType: null,
+          minCompliance: null,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        },
       };
 
       vi.mocked(cache.get).mockResolvedValueOnce(cachedPayload);
@@ -578,8 +576,8 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Rate limiting ────────────────────────────────────────────────────────
 
-  describe("rate limiting", () => {
-    it("returns 429 when rate limited", async () => {
+  describe('rate limiting', () => {
+    it('returns 429 when rate limited', async () => {
       vi.mocked(checkRateLimit).mockResolvedValueOnce(false);
 
       const res = await GET(makeRequest(), { params: {} });
@@ -590,37 +588,37 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Edge cases ───────────────────────────────────────────────────────────
 
-  describe("edge cases", () => {
-    it("handles commitments with bigint amounts", async () => {
+  describe('edge cases', () => {
+    it('handles commitments with bigint amounts', async () => {
       mockGetUserCommitmentsFromChain.mockResolvedValue([
-        makeCommitment({ id: "big", amount: BigInt("99999999999999") }),
+        makeCommitment({ id: 'big', amount: BigInt('99999999999999') }),
       ]);
 
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
-      expect(body.data.data[0].amount).toBe("99999999999999");
+      expect(body.data.data[0].amount).toBe('99999999999999');
     });
 
-    it("handles commitments with bigint currentValue", async () => {
+    it('handles commitments with bigint currentValue', async () => {
       mockGetUserCommitmentsFromChain.mockResolvedValue([
-        makeCommitment({ id: "big", currentValue: BigInt("12345") }),
+        makeCommitment({ id: 'big', currentValue: BigInt('12345') }),
       ]);
 
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
-      expect(body.data.data[0].currentValue).toBe("12345");
+      expect(body.data.data[0].currentValue).toBe('12345');
     });
 
-    it("handles missing optional fields gracefully", async () => {
+    it('handles missing optional fields gracefully', async () => {
       mockGetUserCommitmentsFromChain.mockResolvedValue([
         {
-          id: "minimal",
-          ownerAddress: "GABC",
-          asset: "XLM",
-          amount: "100",
-          status: "ACTIVE",
+          id: 'minimal',
+          ownerAddress: 'GABC',
+          asset: 'XLM',
+          amount: '100',
+          status: 'ACTIVE',
         },
       ]);
 
@@ -629,13 +627,11 @@ describe("GET /api/commitments/search", () => {
 
       expect(body.data.data[0].complianceScore).toBe(0);
       expect(body.data.data[0].violationCount).toBe(0);
-      expect(body.data.data[0].feeEarned).toBe("0");
+      expect(body.data.data[0].feeEarned).toBe('0');
     });
 
-    it("handles chain service errors via withApiHandler", async () => {
-      mockGetUserCommitmentsFromChain.mockRejectedValueOnce(
-        new Error("Chain unavailable"),
-      );
+    it('handles chain service errors via withApiHandler', async () => {
+      mockGetUserCommitmentsFromChain.mockRejectedValueOnce(new Error('Chain unavailable'));
 
       const res = await GET(makeRequest(), { params: {} });
 
@@ -645,49 +641,49 @@ describe("GET /api/commitments/search", () => {
 
   // ─── Response shape ───────────────────────────────────────────────────────
 
-  describe("response shape", () => {
-    it("returns standard envelope structure", async () => {
+  describe('response shape', () => {
+    it('returns standard envelope structure', async () => {
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
-      expect(body).toHaveProperty("success", true);
-      expect(body).toHaveProperty("data");
-      expect(body.data).toHaveProperty("data");
-      expect(body.data).toHaveProperty("meta");
-      expect(body.data).toHaveProperty("filters");
+      expect(body).toHaveProperty('success', true);
+      expect(body).toHaveProperty('data');
+      expect(body.data).toHaveProperty('data');
+      expect(body.data).toHaveProperty('meta');
+      expect(body.data).toHaveProperty('filters');
     });
 
-    it("meta contains all pagination fields", async () => {
+    it('meta contains all pagination fields', async () => {
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
       const { meta } = body.data;
-      expect(meta).toHaveProperty("page");
-      expect(meta).toHaveProperty("pageSize");
-      expect(meta).toHaveProperty("total");
-      expect(meta).toHaveProperty("totalPages");
-      expect(meta).toHaveProperty("hasNextPage");
-      expect(meta).toHaveProperty("hasPrevPage");
+      expect(meta).toHaveProperty('page');
+      expect(meta).toHaveProperty('pageSize');
+      expect(meta).toHaveProperty('total');
+      expect(meta).toHaveProperty('totalPages');
+      expect(meta).toHaveProperty('hasNextPage');
+      expect(meta).toHaveProperty('hasPrevPage');
     });
 
-    it("each item has all expected fields", async () => {
+    it('each item has all expected fields', async () => {
       const res = await GET(makeRequest(), { params: {} });
       const body = await parseJson(res);
 
       const item = body.data.data[0];
       const requiredFields = [
-        "commitmentId",
-        "ownerAddress",
-        "asset",
-        "amount",
-        "status",
-        "riskType",
-        "complianceScore",
-        "currentValue",
-        "feeEarned",
-        "violationCount",
-        "createdAt",
-        "expiresAt",
+        'commitmentId',
+        'ownerAddress',
+        'asset',
+        'amount',
+        'status',
+        'riskType',
+        'complianceScore',
+        'currentValue',
+        'feeEarned',
+        'violationCount',
+        'createdAt',
+        'expiresAt',
       ];
 
       for (const field of requiredFields) {

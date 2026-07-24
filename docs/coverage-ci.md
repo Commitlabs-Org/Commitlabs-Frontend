@@ -24,7 +24,7 @@ As more areas of the codebase reach the threshold, add their paths to the
 Configured in `vitest.config.ts`:
 
 | Metric     | Threshold |
-|------------|-----------|
+| ---------- | --------- |
 | Statements | 95%       |
 | Branches   | 95%       |
 | Functions  | 95%       |

@@ -53,13 +53,7 @@ describe('CompareTray', () => {
   });
 
   it('shows pinned count and listing chips', () => {
-    render(
-      <CompareTray
-        listings={[LISTING_A]}
-        onRemove={vi.fn()}
-        onClear={vi.fn()}
-      />,
-    );
+    render(<CompareTray listings={[LISTING_A]} onRemove={vi.fn()} onClear={vi.fn()} />);
 
     expect(screen.getByRole('region', { name: 'Compare listings tray' })).toBeTruthy();
     expect(screen.getByText('1 of 3 selected for compare')).toBeTruthy();
@@ -67,13 +61,7 @@ describe('CompareTray', () => {
   });
 
   it('disables Compare until at least two listings are pinned', () => {
-    render(
-      <CompareTray
-        listings={[LISTING_A]}
-        onRemove={vi.fn()}
-        onClear={vi.fn()}
-      />,
-    );
+    render(<CompareTray listings={[LISTING_A]} onRemove={vi.fn()} onClear={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Open side-by-side comparison' })).toHaveProperty(
       'disabled',
@@ -82,13 +70,7 @@ describe('CompareTray', () => {
   });
 
   it('opens comparison view when Compare is clicked with two listings', () => {
-    render(
-      <CompareTray
-        listings={[LISTING_A, LISTING_B]}
-        onRemove={vi.fn()}
-        onClear={vi.fn()}
-      />,
-    );
+    render(<CompareTray listings={[LISTING_A, LISTING_B]} onRemove={vi.fn()} onClear={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open side-by-side comparison' }));
     expect(screen.getByRole('dialog', { name: /Compare Listings/i })).toBeTruthy();
@@ -99,13 +81,7 @@ describe('CompareTray', () => {
 
   it('calls onClear when Clear or Dismiss is clicked', () => {
     const onClear = vi.fn();
-    render(
-      <CompareTray
-        listings={[LISTING_A]}
-        onRemove={vi.fn()}
-        onClear={onClear}
-      />,
-    );
+    render(<CompareTray listings={[LISTING_A]} onRemove={vi.fn()} onClear={onClear} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear all pinned listings' }));
     expect(onClear).toHaveBeenCalledTimes(1);
@@ -116,13 +92,7 @@ describe('CompareTray', () => {
 
   it('calls onRemove when a chip remove button is clicked', () => {
     const onRemove = vi.fn();
-    render(
-      <CompareTray
-        listings={[LISTING_A, LISTING_B]}
-        onRemove={onRemove}
-        onClear={vi.fn()}
-      />,
-    );
+    render(<CompareTray listings={[LISTING_A, LISTING_B]} onRemove={onRemove} onClear={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Remove #CMT-001/i }));
     expect(onRemove).toHaveBeenCalledWith('001');

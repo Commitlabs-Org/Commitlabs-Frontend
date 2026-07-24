@@ -29,9 +29,9 @@ describe('Design Tokens', () => {
     // Also assert they are defined under :root
     const rootBlockRegex = /:root\s*{([^}]*)}/;
     const match = cssContent.match(rootBlockRegex);
-    
+
     expect(match).toBeTruthy();
-    
+
     if (match) {
       const rootContent = match[1];
       expectedTokens.forEach((token) => {

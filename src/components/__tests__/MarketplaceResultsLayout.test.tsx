@@ -21,14 +21,26 @@ function mkProps(overrides: Partial<Parameters<typeof MarketplaceResultsLayout>[
 describe('MarketplaceResultsLayout — view toggle', () => {
   it('renders grid view button as pressed when viewMode is grid', () => {
     render(<MarketplaceResultsLayout {...mkProps({ viewMode: 'grid' })} />);
-    expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   it('renders list view button as pressed when viewMode is list', () => {
     render(<MarketplaceResultsLayout {...mkProps({ viewMode: 'list' })} />);
-    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   it('calls onViewModeChange("list") when list button is clicked', () => {
@@ -65,7 +77,9 @@ describe('MarketplaceResultsLayout — pagination', () => {
 
   it('calls onPageChange when a page button is clicked', () => {
     const onPageChange = vi.fn();
-    render(<MarketplaceResultsLayout {...mkProps({ currentPage: 1, totalPages: 3, onPageChange })} />);
+    render(
+      <MarketplaceResultsLayout {...mkProps({ currentPage: 1, totalPages: 3, onPageChange })} />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Page 2' }));
     expect(onPageChange).toHaveBeenCalledWith(2);
   });
@@ -89,7 +103,9 @@ describe('MarketplaceResultsLayout — pagination', () => {
 
   it('Next button advances page forwards when clicked', () => {
     const onPageChange = vi.fn();
-    render(<MarketplaceResultsLayout {...mkProps({ currentPage: 1, totalPages: 3, onPageChange })} />);
+    render(
+      <MarketplaceResultsLayout {...mkProps({ currentPage: 1, totalPages: 3, onPageChange })} />,
+    );
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     expect(onPageChange).toHaveBeenCalledWith(2);
   });

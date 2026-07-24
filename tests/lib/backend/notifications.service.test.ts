@@ -8,7 +8,12 @@ vi.mock('@/lib/backend/mockDb', () => ({
 
 const mockGetMockData = mockDb.getMockData as ReturnType<typeof vi.fn>;
 
-const BASE_COMMITMENT = { asset: 'XLM', type: 'Safe' as const, amount: '100', status: 'Active' as const };
+const BASE_COMMITMENT = {
+  asset: 'XLM',
+  type: 'Safe' as const,
+  amount: '100',
+  status: 'Active' as const,
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,7 +39,15 @@ describe('getUserNotifications – owner filtering', () => {
 
   it('returns empty array when owner has no commitments', async () => {
     mockGetMockData.mockResolvedValue({
-      commitments: [{ ...BASE_COMMITMENT, id: 'CMT-X', ownerAddress: 'alice', status: 'Active', daysRemaining: 30 }],
+      commitments: [
+        {
+          ...BASE_COMMITMENT,
+          id: 'CMT-X',
+          ownerAddress: 'alice',
+          status: 'Active',
+          daysRemaining: 30,
+        },
+      ],
       attestations: [],
       listings: [],
     });
@@ -82,7 +95,9 @@ describe('getUserNotifications – attestation → notification mapping', () => 
     });
 
     const notifications = await getUserNotifications('alice');
-    const attestationNotif = notifications.find((n) => n.relatedCommitmentId === 'CMT-1' && n.type === 'violation');
+    const attestationNotif = notifications.find(
+      (n) => n.relatedCommitmentId === 'CMT-1' && n.type === 'violation',
+    );
 
     expect(attestationNotif).toBeDefined();
     expect(attestationNotif!.severity).toBe('critical');
@@ -97,7 +112,12 @@ describe('getUserNotifications – attestation → notification mapping', () => 
     mockGetMockData.mockResolvedValue({
       commitments: [{ ...BASE_COMMITMENT, id: 'CMT-2', ownerAddress: 'alice' }],
       attestations: [
-        { id: 'ATT-2', commitmentId: 'CMT-2', severity: 'violation', observedAt: '2026-02-01T08:00:00Z' },
+        {
+          id: 'ATT-2',
+          commitmentId: 'CMT-2',
+          severity: 'violation',
+          observedAt: '2026-02-01T08:00:00Z',
+        },
       ],
       listings: [],
     });
@@ -111,7 +131,12 @@ describe('getUserNotifications – attestation → notification mapping', () => 
     mockGetMockData.mockResolvedValue({
       commitments: [{ ...BASE_COMMITMENT, id: 'CMT-3', ownerAddress: 'alice' }],
       attestations: [
-        { id: 'ATT-3', commitmentId: 'CMT-3', severity: 'warning', observedAt: '2026-03-05T09:00:00Z' },
+        {
+          id: 'ATT-3',
+          commitmentId: 'CMT-3',
+          severity: 'warning',
+          observedAt: '2026-03-05T09:00:00Z',
+        },
       ],
       listings: [],
     });
@@ -127,7 +152,13 @@ describe('getUserNotifications – attestation → notification mapping', () => 
     mockGetMockData.mockResolvedValue({
       commitments: [{ ...BASE_COMMITMENT, id: 'CMT-4', ownerAddress: 'alice' }],
       attestations: [
-        { id: 'ATT-4', commitmentId: 'CMT-4', verdict: 'pass', severity: 'ok', observedAt: '2026-04-01T00:00:00Z' },
+        {
+          id: 'ATT-4',
+          commitmentId: 'CMT-4',
+          verdict: 'pass',
+          severity: 'ok',
+          observedAt: '2026-04-01T00:00:00Z',
+        },
       ],
       listings: [],
     });
@@ -136,7 +167,7 @@ describe('getUserNotifications – attestation → notification mapping', () => 
     expect(notifications).toHaveLength(0);
   });
 
-  it('only joins attestations belonging to the owner\'s commitments', async () => {
+  it("only joins attestations belonging to the owner's commitments", async () => {
     mockGetMockData.mockResolvedValue({
       commitments: [
         { ...BASE_COMMITMENT, id: 'CMT-A', ownerAddress: 'alice' },
@@ -158,7 +189,13 @@ describe('getUserNotifications – commitment-derived notifications', () => {
   it('emits an expiry warning for active commitments with <=7 days remaining', async () => {
     mockGetMockData.mockResolvedValue({
       commitments: [
-        { ...BASE_COMMITMENT, id: 'CMT-EXP', ownerAddress: 'alice', status: 'Active', daysRemaining: 3 },
+        {
+          ...BASE_COMMITMENT,
+          id: 'CMT-EXP',
+          ownerAddress: 'alice',
+          status: 'Active',
+          daysRemaining: 3,
+        },
       ],
       attestations: [],
       listings: [],
@@ -174,7 +211,13 @@ describe('getUserNotifications – commitment-derived notifications', () => {
   it('does not emit expiry warning when daysRemaining > 7', async () => {
     mockGetMockData.mockResolvedValue({
       commitments: [
-        { ...BASE_COMMITMENT, id: 'CMT-FAR', ownerAddress: 'alice', status: 'Active', daysRemaining: 30 },
+        {
+          ...BASE_COMMITMENT,
+          id: 'CMT-FAR',
+          ownerAddress: 'alice',
+          status: 'Active',
+          daysRemaining: 30,
+        },
       ],
       attestations: [],
       listings: [],
@@ -203,21 +246,41 @@ describe('getUserNotifications – commitment-derived notifications', () => {
     mockGetMockData.mockResolvedValue({
       commitments: [{ ...BASE_COMMITMENT, id: 'CMT-S', ownerAddress: 'alice' }],
       attestations: [
-        { id: 'ATT-OLD', commitmentId: 'CMT-S', verdict: 'fail', observedAt: '2026-01-01T00:00:00Z' },
-        { id: 'ATT-NEW', commitmentId: 'CMT-S', severity: 'warning', observedAt: '2026-06-01T00:00:00Z' },
+        {
+          id: 'ATT-OLD',
+          commitmentId: 'CMT-S',
+          verdict: 'fail',
+          observedAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'ATT-NEW',
+          commitmentId: 'CMT-S',
+          severity: 'warning',
+          observedAt: '2026-06-01T00:00:00Z',
+        },
       ],
       listings: [],
     });
 
     const notifications = await getUserNotifications('alice');
-    expect(notifications[0].createdAt >= notifications[notifications.length - 1].createdAt).toBe(true);
+    expect(notifications[0].createdAt >= notifications[notifications.length - 1].createdAt).toBe(
+      true,
+    );
   });
 });
 
 describe('getUserNotifications – edge cases', () => {
   it('handles owner with commitments but no attestations', async () => {
     mockGetMockData.mockResolvedValue({
-      commitments: [{ ...BASE_COMMITMENT, id: 'CMT-NOATT', ownerAddress: 'alice', status: 'Active', daysRemaining: 5 }],
+      commitments: [
+        {
+          ...BASE_COMMITMENT,
+          id: 'CMT-NOATT',
+          ownerAddress: 'alice',
+          status: 'Active',
+          daysRemaining: 5,
+        },
+      ],
       attestations: [],
       listings: [],
     });

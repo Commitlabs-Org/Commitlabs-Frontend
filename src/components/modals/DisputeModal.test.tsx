@@ -20,12 +20,7 @@ function renderModal() {
   const onSubmitted = vi.fn();
 
   render(
-    <DisputeModal
-      isOpen
-      commitmentId="cmt-123"
-      onClose={onClose}
-      onSubmitted={onSubmitted}
-    />,
+    <DisputeModal isOpen commitmentId="cmt-123" onClose={onClose} onSubmitted={onSubmitted} />,
   );
 
   return { onClose, onSubmitted };

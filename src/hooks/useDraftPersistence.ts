@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { z } from "zod";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { z } from 'zod';
 
-type CommitmentType = "safe" | "balanced" | "aggressive";
+type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
 export interface DraftState {
   step: number;
@@ -14,14 +14,14 @@ export interface DraftState {
 }
 
 const DRAFT_SCHEMA_VERSION = 1;
-const DRAFT_STORAGE_KEY = "commitlabs-create-draft";
+const DRAFT_STORAGE_KEY = 'commitlabs-create-draft';
 
 const DraftSchema = z.object({
   version: z.literal(DRAFT_SCHEMA_VERSION),
   data: z.object({
     step: z.number(),
-    selectedType: z.enum(["safe", "balanced", "aggressive"]).nullable(),
-    commitmentType: z.enum(["safe", "balanced", "aggressive"]),
+    selectedType: z.enum(['safe', 'balanced', 'aggressive']).nullable(),
+    commitmentType: z.enum(['safe', 'balanced', 'aggressive']),
     amount: z.string(),
     asset: z.string(),
     durationDays: z.number(),
@@ -73,7 +73,7 @@ export function useDraftPersistence() {
         };
         localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(toStore));
       } catch {
-        console.warn("Failed to save draft to localStorage");
+        console.warn('Failed to save draft to localStorage');
       }
     }, 500);
   }, []);

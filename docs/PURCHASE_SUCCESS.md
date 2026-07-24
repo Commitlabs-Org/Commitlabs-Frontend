@@ -17,15 +17,15 @@ If no `onPurchase` prop is provided, the Trade button falls back to `router.push
 
 ### Props
 
-| Prop | Type | Required | Description |
-|---|---|---|---|
-| `isOpen` | `boolean` | ✓ | Controls modal visibility |
-| `onClose` | `() => void` | ✓ | Called when the user dismisses the modal |
-| `commitmentId` | `string` | ✓ | Raw commitment id, zero-padded to 3 digits in the UI |
-| `commitmentType` | `string` | ✓ | Human-readable type label (e.g. `"Safe Commitment"`) |
-| `pricePaid` | `string` | ✓ | Formatted price string (e.g. `"1,000 USDC"`) |
-| `txHash` | `string` | — | Transaction hash; missing hash is handled gracefully |
-| `onViewCommitments` | `() => void` | ✓ | Called when user clicks "View in My Commitments" |
+| Prop                | Type         | Required | Description                                          |
+| ------------------- | ------------ | -------- | ---------------------------------------------------- |
+| `isOpen`            | `boolean`    | ✓        | Controls modal visibility                            |
+| `onClose`           | `() => void` | ✓        | Called when the user dismisses the modal             |
+| `commitmentId`      | `string`     | ✓        | Raw commitment id, zero-padded to 3 digits in the UI |
+| `commitmentType`    | `string`     | ✓        | Human-readable type label (e.g. `"Safe Commitment"`) |
+| `pricePaid`         | `string`     | ✓        | Formatted price string (e.g. `"1,000 USDC"`)         |
+| `txHash`            | `string`     | —        | Transaction hash; missing hash is handled gracefully |
+| `onViewCommitments` | `() => void` | ✓        | Called when user clicks "View in My Commitments"     |
 
 ### Usage
 
@@ -36,10 +36,7 @@ async function handlePurchase(id: string): Promise<string | undefined> {
   return result.txHash;
 }
 
-<MarketplaceCard
-  {...cardProps}
-  onPurchase={handlePurchase}
-/>
+<MarketplaceCard {...cardProps} onPurchase={handlePurchase} />;
 ```
 
 `MarketplaceCard` manages all modal state internally; no additional wiring is required.

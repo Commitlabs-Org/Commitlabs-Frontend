@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import React from "react";
-import { motion, Variants } from "framer-motion";
-import { FiActivity } from "react-icons/fi";
-import { FaDollarSign } from "react-icons/fa";
-import { HiOutlineExclamationCircle } from "react-icons/hi";
-import { TbBolt, TbShieldOff, TbLinkOff } from "react-icons/tb";
+import React from 'react';
+import { motion, Variants } from 'framer-motion';
+import { FiActivity } from 'react-icons/fi';
+import { FaDollarSign } from 'react-icons/fa';
+import { HiOutlineExclamationCircle } from 'react-icons/hi';
+import { TbBolt, TbShieldOff, TbLinkOff } from 'react-icons/tb';
 
 type ProblemItem = {
   title: string;
@@ -15,36 +15,33 @@ type ProblemItem = {
 
 const problems: ProblemItem[] = [
   {
-    title: "Volatile & Unpredictable",
-    description:
-      "Liquidity is highly volatile with no guarantees on duration or behavior",
+    title: 'Volatile & Unpredictable',
+    description: 'Liquidity is highly volatile with no guarantees on duration or behavior',
     Icon: FiActivity,
   },
   {
-    title: "Emission Dependency",
-    description:
-      "Protocols rely on inflationary emissions just to retain capital",
+    title: 'Emission Dependency',
+    description: 'Protocols rely on inflationary emissions just to retain capital',
     Icon: FaDollarSign,
   },
   {
-    title: "No Reliability Metrics",
-    description: "There is no way to measure or price liquidity reliability",
+    title: 'No Reliability Metrics',
+    description: 'There is no way to measure or price liquidity reliability',
     Icon: HiOutlineExclamationCircle,
   },
   {
-    title: "Cascading Failures",
-    description: "Sudden liquidity exits cause devastating cascading failures",
+    title: 'Cascading Failures',
+    description: 'Sudden liquidity exits cause devastating cascading failures',
     Icon: TbBolt,
   },
   {
-    title: "Zero Guarantees",
-    description: "LP tokens provide no guarantees about commitment duration",
+    title: 'Zero Guarantees',
+    description: 'LP tokens provide no guarantees about commitment duration',
     Icon: TbShieldOff,
   },
   {
-    title: "Temporary Capital",
-    description:
-      "Liquidity is treated as temporary capital, not infrastructure",
+    title: 'Temporary Capital',
+    description: 'Liquidity is treated as temporary capital, not infrastructure',
     Icon: TbLinkOff,
   },
 ];
@@ -58,7 +55,7 @@ const containerVariants: Variants = {
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
 
 const cardVariants: Variants = {
@@ -66,7 +63,7 @@ const cardVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: "easeOut" },
+    transition: { duration: 0.5, ease: 'easeOut' },
   },
 };
 
@@ -101,15 +98,12 @@ export const ProblemSection: React.FC = () => {
           </h2>
 
           <p className="font-['Inter',sans-serif] text-[#99a1af] text-base sm:text-lg lg:text-xl max-w-3xl">
-            In today&apos;s DeFi ecosystem, liquidity volatility creates systemic risk
-            and unpredictability that undermines protocol sustainability.
+            In today&apos;s DeFi ecosystem, liquidity volatility creates systemic risk and
+            unpredictability that undermines protocol sustainability.
           </p>
         </motion.div>
 
-        <ul
-          role="list"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
-        >
+        <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {problems.map(({ title, description, Icon }, idx) => (
             <motion.li
               key={idx}
@@ -118,18 +112,11 @@ export const ProblemSection: React.FC = () => {
             >
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-11 h-11 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center">
-                  <Icon
-                    className="w-6 h-6 text-[#0ff0fc]"
-                    aria-hidden="true"
-                  />
+                  <Icon className="w-6 h-6 text-[#0ff0fc]" aria-hidden="true" />
                 </div>
                 <div className="flex flex-col">
-                  <h3 className="text-white font-semibold text-lg">
-                    {title}
-                  </h3>
-                  <p className="text-[#99a1af] text-sm mt-2">
-                    {description}
-                  </p>
+                  <h3 className="text-white font-semibold text-lg">{title}</h3>
+                  <p className="text-[#99a1af] text-sm mt-2">{description}</p>
                 </div>
               </div>
             </motion.li>

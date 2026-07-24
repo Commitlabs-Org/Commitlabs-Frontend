@@ -37,13 +37,10 @@ import { validateAddress } from '@/lib/backend/validation';
 const BUYER_ADDRESS = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 
 function makeRequest(body: Record<string, unknown>) {
-  return createMockRequest(
-    'http://localhost:3000/api/marketplace/listings/listing_1/preflight',
-    {
-      method: 'POST',
-      body,
-    },
-  );
+  return createMockRequest('http://localhost:3000/api/marketplace/listings/listing_1/preflight', {
+    method: 'POST',
+    body,
+  });
 }
 
 function makeContext(id = 'listing_1') {

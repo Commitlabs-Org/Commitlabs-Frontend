@@ -61,18 +61,20 @@ import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 ## Props
 
 ### MarketplaceEmptyStateProps
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| type | 'empty' \| 'filtered' \| 'error' | - | The type of state to display |
-| onRetry | () => void | undefined | Callback for retry button (only shown in error state) |
-| onClearFilters | () => void | undefined | Callback for clear filters button (only shown in filtered state) |
+
+| Prop           | Type                             | Default   | Description                                                      |
+| -------------- | -------------------------------- | --------- | ---------------------------------------------------------------- |
+| type           | 'empty' \| 'filtered' \| 'error' | -         | The type of state to display                                     |
+| onRetry        | () => void                       | undefined | Callback for retry button (only shown in error state)            |
+| onClearFilters | () => void                       | undefined | Callback for clear filters button (only shown in filtered state) |
 
 ### MarketplaceResultsLayoutProps Extensions
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| emptyStateType | 'empty' \| 'filtered' \| 'error' | 'empty' | Determines which empty state to show when totalCount is 0 or error |
-| onRetry | () => void | undefined | Passed to MarketplaceEmptyState for retry functionality |
-| onClearFilters | () => void | undefined | Passed to MarketplaceEmptyState for clearing filters |
+
+| Prop           | Type                             | Default   | Description                                                        |
+| -------------- | -------------------------------- | --------- | ------------------------------------------------------------------ |
+| emptyStateType | 'empty' \| 'filtered' \| 'error' | 'empty'   | Determines which empty state to show when totalCount is 0 or error |
+| onRetry        | () => void                       | undefined | Passed to MarketplaceEmptyState for retry functionality            |
+| onClearFilters | () => void                       | undefined | Passed to MarketplaceEmptyState for clearing filters               |
 
 ## Features
 
@@ -85,6 +87,7 @@ import { MarketplaceResultsLayout } from '@/components/MarketplaceResultsLayout'
 ## Tests
 
 The test suite covers:
+
 - Rendering of all three states
 - Callback functionality (onClearFilters, onRetry)
 - Button visibility (shown only when callbacks provided)

@@ -53,10 +53,9 @@ const mockTransfer = {
 };
 
 function makeRequest(listingId = 'listing_1') {
-  return createMockRequest(
-    `http://localhost:3000/api/marketplace/listings/${listingId}/purchase`,
-    { method: 'POST' },
-  );
+  return createMockRequest(`http://localhost:3000/api/marketplace/listings/${listingId}/purchase`, {
+    method: 'POST',
+  });
 }
 
 function makeContext(id = 'listing_1') {
@@ -192,9 +191,7 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
   });
 
   it('returns 5xx when on-chain transfer fails', async () => {
-    vi.mocked(transferOwnership).mockRejectedValue(
-      new Error('Soroban RPC unreachable'),
-    );
+    vi.mocked(transferOwnership).mockRejectedValue(new Error('Soroban RPC unreachable'));
 
     const res = await POST(makeRequest(), makeContext());
     const { status, data } = await parseResponse(res);

@@ -3,6 +3,7 @@
 This document describes the design, architecture, and implementation of the "Recently Viewed" listings rail added to the marketplace.
 
 ## Overview
+
 To improve user continuity across marketplace browsing sessions, a client-side "Recently Viewed" rail tracks which listings the user has opened details for. It displays these recently viewed items in a compact, accessible, horizontal rail above the main listings grid.
 
 ```
@@ -21,6 +22,7 @@ To improve user continuity across marketplace browsing sessions, a client-side "
 ## Architecture
 
 The feature consists of three main parts:
+
 1. **State Management Hook (`src/hooks/useRecentlyViewed.ts`)**: Manages the persistence, eviction, and deduplication of viewed listing IDs.
 2. **UI Component (`src/components/marketplace/RecentlyViewedRail.tsx`)**: Renders a compact scrollable list of viewed items with horizontal navigation controls.
 3. **Integration (`src/app/marketplace/page.tsx` & `src/components/MarketplaceCard.tsx`)**: Listens to detail modal openings to track views and renders the rail.
@@ -28,7 +30,9 @@ The feature consists of three main parts:
 ---
 
 ## 1. The state hook: `useRecentlyViewed`
+
 Located at `src/hooks/useRecentlyViewed.ts`, this hook:
+
 - **Persists views**: Uses `localStorage` to persist listing IDs across page refreshes and filter/sort modifications.
 - **Limits history**: Capped at `10` listings by default (`MAX_RECENT_LISTINGS`). If the cap is reached, the oldest viewed item is evicted.
 - **Deduplicates repeat views**: If a user views a listing they've already viewed, the ID is moved to the front (beginning) of the history rail, rather than creating a duplicate entry.
@@ -37,7 +41,9 @@ Located at `src/hooks/useRecentlyViewed.ts`, this hook:
 ---
 
 ## 2. The component: `RecentlyViewedRail`
+
 Located at `src/components/marketplace/RecentlyViewedRail.tsx`, this component:
+
 - **Survives filter changes**: Resolves listing metadata by mapping stored IDs against the static mock listings list. Therefore, even if the active filters hide a listing in the main grid, it remains visible in the recently viewed rail.
 - **Accessible keyboard navigation**:
   - The scroll container is focusable via keyboard (`tabIndex={0}`) and responds to `ArrowLeft` and `ArrowRight` keystrokes.
@@ -51,6 +57,7 @@ Located at `src/components/marketplace/RecentlyViewedRail.tsx`, this component:
 ---
 
 ## 3. Integration
+
 - **`src/components/MarketplaceCard.tsx`**: Triggers the `onView` prop inside a `useEffect` hooked to the `isModalOpen` state.
 - **`src/components/MarketplaceGrid.tsx`**: Passes the `onView` prop from the page down to each marketplace card.
 - **`src/app/marketplace/page.tsx`**: Initializes `useRecentlyViewed` and renders `<RecentlyViewedRail />` above the grid inside the main content area.
@@ -58,7 +65,9 @@ Located at `src/components/marketplace/RecentlyViewedRail.tsx`, this component:
 ---
 
 ## Coverage and Tests
+
 Comprehensive test suites cover:
+
 - Hook functionality (`src/hooks/useRecentlyViewed.test.ts`):
   - Storage restoration.
   - Deduplication and re-ordering on repeat view.

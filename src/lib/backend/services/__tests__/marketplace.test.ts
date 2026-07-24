@@ -218,7 +218,7 @@ describe('listMarketplaceListings', () => {
       const resultsDefault = await listMarketplaceListings({});
       const resultsUnknown = await listMarketplaceListings({ sortBy: 'unknown_key' });
       expect(resultsUnknown.map((l) => l.listingId)).toEqual(
-        resultsDefault.map((l) => l.listingId)
+        resultsDefault.map((l) => l.listingId),
       );
     });
   });
@@ -231,8 +231,8 @@ describe('selectFeaturedMarketplaceListings', () => {
       results.every(
         (l) =>
           l.complianceScore >= FEATURED_MARKETPLACE_CONFIG.minComplianceScore &&
-          l.maxLoss <= FEATURED_MARKETPLACE_CONFIG.maxLoss
-      )
+          l.maxLoss <= FEATURED_MARKETPLACE_CONFIG.maxLoss,
+      ),
     ).toBe(true);
   });
 

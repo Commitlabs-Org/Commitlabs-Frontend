@@ -5,30 +5,30 @@ performance, accessibility, best-practices, and SEO before they reach `main`.
 
 ## Audited Routes
 
-| Route | Purpose |
-|---|---|
-| `/` | Landing page (heavy animations, hero assets) |
-| `/marketplace` | Commitment listing (recharts, data tables) |
-| `/commitments` | Dashboard (live SSE stream, health charts) |
+| Route          | Purpose                                      |
+| -------------- | -------------------------------------------- |
+| `/`            | Landing page (heavy animations, hero assets) |
+| `/marketplace` | Commitment listing (recharts, data tables)   |
+| `/commitments` | Dashboard (live SSE stream, health charts)   |
 
 ## Score Budgets
 
-| Category | Threshold | Failure Mode |
-|---|---|---|
-| Performance | ≥ 70 | warn |
-| Accessibility | ≥ 90 | error (blocks merge) |
-| Best Practices | ≥ 90 | error (blocks merge) |
-| SEO | ≥ 90 | error (blocks merge) |
+| Category       | Threshold | Failure Mode         |
+| -------------- | --------- | -------------------- |
+| Performance    | ≥ 70      | warn                 |
+| Accessibility  | ≥ 90      | error (blocks merge) |
+| Best Practices | ≥ 90      | error (blocks merge) |
+| SEO            | ≥ 90      | error (blocks merge) |
 
 ### Core Web Vitals Budgets
 
-| Metric | Budget | Failure Mode |
-|---|---|---|
-| First Contentful Paint (FCP) | ≤ 3 000 ms | warn |
-| Largest Contentful Paint (LCP) | ≤ 4 000 ms | warn |
-| Total Blocking Time (TBT) | ≤ 500 ms | warn |
-| Cumulative Layout Shift (CLS) | ≤ 0.15 | warn |
-| Time to Interactive (TTI) | ≤ 5 000 ms | warn |
+| Metric                         | Budget     | Failure Mode |
+| ------------------------------ | ---------- | ------------ |
+| First Contentful Paint (FCP)   | ≤ 3 000 ms | warn         |
+| Largest Contentful Paint (LCP) | ≤ 4 000 ms | warn         |
+| Total Blocking Time (TBT)      | ≤ 500 ms   | warn         |
+| Cumulative Layout Shift (CLS)  | ≤ 0.15     | warn         |
+| Time to Interactive (TTI)      | ≤ 5 000 ms | warn         |
 
 `error` thresholds block the PR. `warn` thresholds surface in the CI report
 but do not block merge, allowing iterative improvement.

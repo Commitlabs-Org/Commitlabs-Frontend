@@ -64,7 +64,9 @@ describe('MarketplaceGrid', () => {
   it('renders the marketplace loading skeleton with the requested card count', () => {
     render(<MarketplaceGridSkeleton showFilters={false} cardCount={3} />);
 
-    expect(screen.getByRole('status', { name: /loading marketplace listings/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('status', { name: /loading marketplace listings/i }),
+    ).toBeInTheDocument();
     const skeletonGrid = screen.getByRole('region', { name: /marketplace listings/i });
     expect(within(skeletonGrid).getAllByRole('listitem')).toHaveLength(3);
   });

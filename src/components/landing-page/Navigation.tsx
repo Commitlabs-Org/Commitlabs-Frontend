@@ -1,15 +1,15 @@
 // Navigation component with wallet integration
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Search } from "lucide-react";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Search } from 'lucide-react';
 
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { WalletConnectButton } from "@/components/WalletConnectButton";
-import { HelpDrawer } from "@/components/help/HelpDrawer";
-import { useCommandPalette } from "@/hooks/useCommandPalette";
-import { WalletAccountMenu } from "@/components/wallet/WalletAccountMenu";
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { WalletConnectButton } from '@/components/WalletConnectButton';
+import { HelpDrawer } from '@/components/help/HelpDrawer';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
+import { WalletAccountMenu } from '@/components/wallet/WalletAccountMenu';
 
 export const Navigation: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,12 +41,12 @@ export const Navigation: React.FC = () => {
           id="primary-navigation"
           aria-label="Primary"
           className={[
-            "flex items-center justify-center gap-8",
-            "max-[900px]:absolute max-[900px]:top-full max-[900px]:left-0 max-[900px]:right-0 max-[900px]:bg-[#0a0a0a] max-[900px]:flex-col max-[900px]:pt-5 max-[900px]:px-8 max-[900px]:pb-6 max-[900px]:gap-4 max-[900px]:border-b max-[900px]:border-[rgba(0,212,255,0.2)] max-[900px]:-translate-y-[10px] max-[900px]:opacity-0 max-[900px]:pointer-events-none max-[900px]:transition-[opacity,transform] max-[900px]:duration-300 max-[900px]:ease-[ease]",
+            'flex items-center justify-center gap-8',
+            'max-[900px]:absolute max-[900px]:top-full max-[900px]:left-0 max-[900px]:right-0 max-[900px]:bg-[#0a0a0a] max-[900px]:flex-col max-[900px]:pt-5 max-[900px]:px-8 max-[900px]:pb-6 max-[900px]:gap-4 max-[900px]:border-b max-[900px]:border-[rgba(0,212,255,0.2)] max-[900px]:-translate-y-[10px] max-[900px]:opacity-0 max-[900px]:pointer-events-none max-[900px]:transition-[opacity,transform] max-[900px]:duration-300 max-[900px]:ease-[ease]',
             menuOpen
-              ? "max-[900px]:opacity-100 max-[900px]:translate-y-0 max-[900px]:pointer-events-auto"
-              : "",
-          ].join(" ")}
+              ? 'max-[900px]:opacity-100 max-[900px]:translate-y-0 max-[900px]:pointer-events-auto'
+              : '',
+          ].join(' ')}
         >
           <a
             href="#features"
@@ -108,27 +108,25 @@ export const Navigation: React.FC = () => {
             onClick={handleToggle}
             aria-expanded={menuOpen}
             aria-controls="primary-navigation"
-            aria-label={
-              menuOpen ? "Close navigation menu" : "Open navigation menu"
-            }
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
             <span
               className={[
-                "block w-5 h-[2px] bg-[#d7f9ff] rounded-[2px] transition-[transform,opacity] duration-300 ease-[ease]",
-                menuOpen ? "translate-y-[6px] rotate-45" : "",
-              ].join(" ")}
+                'block w-5 h-[2px] bg-[#d7f9ff] rounded-[2px] transition-[transform,opacity] duration-300 ease-[ease]',
+                menuOpen ? 'translate-y-[6px] rotate-45' : '',
+              ].join(' ')}
             />
             <span
               className={[
-                "mt-1 block w-5 h-[2px] bg-[#d7f9ff] rounded-[2px] transition-[transform,opacity] duration-300 ease-[ease]",
-                menuOpen ? "opacity-0" : "",
-              ].join(" ")}
+                'mt-1 block w-5 h-[2px] bg-[#d7f9ff] rounded-[2px] transition-[transform,opacity] duration-300 ease-[ease]',
+                menuOpen ? 'opacity-0' : '',
+              ].join(' ')}
             />
             <span
               className={[
-                "mt-1 block w-5 h-[2px] bg-[#d7f9ff] rounded-[2px] transition-[transform,opacity] duration-300 ease-[ease]",
-                menuOpen ? "-translate-y-[6px] -rotate-45" : "",
-              ].join(" ")}
+                'mt-1 block w-5 h-[2px] bg-[#d7f9ff] rounded-[2px] transition-[transform,opacity] duration-300 ease-[ease]',
+                menuOpen ? '-translate-y-[6px] -rotate-45' : '',
+              ].join(' ')}
             />
           </button>
         </div>

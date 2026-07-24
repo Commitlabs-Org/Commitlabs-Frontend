@@ -11,7 +11,7 @@ interface MyCommitmentsGridSkeletonProps {
 
 /**
  * Skeleton loading component for the commitments list page
- * 
+ *
  * Features:
  * - Shows skeleton stats section (optional)
  * - Shows skeleton filters section (optional)
@@ -32,22 +32,22 @@ export default function MyCommitmentsGridSkeleton({
           <CommitmentStatsSkeleton />
         </div>
       )}
-      
+
       {/* Filters skeleton */}
       {showFilters && (
         <div className="w-full">
           <FiltersSkeleton />
         </div>
       )}
-      
+
       {/* Results count skeleton */}
       <div className="text-[14px] text-[#94A3B8]">
         <div className="inline-block">
           <div className="w-12 h-6 bg-[#1a1a1a] rounded animate-pulse" />
-        </div>
-        {' '}commitments found
+        </div>{' '}
+        commitments found
       </div>
-      
+
       {/* Commitment cards grid skeleton */}
       <div className="grid grid-cols-3 gap-6 max-[1200px]:grid-cols-2 max-[768px]:grid-cols-1">
         {Array.from({ length: cardCount }).map((_, index) => (

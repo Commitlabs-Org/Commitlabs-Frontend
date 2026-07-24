@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
-import ErrorLayout from '@/components/ErrorLayout'
-import ErrorButton from '@/components/ErrorButton'
-import styles from './not-found.module.css'
+import { useRouter } from 'next/navigation';
+import ErrorLayout from '@/components/ErrorLayout';
+import ErrorButton from '@/components/ErrorButton';
+import styles from './not-found.module.css';
 
 export default function NotFound() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <ErrorLayout>
@@ -48,7 +48,7 @@ export default function NotFound() {
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
                 // You can implement search functionality here
-                console.log('Search:', e.currentTarget.value)
+                console.log('Search:', e.currentTarget.value);
               }
             }}
           />
@@ -57,14 +57,11 @@ export default function NotFound() {
         {/* Action Buttons */}
         <div className={styles.actions}>
           <ErrorButton href="/">Go Home</ErrorButton>
-          <ErrorButton
-            variant="secondary"
-            onClick={() => router.back()}
-          >
+          <ErrorButton variant="secondary" onClick={() => router.back()}>
             Go Back
           </ErrorButton>
         </div>
       </div>
     </ErrorLayout>
-  )
+  );
 }

@@ -21,19 +21,19 @@ the log scannable and enables future changelog automation.
 
 ## Accepted types
 
-| Type       | Use for                                                        |
-| ---------- | ------------------------------------------------------------- |
-| `feat`     | A new feature                                                 |
-| `fix`      | A bug fix                                                     |
-| `docs`     | Documentation-only changes                                    |
-| `style`    | Formatting/whitespace, no logic change                       |
-| `refactor` | Code change that neither fixes a bug nor adds a feature       |
-| `perf`     | A performance improvement                                     |
-| `test`     | Adding or correcting tests                                    |
-| `build`    | Build system or dependency changes                           |
-| `ci`       | CI configuration and scripts                                  |
-| `chore`    | Routine maintenance that doesn't fit the above               |
-| `revert`   | Reverting a previous commit                                   |
+| Type       | Use for                                                 |
+| ---------- | ------------------------------------------------------- |
+| `feat`     | A new feature                                           |
+| `fix`      | A bug fix                                               |
+| `docs`     | Documentation-only changes                              |
+| `style`    | Formatting/whitespace, no logic change                  |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `perf`     | A performance improvement                               |
+| `test`     | Adding or correcting tests                              |
+| `build`    | Build system or dependency changes                      |
+| `ci`       | CI configuration and scripts                            |
+| `chore`    | Routine maintenance that doesn't fit the above          |
+| `revert`   | Reverting a previous commit                             |
 
 ## Examples
 

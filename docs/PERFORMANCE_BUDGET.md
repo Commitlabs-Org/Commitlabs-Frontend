@@ -15,22 +15,22 @@ reporting pipeline works.
 Field targets use Google's "good" thresholds, encoded in `WEB_VITALS_BUDGET` in
 [`src/lib/perf/webVitals.ts`](../src/lib/perf/webVitals.ts):
 
-| Metric | Budget ("good") | Meaning |
-| ------ | --------------- | ------- |
-| **LCP** (Largest Contentful Paint) | ≤ 2500 ms | Main content rendered |
-| **INP** (Interaction to Next Paint) | ≤ 200 ms | Responsiveness to input |
-| **CLS** (Cumulative Layout Shift) | ≤ 0.1 | Visual stability |
+| Metric                              | Budget ("good") | Meaning                 |
+| ----------------------------------- | --------------- | ----------------------- |
+| **LCP** (Largest Contentful Paint)  | ≤ 2500 ms       | Main content rendered   |
+| **INP** (Interaction to Next Paint) | ≤ 200 ms        | Responsiveness to input |
+| **CLS** (Cumulative Layout Shift)   | ≤ 0.1           | Visual stability        |
 
 ### Key routes
 
 The budget applies to all routes, with these as the tracked priorities (the same
 set Lighthouse CI collects):
 
-| Route | Why it matters |
-| ----- | -------------- |
-| `/` | Landing — first impression, mostly unauthenticated traffic |
-| `/marketplace` | Data-heavy listing grid (search, sort, cards) |
-| `/commitments` | Authenticated dashboard with charts |
+| Route          | Why it matters                                             |
+| -------------- | ---------------------------------------------------------- |
+| `/`            | Landing — first impression, mostly unauthenticated traffic |
+| `/marketplace` | Data-heavy listing grid (search, sort, cards)              |
+| `/commitments` | Authenticated dashboard with charts                        |
 
 > **Lab vs field:** the Lighthouse assertions in `lighthouserc.json` are
 > intentionally looser than the field "good" thresholds (e.g. LCP warns at
@@ -69,12 +69,12 @@ Browser → next/web-vitals useReportWebVitals
 Register a destination once, on the client, before/at app start:
 
 ```ts
-import { setWebVitalsSink } from '@/lib/perf/webVitals'
+import { setWebVitalsSink } from '@/lib/perf/webVitals';
 
 setWebVitalsSink((record) => {
   // e.g. navigator.sendBeacon('/api/vitals', JSON.stringify(record))
   // keep it cheap and non-throwing
-})
+});
 ```
 
 Use [`isWithinBudget(name, value)`](../src/lib/perf/webVitals.ts) in a sink to

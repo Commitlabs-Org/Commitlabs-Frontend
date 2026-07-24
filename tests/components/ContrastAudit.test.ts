@@ -6,9 +6,7 @@ import { describe, it, expect } from 'vitest';
  */
 function linearize(channel: number): number {
   const s = channel / 255;
-  return s <= 0.04045
-    ? s / 12.92
-    : Math.pow((s + 0.055) / 1.055, 2.4);
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
 }
 
 /**
@@ -74,7 +72,12 @@ describe('WCAG AA contrast audit — dark theme', () => {
     ['text-muted (#808b9e) on surface-tooltip', TOKENS.text.muted, 'tooltip', AA_TEXT],
     ['text-secondary (#99a1af) on surface-base', TOKENS.text.secondary, 'base', AA_TEXT],
     ['text-primary (#ffffff) on surface-base', TOKENS.text.primary, 'base', AA_TEXT],
-    ['drawdown tooltip (#f87171) on tooltip', TOKENS.chart.drawdownTooltipFixed, 'tooltip', AA_TEXT],
+    [
+      'drawdown tooltip (#f87171) on tooltip',
+      TOKENS.chart.drawdownTooltipFixed,
+      'tooltip',
+      AA_TEXT,
+    ],
     ['status-positive (#05DF72) on surface-base', TOKENS.status.positive, 'base', AA_TEXT],
     ['status-warning (#ff8904) on surface-base', TOKENS.status.warning, 'base', AA_TEXT],
     ['status-danger (#f87171) on surface-base', TOKENS.status.danger, 'base', AA_TEXT],

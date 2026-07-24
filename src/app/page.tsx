@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 import React from 'react';
-import { HeroSection } from "@/components/landing-page/sections/HeroSection";
-import { Navigation } from "@/components/landing-page/Navigation";
+import { HeroSection } from '@/components/landing-page/sections/HeroSection';
+import { Navigation } from '@/components/landing-page/Navigation';
 import { Skeleton } from '@/components/Skeleton';
 
 // Lazy-loaded sections
@@ -13,22 +13,35 @@ const SolutionSection = dynamic(() => import('@/components/SolutionSection'), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,
 });
-const CoreConceptsSection = dynamic(() => import('@/components/landing-page/sections/CoreConceptsSection').then(m => m.CoreConceptsSection), {
-  loading: () => <Skeleton className="w-full h-64" />,
-  ssr: false,
-});
-const CommitmentJourney = dynamic(() => import('@/components/CommitmentJourney/CommitmentJourney'), {
-  loading: () => <Skeleton className="w-full h-64" />,
-  ssr: false,
-});
+const CoreConceptsSection = dynamic(
+  () =>
+    import('@/components/landing-page/sections/CoreConceptsSection').then(
+      (m) => m.CoreConceptsSection,
+    ),
+  {
+    loading: () => <Skeleton className="w-full h-64" />,
+    ssr: false,
+  },
+);
+const CommitmentJourney = dynamic(
+  () => import('@/components/CommitmentJourney/CommitmentJourney'),
+  {
+    loading: () => <Skeleton className="w-full h-64" />,
+    ssr: false,
+  },
+);
 const ImpactSection = dynamic(() => import('@/components/ImpactSection'), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,
 });
-const ExperienceSection = dynamic(() => import('@/components/landing-page/sections/ExperienceSection').then(m => m.ExperienceSection), {
-  loading: () => <Skeleton className="w-full h-64" />,
-  ssr: false,
-});
+const ExperienceSection = dynamic(
+  () =>
+    import('@/components/landing-page/sections/ExperienceSection').then((m) => m.ExperienceSection),
+  {
+    loading: () => <Skeleton className="w-full h-64" />,
+    ssr: false,
+  },
+);
 const Footer = dynamic(() => import('@/components/landing-page/Footer'), {
   loading: () => <Skeleton className="w-full h-64" />,
   ssr: false,

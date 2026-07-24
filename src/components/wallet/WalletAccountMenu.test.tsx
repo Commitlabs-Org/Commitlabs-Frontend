@@ -50,9 +50,7 @@ describe('WalletAccountMenu', () => {
     });
     expect(connectButton).toBeEnabled();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /Freighter is not available/i,
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Freighter is not available/i);
   });
 
   it('shows connecting state while the connection request is pending', async () => {
@@ -77,9 +75,7 @@ describe('WalletAccountMenu', () => {
     expect(connectButton).toHaveTextContent(/connecting/i);
 
     resolvePromise({ address: 'GABCD1234EFGH5678IJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOP' });
-    await waitFor(() =>
-      expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument());
   });
 
   it('renders connected address, network, explorer link, and allows disconnecting', async () => {
@@ -89,9 +85,7 @@ describe('WalletAccountMenu', () => {
 
     render(<WalletAccountMenu />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument());
 
     const accountButton = screen.getByRole('button', {
       name: /connected wallet/i,
@@ -102,9 +96,7 @@ describe('WalletAccountMenu', () => {
     expect(await screen.findByText(/Testnet/i)).toBeInTheDocument();
 
     // Check explorer link is present
-    expect(
-      screen.getByRole('menuitem', { name: /View on Stellar.Expert/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /View on Stellar.Expert/i })).toBeInTheDocument();
 
     // Check disconnect button
     const disconnectButton = screen.getByRole('menuitem', {
@@ -113,9 +105,7 @@ describe('WalletAccountMenu', () => {
     fireEvent.click(disconnectButton);
 
     await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /connect wallet/i }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument(),
     );
 
     // Check that logout API was called
@@ -138,9 +128,7 @@ describe('WalletAccountMenu', () => {
 
     render(<WalletAccountMenu />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument());
 
     const accountButton = screen.getByRole('button', {
       name: /connected wallet/i,
@@ -165,9 +153,7 @@ describe('WalletAccountMenu', () => {
 
     render(<WalletAccountMenu />);
 
-    await waitFor(() =>
-      expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument());
 
     const accountButton = screen.getByRole('button', {
       name: /connected wallet/i,
@@ -181,9 +167,7 @@ describe('WalletAccountMenu', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
 
     // Check menu is closed
-    await waitFor(() =>
-      expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument());
   });
 
   it('shows a recovery message when the user rejects the connection in Freighter', async () => {
@@ -192,9 +176,7 @@ describe('WalletAccountMenu', () => {
     render(<WalletAccountMenu />);
 
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        /Connection canceled in Freighter/i,
-      ),
+      expect(screen.getByRole('alert')).toHaveTextContent(/Connection canceled in Freighter/i),
     );
   });
 });

@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, X, Loader2, AlertCircle } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, X, Loader2, AlertCircle } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export interface CommitmentSearchResult {
-  commitmentId: string
-  ownerAddress: string
-  asset: string
-  amount: string
-  status: string
-  riskType: string
-  complianceScore: number
+  commitmentId: string;
+  ownerAddress: string;
+  asset: string;
+  amount: string;
+  status: string;
+  riskType: string;
+  complianceScore: number;
 }
 
 export interface SidebarSearchProps {
-  ownerAddress?: string
-  isCollapsed?: boolean
-  onResultSelect?: () => void
+  ownerAddress?: string;
+  isCollapsed?: boolean;
+  onResultSelect?: () => void;
 }
 
 export const SidebarSearch: React.FC<SidebarSearchProps> = ({
@@ -26,111 +26,111 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
   isCollapsed = false,
   onResultSelect,
 }) => {
-  const router = useRouter()
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<CommitmentSearchResult[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isOpen, setIsOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(-1)
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<CommitmentSearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const inputRef = useRef<HTMLInputElement>(null)
-  const listboxRef = useRef<HTMLUListElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const debouncedQuery = useDebounce(query, 350)
+  const debouncedQuery = useDebounce(query, 350);
 
   const fetchResults = useCallback(
     async (searchQuery: string) => {
       if (!searchQuery.trim() || !ownerAddress) {
-        setResults([])
-        setIsOpen(false)
-        return
+        setResults([]);
+        setIsOpen(false);
+        return;
       }
 
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
         const params = new URLSearchParams({
           ownerAddress,
           asset: searchQuery.toUpperCase(),
           pageSize: '5',
-        })
-        const res = await fetch(`/api/commitments/search?${params.toString()}`)
-        if (!res.ok) throw new Error('Search failed')
-        const json = await res.json()
-        const data: CommitmentSearchResult[] = json?.data ?? []
-        setResults(data)
-        setIsOpen(true)
-        setActiveIndex(-1)
+        });
+        const res = await fetch(`/api/commitments/search?${params.toString()}`);
+        if (!res.ok) throw new Error('Search failed');
+        const json = await res.json();
+        const data: CommitmentSearchResult[] = json?.data ?? [];
+        setResults(data);
+        setIsOpen(true);
+        setActiveIndex(-1);
       } catch {
-        setError('Search unavailable. Please try again.')
-        setResults([])
-        setIsOpen(false)
+        setError('Search unavailable. Please try again.');
+        setResults([]);
+        setIsOpen(false);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     [ownerAddress],
-  )
+  );
 
   useEffect(() => {
-    fetchResults(debouncedQuery)
-  }, [debouncedQuery, fetchResults])
+    fetchResults(debouncedQuery);
+  }, [debouncedQuery, fetchResults]);
 
   const handleClear = () => {
-    setQuery('')
-    setResults([])
-    setIsOpen(false)
-    setError(null)
-    setActiveIndex(-1)
-    inputRef.current?.focus()
-  }
+    setQuery('');
+    setResults([]);
+    setIsOpen(false);
+    setError(null);
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  };
 
   const handleSelect = (item: CommitmentSearchResult) => {
-    router.push(`/commitments/${item.commitmentId}`)
-    setQuery('')
-    setResults([])
-    setIsOpen(false)
-    onResultSelect?.()
-  }
+    router.push(`/commitments/${item.commitmentId}`);
+    setQuery('');
+    setResults([]);
+    setIsOpen(false);
+    onResultSelect?.();
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || results.length === 0) return
+    if (!isOpen || results.length === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
-        e.preventDefault()
-        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
-        break
+        e.preventDefault();
+        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+        break;
       case 'ArrowUp':
-        e.preventDefault()
-        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
-        break
+        e.preventDefault();
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+        break;
       case 'Enter':
-        e.preventDefault()
+        e.preventDefault();
         if (activeIndex >= 0 && results[activeIndex]) {
-          handleSelect(results[activeIndex])
+          handleSelect(results[activeIndex]);
         }
-        break
+        break;
       case 'Escape':
-        setIsOpen(false)
-        setActiveIndex(-1)
-        break
+        setIsOpen(false);
+        setActiveIndex(-1);
+        break;
     }
-  }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (isCollapsed) {
     return (
@@ -142,12 +142,13 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
       >
         <Search size={20} />
       </button>
-    )
+    );
   }
 
-  const listboxId = 'sidebar-search-listbox'
-  const hasResults = results.length > 0
-  const isEmpty = !isLoading && !error && query.trim().length > 0 && debouncedQuery === query && !hasResults
+  const listboxId = 'sidebar-search-listbox';
+  const hasResults = results.length > 0;
+  const isEmpty =
+    !isLoading && !error && query.trim().length > 0 && debouncedQuery === query && !hasResults;
 
   return (
     <div ref={containerRef} className="relative px-2 py-2" data-testid="sidebar-search">
@@ -159,11 +160,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
         className="relative flex items-center"
       >
         <span className="absolute left-3 text-white/40 pointer-events-none" aria-hidden="true">
-          {isLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Search size={16} />
-          )}
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
         </span>
 
         <input
@@ -239,9 +236,10 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               onMouseEnter={() => setActiveIndex(index)}
               className={`
                 flex items-center justify-between px-3 py-2.5 cursor-pointer text-sm transition-colors
-                ${index === activeIndex
-                  ? 'bg-[#0FF0FC]/10 text-[#0FF0FC]'
-                  : 'text-white/80 hover:bg-white/5'
+                ${
+                  index === activeIndex
+                    ? 'bg-[#0FF0FC]/10 text-[#0FF0FC]'
+                    : 'text-white/80 hover:bg-white/5'
                 }
               `}
             >
@@ -251,15 +249,14 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
           ))}
 
           {/* Marketplace fallback link */}
-          <li
-            role="option"
-            aria-selected={false}
-            className="border-t border-white/10"
-          >
+          <li role="option" aria-selected={false} className="border-t border-white/10">
             <a
               href={`/marketplace?q=${encodeURIComponent(query)}`}
               className="flex items-center gap-2 px-3 py-2.5 text-xs text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors"
-              onClick={() => { setIsOpen(false); onResultSelect?.() }}
+              onClick={() => {
+                setIsOpen(false);
+                onResultSelect?.();
+              }}
             >
               <Search size={12} aria-hidden="true" />
               Search marketplace for &ldquo;{query}&rdquo;
@@ -269,12 +266,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
       )}
 
       {/* Live region for screen readers */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {isLoading
           ? 'Searching…'
           : hasResults
@@ -284,7 +276,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               : ''}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default SidebarSearch
+export default SidebarSearch;

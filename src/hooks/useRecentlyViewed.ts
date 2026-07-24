@@ -51,7 +51,7 @@ export function useRecentlyViewed(cap = MAX_RECENT_LISTINGS) {
         return updated;
       });
     },
-    [cap]
+    [cap],
   );
 
   const clearAll = useCallback(() => {

@@ -35,7 +35,9 @@ export function TourStep({
   // Focus management: Focus on the tooltip title/container when step changes
   useEffect(() => {
     if (containerRef.current) {
-      const nextBtn = containerRef.current.querySelector('[data-testid="tour-next-btn"]') as HTMLButtonElement;
+      const nextBtn = containerRef.current.querySelector(
+        '[data-testid="tour-next-btn"]',
+      ) as HTMLButtonElement;
       if (nextBtn) {
         nextBtn.focus();
       } else {
@@ -119,7 +121,7 @@ export function TourStep({
       // Constrain tooltip boundaries within the screen viewport
       const padding = 16;
       left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding));
-      
+
       // Calculate height dynamically if already in DOM
       if (containerRef.current) {
         const actualHeight = containerRef.current.offsetHeight;
@@ -174,9 +176,7 @@ export function TourStep({
         }
       } else if (e.key === 'Tab') {
         if (!containerRef.current) return;
-        const focusable = containerRef.current.querySelectorAll(
-          'button, [tabindex="0"]'
-        );
+        const focusable = containerRef.current.querySelectorAll('button, [tabindex="0"]');
         if (focusable.length === 0) return;
         const first = focusable[0] as HTMLElement | undefined;
         const last = focusable[focusable.length - 1] as HTMLElement | undefined;
@@ -240,7 +240,9 @@ export function TourStep({
         aria-labelledby="tour-step-title"
         aria-describedby="tour-step-content"
         tabIndex={-1}
-        initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95, y: position === 'top' ? 10 : -10 }}
+        initial={
+          shouldReduceMotion ? {} : { opacity: 0, scale: 0.95, y: position === 'top' ? 10 : -10 }
+        }
         animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.2 }}
         style={{
@@ -261,8 +263,23 @@ export function TourStep({
         data-testid="tour-tooltip"
       >
         {/* Step Indicator */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: '#0ff0fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '8px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#0ff0fc',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
             Step {currentStepIndex + 1} of {totalSteps}
           </span>
           <button
@@ -287,10 +304,21 @@ export function TourStep({
         </div>
 
         {/* Content */}
-        <h3 id="tour-step-title" style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}>
+        <h3
+          id="tour-step-title"
+          style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#ffffff' }}
+        >
           {title}
         </h3>
-        <p id="tour-step-content" style={{ fontSize: '13px', lineHeight: '1.5', color: 'rgba(255, 255, 255, 0.75)', marginBottom: '20px' }}>
+        <p
+          id="tour-step-content"
+          style={{
+            fontSize: '13px',
+            lineHeight: '1.5',
+            color: 'rgba(255, 255, 255, 0.75)',
+            marginBottom: '20px',
+          }}
+        >
           {content}
         </p>
 
@@ -303,7 +331,8 @@ export function TourStep({
               background: 'transparent',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '8px',
-              color: currentStepIndex === 0 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+              color:
+                currentStepIndex === 0 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)',
               fontSize: '13px',
               fontWeight: 500,
               padding: '6px 12px',

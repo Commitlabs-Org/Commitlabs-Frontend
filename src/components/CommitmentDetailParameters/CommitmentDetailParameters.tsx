@@ -1,25 +1,23 @@
-import { Clock, AlertTriangle, Shield, DollarSign } from 'lucide-react'
-import styles from './CommitmentDetailParameters.module.css'
-import { PiStack } from 'react-icons/pi'
-import GlossaryTerm from '../GlossaryTerm'
+import { Clock, AlertTriangle, Shield, DollarSign } from 'lucide-react';
+import styles from './CommitmentDetailParameters.module.css';
+import { PiStack } from 'react-icons/pi';
+import GlossaryTerm from '../GlossaryTerm';
 
-const DEFAULT_DURATION_DESCRIPTION = 'Commitment lock period'
-const DEFAULT_MAX_LOSS_DESCRIPTION = 'Maximum acceptable loss before violation'
-const DEFAULT_COMMITMENT_TYPE_DESCRIPTION = 'Risk profile and strategy type'
-const DEFAULT_EARLY_EXIT_PENALTY_DESCRIPTION = 'Penalty for exiting before expiry'
+const DEFAULT_DURATION_DESCRIPTION = 'Commitment lock period';
+const DEFAULT_MAX_LOSS_DESCRIPTION = 'Maximum acceptable loss before violation';
+const DEFAULT_COMMITMENT_TYPE_DESCRIPTION = 'Risk profile and strategy type';
+const DEFAULT_EARLY_EXIT_PENALTY_DESCRIPTION = 'Penalty for exiting before expiry';
 
 export interface CommitmentDetailParametersProps {
-  durationLabel: string
-  maxLossLabel: string
-  commitmentTypeLabel: string
-  earlyExitPenaltyLabel: string
-  durationDescription?: string
-  maxLossDescription?: string
-  commitmentTypeDescription?: string
-  earlyExitPenaltyDescription?: string
+  durationLabel: string;
+  maxLossLabel: string;
+  commitmentTypeLabel: string;
+  earlyExitPenaltyLabel: string;
+  durationDescription?: string;
+  maxLossDescription?: string;
+  commitmentTypeDescription?: string;
+  earlyExitPenaltyDescription?: string;
 }
-
-
 
 export function CommitmentDetailParameters({
   durationLabel,
@@ -32,13 +30,10 @@ export function CommitmentDetailParameters({
   earlyExitPenaltyDescription = DEFAULT_EARLY_EXIT_PENALTY_DESCRIPTION,
 }: CommitmentDetailParametersProps) {
   return (
-    <section
-      className={styles.section}
-      aria-labelledby="commitment-parameters-heading"
-    >
+    <section className={styles.section} aria-labelledby="commitment-parameters-heading">
       <div className={styles.headingRow}>
         <div className={styles.headingIcon} aria-hidden="true">
-          <PiStack color='#0ef1fc' strokeWidth={2} size={22}/>
+          <PiStack color="#0ef1fc" strokeWidth={2} size={22} />
         </div>
         <h2 id="commitment-parameters-heading" className={styles.heading}>
           Commitment Parameters
@@ -62,7 +57,9 @@ export function CommitmentDetailParameters({
             <div className={styles.iconWrap}>
               <AlertTriangle size={22} color="#FF3B30" strokeWidth={2} />
             </div>
-            <span className={styles.label}><GlossaryTerm termKey="max loss threshold">Max Loss Threshold</GlossaryTerm></span>
+            <span className={styles.label}>
+              <GlossaryTerm termKey="max loss threshold">Max Loss Threshold</GlossaryTerm>
+            </span>
           </div>
           <p className={styles.value}>{maxLossLabel}</p>
           <p className={styles.description}>{maxLossDescription}</p>
@@ -84,7 +81,9 @@ export function CommitmentDetailParameters({
             <div className={styles.iconWrap}>
               <DollarSign size={22} color="#F5A623" strokeWidth={2} />
             </div>
-            <span className={styles.label}><GlossaryTerm termKey="early exit">Early Exit Penalty</GlossaryTerm></span>
+            <span className={styles.label}>
+              <GlossaryTerm termKey="early exit">Early Exit Penalty</GlossaryTerm>
+            </span>
           </div>
           <p className={styles.value}>{earlyExitPenaltyLabel}</p>
           <p className={styles.description}>{earlyExitPenaltyDescription}</p>

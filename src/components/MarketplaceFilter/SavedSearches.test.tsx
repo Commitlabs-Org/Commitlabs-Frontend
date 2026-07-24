@@ -74,11 +74,13 @@ describe('SavedSearches', () => {
     const onApplyFilters = vi.fn();
     render(<SavedSearches filters={mockFilters} onApplyFilters={onApplyFilters} />);
     fireEvent.click(screen.getByText('Saved Searches'));
-    
+
     await waitFor(() => screen.getByText('Test Search'));
 
     fireEvent.click(screen.getByText('Save this search'));
-    fireEvent.change(screen.getByPlaceholderText('Search name...'), { target: { value: 'Test Search' } });
+    fireEvent.change(screen.getByPlaceholderText('Search name...'), {
+      target: { value: 'Test Search' },
+    });
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
@@ -112,7 +114,7 @@ describe('SavedSearches', () => {
     fireEvent.click(screen.getByText('Saved Searches'));
 
     await waitFor(() => screen.getByText('Delete Me'));
-    
+
     const deleteButton = screen.getByLabelText('Delete search');
     fireEvent.click(deleteButton);
 

@@ -270,7 +270,7 @@ describe('GET /api/admin/audit-events — authorized', () => {
 
     const req = makeRequest(
       { startTime: '2026-04-22T00:00:00Z', endTime: '2026-04-22T23:59:59Z' },
-      ADMIN_SECRET
+      ADMIN_SECRET,
     );
     const res = await GET(req, { params: {} });
     const body = await res.json();
@@ -295,7 +295,7 @@ describe('GET /api/admin/audit-events — authorized', () => {
         startTime: '2026-04-23T00:00:00Z',
         endTime: '2026-04-24T00:00:00Z',
       },
-      ADMIN_SECRET
+      ADMIN_SECRET,
     );
     const res = await GET(req, { params: {} });
     const body = await res.json();
@@ -485,7 +485,7 @@ describe('GET /api/admin/audit-events — rate limiting', () => {
 
     expect(rateLimit.checkRateLimit).toHaveBeenCalledWith(
       expect.any(String),
-      'api/admin/audit-events'
+      'api/admin/audit-events',
     );
   });
 });

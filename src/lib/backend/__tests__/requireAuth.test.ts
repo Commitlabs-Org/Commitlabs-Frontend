@@ -16,9 +16,7 @@ const mockVerify = verifySessionToken as ReturnType<typeof vi.fn>;
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function makeRequestWithCookie(sessionValue: string | null): NextRequest {
-  const headers: HeadersInit = sessionValue
-    ? { Cookie: `session=${sessionValue}` }
-    : {};
+  const headers: HeadersInit = sessionValue ? { Cookie: `session=${sessionValue}` } : {};
   return new NextRequest('http://localhost:3000/api/test', { headers });
 }
 

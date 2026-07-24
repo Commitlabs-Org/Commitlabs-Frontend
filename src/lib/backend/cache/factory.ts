@@ -8,9 +8,7 @@ function createAdapter(): CacheAdapter {
 
   const useRedis =
     forced === 'redis' ||
-    (forced !== 'memory' &&
-      process.env.NODE_ENV === 'production' &&
-      !!redisUrl);
+    (forced !== 'memory' && process.env.NODE_ENV === 'production' && !!redisUrl);
 
   if (useRedis) {
     if (!redisUrl) {

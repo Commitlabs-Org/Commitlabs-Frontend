@@ -44,9 +44,7 @@ describe('GET /api/marketplace/featured', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(checkRateLimit).mockResolvedValue(true);
-    vi.mocked(marketplaceService.getFeaturedListings).mockResolvedValue([
-      featuredListing as any,
-    ]);
+    vi.mocked(marketplaceService.getFeaturedListings).mockResolvedValue([featuredListing as any]);
   });
 
   it('returns featured listings with total count and cache/security headers', async () => {
@@ -62,10 +60,7 @@ describe('GET /api/marketplace/featured', () => {
     expect(headers.get('Cache-Control')).toBe(FEATURED_MARKETPLACE_CACHE_CONTROL);
     expect(headers.get('X-Content-Type-Options')).toBe('nosniff');
     expect(headers.get('X-Frame-Options')).toBe('DENY');
-    expect(checkRateLimit).toHaveBeenCalledWith(
-      '203.0.113.10',
-      'api/marketplace/featured',
-    );
+    expect(checkRateLimit).toHaveBeenCalledWith('203.0.113.10', 'api/marketplace/featured');
   });
 
   it('returns an empty featured set with a zero total', async () => {

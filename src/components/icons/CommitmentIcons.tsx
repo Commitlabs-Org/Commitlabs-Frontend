@@ -1,6 +1,9 @@
 import React from 'react';
 
-export const SafeIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+export const SafeIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 24,
+  className,
+}) => (
   <svg
     width={size}
     height={size}
@@ -16,7 +19,10 @@ export const SafeIcon: React.FC<{ size?: number; className?: string }> = ({ size
   </svg>
 );
 
-export const BalancedIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+export const BalancedIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 24,
+  className,
+}) => (
   <svg
     width={size}
     height={size}
@@ -33,7 +39,10 @@ export const BalancedIcon: React.FC<{ size?: number; className?: string }> = ({ 
   </svg>
 );
 
-export const AggressiveIcon: React.FC<{ size?: number; className?: string }> = ({ size = 24, className }) => (
+export const AggressiveIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 24,
+  className,
+}) => (
   <svg
     width={size}
     height={size}
@@ -49,7 +58,10 @@ export const AggressiveIcon: React.FC<{ size?: number; className?: string }> = (
   </svg>
 );
 
-export const EyeIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
+export const EyeIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 16,
+  className,
+}) => (
   <svg
     width={size}
     height={size}
@@ -66,7 +78,10 @@ export const EyeIcon: React.FC<{ size?: number; className?: string }> = ({ size 
   </svg>
 );
 
-export const FileTextIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
+export const FileTextIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 16,
+  className,
+}) => (
   <svg
     width={size}
     height={size}
@@ -86,7 +101,10 @@ export const FileTextIcon: React.FC<{ size?: number; className?: string }> = ({ 
   </svg>
 );
 
-export const AlertIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
+export const AlertIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 16,
+  className,
+}) => (
   <svg
     width={size}
     height={size}

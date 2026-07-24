@@ -1,4 +1,5 @@
 # Backend Security Review Checklist
+
 **Project:** Commitlabs-Frontend  
 **Reference:** [#141 - Create a security review checklist for backend PRs](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/141)  
 **Applies To:** All PRs touching `src/utils/`, `src/app/api/`, contract interaction logic, wallet handling, and environment configuration.
@@ -186,12 +187,12 @@ Pull requests are scanned for known-vulnerable dependencies by the
 
 Use this when flagging issues during review:
 
-| Severity | Description | Example |
-|----------|-------------|---------|
-| 🔴 **Critical** | Must be fixed before merge — security risk | Private key in source code |
-| 🟠 **High** | Must be fixed before merge — data or user risk | Unhandled contract error crashes app |
-| 🟡 **Medium** | Should be fixed or tracked as an issue | `console.log` leaking wallet address |
-| 🔵 **Low** | Nice to fix — code quality concern | TypeScript `any` type without comment |
-| ⚪ **Info** | Observation only — no action required | Minor naming inconsistency |
+| Severity        | Description                                    | Example                               |
+| --------------- | ---------------------------------------------- | ------------------------------------- |
+| 🔴 **Critical** | Must be fixed before merge — security risk     | Private key in source code            |
+| 🟠 **High**     | Must be fixed before merge — data or user risk | Unhandled contract error crashes app  |
+| 🟡 **Medium**   | Should be fixed or tracked as an issue         | `console.log` leaking wallet address  |
+| 🔵 **Low**      | Nice to fix — code quality concern             | TypeScript `any` type without comment |
+| ⚪ **Info**     | Observation only — no action required          | Minor naming inconsistency            |
 
 ---

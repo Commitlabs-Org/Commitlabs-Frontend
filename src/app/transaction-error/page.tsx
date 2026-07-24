@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { Suspense, useEffect, useMemo, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import ErrorLayout from '@/components/ErrorLayout'
-import ErrorButton from '@/components/ErrorButton'
-import { buildExplorerUrl } from '@/utils/explorerLinks'
-import styles from './page.module.css'
+import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import ErrorLayout from '@/components/ErrorLayout';
+import ErrorButton from '@/components/ErrorButton';
+import { buildExplorerUrl } from '@/utils/explorerLinks';
+import styles from './page.module.css';
 
-type TransactionErrorCategory = 'rejected' | 'timed-out' | 'failed'
+type TransactionErrorCategory = 'rejected' | 'timed-out' | 'failed';
 
 interface RecoveryContent {
-  eyebrow: string
-  title: string
-  description: string
-  summaryTitle: string
-  summary: string
-  tipsTitle: string
-  tips: string[]
-  explorerLabel?: string
+  eyebrow: string;
+  title: string;
+  description: string;
+  summaryTitle: string;
+  summary: string;
+  tipsTitle: string;
+  tips: string[];
+  explorerLabel?: string;
 }
 
 const ERROR_CODE_TO_CATEGORY: Record<string, TransactionErrorCategory> = {
@@ -34,7 +34,7 @@ const ERROR_CODE_TO_CATEGORY: Record<string, TransactionErrorCategory> = {
   BLOCKCHAIN_CALL_FAILED: 'failed',
   BAD_GATEWAY: 'failed',
   INTERNAL_ERROR: 'failed',
-}
+};
 
 const RECOVERY_CONTENT: Record<TransactionErrorCategory, RecoveryContent> = {
   rejected: {
@@ -43,8 +43,7 @@ const RECOVERY_CONTENT: Record<TransactionErrorCategory, RecoveryContent> = {
     description:
       'The transaction was not accepted because the signature, parameters, or current commitment state need attention.',
     summaryTitle: 'No transaction was completed',
-    summary:
-      'Review the details, adjust anything that changed, then try again when you are ready.',
+    summary: 'Review the details, adjust anything that changed, then try again when you are ready.',
     tipsTitle: 'Before trying again',
     tips: [
       'Confirm the wallet signature prompt was approved.',
@@ -84,41 +83,44 @@ const RECOVERY_CONTENT: Record<TransactionErrorCategory, RecoveryContent> = {
     ],
     explorerLabel: 'View on Explorer',
   },
-}
+};
 
-function getCategoryFromParams(category: string | null, code: string | null): TransactionErrorCategory {
-  const normalizedCategory = category?.toLowerCase()
+function getCategoryFromParams(
+  category: string | null,
+  code: string | null,
+): TransactionErrorCategory {
+  const normalizedCategory = category?.toLowerCase();
 
   if (
     normalizedCategory === 'rejected' ||
     normalizedCategory === 'timed-out' ||
     normalizedCategory === 'failed'
   ) {
-    return normalizedCategory
+    return normalizedCategory;
   }
 
-  const normalizedCode = code?.toUpperCase()
-  return normalizedCode ? ERROR_CODE_TO_CATEGORY[normalizedCode] ?? 'failed' : 'failed'
+  const normalizedCode = code?.toUpperCase();
+  return normalizedCode ? (ERROR_CODE_TO_CATEGORY[normalizedCode] ?? 'failed') : 'failed';
 }
 
 function TransactionErrorContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const headingRef = useRef<HTMLHeadingElement>(null)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const category = useMemo(
     () => getCategoryFromParams(searchParams.get('category'), searchParams.get('code')),
     [searchParams],
-  )
-  const content = RECOVERY_CONTENT[category]
-  const errorMessage = searchParams.get('message') || content.description
-  const txHash = searchParams.get('hash')
-  const errorCode = searchParams.get('code')
-  const txExplorerUrl = buildExplorerUrl('tx', txHash)
+  );
+  const content = RECOVERY_CONTENT[category];
+  const errorMessage = searchParams.get('message') || content.description;
+  const txHash = searchParams.get('hash');
+  const errorCode = searchParams.get('code');
+  const txExplorerUrl = buildExplorerUrl('tx', txHash);
 
   useEffect(() => {
-    headingRef.current?.focus()
-  }, [])
+    headingRef.current?.focus();
+  }, []);
 
   return (
     <section className={styles.container} aria-labelledby="transaction-error-title">
@@ -134,13 +136,30 @@ function TransactionErrorContent() {
           <circle cx="48" cy="48" r="28" fill="currentColor" opacity="0.12" />
           {category === 'timed-out' ? (
             <>
-              <path d="M48 28v22l14 8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M48 28v22l14 8"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
               <path d="M32 20h32" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
             </>
           ) : category === 'rejected' ? (
             <>
-              <path d="M34 34l28 28M62 34 34 62" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-              <path d="M28 48h-6M74 48h-6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
+              <path
+                d="M34 34l28 28M62 34 34 62"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M28 48h-6M74 48h-6"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                opacity="0.7"
+              />
             </>
           ) : (
             <>
@@ -152,12 +171,7 @@ function TransactionErrorContent() {
       </div>
 
       <p className={styles.eyebrow}>{content.eyebrow}</p>
-      <h1
-        id="transaction-error-title"
-        ref={headingRef}
-        className={styles.title}
-        tabIndex={-1}
-      >
+      <h1 id="transaction-error-title" ref={headingRef} className={styles.title} tabIndex={-1}>
         {content.title}
       </h1>
       <p className={styles.description}>{errorMessage}</p>
@@ -178,7 +192,7 @@ function TransactionErrorContent() {
               <button
                 className={styles.copyButton}
                 onClick={() => {
-                  void navigator.clipboard?.writeText(txHash)
+                  void navigator.clipboard?.writeText(txHash);
                 }}
                 title="Copy transaction hash"
                 aria-label="Copy transaction hash"
@@ -208,32 +222,32 @@ function TransactionErrorContent() {
       </div>
 
       <div className={styles.actions}>
-        <ErrorButton onClick={() => router.back()}>
-          Try Again
-        </ErrorButton>
+        <ErrorButton onClick={() => router.back()}>Try Again</ErrorButton>
         <ErrorButton href="/commitments/overview" variant="secondary">
           Go to Dashboard
         </ErrorButton>
         {txExplorerUrl && (
-          <ErrorButton
-            href={txExplorerUrl}
-            variant="secondary"
-            isExternal
-          >
+          <ErrorButton href={txExplorerUrl} variant="secondary" isExternal>
             {content.explorerLabel ?? 'View on Explorer'}
           </ErrorButton>
         )}
       </div>
     </section>
-  )
+  );
 }
 
 export default function TransactionError() {
   return (
     <ErrorLayout>
-      <Suspense fallback={<div className={styles.container}><p role="status">Loading...</p></div>}>
+      <Suspense
+        fallback={
+          <div className={styles.container}>
+            <p role="status">Loading...</p>
+          </div>
+        }
+      >
         <TransactionErrorContent />
       </Suspense>
     </ErrorLayout>
-  )
+  );
 }

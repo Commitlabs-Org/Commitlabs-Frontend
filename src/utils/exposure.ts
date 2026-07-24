@@ -65,10 +65,7 @@ function latestDrawdownFraction(drawdownHistory: DrawdownPoint[]): number | null
   return latest.drawdownPercent;
 }
 
-function computeDrawdownExposurePercent(
-  drawdownFraction: number,
-  maxLossPercent: number,
-): number {
+function computeDrawdownExposurePercent(drawdownFraction: number, maxLossPercent: number): number {
   const drawdownPercent = drawdownFraction * 100;
   return Math.min(100, Math.max(0, (drawdownPercent / maxLossPercent) * 100));
 }
@@ -101,9 +98,7 @@ function combineExposure(
   volatilityExposure: number | null,
 ): number | null {
   if (drawdownExposure !== null && volatilityExposure !== null) {
-    return (
-      DRAWDOWN_WEIGHT * drawdownExposure + VOLATILITY_WEIGHT * volatilityExposure
-    );
+    return DRAWDOWN_WEIGHT * drawdownExposure + VOLATILITY_WEIGHT * volatilityExposure;
   }
   if (drawdownExposure !== null) return drawdownExposure;
   if (volatilityExposure !== null) return volatilityExposure;
@@ -143,9 +138,7 @@ export function computeCommitmentExposure(
       ?.map((point) => point.currentValue)
       .filter((value) => Number.isFinite(value)) ?? [];
   const volatilityExposure =
-    values.length >= 2
-      ? computeVolatilityExposurePercent(values, ceiling)
-      : null;
+    values.length >= 2 ? computeVolatilityExposurePercent(values, ceiling) : null;
 
   const exposurePercent = combineExposure(drawdownExposure, volatilityExposure);
 

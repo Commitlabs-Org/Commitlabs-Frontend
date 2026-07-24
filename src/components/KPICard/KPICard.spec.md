@@ -24,14 +24,14 @@ The KPI Card is a reusable component for displaying dashboard metrics with built
 
 The KPI Card supports 6 color variants for different metric categories:
 
-| Variant | Color | Use Case |
-|---------|-------|----------|
-| `teal` | `#0ff0fc` | Growth, performance, primary metrics |
-| `green` | `#00ff7a` | Positive metrics, revenue, success |
-| `blue` | `#3b82f6` | Informational, neutral-positive |
-| `purple` | `#a855f7` | Analytics, scores, compliance |
-| `orange` | `#f97316` | Warnings, attention needed |
-| `neutral` | `#94a3b8` | Secondary metrics, counts |
+| Variant   | Color     | Use Case                             |
+| --------- | --------- | ------------------------------------ |
+| `teal`    | `#0ff0fc` | Growth, performance, primary metrics |
+| `green`   | `#00ff7a` | Positive metrics, revenue, success   |
+| `blue`    | `#3b82f6` | Informational, neutral-positive      |
+| `purple`  | `#a855f7` | Analytics, scores, compliance        |
+| `orange`  | `#f97316` | Warnings, attention needed           |
+| `neutral` | `#94a3b8` | Secondary metrics, counts            |
 
 ### Visual Style
 
@@ -44,11 +44,11 @@ The KPI Card supports 6 color variants for different metric categories:
 
 ## Size Options
 
-| Size | Padding | Value Font | Icon Size | Use Case |
-|------|---------|------------|-----------|----------|
-| `small` | 1rem | 1.5rem | 14px | Dense grids, mobile |
-| `medium` | 1.5rem | 2rem | 18px | Standard dashboard |
-| `large` | 2rem | 2.5rem | 22px | Hero metrics, focus areas |
+| Size     | Padding | Value Font | Icon Size | Use Case                  |
+| -------- | ------- | ---------- | --------- | ------------------------- |
+| `small`  | 1rem    | 1.5rem     | 14px      | Dense grids, mobile       |
+| `medium` | 1.5rem  | 2rem       | 18px      | Standard dashboard        |
+| `large`  | 2rem    | 2.5rem     | 22px      | Hero metrics, focus areas |
 
 ---
 
@@ -59,12 +59,7 @@ The KPI Card supports 6 color variants for different metric categories:
 Standard metric display with value, label, and optional delta.
 
 ```tsx
-<KPICard
-  label="Total Revenue"
-  value={125000}
-  format="currency"
-  variant="green"
-/>
+<KPICard label="Total Revenue" value={125000} format="currency" variant="green" />
 ```
 
 ### 2. Loading State
@@ -81,6 +76,7 @@ Displays a spinner with skeleton placeholder animation.
 ```
 
 **Loading UI Elements:**
+
 - Rotating loader icon (matches accent color)
 - Optional loading message
 - Animated skeleton bars (pulse animation)
@@ -100,6 +96,7 @@ Displays error icon with optional retry button.
 ```
 
 **Error UI Elements:**
+
 - AlertCircle icon (red)
 - Error message text
 - Retry button (optional)
@@ -109,14 +106,11 @@ Displays error icon with optional retry button.
 Displays when no data is available but no error occurred.
 
 ```tsx
-<KPICard
-  label="Total Revenue"
-  state="empty"
-  variant="green"
-/>
+<KPICard label="Total Revenue" state="empty" variant="green" />
 ```
 
 **Empty UI Elements:**
+
 - Italicized "No data available" message
 
 ---
@@ -125,13 +119,13 @@ Displays when no data is available but no error occurred.
 
 ### Supported Format Types
 
-| Format | Description | Example |
-|--------|-------------|---------|
-| `value` | Default number | `1,234` |
-| `currency` | USD currency | `$1,234.56` |
-| `percentage` | Percentage | `85.2%` |
-| `count` | Compact (K/M/B) | `1.2M` |
-| `score` | Decimal score | `95.0` |
+| Format       | Description     | Example     |
+| ------------ | --------------- | ----------- |
+| `value`      | Default number  | `1,234`     |
+| `currency`   | USD currency    | `$1,234.56` |
+| `percentage` | Percentage      | `85.2%`     |
+| `count`      | Compact (K/M/B) | `1.2M`      |
+| `score`      | Decimal score   | `95.0`      |
 
 ### Formatting Utilities
 
@@ -156,13 +150,7 @@ formatCompact(1234567) → "1.2M"
 Override the default currency or add custom units:
 
 ```tsx
-<KPICard
-  label="Gas Used"
-  value={45000}
-  format="count"
-  unit="Gwei"
-  variant="blue"
-/>
+<KPICard label="Gas Used" value={45000} format="count" unit="Gwei" variant="blue" />
 ```
 
 ### Decimal Precision
@@ -185,32 +173,27 @@ Control decimal places per format type:
 
 ```tsx
 interface KPIDelta {
-  value: number;        // The delta value (e.g., 12.5)
+  value: number; // The delta value (e.g., 12.5)
   direction: 'up' | 'down' | 'neutral';
-  period?: string;      // e.g., "vs last 30 days"
+  period?: string; // e.g., "vs last 30 days"
   isPercentage?: boolean;
 }
 ```
 
 ### Delta Display
 
-| Direction | Icon | Color | Background |
-|-----------|------|-------|------------|
-| `up` | TrendingUp | `#00ff7a` | `rgba(0, 255, 122, 0.15)` |
-| `down` | TrendingDown | `#ef4444` | `rgba(239, 68, 68, 0.15)` |
-| `neutral` | Minus | `#94a3b8` | `rgba(148, 163, 184, 0.15)` |
+| Direction | Icon         | Color     | Background                  |
+| --------- | ------------ | --------- | --------------------------- |
+| `up`      | TrendingUp   | `#00ff7a` | `rgba(0, 255, 122, 0.15)`   |
+| `down`    | TrendingDown | `#ef4444` | `rgba(239, 68, 68, 0.15)`   |
+| `neutral` | Minus        | `#94a3b8` | `rgba(148, 163, 184, 0.15)` |
 
 ### Auto-Calculate Delta
 
 Provide `previousValue` and the component auto-calculates the delta:
 
 ```tsx
-<KPICard
-  label="Monthly Revenue"
-  value={125000}
-  previousValue={110000}
-  variant="green"
-/>
+<KPICard label="Monthly Revenue" value={125000} previousValue={110000} variant="green" />
 // Displays: $125,000 with +13.6% delta badge
 ```
 
@@ -225,7 +208,7 @@ Explicitly pass a delta object:
   delta={{
     value: 8.2,
     direction: 'up',
-    period: 'vs last week'
+    period: 'vs last week',
   }}
   variant="teal"
 />
@@ -283,14 +266,14 @@ Explicitly pass a delta object:
 
 ### Color Assignment by Metric Type
 
-| Metric Category | Recommended Variant |
-|-----------------|---------------------|
-| Revenue/Value | `green` |
-| Growth/Change | `teal` |
-| Compliance/Score | `purple` |
-| Users/Count | `blue` |
-| Warnings | `orange` |
-| Neutral/Other | `neutral` |
+| Metric Category  | Recommended Variant |
+| ---------------- | ------------------- |
+| Revenue/Value    | `green`             |
+| Growth/Change    | `teal`              |
+| Compliance/Score | `purple`            |
+| Users/Count      | `blue`              |
+| Warnings         | `orange`            |
+| Neutral/Other    | `neutral`           |
 
 ---
 
@@ -374,13 +357,7 @@ function RevenueDashboard() {
         size="large"
         delta={{ value: 12.5, direction: 'up', period: 'vs last month' }}
       />
-      <KPICard
-        label="Active Commitments"
-        value={342}
-        format="count"
-        variant="teal"
-        size="large"
-      />
+      <KPICard label="Active Commitments" value={342} format="count" variant="teal" size="large" />
       <KPICard
         label="Compliance Score"
         value={94.2}
@@ -434,26 +411,26 @@ function RevenueDashboard() {
 
 ## Props Reference
 
-| Prop | Type | Default | Required |
-|------|------|---------|----------|
-| `label` | `string` | - | Yes |
-| `value` | `string \| number` | - | No |
-| `previousValue` | `string \| number` | - | No |
-| `variant` | `'teal' \| 'green' \| 'blue' \| 'purple' \| 'orange' \| 'neutral'` | `'teal'` | No |
-| `size` | `'small' \| 'medium' \| 'large'` | `'medium'` | No |
-| `icon` | `LucideIcon` | - | No |
-| `delta` | `KPIDelta` | - | No |
-| `state` | `'default' \| 'loading' \| 'error' \| 'empty'` | `'default'` | No |
-| `loadingMessage` | `string` | `'Loading metrics...'` | No |
-| `errorMessage` | `string` | `'Failed to load'` | No |
-| `format` | `'value' \| 'percentage' \| 'currency' \| 'count' \| 'score'` | `'value'` | No |
-| `unit` | `string` | - | No |
-| `decimals` | `number` | `0` | No |
-| `description` | `string` | - | No |
-| `tooltip` | `string` | - | No |
-| `onRetry` | `() => void` | - | No |
-| `onClick` | `() => void` | - | No |
-| `ariaLabel` | `string` | - | No |
+| Prop             | Type                                                               | Default                | Required |
+| ---------------- | ------------------------------------------------------------------ | ---------------------- | -------- |
+| `label`          | `string`                                                           | -                      | Yes      |
+| `value`          | `string \| number`                                                 | -                      | No       |
+| `previousValue`  | `string \| number`                                                 | -                      | No       |
+| `variant`        | `'teal' \| 'green' \| 'blue' \| 'purple' \| 'orange' \| 'neutral'` | `'teal'`               | No       |
+| `size`           | `'small' \| 'medium' \| 'large'`                                   | `'medium'`             | No       |
+| `icon`           | `LucideIcon`                                                       | -                      | No       |
+| `delta`          | `KPIDelta`                                                         | -                      | No       |
+| `state`          | `'default' \| 'loading' \| 'error' \| 'empty'`                     | `'default'`            | No       |
+| `loadingMessage` | `string`                                                           | `'Loading metrics...'` | No       |
+| `errorMessage`   | `string`                                                           | `'Failed to load'`     | No       |
+| `format`         | `'value' \| 'percentage' \| 'currency' \| 'count' \| 'score'`      | `'value'`              | No       |
+| `unit`           | `string`                                                           | -                      | No       |
+| `decimals`       | `number`                                                           | `0`                    | No       |
+| `description`    | `string`                                                           | -                      | No       |
+| `tooltip`        | `string`                                                           | -                      | No       |
+| `onRetry`        | `() => void`                                                       | -                      | No       |
+| `onClick`        | `() => void`                                                       | -                      | No       |
+| `ariaLabel`      | `string`                                                           | -                      | No       |
 
 ---
 
@@ -471,12 +448,12 @@ function RevenueDashboard() {
 
 ### Metric → KPICard Mapping
 
-| Metric | `CommitmentStats` field | `format` | `variant` | Icon |
-|--------|------------------------|----------|-----------|------|
-| Total Active Commitments | `totalActive` | `count` | `teal` | `TrendingUp` |
-| Total Committed Value | `totalCommittedValue` | `currency` | `green` | `DollarSign` |
-| Average Compliance Score | `avgComplianceScore` | `percentage` | `blue` | `Award` |
-| Total Fees Generated | `totalFeesGenerated` | `currency` | `purple` | `Coins` |
+| Metric                   | `CommitmentStats` field | `format`     | `variant` | Icon         |
+| ------------------------ | ----------------------- | ------------ | --------- | ------------ |
+| Total Active Commitments | `totalActive`           | `count`      | `teal`    | `TrendingUp` |
+| Total Committed Value    | `totalCommittedValue`   | `currency`   | `green`   | `DollarSign` |
+| Average Compliance Score | `avgComplianceScore`    | `percentage` | `blue`    | `Award`      |
+| Total Fees Generated     | `totalFeesGenerated`    | `currency`   | `purple`  | `Coins`      |
 
 ### Trend Indicators
 
@@ -489,21 +466,21 @@ Pass `trends` on `CommitmentStats` to show directional deltas. Each trend uses `
   avgComplianceScore={94.2}
   totalFeesGenerated="3200"
   trends={{
-    totalActive:        { value: 20, direction: 'up',      period: 'vs last month' },
-    totalCommittedValue:{ value: 5.3, direction: 'up',     period: 'vs last month' },
+    totalActive: { value: 20, direction: 'up', period: 'vs last month' },
+    totalCommittedValue: { value: 5.3, direction: 'up', period: 'vs last month' },
     avgComplianceScore: { value: 1.8, direction: 'neutral' },
-    totalFeesGenerated: { value: 12,  direction: 'down',   period: 'vs last month' },
+    totalFeesGenerated: { value: 12, direction: 'down', period: 'vs last month' },
   }}
 />
 ```
 
 ### Responsive Breakpoints
 
-| Viewport | Columns | Gap |
-|----------|---------|-----|
-| ≥ 1025 px (desktop) | 4 | 1.5 rem |
-| 641 – 1024 px (tablet) | 2 | 1 rem |
-| ≤ 640 px (mobile) | 1 | 0.75 rem |
+| Viewport               | Columns | Gap      |
+| ---------------------- | ------- | -------- |
+| ≥ 1025 px (desktop)    | 4       | 1.5 rem  |
+| 641 – 1024 px (tablet) | 2       | 1 rem    |
+| ≤ 640 px (mobile)      | 1       | 0.75 rem |
 
 Breakpoints are defined in `MyCommitmentsStats.module.css`. Card-level styles (padding, typography, hover) are inherited from `KPICard.module.css`.
 

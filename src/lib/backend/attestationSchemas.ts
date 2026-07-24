@@ -14,8 +14,8 @@
  *  4. Add tests in tests/api/attestationSchemas.test.ts.
  */
 
-import { z } from "zod";
-import type { AttestationType } from "@/lib/types/domain";
+import { z } from 'zod';
+import type { AttestationType } from '@/lib/types/domain';
 
 // ---------------------------------------------------------------------------
 // Shared limits
@@ -34,12 +34,12 @@ export const MAX_PAYLOAD_BYTES = 2048;
 const boundedString = z.string().max(MAX_STRING_LENGTH);
 
 const complianceScoreField = z
-  .number({ invalid_type_error: "complianceScore must be a number" })
-  .min(0, "complianceScore must be >= 0")
-  .max(100, "complianceScore must be <= 100");
+  .number({ invalid_type_error: 'complianceScore must be a number' })
+  .min(0, 'complianceScore must be >= 0')
+  .max(100, 'complianceScore must be <= 100');
 
 const violationField = z.boolean({
-  invalid_type_error: "violation must be a boolean",
+  invalid_type_error: 'violation must be a boolean',
 });
 
 const feeAmountField = z
@@ -76,9 +76,9 @@ export const healthCheckDataSchema = z
  */
 export const violationDataSchema = z
   .object({
-    reason: boundedString.min(1, "reason is required for violation attestations"),
+    reason: boundedString.min(1, 'reason is required for violation attestations'),
     complianceScore: complianceScoreField.optional(),
-    severity: z.enum(["low", "medium", "high"]).optional(),
+    severity: z.enum(['low', 'medium', 'high']).optional(),
   })
   .strict();
 
@@ -109,14 +109,10 @@ export const feeGenerationDataSchema = z
 export const drawdownDataSchema = z
   .object({
     drawdownPercent: z
-      .number({ invalid_type_error: "drawdownPercent must be a number" })
-      .min(0, "drawdownPercent must be >= 0")
-      .max(100, "drawdownPercent must be <= 100"),
-    maxAllowed: z
-      .number()
-      .min(0)
-      .max(100)
-      .optional(),
+      .number({ invalid_type_error: 'drawdownPercent must be a number' })
+      .min(0, 'drawdownPercent must be >= 0')
+      .max(100, 'drawdownPercent must be <= 100'),
+    maxAllowed: z.number().min(0).max(100).optional(),
     complianceScore: complianceScoreField.optional(),
   })
   .strict();
@@ -141,11 +137,7 @@ export type ViolationData = z.infer<typeof violationDataSchema>;
 export type FeeGenerationData = z.infer<typeof feeGenerationDataSchema>;
 export type DrawdownData = z.infer<typeof drawdownDataSchema>;
 
-export type AttestationData =
-  | HealthCheckData
-  | ViolationData
-  | FeeGenerationData
-  | DrawdownData;
+export type AttestationData = HealthCheckData | ViolationData | FeeGenerationData | DrawdownData;
 
 // ---------------------------------------------------------------------------
 // Validation entry-point
@@ -171,11 +163,11 @@ export function validateAttestationData(
 ): AttestationData {
   // Size guard — check before parsing to avoid processing huge payloads
   const serialised = JSON.stringify(data ?? {});
-  if (Buffer.byteLength(serialised, "utf8") > MAX_PAYLOAD_BYTES) {
+  if (Buffer.byteLength(serialised, 'utf8') > MAX_PAYLOAD_BYTES) {
     const err = new Error(
       `Attestation data payload exceeds the maximum allowed size of ${MAX_PAYLOAD_BYTES} bytes.`,
     );
-    (err as NodeJS.ErrnoException).code = "PAYLOAD_TOO_LARGE";
+    (err as NodeJS.ErrnoException).code = 'PAYLOAD_TOO_LARGE';
     throw err;
   }
 

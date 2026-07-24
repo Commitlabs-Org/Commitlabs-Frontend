@@ -14,6 +14,5 @@ export default function CommitmentForm() {
       */}
       <p>Commitment form component - to be implemented</p>
     </div>
-  )
+  );
 }
-

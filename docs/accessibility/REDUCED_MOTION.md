@@ -6,7 +6,7 @@ CommitLabs is committed to providing an accessible, high-performance web experie
 
 ## 📌 Overview
 
-Animations and transitions (parallax scrolling, scaling, modals, loading states, and starfields) can cause discomfort, distraction, or performance degradation for users with vestibular disorders, low-end devices, or personal preferences. 
+Animations and transitions (parallax scrolling, scaling, modals, loading states, and starfields) can cause discomfort, distraction, or performance degradation for users with vestibular disorders, low-end devices, or personal preferences.
 
 Our policy guarantees that when a user requests reduced motion via their operating system settings, the application automatically neutralizes or dampens all visual motion globally.
 
@@ -17,6 +17,7 @@ Our policy guarantees that when a user requests reduced motion via their operati
 The policy utilizes a dual approach to cover both **framer-motion** components and **CSS transitions/animations**.
 
 ### 1. Framer Motion Integration
+
 The entire application tree is wrapped under the `MotionConfig` provider with the `reducedMotion="user"` directive in the root layout.
 
 - **Wrapper Component**: [MotionProvider](https://github.com/Commitlabs-Org/Commitlabs-Frontend/blob/master//src/components/MotionProvider.tsx)
@@ -24,6 +25,7 @@ The entire application tree is wrapped under the `MotionConfig` provider with th
 - **Behavior**: Framer Motion automatically respects the user's OS preference, disabling or simplification of physical coordinate/parallax transitions.
 
 ### 2. Global CSS Overrides
+
 To neutralize animations defined in stylesheets or third-party CSS, we added a global media query at the end of [globals.css](https://github.com/Commitlabs-Org/Commitlabs-Frontend/blob/master//src/app/globals.css):
 
 ```css

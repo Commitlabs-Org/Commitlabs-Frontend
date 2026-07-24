@@ -18,9 +18,7 @@ describe('useNftMetadata', () => {
   });
 
   it('starts with null metadata, not loading, and no error', () => {
-    const { result } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1' })
-    );
+    const { result } = renderHook(() => useNftMetadata({ tokenId: 'token-1' }));
 
     expect(result.current.metadata).toBeNull();
     expect(result.current.isLoading).toBe(false);
@@ -36,7 +34,7 @@ describe('useNftMetadata', () => {
     });
 
     const { result } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/1' })
+      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/1' }),
     );
 
     await act(async () => {
@@ -61,7 +59,7 @@ describe('useNftMetadata', () => {
     });
 
     const { result } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/missing' })
+      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/missing' }),
     );
 
     await act(async () => {
@@ -78,7 +76,7 @@ describe('useNftMetadata', () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/1' })
+      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/1' }),
     );
 
     await act(async () => {
@@ -92,9 +90,7 @@ describe('useNftMetadata', () => {
   });
 
   it('does nothing when metadataUrl is omitted', async () => {
-    const { result } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1' })
-    );
+    const { result } = renderHook(() => useNftMetadata({ tokenId: 'token-1' }));
 
     await act(async () => {
       await result.current.refresh();
@@ -116,7 +112,7 @@ describe('useNftMetadata', () => {
     });
 
     const { result, unmount } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/slow' })
+      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/slow' }),
     );
 
     act(() => {
@@ -146,7 +142,7 @@ describe('useNftMetadata', () => {
     });
 
     const { result } = renderHook(() =>
-      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/1' })
+      useNftMetadata({ tokenId: 'token-1', metadataUrl: 'https://meta.example.com/1' }),
     );
 
     await act(async () => {
@@ -156,7 +152,11 @@ describe('useNftMetadata', () => {
     await waitFor(() => expect(result.current.metadata).toEqual({ name: 'First' }));
 
     // Second fetch fails
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
 
     await act(async () => {
       await result.current.refresh();

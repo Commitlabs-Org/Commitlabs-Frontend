@@ -22,10 +22,14 @@ interface ChartExportMenuProps {
 
 function getTabData(tab: HealthMetricsTab, data: HealthMetricsExportData) {
   switch (tab) {
-    case 'value':    return data.valueHistoryData;
-    case 'drawdown': return data.drawdownData;
-    case 'fee':      return data.feeGenerationData;
-    case 'compliance': return data.complianceData;
+    case 'value':
+      return data.valueHistoryData;
+    case 'drawdown':
+      return data.drawdownData;
+    case 'fee':
+      return data.feeGenerationData;
+    case 'compliance':
+      return data.complianceData;
   }
 }
 

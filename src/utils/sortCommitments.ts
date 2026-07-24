@@ -1,9 +1,9 @@
 import { Commitment } from '@/types/commitment';
 
-export type SortOption = 
-  | 'Newest' 
-  | 'Oldest' 
-  | 'ValueHighLow' 
+export type SortOption =
+  | 'Newest'
+  | 'Oldest'
+  | 'ValueHighLow'
   | 'ValueLowHigh'
   | 'MaturitySoonest'
   | 'MaturityLatest'
@@ -23,10 +23,14 @@ export function sortCommitments(commitments: Commitment[], sortBy: SortOption): 
       sorted.sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
       break;
     case 'ValueHighLow':
-      sorted.sort((a, b) => Number(b.amount.replace(/,/g, '')) - Number(a.amount.replace(/,/g, '')));
+      sorted.sort(
+        (a, b) => Number(b.amount.replace(/,/g, '')) - Number(a.amount.replace(/,/g, '')),
+      );
       break;
     case 'ValueLowHigh':
-      sorted.sort((a, b) => Number(a.amount.replace(/,/g, '')) - Number(b.amount.replace(/,/g, '')));
+      sorted.sort(
+        (a, b) => Number(a.amount.replace(/,/g, '')) - Number(b.amount.replace(/,/g, '')),
+      );
       break;
     case 'MaturitySoonest':
       sorted.sort((a, b) => a.daysRemaining - b.daysRemaining);

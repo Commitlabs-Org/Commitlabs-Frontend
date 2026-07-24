@@ -158,7 +158,8 @@ describe('POST /api/commitments/[id]/settle — rate limiting', () => {
   });
 
   it('allows the request through when rate limit is not exceeded', async () => {
-    const { getCommitmentFromChain, settleCommitmentOnChain } = await import('@/lib/backend/services/contracts');
+    const { getCommitmentFromChain, settleCommitmentOnChain } =
+      await import('@/lib/backend/services/contracts');
     vi.mocked(getCommitmentFromChain).mockResolvedValue({ status: 'ACTIVE' } as any);
     vi.mocked(settleCommitmentOnChain).mockResolvedValue({
       settlementAmount: '100',
@@ -216,7 +217,8 @@ describe('POST /api/commitments/[id]/early-exit — rate limiting', () => {
   });
 
   it('allows the request through when rate limit is not exceeded', async () => {
-    const { getCommitmentFromChain, earlyExitCommitmentOnChain } = await import('@/lib/backend/services/contracts');
+    const { getCommitmentFromChain, earlyExitCommitmentOnChain } =
+      await import('@/lib/backend/services/contracts');
     vi.mocked(getCommitmentFromChain).mockResolvedValue({
       id: 'abc',
       ownerAddress: VALID_ADDRESS,

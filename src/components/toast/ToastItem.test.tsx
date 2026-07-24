@@ -37,7 +37,7 @@ describe('ToastItem', () => {
           onDismiss={mockOnDismiss}
           onPause={mockOnPause}
           onResume={mockOnResume}
-        />
+        />,
       );
 
       // Verify severity class is present
@@ -62,7 +62,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     // Verify it doesn't crash and renders the title
@@ -80,7 +80,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     expect(screen.queryByRole('alert')).toBeNull();
@@ -95,7 +95,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     const closeBtn = screen.getByLabelText('Dismiss notification');
@@ -112,7 +112,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     // Initial render causes either onPause or onResume call due to state initialization
@@ -145,7 +145,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     mockOnPause.mockClear();
@@ -176,7 +176,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     const toastEl = screen.getByRole('alert');
@@ -193,7 +193,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     mockOnPause.mockClear();
@@ -216,7 +216,9 @@ describe('ToastItem', () => {
     dummyButton.setAttribute('data-toast', 'true');
     document.body.appendChild(dummyButton);
 
-    const spyActiveElement = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(dummyButton);
+    const spyActiveElement = vi
+      .spyOn(document, 'activeElement', 'get')
+      .mockReturnValue(dummyButton);
 
     render(
       <ToastItem
@@ -226,7 +228,7 @@ describe('ToastItem', () => {
         onDismiss={mockOnDismiss}
         onPause={mockOnPause}
         onResume={mockOnResume}
-      />
+      />,
     );
 
     // Since the activeElement is inside [data-toast], it should initialize as paused

@@ -1,329 +1,303 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-    applyCorsPolicy,
-    toCorsErrorResponse,
-    createCorsOptionsHandler,
-    enforceCorsRequestPolicy,
-    type CorsRoutePolicy,
+  applyCorsPolicy,
+  toCorsErrorResponse,
+  createCorsOptionsHandler,
+  enforceCorsRequestPolicy,
+  type CorsRoutePolicy,
 } from './cors';
 import { ForbiddenError } from './errors';
 
 const ORIGINAL_ENV = {
-    firstParty: process.env.COMMITLABS_FIRST_PARTY_ORIGINS,
-    publicApi: process.env.COMMITLABS_PUBLIC_API_ORIGINS,
+  firstParty: process.env.COMMITLABS_FIRST_PARTY_ORIGINS,
+  publicApi: process.env.COMMITLABS_PUBLIC_API_ORIGINS,
 };
 
 afterEach(() => {
-    process.env.COMMITLABS_FIRST_PARTY_ORIGINS = ORIGINAL_ENV.firstParty;
-    process.env.COMMITLABS_PUBLIC_API_ORIGINS = ORIGINAL_ENV.publicApi;
-    vi.restoreAllMocks();
+  process.env.COMMITLABS_FIRST_PARTY_ORIGINS = ORIGINAL_ENV.firstParty;
+  process.env.COMMITLABS_PUBLIC_API_ORIGINS = ORIGINAL_ENV.publicApi;
+  vi.restoreAllMocks();
 });
 
 describe('cors helper', () => {
-    it('applies wildcard CORS headers to public responses', () => {
-        const policy = {
-            GET: { access: 'public' },
-        } satisfies CorsRoutePolicy;
+  it('applies wildcard CORS headers to public responses', () => {
+    const policy = {
+      GET: { access: 'public' },
+    } satisfies CorsRoutePolicy;
 
-        const request = new NextRequest('http://localhost:3000/api/health', {
-            method: 'GET',
-            headers: { Origin: 'https://external.example' },
-        });
-
-        const response = applyCorsPolicy(
-            request,
-            NextResponse.json({ status: 'healthy' }),
-            policy
-        );
-
-        expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-        expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, OPTIONS');
-        expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
-        expect(response.headers.get('Vary')).toContain('Origin');
+    const request = new NextRequest('http://localhost:3000/api/health', {
+      method: 'GET',
+      headers: { Origin: 'https://external.example' },
     });
 
-    it('echoes allowed first-party origins and enables credentials', () => {
-        process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
+    const response = applyCorsPolicy(request, NextResponse.json({ status: 'healthy' }), policy);
 
-        const policy = {
-            POST: { access: 'first-party' },
-        } satisfies CorsRoutePolicy;
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, OPTIONS');
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
+    expect(response.headers.get('Vary')).toContain('Origin');
+  });
 
-        const request = new NextRequest('http://localhost:3000/api/auth', {
-            method: 'POST',
-            headers: { Origin: 'https://app.commitlabs.test' },
-        });
+  it('echoes allowed first-party origins and enables credentials', () => {
+    process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
 
-        const response = applyCorsPolicy(
-            request,
-            NextResponse.json({ success: true }),
-            policy
-        );
+    const policy = {
+      POST: { access: 'first-party' },
+    } satisfies CorsRoutePolicy;
 
-        expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
-            'https://app.commitlabs.test'
-        );
-        expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+    const request = new NextRequest('http://localhost:3000/api/auth', {
+      method: 'POST',
+      headers: { Origin: 'https://app.commitlabs.test' },
     });
 
-    it('rejects disallowed first-party origins', () => {
-        process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
+    const response = applyCorsPolicy(request, NextResponse.json({ success: true }), policy);
 
-        const policy = {
-            POST: { access: 'first-party' },
-        } satisfies CorsRoutePolicy;
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://app.commitlabs.test');
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+  });
 
-        const request = new NextRequest('http://localhost:3000/api/auth', {
-            method: 'POST',
-            headers: { Origin: 'https://evil.example' },
-        });
+  it('rejects disallowed first-party origins', () => {
+    process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
 
-        expect(() => enforceCorsRequestPolicy(request, policy)).toThrowError(
-            /Origin is not allowed/
-        );
+    const policy = {
+      POST: { access: 'first-party' },
+    } satisfies CorsRoutePolicy;
+
+    const request = new NextRequest('http://localhost:3000/api/auth', {
+      method: 'POST',
+      headers: { Origin: 'https://evil.example' },
     });
 
-    it('builds method-aware preflight responses for mixed public and first-party routes', async () => {
-        process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
+    expect(() => enforceCorsRequestPolicy(request, policy)).toThrowError(/Origin is not allowed/);
+  });
 
-        const policy = {
-            GET: { access: 'public' },
-            POST: {
-                access: 'first-party',
-                allowHeaders: ['Authorization', 'Content-Type'],
-            },
-        } satisfies CorsRoutePolicy;
+  it('builds method-aware preflight responses for mixed public and first-party routes', async () => {
+    process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
 
-        const handler = createCorsOptionsHandler(policy);
-        const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
-            method: 'OPTIONS',
-            headers: {
-                Origin: 'https://app.commitlabs.test',
-                'Access-Control-Request-Method': 'POST',
-                'Access-Control-Request-Headers': 'Authorization, Content-Type',
-            },
-        });
+    const policy = {
+      GET: { access: 'public' },
+      POST: {
+        access: 'first-party',
+        allowHeaders: ['Authorization', 'Content-Type'],
+      },
+    } satisfies CorsRoutePolicy;
 
-        const response = await handler(request);
-
-        expect(response.status).toBe(204);
-        expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
-            'https://app.commitlabs.test'
-        );
-        expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
-        expect(response.headers.get('Access-Control-Allow-Headers')).toBe(
-            'Authorization, Content-Type'
-        );
-        expect(response.headers.get('Access-Control-Allow-Methods')).toBe(
-            'GET, POST, OPTIONS'
-        );
+    const handler = createCorsOptionsHandler(policy);
+    const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://app.commitlabs.test',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'Authorization, Content-Type',
+      },
     });
 
-    it('rejects preflight requests with headers outside the allowlist', async () => {
-        process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
+    const response = await handler(request);
 
-        const policy = {
-            POST: {
-                access: 'first-party',
-                allowHeaders: ['Content-Type'],
-            },
-        } satisfies CorsRoutePolicy;
+    expect(response.status).toBe(204);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://app.commitlabs.test');
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+    expect(response.headers.get('Access-Control-Allow-Headers')).toBe(
+      'Authorization, Content-Type',
+    );
+    expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
+  });
 
-        const handler = createCorsOptionsHandler(policy);
-        const request = new NextRequest('http://localhost:3000/api/auth', {
-            method: 'OPTIONS',
-            headers: {
-                Origin: 'https://app.commitlabs.test',
-                'Access-Control-Request-Method': 'POST',
-                'Access-Control-Request-Headers': 'X-Custom-Header',
-            },
-        });
+  it('rejects preflight requests with headers outside the allowlist', async () => {
+    process.env.COMMITLABS_FIRST_PARTY_ORIGINS = 'https://app.commitlabs.test';
 
-        const response = await handler(request);
-        const body = await response.json();
+    const policy = {
+      POST: {
+        access: 'first-party',
+        allowHeaders: ['Content-Type'],
+      },
+    } satisfies CorsRoutePolicy;
 
-        expect(response.status).toBe(403);
-        expect(body.error.code).toBe('FORBIDDEN');
+    const handler = createCorsOptionsHandler(policy);
+    const request = new NextRequest('http://localhost:3000/api/auth', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://app.commitlabs.test',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'X-Custom-Header',
+      },
     });
 
-    it('returns the original response when no policy exists for the method', () => {
-        const request = new NextRequest('http://localhost:3000/api/health', {
-            method: 'PATCH',
-        });
-        const response = NextResponse.json({ ok: true });
+    const response = await handler(request);
+    const body = await response.json();
 
-        const resolved = applyCorsPolicy(request, response, {
-            GET: { access: 'public' },
-        });
+    expect(response.status).toBe(403);
+    expect(body.error.code).toBe('FORBIDDEN');
+  });
 
-        expect(resolved).toBe(response);
-        expect(resolved.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  it('returns the original response when no policy exists for the method', () => {
+    const request = new NextRequest('http://localhost:3000/api/health', {
+      method: 'PATCH',
+    });
+    const response = NextResponse.json({ ok: true });
+
+    const resolved = applyCorsPolicy(request, response, {
+      GET: { access: 'public' },
     });
 
-    it('supports public origin allowlists without credentials', () => {
-        process.env.COMMITLABS_PUBLIC_API_ORIGINS =
-            'https://docs.commitlabs.test,https://status.commitlabs.test';
+    expect(resolved).toBe(response);
+    expect(resolved.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
 
-        const policy = {
-            GET: {
-                access: 'public',
-                exposeHeaders: ['X-Trace-Id'],
-            },
-        } satisfies CorsRoutePolicy;
+  it('supports public origin allowlists without credentials', () => {
+    process.env.COMMITLABS_PUBLIC_API_ORIGINS =
+      'https://docs.commitlabs.test,https://status.commitlabs.test';
 
-        const request = new NextRequest('http://localhost:3000/api/metrics', {
-            method: 'GET',
-            headers: { Origin: 'https://docs.commitlabs.test' },
-        });
+    const policy = {
+      GET: {
+        access: 'public',
+        exposeHeaders: ['X-Trace-Id'],
+      },
+    } satisfies CorsRoutePolicy;
 
-        const response = applyCorsPolicy(
-            request,
-            NextResponse.json({ status: 'up' }),
-            policy
-        );
-
-        expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
-            'https://docs.commitlabs.test'
-        );
-        expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
-        expect(response.headers.get('Access-Control-Expose-Headers')).toBe('X-Trace-Id');
+    const request = new NextRequest('http://localhost:3000/api/metrics', {
+      method: 'GET',
+      headers: { Origin: 'https://docs.commitlabs.test' },
     });
 
-    it('rejects wildcard public origins when credentials are enabled', () => {
-        process.env.COMMITLABS_PUBLIC_API_ORIGINS = '*';
+    const response = applyCorsPolicy(request, NextResponse.json({ status: 'up' }), policy);
 
-        const policy = {
-            GET: {
-                access: 'public',
-                allowCredentials: true,
-            },
-        } satisfies CorsRoutePolicy;
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
+      'https://docs.commitlabs.test',
+    );
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBeNull();
+    expect(response.headers.get('Access-Control-Expose-Headers')).toBe('X-Trace-Id');
+  });
 
-        const request = new NextRequest('http://localhost:3000/api/metrics', {
-            method: 'GET',
-            headers: { Origin: 'https://external.example' },
-        });
+  it('rejects wildcard public origins when credentials are enabled', () => {
+    process.env.COMMITLABS_PUBLIC_API_ORIGINS = '*';
 
-        expect(() =>
-            applyCorsPolicy(request, NextResponse.json({ status: 'up' }), policy)
-        ).toThrow(/wildcard origins with credentials/i);
+    const policy = {
+      GET: {
+        access: 'public',
+        allowCredentials: true,
+      },
+    } satisfies CorsRoutePolicy;
+
+    const request = new NextRequest('http://localhost:3000/api/metrics', {
+      method: 'GET',
+      headers: { Origin: 'https://external.example' },
     });
 
-    it('returns a 405 preflight response for unsupported methods', async () => {
-        const handler = createCorsOptionsHandler({
-            GET: { access: 'public' },
-        });
+    expect(() => applyCorsPolicy(request, NextResponse.json({ status: 'up' }), policy)).toThrow(
+      /wildcard origins with credentials/i,
+    );
+  });
 
-        const request = new NextRequest('http://localhost:3000/api/health', {
-            method: 'OPTIONS',
-            headers: {
-                Origin: 'https://external.example',
-                'Access-Control-Request-Method': 'DELETE',
-            },
-        });
-
-        const response = await handler(request);
-        const body = await response.json();
-
-        expect(response.status).toBe(405);
-        expect(body.error.code).toBe('METHOD_NOT_ALLOWED');
+  it('returns a 405 preflight response for unsupported methods', async () => {
+    const handler = createCorsOptionsHandler({
+      GET: { access: 'public' },
     });
 
-    it('converts unexpected CORS errors into internal error responses', async () => {
-        process.env.COMMITLABS_PUBLIC_API_ORIGINS = '*';
-
-        const handler = createCorsOptionsHandler({
-            POST: { access: 'public', allowCredentials: true },
-        });
-
-        const request = new NextRequest('http://localhost:3000/api/broken', {
-            method: 'OPTIONS',
-            headers: {
-                Origin: 'https://external.example',
-                'Access-Control-Request-Method': 'POST',
-            },
-        });
-
-        const response = await handler(request);
-        const body = await response.json();
-
-        expect(response.status).toBe(500);
-        expect(body.error.code).toBe('INTERNAL_ERROR');
+    const request = new NextRequest('http://localhost:3000/api/health', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://external.example',
+        'Access-Control-Request-Method': 'DELETE',
+      },
     });
 
-    it('serializes generic errors through toCorsErrorResponse', async () => {
-        const response = toCorsErrorResponse(new Error('boom'));
-        const body = await response.json();
+    const response = await handler(request);
+    const body = await response.json();
 
-        expect(response.status).toBe(500);
-        expect(body.error.code).toBe('INTERNAL_ERROR');
+    expect(response.status).toBe(405);
+    expect(body.error.code).toBe('METHOD_NOT_ALLOWED');
+  });
+
+  it('converts unexpected CORS errors into internal error responses', async () => {
+    process.env.COMMITLABS_PUBLIC_API_ORIGINS = '*';
+
+    const handler = createCorsOptionsHandler({
+      POST: { access: 'public', allowCredentials: true },
     });
 
-    it('serializes api errors through toCorsErrorResponse', async () => {
-        const response = toCorsErrorResponse(
-            new ForbiddenError('Forbidden origin.', { origin: 'https://evil.example' })
-        );
-        const body = await response.json();
-
-        expect(response.status).toBe(403);
-        expect(body.error.code).toBe('FORBIDDEN');
-        expect(body.error.details).toEqual({ origin: 'https://evil.example' });
+    const request = new NextRequest('http://localhost:3000/api/broken', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://external.example',
+        'Access-Control-Request-Method': 'POST',
+      },
     });
 
-    it('rejects wildcard first-party origin configuration', () => {
-        process.env.COMMITLABS_FIRST_PARTY_ORIGINS = '*';
+    const response = await handler(request);
+    const body = await response.json();
 
-        const policy = {
-            POST: { access: 'first-party' },
-        } satisfies CorsRoutePolicy;
+    expect(response.status).toBe(500);
+    expect(body.error.code).toBe('INTERNAL_ERROR');
+  });
 
-        const request = new NextRequest('http://localhost:3000/api/auth', {
-            method: 'POST',
-            headers: { Origin: 'https://app.commitlabs.test' },
-        });
+  it('serializes generic errors through toCorsErrorResponse', async () => {
+    const response = toCorsErrorResponse(new Error('boom'));
+    const body = await response.json();
 
-        expect(() => enforceCorsRequestPolicy(request, policy)).toThrow(
-            /cannot be "\*"/i
-        );
+    expect(response.status).toBe(500);
+    expect(body.error.code).toBe('INTERNAL_ERROR');
+  });
+
+  it('serializes api errors through toCorsErrorResponse', async () => {
+    const response = toCorsErrorResponse(
+      new ForbiddenError('Forbidden origin.', { origin: 'https://evil.example' }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error.code).toBe('FORBIDDEN');
+    expect(body.error.details).toEqual({ origin: 'https://evil.example' });
+  });
+
+  it('rejects wildcard first-party origin configuration', () => {
+    process.env.COMMITLABS_FIRST_PARTY_ORIGINS = '*';
+
+    const policy = {
+      POST: { access: 'first-party' },
+    } satisfies CorsRoutePolicy;
+
+    const request = new NextRequest('http://localhost:3000/api/auth', {
+      method: 'POST',
+      headers: { Origin: 'https://app.commitlabs.test' },
     });
 
-    it('ignores invalid origin headers when applying policy', () => {
-        const policy = {
-            GET: { access: 'first-party' },
-        } satisfies CorsRoutePolicy;
+    expect(() => enforceCorsRequestPolicy(request, policy)).toThrow(/cannot be "\*"/i);
+  });
 
-        const request = new NextRequest('http://localhost:3000/api/auth', {
-            method: 'GET',
-            headers: { Origin: '   ' },
-        });
+  it('ignores invalid origin headers when applying policy', () => {
+    const policy = {
+      GET: { access: 'first-party' },
+    } satisfies CorsRoutePolicy;
 
-        const response = applyCorsPolicy(
-            request,
-            NextResponse.json({ ok: true }),
-            policy
-        );
-
-        expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
-        expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+    const request = new NextRequest('http://localhost:3000/api/auth', {
+      method: 'GET',
+      headers: { Origin: '   ' },
     });
 
-    it('appends origin to an existing vary header only once', () => {
-        const policy = {
-            GET: { access: 'public' },
-        } satisfies CorsRoutePolicy;
+    const response = applyCorsPolicy(request, NextResponse.json({ ok: true }), policy);
 
-        const request = new NextRequest('http://localhost:3000/api/health', {
-            method: 'GET',
-            headers: { Origin: 'https://external.example' },
-        });
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+  });
 
-        const response = NextResponse.json({ ok: true });
-        response.headers.set('Vary', 'Accept-Encoding');
+  it('appends origin to an existing vary header only once', () => {
+    const policy = {
+      GET: { access: 'public' },
+    } satisfies CorsRoutePolicy;
 
-        applyCorsPolicy(request, response, policy);
-        applyCorsPolicy(request, response, policy);
-
-        expect(response.headers.get('Vary')).toBe('Accept-Encoding, Origin');
+    const request = new NextRequest('http://localhost:3000/api/health', {
+      method: 'GET',
+      headers: { Origin: 'https://external.example' },
     });
+
+    const response = NextResponse.json({ ok: true });
+    response.headers.set('Vary', 'Accept-Encoding');
+
+    applyCorsPolicy(request, response, policy);
+    applyCorsPolicy(request, response, policy);
+
+    expect(response.headers.get('Vary')).toBe('Accept-Encoding, Origin');
+  });
 });

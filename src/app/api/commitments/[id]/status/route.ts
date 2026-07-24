@@ -43,43 +43,41 @@ export function getDaysRemaining(expiresAt?: string): number {
  * @returns 404 if commitment not found
  * @returns 429 if rate limit exceeded
  */
-export const GET = withApiHandler(async (
-  req: NextRequest,
-  context: { params: Record<string, string> },
-  correlationId: string,
-) => {
-  const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
-  const isAllowed = await checkRateLimit(ip, 'api/commitments/status');
-  if (!isAllowed) {
-    throw new TooManyRequestsError();
-  }
+export const GET = withApiHandler(
+  async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
+    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+    const isAllowed = await checkRateLimit(ip, 'api/commitments/status');
+    if (!isAllowed) {
+      throw new TooManyRequestsError();
+    }
 
-  const commitmentId = context.params.id;
+    const commitmentId = context.params.id;
 
-  if (!commitmentId) {
-    throw new NotFoundError('Commitment');
-  }
+    if (!commitmentId) {
+      throw new NotFoundError('Commitment');
+    }
 
-  let commitment;
-  try {
-    commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
-  } catch {
-    throw new NotFoundError('Commitment', { commitmentId });
-  }
+    let commitment;
+    try {
+      commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
+    } catch {
+      throw new NotFoundError('Commitment', { commitmentId });
+    }
 
-  if (!commitment) {
-    throw new NotFoundError('Commitment', { commitmentId });
-  }
+    if (!commitment) {
+      throw new NotFoundError('Commitment', { commitmentId });
+    }
 
-  const response: CommitmentStatusResponse = {
-    commitmentId: commitment.id,
-    status: commitment.status,
-    daysRemaining: getDaysRemaining(commitment.expiresAt),
-    complianceScore: commitment.complianceScore,
-    currentValue: commitment.currentValue,
-    violationCount: commitment.violationCount,
-    expiresAt: commitment.expiresAt ?? null,
-  };
+    const response: CommitmentStatusResponse = {
+      commitmentId: commitment.id,
+      status: commitment.status,
+      daysRemaining: getDaysRemaining(commitment.expiresAt),
+      complianceScore: commitment.complianceScore,
+      currentValue: commitment.currentValue,
+      violationCount: commitment.violationCount,
+      expiresAt: commitment.expiresAt ?? null,
+    };
 
-  return ok(response, undefined, 200, correlationId);
-});
+    return ok(response, undefined, 200, correlationId);
+  },
+);

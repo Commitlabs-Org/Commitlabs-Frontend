@@ -18,7 +18,7 @@ describe('IdempotencyService with InMemoryKVStore', () => {
 
   it('should handle first call with a fresh key (creates STARTED record)', async () => {
     const key = 'test-key-1';
-    
+
     // First call: start returns true (lock acquired)
     const success = await service.start(key);
     expect(success).toBe(true);

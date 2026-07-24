@@ -74,7 +74,7 @@ export default function NFTDisplay({
             <Loader2 className="w-8 h-8 text-[#0FF0FC] animate-spin" />
           </div>
         )}
-        {(!imageError && imageUrl) ? (
+        {!imageError && imageUrl ? (
           <Image
             src={imageUrl}
             alt={`NFT ${tokenId}`}
@@ -154,5 +154,3 @@ export default function NFTDisplay({
     </div>
   );
 }
-
-

@@ -6,7 +6,7 @@ describe('ETag utilities', () => {
     it('should generate a quoted SHA-256 hash', () => {
       const data = { id: 1, name: 'test' };
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
       expect(etag.startsWith('"')).toBe(true);
       expect(etag.endsWith('"')).toBe(true);
@@ -16,45 +16,45 @@ describe('ETag utilities', () => {
       const data = { id: 1, name: 'test' };
       const etag1 = generateETag(data);
       const etag2 = generateETag(data);
-      
+
       expect(etag1).toBe(etag2);
     });
 
     it('should generate different ETags for different data', () => {
       const data1 = { id: 1, name: 'test' };
       const data2 = { id: 2, name: 'test' };
-      
+
       const etag1 = generateETag(data1);
       const etag2 = generateETag(data2);
-      
+
       expect(etag1).not.toBe(etag2);
     });
 
     it('should handle arrays', () => {
       const data = [1, 2, 3];
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
 
     it('should handle strings', () => {
       const data = 'test string';
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
 
     it('should handle numbers', () => {
       const data = 42;
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
 
     it('should handle null', () => {
       const data = null;
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
 
@@ -64,36 +64,36 @@ describe('ETag utilities', () => {
           id: 1,
           profile: {
             name: 'John',
-            email: 'john@example.com'
-          }
-        }
+            email: 'john@example.com',
+          },
+        },
       };
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
 
     it('should be sensitive to property order in objects', () => {
       const data1 = { a: 1, b: 2 };
       const data2 = { b: 2, a: 1 };
-      
+
       const etag1 = generateETag(data1);
       const etag2 = generateETag(data2);
-      
+
       expect(etag1).not.toBe(etag2);
     });
 
     it('should handle empty objects', () => {
       const data = {};
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
 
     it('should handle empty arrays', () => {
       const data: unknown[] = [];
       const etag = generateETag(data);
-      
+
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
     });
   });
@@ -171,8 +171,8 @@ describe('ETag utilities', () => {
         data: {
           id: 1,
           name: 'Test Item',
-          timestamp: '2026-05-27T10:00:00Z'
-        }
+          timestamp: '2026-05-27T10:00:00Z',
+        },
       };
 
       const etag = generateETag(responseData);
@@ -195,7 +195,7 @@ describe('ETag utilities', () => {
 
       // Simulate client sending If-None-Match header
       const clientIfNoneMatch = etag;
-      
+
       // Server checks if resource changed
       const currentETag = generateETag(data);
       const hasChanged = !etagMatches(clientIfNoneMatch, currentETag);
@@ -212,7 +212,7 @@ describe('ETag utilities', () => {
 
       // Simulate client sending old If-None-Match header
       const clientIfNoneMatch = originalETag;
-      
+
       // Server checks if resource changed
       const hasChanged = !etagMatches(clientIfNoneMatch, updatedETag);
 

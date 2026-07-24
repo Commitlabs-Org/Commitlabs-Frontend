@@ -49,7 +49,9 @@ export function SettlementEligibilityChecklist({
       setError(null);
 
       try {
-        const response = await fetch(`/api/commitments/${encodeURIComponent(commitmentId)}/settle/preview`);
+        const response = await fetch(
+          `/api/commitments/${encodeURIComponent(commitmentId)}/settle/preview`,
+        );
         if (!response.ok) {
           throw new Error('Unable to verify settlement eligibility');
         }
@@ -88,19 +90,25 @@ export function SettlementEligibilityChecklist({
       {
         id: 'maturity',
         label: 'Maturity reached',
-        description: preview.eligible ? 'The commitment is mature enough to settle.' : preview.reason ?? 'Settlement is blocked until maturity.',
+        description: preview.eligible
+          ? 'The commitment is mature enough to settle.'
+          : (preview.reason ?? 'Settlement is blocked until maturity.'),
         isComplete: preview.eligible,
       },
       {
         id: 'dispute',
         label: 'No active dispute',
-        description: preview.eligible ? 'No dispute is preventing settlement.' : preview.reason ?? 'Settlement is blocked by a dispute state.',
+        description: preview.eligible
+          ? 'No dispute is preventing settlement.'
+          : (preview.reason ?? 'Settlement is blocked by a dispute state.'),
         isComplete: preview.eligible,
       },
       {
         id: 'status',
         label: 'Eligible settlement state',
-        description: preview.eligible ? 'The commitment is in a settlement-ready state.' : preview.reason ?? 'The commitment is not in a settlement-ready state.',
+        description: preview.eligible
+          ? 'The commitment is in a settlement-ready state.'
+          : (preview.reason ?? 'The commitment is not in a settlement-ready state.'),
         isComplete: preview.eligible,
       },
     ];
@@ -112,11 +120,18 @@ export function SettlementEligibilityChecklist({
   const StatusIcon = statusIcon;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 text-white" aria-labelledby="settlement-eligibility-heading">
+    <section
+      className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 text-white"
+      aria-labelledby="settlement-eligibility-heading"
+    >
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <h3 id="settlement-eligibility-heading" className="text-sm font-semibold text-white">Settlement preview</h3>
-          <p className="mt-1 text-xs text-white/60">Check eligibility before opening the settlement flow.</p>
+          <h3 id="settlement-eligibility-heading" className="text-sm font-semibold text-white">
+            Settlement preview
+          </h3>
+          <p className="mt-1 text-xs text-white/60">
+            Check eligibility before opening the settlement flow.
+          </p>
         </div>
         <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
           <StatusIcon className={`h-3.5 w-3.5 ${statusTone}`} aria-hidden="true" />
@@ -125,12 +140,18 @@ export function SettlementEligibilityChecklist({
       </div>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white/70" aria-live="polite">
+        <div
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white/70"
+          aria-live="polite"
+        >
           <Clock3 className="h-4 w-4" aria-hidden="true" />
           Verifying settlement readiness…
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-[#FF8A04]/30 bg-[#FF8A04]/10 p-3 text-sm text-white/80" role="alert">
+        <div
+          className="rounded-xl border border-[#FF8A04]/30 bg-[#FF8A04]/10 p-3 text-sm text-white/80"
+          role="alert"
+        >
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>Unable to verify settlement eligibility right now.</span>
@@ -140,12 +161,21 @@ export function SettlementEligibilityChecklist({
         <>
           <ul className="space-y-2" aria-label="Settlement eligibility checklist">
             {checklist.map((item) => (
-              <li key={item.id} className={`rounded-xl border p-3 ${item.isComplete ? 'border-[#0FF0FC]/20 bg-[#0FF0FC]/10' : 'border-white/10 bg-white/[0.03]'}`}>
+              <li
+                key={item.id}
+                className={`rounded-xl border p-3 ${item.isComplete ? 'border-[#0FF0FC]/20 bg-[#0FF0FC]/10' : 'border-white/10 bg-white/[0.03]'}`}
+              >
                 <div className="flex items-start gap-2">
                   {item.isComplete ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0FF0FC]" aria-hidden="true" />
+                    <CheckCircle2
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#0FF0FC]"
+                      aria-hidden="true"
+                    />
                   ) : (
-                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[#FF8A04]" aria-hidden="true" />
+                    <ShieldAlert
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#FF8A04]"
+                      aria-hidden="true"
+                    />
                   )}
                   <div>
                     <p className="text-sm font-medium text-white">{item.label}</p>
@@ -158,11 +188,15 @@ export function SettlementEligibilityChecklist({
 
           <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
             <p className="font-medium text-white">Estimated settlement</p>
-            <p className="mt-1 text-xs leading-5">{toDisplayValue(preview?.estimatedSettlement ?? null)}</p>
+            <p className="mt-1 text-xs leading-5">
+              {toDisplayValue(preview?.estimatedSettlement ?? null)}
+            </p>
           </div>
 
           {disabledReason ? (
-            <p className="mt-3 text-xs leading-5 text-[#FF8A04]" role="note">{disabledReason}</p>
+            <p className="mt-3 text-xs leading-5 text-[#FF8A04]" role="note">
+              {disabledReason}
+            </p>
           ) : null}
         </>
       )}

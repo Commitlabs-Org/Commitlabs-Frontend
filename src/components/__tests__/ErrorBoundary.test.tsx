@@ -6,10 +6,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ErrorBoundary, withErrorBoundary } from '@/components/ErrorBoundary';
-import {
-  setErrorTransport,
-  type ClientErrorRecord,
-} from '@/lib/observability/reportError';
+import { setErrorTransport, type ClientErrorRecord } from '@/lib/observability/reportError';
 
 // Component that throws an error
 class ThrowingComponent extends Component<{ shouldThrow?: boolean }> {
@@ -173,11 +170,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('handles null children gracefully', () => {
-    render(
-      <ErrorBoundary>
-        {null}
-      </ErrorBoundary>,
-    );
+    render(<ErrorBoundary>{null}</ErrorBoundary>);
 
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });

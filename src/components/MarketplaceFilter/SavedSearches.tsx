@@ -94,27 +94,30 @@ export default function SavedSearches({ filters, onApplyFilters }: SavedSearches
     }
   }, [address, searchName, filters, savedSearches]);
 
-  const handleDeleteSearch = useCallback(async (searchId: string) => {
-    if (!address) return;
+  const handleDeleteSearch = useCallback(
+    async (searchId: string) => {
+      if (!address) return;
 
-    try {
-      const updatedSearches = savedSearches.filter((s) => s.id !== searchId);
+      try {
+        const updatedSearches = savedSearches.filter((s) => s.id !== searchId);
 
-      const token = localStorage.getItem('sessionToken') || `session_${address}_${Date.now()}`;
-      await fetch('/api/user/preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ savedMarketplaceSearches: updatedSearches }),
-      });
+        const token = localStorage.getItem('sessionToken') || `session_${address}_${Date.now()}`;
+        await fetch('/api/user/preferences', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ savedMarketplaceSearches: updatedSearches }),
+        });
 
-      setSavedSearches(updatedSearches);
-    } catch (err) {
-      console.error('Failed to delete search:', err);
-    }
-  }, [address, savedSearches]);
+        setSavedSearches(updatedSearches);
+      } catch (err) {
+        console.error('Failed to delete search:', err);
+      }
+    },
+    [address, savedSearches],
+  );
 
   return (
     <div className="mb-4 border-b border-white/5 pb-3">

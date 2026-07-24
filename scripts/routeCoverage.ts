@@ -11,9 +11,11 @@ export function routeFileToOpenApiPath(routeFile: string): string {
     return '';
   }
 
-  const segments = normalized.slice(prefix.length, -(`/${ROUTE_FILE}`).length).split('/');
+  const segments = normalized.slice(prefix.length, -`/${ROUTE_FILE}`.length).split('/');
   const apiPath = segments
-    .map((segment) => (segment.startsWith('[') && segment.endsWith(']') ? `{${segment.slice(1, -1)}}` : segment))
+    .map((segment) =>
+      segment.startsWith('[') && segment.endsWith(']') ? `{${segment.slice(1, -1)}}` : segment,
+    )
     .join('/');
 
   return `/api/${apiPath}`;
@@ -64,7 +66,10 @@ export function parseOpenApiPaths(openApiContent: string): Set<string> {
   return paths;
 }
 
-export function findUndocumentedRoutes(routeFiles: string[], documentedPaths: Set<string>): string[] {
+export function findUndocumentedRoutes(
+  routeFiles: string[],
+  documentedPaths: Set<string>,
+): string[] {
   return routeFiles
     .map((file) => routeFileToOpenApiPath(`src/app/api/${file}`))
     .filter((path) => path.length > 0 && !documentedPaths.has(path))

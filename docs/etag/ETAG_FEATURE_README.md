@@ -11,14 +11,19 @@ Successfully implemented HTTP ETag-based caching for CommitLabs list endpoints, 
 ### For Developers
 
 1. **Enable ETag on a new endpoint**:
+
    ```typescript
-   export const GET = withApiHandler(async (req, context, correlationId) => {
-     // Your handler logic
-     return ok(data, undefined, 200, correlationId);
-   }, { enableETag: true });
+   export const GET = withApiHandler(
+     async (req, context, correlationId) => {
+       // Your handler logic
+       return ok(data, undefined, 200, correlationId);
+     },
+     { enableETag: true },
+   );
    ```
 
 2. **Test ETag functionality**:
+
    ```bash
    npm run test -- tests/api/etag.test.ts --run
    npm run test -- tests/api/withApiHandler.etag.test.ts --run
@@ -32,6 +37,7 @@ Successfully implemented HTTP ETag-based caching for CommitLabs list endpoints, 
 ### For Clients
 
 1. **First request** - Get the ETag:
+
    ```javascript
    const response = await fetch('/api/commitments?ownerAddress=G...');
    const etag = response.headers.get('etag');
@@ -41,9 +47,9 @@ Successfully implemented HTTP ETag-based caching for CommitLabs list endpoints, 
 2. **Subsequent requests** - Use the cached ETag:
    ```javascript
    const cachedResponse = await fetch('/api/commitments?ownerAddress=G...', {
-     headers: { 'If-None-Match': etag }
+     headers: { 'If-None-Match': etag },
    });
-   
+
    if (cachedResponse.status === 304) {
      // Use cached data
    } else {
@@ -154,11 +160,13 @@ Content-Type: application/json
 ### Cache Headers
 
 All ETag responses include:
+
 ```
 Cache-Control: public, max-age=0, must-revalidate
 ```
 
 This means:
+
 - **public**: Can be cached by any cache (browser, CDN, proxy)
 - **max-age=0**: Don't use cached response without validation
 - **must-revalidate**: Must check with server before using cached response
@@ -167,23 +175,24 @@ This means:
 
 ### Bandwidth Savings
 
-| Scenario | Without ETag | With ETag | Savings |
-|----------|-------------|-----------|---------|
-| Single 304 response | 50KB | 200 bytes | 99.6% |
-| 10 requests (5 304s) | 500KB | 50KB + 1KB | 89.8% |
-| Daily polling (2880 requests) | 144GB | 576MB | 99.6% |
+| Scenario                      | Without ETag | With ETag  | Savings |
+| ----------------------------- | ------------ | ---------- | ------- |
+| Single 304 response           | 50KB         | 200 bytes  | 99.6%   |
+| 10 requests (5 304s)          | 500KB        | 50KB + 1KB | 89.8%   |
+| Daily polling (2880 requests) | 144GB        | 576MB      | 99.6%   |
 
 ### Latency Impact
 
-| Operation | Time | Impact |
-|-----------|------|--------|
-| ETag generation (SHA-256) | <1ms | Negligible |
-| ETag matching (string compare) | <0.1ms | Negligible |
-| Total overhead | <1ms | <0.1% of P95 |
+| Operation                      | Time   | Impact       |
+| ------------------------------ | ------ | ------------ |
+| ETag generation (SHA-256)      | <1ms   | Negligible   |
+| ETag matching (string compare) | <0.1ms | Negligible   |
+| Total overhead                 | <1ms   | <0.1% of P95 |
 
 ### Real-World Example
 
 Dashboard with 30-second polling:
+
 - **Without ETag**: 2,880 requests/day × 50KB = 144GB/day
 - **With ETag**: 2,880 requests/day × 200 bytes (avg) = 576MB/day
 - **Savings**: 143.4GB/day (99.6% reduction)
@@ -287,6 +296,7 @@ npm run test:watch
 ### Deployment Steps
 
 1. **Staging**
+
    ```bash
    git push origin fix/etag-implementation
    # Deploy to staging environment
@@ -306,6 +316,7 @@ npm run test:watch
 ### Rollback (if needed)
 
 Since this is backward compatible:
+
 1. Remove `enableETag: true` from route handlers
 2. Redeploy
 3. No data migration needed
@@ -345,10 +356,14 @@ http_requests_total{endpoint="/api/commitments", status="5xx"}
 ### Q: How do I disable ETag for a specific endpoint?
 
 **A**: Remove `enableETag: true` from the withApiHandler options:
+
 ```typescript
-export const GET = withApiHandler(async (req, context, correlationId) => {
-  // ...
-}, { cors: CORS_POLICY }); // No enableETag option
+export const GET = withApiHandler(
+  async (req, context, correlationId) => {
+    // ...
+  },
+  { cors: CORS_POLICY },
+); // No enableETag option
 ```
 
 ### Q: Can I use weak ETags?
@@ -404,6 +419,7 @@ a882e59 feat: add ETag and conditional 304 support to list endpoints
 ## Support
 
 For questions or issues:
+
 1. Check the troubleshooting section above
 2. Review the test files for usage examples
 3. Check the implementation summary for details
@@ -414,6 +430,7 @@ For questions or issues:
 The ETag implementation is complete, tested, documented, and ready for production. It provides significant performance improvements with zero breaking changes and minimal implementation complexity.
 
 **Next Steps**:
+
 1. Code review
 2. Staging deployment
 3. Performance verification

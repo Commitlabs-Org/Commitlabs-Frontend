@@ -54,14 +54,14 @@ users who need installation or help.
 
 Tests live in `src/components/wallet/NetworkMismatchBanner.test.tsx` and cover:
 
-| Scenario | Expected |
-|---|---|
-| Wallet disconnected | No banner |
-| Connected, networks match | No banner |
-| Connected, `walletNetwork` is `null` | No banner |
-| Connected, networks mismatch | Banner with `role="alert"` |
-| Dismiss button clicked | Banner hidden |
-| New mismatch after dismiss | Banner re-appears |
+| Scenario                             | Expected                   |
+| ------------------------------------ | -------------------------- |
+| Wallet disconnected                  | No banner                  |
+| Connected, networks match            | No banner                  |
+| Connected, `walletNetwork` is `null` | No banner                  |
+| Connected, networks mismatch         | Banner with `role="alert"` |
+| Dismiss button clicked               | Banner hidden              |
+| New mismatch after dismiss           | Banner re-appears          |
 
 Run with:
 

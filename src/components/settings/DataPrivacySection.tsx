@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
-import { ShieldCheck, Download, Trash2 } from 'lucide-react'
-import { NotificationSection } from './NotificationSection'
+import React, { useState } from 'react';
+import { ShieldCheck, Download, Trash2 } from 'lucide-react';
+import { NotificationSection } from './NotificationSection';
 
 export interface UserExportData {
-  exportedAt: string
-  account: string
-  preferences: Record<string, unknown>
-  watchlist: string[]
-  drafts: string[]
+  exportedAt: string;
+  account: string;
+  preferences: Record<string, unknown>;
+  watchlist: string[];
+  drafts: string[];
 }
 
 interface DataPrivacySectionProps {
   /** Connected wallet address; empty string when disconnected */
-  walletAddress?: string
+  walletAddress?: string;
   /** Optional override for gathering preferences (injected for testing) */
-  getPreferences?: () => Record<string, unknown>
+  getPreferences?: () => Record<string, unknown>;
 }
 
 /**
@@ -32,38 +32,40 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
   walletAddress = '',
   getPreferences,
 }) => {
-  const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [clearStatus, setClearStatus] = useState<'idle' | 'confirming' | 'success' | 'error'>('idle')
+  const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [clearStatus, setClearStatus] = useState<'idle' | 'confirming' | 'success' | 'error'>(
+    'idle',
+  );
 
   const buildExportPayload = (): UserExportData => {
     const preferences = getPreferences
       ? getPreferences()
       : (() => {
           try {
-            const raw = localStorage.getItem('cl:preferences')
-            return raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+            const raw = localStorage.getItem('cl:preferences');
+            return raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
           } catch {
-            return {}
+            return {};
           }
-        })()
+        })();
 
     const watchlist: string[] = (() => {
       try {
-        const raw = localStorage.getItem('cl:watchlist')
-        return raw ? (JSON.parse(raw) as string[]) : []
+        const raw = localStorage.getItem('cl:watchlist');
+        return raw ? (JSON.parse(raw) as string[]) : [];
       } catch {
-        return []
+        return [];
       }
-    })()
+    })();
 
     const drafts: string[] = (() => {
       try {
-        const raw = localStorage.getItem('cl:drafts')
-        return raw ? (JSON.parse(raw) as string[]) : []
+        const raw = localStorage.getItem('cl:drafts');
+        return raw ? (JSON.parse(raw) as string[]) : [];
       } catch {
-        return []
+        return [];
       }
-    })()
+    })();
 
     return {
       exportedAt: new Date().toISOString(),
@@ -71,49 +73,49 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
       preferences,
       watchlist,
       drafts,
-    }
-  }
+    };
+  };
 
   const handleExport = () => {
     try {
-      const payload = buildExportPayload()
+      const payload = buildExportPayload();
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: 'application/json',
-      })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `commitlabs-data-${Date.now()}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-      setExportStatus('success')
-      setTimeout(() => setExportStatus('idle'), 3000)
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `commitlabs-data-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportStatus('success');
+      setTimeout(() => setExportStatus('idle'), 3000);
     } catch {
-      setExportStatus('error')
-      setTimeout(() => setExportStatus('idle'), 3000)
+      setExportStatus('error');
+      setTimeout(() => setExportStatus('idle'), 3000);
     }
-  }
+  };
 
   const handleClearRequest = () => {
-    setClearStatus('confirming')
-  }
+    setClearStatus('confirming');
+  };
 
   const handleClearConfirm = () => {
     try {
-      ;['cl:preferences', 'cl:watchlist', 'cl:drafts'].forEach((key) =>
+      ['cl:preferences', 'cl:watchlist', 'cl:drafts'].forEach((key) =>
         localStorage.removeItem(key),
-      )
-      setClearStatus('success')
-      setTimeout(() => setClearStatus('idle'), 3000)
+      );
+      setClearStatus('success');
+      setTimeout(() => setClearStatus('idle'), 3000);
     } catch {
-      setClearStatus('error')
-      setTimeout(() => setClearStatus('idle'), 3000)
+      setClearStatus('error');
+      setTimeout(() => setClearStatus('idle'), 3000);
     }
-  }
+  };
 
   const handleClearCancel = () => {
-    setClearStatus('idle')
-  }
+    setClearStatus('idle');
+  };
 
   return (
     <NotificationSection
@@ -126,8 +128,8 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
         <div>
           <h3 className="font-semibold text-white">Export Account Data</h3>
           <p className="text-sm text-white/50 mt-1">
-            Download your preferences, watchlist, and drafts as a JSON file.
-            Secrets and private keys are never included.
+            Download your preferences, watchlist, and drafts as a JSON file. Secrets and private
+            keys are never included.
           </p>
         </div>
 
@@ -140,12 +142,7 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
           Export Data
         </button>
 
-        <div
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          className="text-sm"
-        >
+        <div role="status" aria-live="polite" aria-atomic="true" className="text-sm">
           {exportStatus === 'success' && (
             <span className="text-green-400">Export downloaded successfully.</span>
           )}
@@ -160,16 +157,14 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
         <div>
           <h3 className="font-semibold text-white">Clear Local Data</h3>
           <p className="text-sm text-white/50 mt-1">
-            Remove all locally stored preferences, watchlist entries, and drafts
-            from this device. This does not affect on-chain state.
+            Remove all locally stored preferences, watchlist entries, and drafts from this device.
+            This does not affect on-chain state.
           </p>
         </div>
 
         {clearStatus === 'confirming' ? (
           <div className="flex items-center gap-3">
-            <p className="text-sm text-yellow-400">
-              Are you sure? This cannot be undone.
-            </p>
+            <p className="text-sm text-yellow-400">Are you sure? This cannot be undone.</p>
             <button
               onClick={handleClearConfirm}
               aria-label="Confirm clear local data"
@@ -196,12 +191,7 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
           </button>
         )}
 
-        <div
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          className="text-sm"
-        >
+        <div role="status" aria-live="polite" aria-atomic="true" className="text-sm">
           {clearStatus === 'success' && (
             <span className="text-green-400">Local data cleared successfully.</span>
           )}
@@ -211,5 +201,5 @@ export const DataPrivacySection: React.FC<DataPrivacySectionProps> = ({
         </div>
       </div>
     </NotificationSection>
-  )
-}
+  );
+};

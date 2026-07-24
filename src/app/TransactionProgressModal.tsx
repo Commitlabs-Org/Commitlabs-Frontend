@@ -1,16 +1,13 @@
 'use client';
 
 import React from 'react';
-import TransactionStepTimeline, { type TransactionTimelinePhase } from '@/components/transaction/TransactionStepTimeline';
+import TransactionStepTimeline, {
+  type TransactionTimelinePhase,
+} from '@/components/transaction/TransactionStepTimeline';
 import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
 
 export type TransactionState =
-  | 'IDLE'
-  | 'AWAITING_SIGNATURE'
-  | 'SUBMITTING'
-  | 'PROCESSING'
-  | 'SUCCESS'
-  | 'ERROR';
+  'IDLE' | 'AWAITING_SIGNATURE' | 'SUBMITTING' | 'PROCESSING' | 'SUCCESS' | 'ERROR';
 
 export interface TransactionProgressModalProps {
   isOpen: boolean;
@@ -24,7 +21,10 @@ export interface TransactionProgressModalProps {
   onSuccessAction?: () => void; // e.g., "View Details"
 }
 
-const ERROR_MAPPINGS: Record<string, { type: 'error' | 'warning'; lead: string; helper: string; primary: string; secondary: string }> = {
+const ERROR_MAPPINGS: Record<
+  string,
+  { type: 'error' | 'warning'; lead: string; helper: string; primary: string; secondary: string }
+> = {
   USER_REJECTED: {
     type: 'warning',
     lead: 'Signature Canceled',
@@ -49,7 +49,8 @@ const ERROR_MAPPINGS: Record<string, { type: 'error' | 'warning'; lead: string; 
   RPC_TIMEOUT: {
     type: 'warning',
     lead: 'Status Unknown (Timeout)',
-    helper: 'The network is taking longer than expected. Check the block explorer before retrying to prevent duplicate transactions.',
+    helper:
+      'The network is taking longer than expected. Check the block explorer before retrying to prevent duplicate transactions.',
     primary: 'Check Explorer ↗',
     secondary: 'Close',
   },
@@ -134,37 +135,52 @@ export default function TransactionProgressModal({
   // -- State Configuration Helpers --
   const getHeader = () => {
     switch (state) {
-      case 'AWAITING_SIGNATURE': return 'Confirm in Freighter';
-      case 'SUBMITTING': return `${actionName} in Progress`;
-      case 'PROCESSING': return 'Confirming Transaction';
-      case 'SUCCESS': return `${actionName} Successful!`;
+      case 'AWAITING_SIGNATURE':
+        return 'Confirm in Freighter';
+      case 'SUBMITTING':
+        return `${actionName} in Progress`;
+      case 'PROCESSING':
+        return 'Confirming Transaction';
+      case 'SUCCESS':
+        return `${actionName} Successful!`;
       case 'ERROR':
         return errorCode === 'RPC_TIMEOUT' ? 'Network Timeout' : 'Transaction Failed';
-      default: return 'Transaction in Progress';
+      default:
+        return 'Transaction in Progress';
     }
   };
 
   const getLeadText = () => {
     switch (state) {
-      case 'AWAITING_SIGNATURE': return 'Please sign the transaction in your wallet.';
-      case 'SUBMITTING': return 'Sending to the Stellar Network...';
-      case 'PROCESSING': return 'Waiting for network confirmation...';
-      case 'SUCCESS': return 'Your transaction has been confirmed.';
+      case 'AWAITING_SIGNATURE':
+        return 'Please sign the transaction in your wallet.';
+      case 'SUBMITTING':
+        return 'Sending to the Stellar Network...';
+      case 'PROCESSING':
+        return 'Waiting for network confirmation...';
+      case 'SUCCESS':
+        return 'Your transaction has been confirmed.';
       case 'ERROR':
         return ERROR_MAPPINGS[errorCode]?.lead || ERROR_MAPPINGS['UNKNOWN_ERROR'].lead;
-      default: return '';
+      default:
+        return '';
     }
   };
 
   const getHelperText = () => {
     switch (state) {
-      case 'AWAITING_SIGNATURE': return "We're waiting for your approval to proceed.";
-      case 'SUBMITTING': return "This usually takes 3-5 seconds. Please don't close this window.";
-      case 'PROCESSING': return 'The transaction has been submitted and is waiting to be included in the ledger.';
-      case 'SUCCESS': return successMessage;
+      case 'AWAITING_SIGNATURE':
+        return "We're waiting for your approval to proceed.";
+      case 'SUBMITTING':
+        return "This usually takes 3-5 seconds. Please don't close this window.";
+      case 'PROCESSING':
+        return 'The transaction has been submitted and is waiting to be included in the ledger.';
+      case 'SUCCESS':
+        return successMessage;
       case 'ERROR':
         return ERROR_MAPPINGS[errorCode]?.helper || ERROR_MAPPINGS['UNKNOWN_ERROR'].helper;
-      default: return '';
+      default:
+        return '';
     }
   };
 
@@ -173,7 +189,17 @@ export default function TransactionProgressModal({
     if (state === 'AWAITING_SIGNATURE') {
       return (
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white/5 border border-white/10 animate-pulse">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/80">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-white/80"
+          >
             <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
             <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
             <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
@@ -185,9 +211,28 @@ export default function TransactionProgressModal({
     if (state === 'SUBMITTING' || state === 'PROCESSING') {
       return (
         <div className="flex items-center justify-center w-16 h-16">
-          <svg className="animate-spin text-[#00C950]" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
-            <path d="M12 2C6.47715 2 2 6.47715 2 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          <svg
+            className="animate-spin text-[#00C950]"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeOpacity="0.25"
+            />
+            <path
+              d="M12 2C6.47715 2 2 6.47715 2 12"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
           </svg>
         </div>
       );
@@ -196,7 +241,16 @@ export default function TransactionProgressModal({
     if (state === 'SUCCESS') {
       return (
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#00C950]/10 border border-[#00C950]/20">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00C950" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#00C950"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
@@ -206,18 +260,41 @@ export default function TransactionProgressModal({
     if (state === 'ERROR') {
       const errorType = ERROR_MAPPINGS[errorCode]?.type || 'error';
       const color = errorType === 'warning' ? '#FF8904' : '#FF4757';
-      const bgClass = errorType === 'warning' ? 'bg-[#FF8904]/10 border-[#FF8904]/20' : 'bg-[#FF4757]/10 border-[#FF4757]/20';
+      const bgClass =
+        errorType === 'warning'
+          ? 'bg-[#FF8904]/10 border-[#FF8904]/20'
+          : 'bg-[#FF4757]/10 border-[#FF4757]/20';
 
       return (
-        <div className={`flex items-center justify-center w-16 h-16 rounded-full border ${bgClass}`}>
+        <div
+          className={`flex items-center justify-center w-16 h-16 rounded-full border ${bgClass}`}
+        >
           {errorType === 'warning' ? (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
               <line x1="12" x2="12" y1="9" y2="13" />
               <line x1="12" x2="12.01" y1="17" y2="17" />
             </svg>
           ) : (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <circle cx="12" cy="12" r="10" />
               <line x1="15" x2="9" y1="9" y2="15" />
               <line x1="9" x2="15" y1="9" y2="15" />
@@ -240,7 +317,10 @@ export default function TransactionProgressModal({
 
     if (state === 'AWAITING_SIGNATURE') {
       return (
-        <button onClick={onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
+        <button
+          onClick={onClose}
+          className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+        >
           Cancel
         </button>
       );
@@ -249,10 +329,16 @@ export default function TransactionProgressModal({
     if (state === 'SUCCESS') {
       return (
         <div className="flex flex-col gap-3 w-full">
-          <button onClick={onSuccessAction || onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-[#00C950] hover:bg-[#00C950]/90 transition-colors">
+          <button
+            onClick={onSuccessAction || onClose}
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-[#00C950] hover:bg-[#00C950]/90 transition-colors"
+          >
             View Details
           </button>
-          <button onClick={onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors">
+          <button
+            onClick={onClose}
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+          >
             Close
           </button>
         </div>
@@ -267,8 +353,8 @@ export default function TransactionProgressModal({
         if (isTimeout && txExplorerUrl) {
           openExplorerUrl('tx', txHash);
         } else if (mapping.primary === 'Fund Wallet' || mapping.primary === 'Contact Support') {
-           // Handle external redirect logic here if applicable, otherwise fallback to generic
-          onClose(); 
+          // Handle external redirect logic here if applicable, otherwise fallback to generic
+          onClose();
         } else {
           onRetry?.();
         }
@@ -276,13 +362,16 @@ export default function TransactionProgressModal({
 
       return (
         <div className="flex flex-col gap-3 w-full">
-          <button 
-            onClick={handlePrimaryClick} 
+          <button
+            onClick={handlePrimaryClick}
             className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-white/10 hover:bg-white/20 transition-colors"
           >
             {mapping.primary}
           </button>
-          <button onClick={onClose} className="w-full py-3 px-4 rounded-lg font-semibold text-white/50 hover:text-white/80 transition-colors">
+          <button
+            onClick={onClose}
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white/50 hover:text-white/80 transition-colors"
+          >
             {mapping.secondary}
           </button>
         </div>
@@ -294,7 +383,7 @@ export default function TransactionProgressModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
-      <div 
+      <div
         className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
         role="dialog"
         aria-modal="true"
@@ -307,12 +396,21 @@ export default function TransactionProgressModal({
           </h2>
           {/* Only show close button if it's safe to cancel */}
           {state !== 'SUBMITTING' && state !== 'PROCESSING' && (
-            <button 
+            <button
               onClick={onClose}
               className="p-1.5 rounded-md text-white/50 hover:text-white hover:bg-white/10 transition-colors"
               aria-label="Close modal"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -322,18 +420,11 @@ export default function TransactionProgressModal({
 
         {/* Body */}
         <div className="flex flex-col items-center justify-center p-8 text-center">
-          
-          <div className="mb-6">
-            {renderGraphic()}
-          </div>
+          <div className="mb-6">{renderGraphic()}</div>
 
-          <h3 className="text-xl font-bold text-white mb-2">
-            {getLeadText()}
-          </h3>
-          
-          <p className="text-sm text-white/60 max-w-[300px] leading-relaxed">
-            {getHelperText()}
-          </p>
+          <h3 className="text-xl font-bold text-white mb-2">{getLeadText()}</h3>
+
+          <p className="text-sm text-white/60 max-w-[300px] leading-relaxed">{getHelperText()}</p>
 
           <TransactionStepTimeline
             currentPhase={timelinePhase}
@@ -343,35 +434,42 @@ export default function TransactionProgressModal({
           />
 
           {/* Explorer Link Slot */}
-          {txExplorerUrl && (state === 'SUCCESS' || state === 'ERROR' || state === 'PROCESSING') && (
-            <div className="mt-6 p-3 w-full rounded-lg bg-white/5 border border-white/5 flex items-center justify-between">
-              <span className="text-xs text-white/40 font-mono truncate max-w-[200px]">
-                {txHash}
-              </span>
-              <a 
-                href={txExplorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-white/70 hover:text-[#00C950] flex items-center gap-1.5 font-medium transition-colors"
-              >
-                View Explorer
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" x2="21" y1="14" y2="3" />
-                </svg>
-              </a>
-            </div>
-          )}
+          {txExplorerUrl &&
+            (state === 'SUCCESS' || state === 'ERROR' || state === 'PROCESSING') && (
+              <div className="mt-6 p-3 w-full rounded-lg bg-white/5 border border-white/5 flex items-center justify-between">
+                <span className="text-xs text-white/40 font-mono truncate max-w-[200px]">
+                  {txHash}
+                </span>
+                <a
+                  href={txExplorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-white/70 hover:text-[#00C950] flex items-center gap-1.5 font-medium transition-colors"
+                >
+                  View Explorer
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" x2="21" y1="14" y2="3" />
+                  </svg>
+                </a>
+              </div>
+            )}
         </div>
 
         {/* Footer Actions */}
-        {(state !== 'SUBMITTING' && state !== 'PROCESSING') && (
-          <div className="px-6 pb-6 pt-2 flex flex-col items-center">
-            {renderActions()}
-          </div>
+        {state !== 'SUBMITTING' && state !== 'PROCESSING' && (
+          <div className="px-6 pb-6 pt-2 flex flex-col items-center">{renderActions()}</div>
         )}
-        
       </div>
     </div>
   );

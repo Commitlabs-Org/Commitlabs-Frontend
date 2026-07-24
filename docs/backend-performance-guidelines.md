@@ -41,6 +41,7 @@ _Note: Latency is measured as Time to First Byte (TTFB) + Content Download Time 
 ## 4.1 ETag Implementation for List Endpoints
 
 CommitLabs implements ETag-based caching for read-heavy list endpoints to reduce bandwidth and re-render costs. This applies to:
+
 - `/api/commitments` (GET)
 - `/api/marketplace/listings` (GET)
 - `/api/attestations` (GET)
@@ -69,7 +70,7 @@ const data = await response.json();
 
 // Subsequent request with cached ETag
 const cachedResponse = await fetch('/api/commitments?ownerAddress=G...', {
-  headers: { 'If-None-Match': etag }
+  headers: { 'If-None-Match': etag },
 });
 
 if (cachedResponse.status === 304) {
@@ -94,10 +95,10 @@ if (cachedResponse.status === 304) {
 
 ```javascript
 // Good: Pagination, Field Selection, and Timeout Handling
-app.get("/api/users", async (req, res) => {
+app.get('/api/users', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = Math.min(parseInt(req.query.limit) || 20, 50); // Enforce max limit
-  const fields = req.query.fields ? req.query.fields.split(",") : null;
+  const fields = req.query.fields ? req.query.fields.split(',') : null;
 
   try {
     const users = await db.users
@@ -116,7 +117,7 @@ app.get("/api/users", async (req, res) => {
       meta: { page, limit },
     });
   } catch (error) {
-    res.status(500).json({ error: "Query timeout or database error" });
+    res.status(500).json({ error: 'Query timeout or database error' });
   }
 });
 ```
@@ -168,12 +169,12 @@ SOROBAN_RPC_TIMEOUT_MS=30000
 
 ### Timeout behaviour
 
-| Scenario | HTTP status | `retryable` | Notes |
-| :--- | :--- | :--- | :--- |
-| `getAccount` / `simulateTransaction` hang | `504 GATEWAY_TIMEOUT` | `true` | Safe to retry — no state was mutated. |
-| `prepareTransaction` hang | `504 GATEWAY_TIMEOUT` | `true` | Safe to retry — tx was not broadcast. |
-| `sendTransaction` hang | `504 GATEWAY_TIMEOUT` | `true` | **Outcome unknown** — the tx may have been broadcast. Surface the error details to the user. |
-| `waitForTransactionResult` hang | `504 GATEWAY_TIMEOUT` | `true` | Tx was broadcast; include `txHash` from error details so users can verify on-chain. |
+| Scenario                                  | HTTP status           | `retryable` | Notes                                                                                        |
+| :---------------------------------------- | :-------------------- | :---------- | :------------------------------------------------------------------------------------------- |
+| `getAccount` / `simulateTransaction` hang | `504 GATEWAY_TIMEOUT` | `true`      | Safe to retry — no state was mutated.                                                        |
+| `prepareTransaction` hang                 | `504 GATEWAY_TIMEOUT` | `true`      | Safe to retry — tx was not broadcast.                                                        |
+| `sendTransaction` hang                    | `504 GATEWAY_TIMEOUT` | `true`      | **Outcome unknown** — the tx may have been broadcast. Surface the error details to the user. |
+| `waitForTransactionResult` hang           | `504 GATEWAY_TIMEOUT` | `true`      | Tx was broadcast; include `txHash` from error details so users can verify on-chain.          |
 
 ### Write-call semantics
 
@@ -187,7 +188,7 @@ final outcome on-chain independently.
 A single `AbortController` is created per `invokeContractMethod` invocation.
 `setTimeout(controller.abort, timeoutMs)` schedules the abort, and every
 awaited RPC promise is wrapped in `abortableRpc()` which races the real call
-against the abort signal.  The timer is always cleared in a `finally` block so
+against the abort signal. The timer is always cleared in a `finally` block so
 no leaks occur on the success path.
 
 ## 8. Escalation Procedures
@@ -203,12 +204,11 @@ If a service consistently violates performance guidelines:
 
 Exceptions to these guidelines must be approved by the Architecture Review Board.
 
-*   **Request Process**: Submit a "Performance Exception Request" document detailing:
-    *   Reason for exception (e.g., legacy system limitation, extremely complex computation).
-    *   Impact analysis on system resources and user experience.
-    *   Proposed mitigation (e.g., aggressive caching, async processing).
-    *   Timeline for compliance or permanent waiver justification.
-
+- **Request Process**: Submit a "Performance Exception Request" document detailing:
+  - Reason for exception (e.g., legacy system limitation, extremely complex computation).
+  - Impact analysis on system resources and user experience.
+  - Proposed mitigation (e.g., aggressive caching, async processing).
+  - Timeline for compliance or permanent waiver justification.
 
 ## 9. Soroban Read Retry Policy
 
@@ -216,7 +216,7 @@ Read calls to Soroban RPC (`src/lib/backend/services/contracts.ts`) are wrapped 
 
 ### What is retried
 
-Only **read-mode** contract calls, and only when they fail with a *transient* error. Transience is decided by `isRetryableContractError`, which reuses the classification produced by `normalizeContractError` so there is a single source of truth. Retried failures are HTTP 429, HTTP 503/504, timeout/deadline errors, and generic gateway-class failures (e.g. a dropped socket) — safe to retry because reads are idempotent.
+Only **read-mode** contract calls, and only when they fail with a _transient_ error. Transience is decided by `isRetryableContractError`, which reuses the classification produced by `normalizeContractError` so there is a single source of truth. Retried failures are HTTP 429, HTTP 503/504, timeout/deadline errors, and generic gateway-class failures (e.g. a dropped socket) — safe to retry because reads are idempotent.
 
 ### What is never retried
 
@@ -224,11 +224,12 @@ Only **read-mode** contract calls, and only when they fail with a *transient* er
 - HTTP 404 (not found) — a deterministic result, not a transient failure.
 - HTTP 400 / validation errors — retrying cannot change the outcome.
 - Configuration errors (missing contract address or source account, surfaced as a 500 `BLOCKCHAIN_UNAVAILABLE`) — not transient.
-- The optimistic `get_user_commitments` probe in `getUserCommitmentsFromChain`. Its failure is *expected* on contracts that don't implement that method and is handled by an id-based fallback; retrying an expected failure would only add latency. Transient errors are still covered, because the fallback `get_user_commitment_ids` read and the per-id `getCommitmentFromChain` reads each go through the retrying path.
+- The optimistic `get_user_commitments` probe in `getUserCommitmentsFromChain`. Its failure is _expected_ on contracts that don't implement that method and is handled by an id-based fallback; retrying an expected failure would only add latency. Transient errors are still covered, because the fallback `get_user_commitment_ids` read and the per-id `getCommitmentFromChain` reads each go through the retrying path.
 
 ### Backoff algorithm
 
 Delays grow exponentially and use **equal jitter** so that many concurrent callers (e.g. parallel per-commitment reads) do not retry in lock-step:
+
 - **Request Process**: Submit a "Performance Exception Request" document detailing:
   - Reason for exception (e.g., legacy system limitation, extremely complex computation).
   - Impact analysis on system resources and user experience.
@@ -283,14 +284,14 @@ commitlabs:marketplace:stats
 await this.storage.set(getListingStorageKey(listingId), listing);
 
 // Step 2: Invalidate all listing query caches via prefix
-await cache.invalidate("commitlabs:marketplace:listings:");
-logInfo(undefined, "[cache] invalidated marketplace-listings after mutation", {
+await cache.invalidate('commitlabs:marketplace:listings:');
+logInfo(undefined, '[cache] invalidated marketplace-listings after mutation', {
   listingId,
 });
 
 // Step 3: Invalidate stats cache
 await cache.delete(CacheKey.marketplaceStats());
-logInfo(undefined, "[cache] invalidated marketplace-stats after mutation", {
+logInfo(undefined, '[cache] invalidated marketplace-stats after mutation', {
   listingId,
 });
 ```
@@ -342,7 +343,7 @@ await cache.clear();
 
 ```typescript
 // Bad: Listings cache updated but stats still stale
-await cache.delete("commitlabs:marketplace:listings:hash123");
+await cache.delete('commitlabs:marketplace:listings:hash123');
 // Missing: await cache.delete(CacheKey.marketplaceStats());
 ```
 
@@ -358,7 +359,7 @@ await cache.set(key, value, 300); // 5 min TTL
 
 ```typescript
 // Good: Precise invalidation after marketplace mutation
-await cache.invalidate("commitlabs:marketplace:listings:");
+await cache.invalidate('commitlabs:marketplace:listings:');
 await cache.delete(CacheKey.marketplaceStats());
 ```
 

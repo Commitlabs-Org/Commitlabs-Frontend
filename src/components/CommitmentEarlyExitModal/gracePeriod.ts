@@ -80,7 +80,8 @@ export function getGraceCountdownStatus({
     return {
       state: 'no_grace',
       title: 'Penalty applies now',
-      detail: 'This protocol configuration has no penalty-free grace period. Early exit uses the penalty shown below.',
+      detail:
+        'This protocol configuration has no penalty-free grace period. Early exit uses the penalty shown below.',
     };
   }
 

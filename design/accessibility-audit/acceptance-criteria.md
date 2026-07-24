@@ -203,9 +203,9 @@ work:
 Wire one of the following into the existing CI pipeline (the project uses
 [`ci.yml`](../../ci.yml)):
 
-* `axe-playwright` smoke run on each audited route, asserting zero serious/critical
+- `axe-playwright` smoke run on each audited route, asserting zero serious/critical
   violations.
-* Or, `jest-axe` assertions on every component test. Recommended starting set:
+- Or, `jest-axe` assertions on every component test. Recommended starting set:
   `KPICard`, `Dialog`, `ChartFigure`, `Tooltip`, plus the wizard step components.
 
 The CI gate fails the PR on regressions. False positives are addressed by adjusting the
@@ -215,10 +215,10 @@ component, not by suppressing the rule.
 
 Add to the existing ESLint config:
 
-* `eslint-plugin-jsx-a11y` recommended rules.
-* A custom rule rejecting `disabled` + `aria-disabled` on the same `<button>` (catches
+- `eslint-plugin-jsx-a11y` recommended rules.
+- A custom rule rejecting `disabled` + `aria-disabled` on the same `<button>` (catches
   the F-02-01 class).
-* A custom rule rejecting `title` attributes on non-interactive elements (catches the
+- A custom rule rejecting `title` attributes on non-interactive elements (catches the
   F-02-05 class).
 
 ### 3. PR review checklist

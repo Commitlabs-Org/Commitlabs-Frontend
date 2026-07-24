@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useReportWebVitals } from 'next/web-vitals'
-import { reportWebVital } from '@/lib/perf/webVitals'
+import { useReportWebVitals } from 'next/web-vitals';
+import { reportWebVital } from '@/lib/perf/webVitals';
 
 /**
  * Mounts the Next.js web-vitals listener and forwards each metric to the
@@ -12,8 +12,8 @@ import { reportWebVital } from '@/lib/perf/webVitals'
  */
 export function WebVitalsReporter() {
   useReportWebVitals((metric) => {
-    reportWebVital(metric)
-  })
+    reportWebVital(metric);
+  });
 
-  return null
+  return null;
 }

@@ -1,7 +1,7 @@
-import styles from './ErrorLayout.module.css'
+import styles from './ErrorLayout.module.css';
 
 interface ErrorLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function ErrorLayout({ children }: ErrorLayoutProps) {
@@ -9,5 +9,5 @@ export default function ErrorLayout({ children }: ErrorLayoutProps) {
     <div className={styles.errorContainer}>
       <div className={styles.content}>{children}</div>
     </div>
-  )
+  );
 }

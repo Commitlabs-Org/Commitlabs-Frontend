@@ -63,5 +63,5 @@ export async function listCommitments(): Promise<Commitment[]> {
 }
 
 export async function getCommitment(id: string): Promise<Commitment | undefined> {
-  return mockCommitments.find(c => c.id === id);
+  return mockCommitments.find((c) => c.id === id);
 }

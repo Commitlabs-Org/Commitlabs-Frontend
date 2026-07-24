@@ -1,65 +1,65 @@
-'use client'
+'use client';
 
-import React, { useState, useCallback } from 'react'
-import { Monitor, AlertTriangle, Trash2 } from 'lucide-react'
-import { NotificationSection } from './NotificationSection'
+import React, { useState, useCallback } from 'react';
+import { Monitor, AlertTriangle, Trash2 } from 'lucide-react';
+import { NotificationSection } from './NotificationSection';
 
 export interface ActiveSession {
-  id: string
-  userAgent: string
-  ipAddress: string
-  createdAt: string
-  isCurrent: boolean
+  id: string;
+  userAgent: string;
+  ipAddress: string;
+  createdAt: string;
+  isCurrent: boolean;
 }
 
 interface ActiveSessionsSectionProps {
-  sessions?: ActiveSession[]
-  onRevokeOthers?: () => Promise<void>
+  sessions?: ActiveSession[];
+  onRevokeOthers?: () => Promise<void>;
 }
 
 export const ActiveSessionsSection: React.FC<ActiveSessionsSectionProps> = ({
   sessions = [],
   onRevokeOthers,
 }) => {
-  const [revoking, setRevoking] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<string | null>(null)
+  const [revoking, setRevoking] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const handleRevokeClick = () => {
-    setConfirmOpen(true)
-    setError(null)
-    setStatus(null)
-  }
+    setConfirmOpen(true);
+    setError(null);
+    setStatus(null);
+  };
 
   const handleConfirm = useCallback(async () => {
-    setConfirmOpen(false)
-    setRevoking(true)
-    setError(null)
+    setConfirmOpen(false);
+    setRevoking(true);
+    setError(null);
     try {
       if (onRevokeOthers) {
-        await onRevokeOthers()
+        await onRevokeOthers();
       } else {
         const res = await fetch('/api/auth/sessions/revoke-others', {
           method: 'POST',
           credentials: 'same-origin',
-        })
+        });
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data?.error ?? 'Failed to revoke other sessions')
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error ?? 'Failed to revoke other sessions');
         }
       }
-      setStatus('All other sessions have been revoked.')
+      setStatus('All other sessions have been revoked.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.')
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
-      setRevoking(false)
+      setRevoking(false);
     }
-  }, [onRevokeOthers])
+  }, [onRevokeOthers]);
 
-  const handleCancel = () => setConfirmOpen(false)
+  const handleCancel = () => setConfirmOpen(false);
 
-  const otherSessionCount = sessions.filter((s) => !s.isCurrent).length
+  const otherSessionCount = sessions.filter((s) => !s.isCurrent).length;
 
   return (
     <NotificationSection
@@ -97,7 +97,8 @@ export const ActiveSessionsSection: React.FC<ActiveSessionsSectionProps> = ({
                     )}
                   </p>
                   <p className="text-xs text-white/40 mt-0.5">
-                    {session.ipAddress} &middot; Signed in {new Date(session.createdAt).toLocaleString()}
+                    {session.ipAddress} &middot; Signed in{' '}
+                    {new Date(session.createdAt).toLocaleString()}
                   </p>
                 </div>
               </li>
@@ -147,9 +148,7 @@ export const ActiveSessionsSection: React.FC<ActiveSessionsSectionProps> = ({
                     {error}
                   </p>
                 )}
-                {status && !error && (
-                  <p className="mb-3 text-sm text-[#0FF0FC]">{status}</p>
-                )}
+                {status && !error && <p className="mb-3 text-sm text-[#0FF0FC]">{status}</p>}
                 <button
                   onClick={handleRevokeClick}
                   disabled={revoking}
@@ -176,5 +175,5 @@ export const ActiveSessionsSection: React.FC<ActiveSessionsSectionProps> = ({
         )}
       </div>
     </NotificationSection>
-  )
-}
+  );
+};

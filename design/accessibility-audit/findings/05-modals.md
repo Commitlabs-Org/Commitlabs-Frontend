@@ -1,11 +1,12 @@
 # Findings — Modals
 
 Flow code:
-* [`src/components/modals/Commitmentcreatedmodal.tsx`](../../../src/components/modals/Commitmentcreatedmodal.tsx) (success)
-* [`src/components/modals/CommitmentDetailsModal.tsx`](../../../src/components/modals/CommitmentDetailsModal.tsx)
-* [`src/components/modals/CommitmentSuccess.tsx`](../../../src/components/modals/CommitmentSuccess.tsx)
-* [`src/components/CommitmentEarlyExitModal/`](../../../src/components/CommitmentEarlyExitModal/)
-* [`src/components/CommitmentCreatedModal .tsx`](../../../src/components/CommitmentCreatedModal%20.tsx) (note: file name has a trailing space)
+
+- [`src/components/modals/Commitmentcreatedmodal.tsx`](../../../src/components/modals/Commitmentcreatedmodal.tsx) (success)
+- [`src/components/modals/CommitmentDetailsModal.tsx`](../../../src/components/modals/CommitmentDetailsModal.tsx)
+- [`src/components/modals/CommitmentSuccess.tsx`](../../../src/components/modals/CommitmentSuccess.tsx)
+- [`src/components/CommitmentEarlyExitModal/`](../../../src/components/CommitmentEarlyExitModal/)
+- [`src/components/CommitmentCreatedModal .tsx`](../../../src/components/CommitmentCreatedModal%20.tsx) (note: file name has a trailing space)
 
 The success modal does most things right; the issues below are about the **gaps that
 repeat across each modal implementation** because there is no shared `Dialog` primitive.
@@ -14,11 +15,11 @@ repeat across each modal implementation** because there is no shared `Dialog` pr
 
 ### F-05-01 — Success modal does not restore focus to its trigger on close
 
-| | |
-| :---- | :---- |
-| Severity | **Critical** |
-| Effort | S (per modal) / L (introduce shared primitive) |
-| WCAG | 2.4.3 (Focus Order) |
+|          |                                                                                                 |
+| :------- | :---------------------------------------------------------------------------------------------- |
+| Severity | **Critical**                                                                                    |
+| Effort   | S (per modal) / L (introduce shared primitive)                                                  |
+| WCAG     | 2.4.3 (Focus Order)                                                                             |
 | Location | [`Commitmentcreatedmodal.tsx:30–50`](../../../src/components/modals/Commitmentcreatedmodal.tsx) |
 
 **Observation.** The modal correctly moves focus to its primary button on open
@@ -31,7 +32,7 @@ from the page top.
 commitment, they have to tab through the entire wizard chrome to return to the next
 sensible action.
 
-**Recommended fix.** Capture `document.activeElement` *before* the modal opens (when
+**Recommended fix.** Capture `document.activeElement` _before_ the modal opens (when
 `isOpen` flips false → true), store in a ref, and on close call `previousActiveElement.focus()`.
 Same pattern applies to every modal. The right home for this is a shared `<Dialog>`
 primitive — see [`component-spec-updates.md`](../component-spec-updates.md).
@@ -44,11 +45,11 @@ e.g., the back link if Submit unmounts).
 
 ### F-05-02 — Modal animations not gated on `prefers-reduced-motion`
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 2.3.3 (Animation from Interactions, AAA — best practice) — also affects 1.4.13 |
+|          |                                                                                                     |
+| :------- | :-------------------------------------------------------------------------------------------------- |
+| Severity | High                                                                                                |
+| Effort   | S                                                                                                   |
+| WCAG     | 2.3.3 (Animation from Interactions, AAA — best practice) — also affects 1.4.13                      |
 | Location | [`Commitmentcreatedmodal.tsx:93,99,120`](../../../src/components/modals/Commitmentcreatedmodal.tsx) |
 
 **Observation.** The modal uses `animate-in fade-in duration-200`,
@@ -71,11 +72,11 @@ re-trigger the modal. No animation runs.
 
 ### F-05-03 — Each modal re-implements the dialog pattern; behavior drifts
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | L |
-| WCAG | 2.4.3 (Focus Order), 4.1.2 (Name, Role, Value) — pattern issue, multiple criteria |
+|          |                                                                                                                                                                   |
+| :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | High                                                                                                                                                              |
+| Effort   | L                                                                                                                                                                 |
+| WCAG     | 2.4.3 (Focus Order), 4.1.2 (Name, Role, Value) — pattern issue, multiple criteria                                                                                 |
 | Location | every file under [`src/components/modals/`](../../../src/components/modals/) and [`CommitmentEarlyExitModal/`](../../../src/components/CommitmentEarlyExitModal/) |
 
 **Observation.** There are at least four modal implementations in the codebase
@@ -89,12 +90,13 @@ others vulnerable.
 sometimes not; sometimes focus traps, sometimes escapes.
 
 **Recommended fix.** Introduce a `<Dialog>` primitive that owns the full pattern:
-* `role="dialog"` with `aria-modal="true"` and required `aria-labelledby` (compile-time
+
+- `role="dialog"` with `aria-modal="true"` and required `aria-labelledby` (compile-time
   warning if missing).
-* Focus capture on open, focus trap during, focus restore on close.
-* `Esc` closes; click-outside closes (configurable).
-* `prefers-reduced-motion`-gated animations.
-* Body scroll lock that is reversible if multiple dialogs stack.
+- Focus capture on open, focus trap during, focus restore on close.
+- `Esc` closes; click-outside closes (configurable).
+- `prefers-reduced-motion`-gated animations.
+- Body scroll lock that is reversible if multiple dialogs stack.
 
 Migrate each modal to the primitive. This is the single highest-leverage refactor in the
 audit — it discharges F-05-01, F-05-02, F-05-04 (next), and pre-empts the same class of
@@ -107,11 +109,11 @@ Esc, animations, aria-labelledby) without per-modal exceptions.
 
 ### F-05-04 — Early-exit modal: confirmation pattern needs explicit acknowledgement semantics
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | M |
-| WCAG | 3.3.4 (Error Prevention, AA) |
+|          |                                                                                                                                                                                |
+| :------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | High                                                                                                                                                                           |
+| Effort   | M                                                                                                                                                                              |
+| WCAG     | 3.3.4 (Error Prevention, AA)                                                                                                                                                   |
 | Location | [`CommitmentEarlyExitModal/`](../../../src/components/CommitmentEarlyExitModal/), invoked from [`src/app/commitments/page.tsx:251–259`](../../../src/app/commitments/page.tsx) |
 
 **Observation.** The early-exit modal has a `hasAcknowledged` state passed in. This is
@@ -119,7 +121,7 @@ the right shape — destructive actions should require an explicit acknowledgeme
 checkbox before the confirm button activates. Two things to verify:
 
 1. The acknowledgement checkbox has a programmatic label naming the consequence: `I
-   understand that exiting early forfeits 5% of my commitment.`
+understand that exiting early forfeits 5% of my commitment.`
 2. The Confirm button is `aria-disabled` until `hasAcknowledged` is true (not native
    `disabled` — same issue as F-02-01).
 
@@ -129,7 +131,7 @@ be reversible, confirmed, or checked.
 
 **Recommended fix.** Wire the checkbox label to the consequence text. Use `aria-disabled`
 on the Confirm button and intercept clicks while not acknowledged. Add a visually-hidden
-status text that announces "Confirmation required" so SR users hear *why* the button is
+status text that announces "Confirmation required" so SR users hear _why_ the button is
 not yet active.
 
 **Verification.** Open the modal, do not check the acknowledgement, tab to Confirm; SR
@@ -140,11 +142,11 @@ the box; SR hears "Confirmation acknowledged" (live region) and the button activ
 
 ### F-05-05 — Backdrop interaction blocks AT users from leaving via gesture
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 2.4.3 (Focus Order), 1.3.1 (Info and Relationships) |
+|          |                                                                                                 |
+| :------- | :---------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                          |
+| Effort   | S                                                                                               |
+| WCAG     | 2.4.3 (Focus Order), 1.3.1 (Info and Relationships)                                             |
 | Location | [`Commitmentcreatedmodal.tsx:92–96`](../../../src/components/modals/Commitmentcreatedmodal.tsx) |
 
 **Observation.** The backdrop uses `role="presentation"` (line 95) and a click-outside
@@ -164,11 +166,11 @@ contents appear in the regions list, not a separate scrim.
 
 ### F-05-06 — Modal close button accessible name
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 2.5.3 (Label in Name), 4.1.2 (Name, Role, Value) |
+|          |                                                                                                   |
+| :------- | :------------------------------------------------------------------------------------------------ |
+| Severity | Medium                                                                                            |
+| Effort   | S                                                                                                 |
+| WCAG     | 2.5.3 (Label in Name), 4.1.2 (Name, Role, Value)                                                  |
 | Location | [`Commitmentcreatedmodal.tsx:110–116`](../../../src/components/modals/Commitmentcreatedmodal.tsx) |
 
 **Observation.** The close button uses `aria-label="Close modal"`. The dialog itself has
@@ -191,11 +193,11 @@ activates the close button.
 
 ### F-05-07 — Multiple modals on same page: stacking and focus ownership
 
-| | |
-| :---- | :---- |
-| Severity | Low |
-| Effort | M |
-| WCAG | 2.4.3 (Focus Order) |
+|          |                                                                                  |
+| :------- | :------------------------------------------------------------------------------- |
+| Severity | Low                                                                              |
+| Effort   | M                                                                                |
+| WCAG     | 2.4.3 (Focus Order)                                                              |
 | Location | pattern issue across [`src/components/modals/`](../../../src/components/modals/) |
 
 **Observation.** Forward-looking: the codebase doesn't currently stack modals (open one
@@ -216,11 +218,11 @@ runtime check needed today.
 
 ### F-05-08 — Body scroll lock leaks if modal unmounts unexpectedly
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 1.4.10 (Reflow), 2.4.3 (Focus Order) — indirect |
+|          |                                                                                                 |
+| :------- | :---------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                          |
+| Effort   | S                                                                                               |
+| WCAG     | 1.4.10 (Reflow), 2.4.3 (Focus Order) — indirect                                                 |
 | Location | [`Commitmentcreatedmodal.tsx:36,43`](../../../src/components/modals/Commitmentcreatedmodal.tsx) |
 
 **Observation.** `document.body.style.overflow = 'hidden'` is set on open and reset on
@@ -242,16 +244,16 @@ when the count hits zero. Belongs in the shared `<Dialog>` primitive.
 
 ## Summary
 
-| ID | Severity | Effort |
-| :- | :------- | :----- |
+| ID      | Severity | Effort                        |
+| :------ | :------- | :---------------------------- |
 | F-05-01 | Critical | S (per modal) / L (primitive) |
-| F-05-02 | High | S |
-| F-05-03 | High | L |
-| F-05-04 | High | M |
-| F-05-05 | Medium | S |
-| F-05-06 | Medium | S |
-| F-05-08 | Medium | S |
-| F-05-07 | Low | M |
+| F-05-02 | High     | S                             |
+| F-05-03 | High     | L                             |
+| F-05-04 | High     | M                             |
+| F-05-05 | Medium   | S                             |
+| F-05-06 | Medium   | S                             |
+| F-05-08 | Medium   | S                             |
+| F-05-07 | Low      | M                             |
 
 **Recommendation:** if budget allows, do F-05-03 first — the `<Dialog>` primitive — and
 let it discharge F-05-01, F-05-02, F-05-05, F-05-06, F-05-08 in one move. If not, fix

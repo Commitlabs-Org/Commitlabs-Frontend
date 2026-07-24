@@ -53,16 +53,22 @@ describe('healthCheckDataSchema', () => {
 
   it('rejects complianceScore below 0', () => {
     const err = (() => {
-      try { healthCheckDataSchema.parse({ complianceScore: -1 }); }
-      catch (e) { return e as ZodError; }
+      try {
+        healthCheckDataSchema.parse({ complianceScore: -1 });
+      } catch (e) {
+        return e as ZodError;
+      }
     })()!;
     expect(zodMessages(err)).toContain('complianceScore must be >= 0');
   });
 
   it('rejects complianceScore above 100', () => {
     const err = (() => {
-      try { healthCheckDataSchema.parse({ complianceScore: 101 }); }
-      catch (e) { return e as ZodError; }
+      try {
+        healthCheckDataSchema.parse({ complianceScore: 101 });
+      } catch (e) {
+        return e as ZodError;
+      }
     })()!;
     expect(zodMessages(err)).toContain('complianceScore must be <= 100');
   });
@@ -78,15 +84,15 @@ describe('healthCheckDataSchema', () => {
   });
 
   it('rejects unknown keys (strict mode)', () => {
-    expect(() =>
-      healthCheckDataSchema.parse({ complianceScore: 50, unknownField: 'bad' }),
-    ).toThrow(ZodError);
+    expect(() => healthCheckDataSchema.parse({ complianceScore: 50, unknownField: 'bad' })).toThrow(
+      ZodError,
+    );
   });
 
   it('rejects multiple unknown keys', () => {
-    expect(() =>
-      healthCheckDataSchema.parse({ complianceScore: 50, foo: 1, bar: 2 }),
-    ).toThrow(ZodError);
+    expect(() => healthCheckDataSchema.parse({ complianceScore: 50, foo: 1, bar: 2 })).toThrow(
+      ZodError,
+    );
   });
 });
 
@@ -106,7 +112,11 @@ describe('violationDataSchema', () => {
       complianceScore: 20,
       severity: 'high',
     });
-    expect(result).toMatchObject({ reason: 'Max loss breached', complianceScore: 20, severity: 'high' });
+    expect(result).toMatchObject({
+      reason: 'Max loss breached',
+      complianceScore: 20,
+      severity: 'high',
+    });
   });
 
   it('rejects missing reason', () => {
@@ -122,21 +132,21 @@ describe('violationDataSchema', () => {
   });
 
   it('rejects invalid severity value', () => {
-    expect(() =>
-      violationDataSchema.parse({ reason: 'breach', severity: 'critical' }),
-    ).toThrow(ZodError);
+    expect(() => violationDataSchema.parse({ reason: 'breach', severity: 'critical' })).toThrow(
+      ZodError,
+    );
   });
 
   it('rejects complianceScore out of range', () => {
-    expect(() =>
-      violationDataSchema.parse({ reason: 'breach', complianceScore: 150 }),
-    ).toThrow(ZodError);
+    expect(() => violationDataSchema.parse({ reason: 'breach', complianceScore: 150 })).toThrow(
+      ZodError,
+    );
   });
 
   it('rejects unknown keys', () => {
-    expect(() =>
-      violationDataSchema.parse({ reason: 'breach', extraField: true }),
-    ).toThrow(ZodError);
+    expect(() => violationDataSchema.parse({ reason: 'breach', extraField: true })).toThrow(
+      ZodError,
+    );
   });
 });
 
@@ -179,15 +189,15 @@ describe('feeGenerationDataSchema', () => {
   });
 
   it('rejects unknown keys', () => {
-    expect(() =>
-      feeGenerationDataSchema.parse({ feeEarned: '100', amount: '100' }),
-    ).toThrow(ZodError);
+    expect(() => feeGenerationDataSchema.parse({ feeEarned: '100', amount: '100' })).toThrow(
+      ZodError,
+    );
   });
 
   it('rejects complianceScore out of range', () => {
-    expect(() =>
-      feeGenerationDataSchema.parse({ feeEarned: '100', complianceScore: -5 }),
-    ).toThrow(ZodError);
+    expect(() => feeGenerationDataSchema.parse({ feeEarned: '100', complianceScore: -5 })).toThrow(
+      ZodError,
+    );
   });
 });
 
@@ -227,15 +237,15 @@ describe('drawdownDataSchema', () => {
   });
 
   it('rejects unknown keys', () => {
-    expect(() =>
-      drawdownDataSchema.parse({ drawdownPercent: 5, extraKey: 'bad' }),
-    ).toThrow(ZodError);
+    expect(() => drawdownDataSchema.parse({ drawdownPercent: 5, extraKey: 'bad' })).toThrow(
+      ZodError,
+    );
   });
 
   it('rejects maxAllowed out of range', () => {
-    expect(() =>
-      drawdownDataSchema.parse({ drawdownPercent: 5, maxAllowed: 200 }),
-    ).toThrow(ZodError);
+    expect(() => drawdownDataSchema.parse({ drawdownPercent: 5, maxAllowed: 200 })).toThrow(
+      ZodError,
+    );
   });
 });
 
@@ -283,9 +293,9 @@ describe('validateAttestationData', () => {
   });
 
   it('throws ZodError for disallowed key on drawdown', () => {
-    expect(() =>
-      validateAttestationData('drawdown', { drawdownPercent: 5, hack: true }),
-    ).toThrow(ZodError);
+    expect(() => validateAttestationData('drawdown', { drawdownPercent: 5, hack: true })).toThrow(
+      ZodError,
+    );
   });
 
   it('throws PAYLOAD_TOO_LARGE when payload exceeds MAX_PAYLOAD_BYTES', () => {
@@ -330,8 +340,6 @@ describe('validateAttestationData', () => {
 
   // New test: feeEarned string exceeding MAX_STRING_LENGTH
   it('rejects feeEarned string exceeding MAX_STRING_LENGTH', () => {
-    expect(() =>
-      feeGenerationDataSchema.parse({ feeEarned: oversizedString() }),
-    ).toThrow(ZodError);
+    expect(() => feeGenerationDataSchema.parse({ feeEarned: oversizedString() })).toThrow(ZodError);
   });
 });

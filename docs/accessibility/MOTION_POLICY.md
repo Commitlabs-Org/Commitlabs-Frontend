@@ -20,10 +20,10 @@ exposes a shared `useReducedMotion()` hook:
 
 ## How it is applied
 
-| Surface                          | Gating mechanism                                  |
-| -------------------------------- | ------------------------------------------------- |
-| `HealthMetricsValueHistoryChart` | Recharts `isAnimationActive={!reducedMotion}`     |
-| `VolatilityExposureMeter`        | Inline `transition: 'none'` when reduced motion   |
+| Surface                          | Gating mechanism                                |
+| -------------------------------- | ----------------------------------------------- |
+| `HealthMetricsValueHistoryChart` | Recharts `isAnimationActive={!reducedMotion}`   |
+| `VolatilityExposureMeter`        | Inline `transition: 'none'` when reduced motion |
 
 Importantly, **data still updates** when reduced motion is on — only the
 animation/transition is removed, so the chart and meter reflect new values

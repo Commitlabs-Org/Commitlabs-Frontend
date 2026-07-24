@@ -19,11 +19,11 @@
 
 ### `SidebarSearchProps`
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `ownerAddress` | `string \| undefined` | `undefined` | Wallet / owner address used to scope the `/api/commitments/search` query. When omitted, the search input is rendered but no fetch is made. |
-| `isCollapsed` | `boolean` | `false` | When `true`, renders a compact icon button instead of the full input. |
-| `onResultSelect` | `() => void \| undefined` | `undefined` | Callback fired after a result is selected (e.g. to close the mobile sidebar drawer). |
+| Prop             | Type                      | Default     | Description                                                                                                                                |
+| ---------------- | ------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ownerAddress`   | `string \| undefined`     | `undefined` | Wallet / owner address used to scope the `/api/commitments/search` query. When omitted, the search input is rendered but no fetch is made. |
+| `isCollapsed`    | `boolean`                 | `false`     | When `true`, renders a compact icon button instead of the full input.                                                                      |
+| `onResultSelect` | `() => void \| undefined` | `undefined` | Callback fired after a result is selected (e.g. to close the mobile sidebar drawer).                                                       |
 
 ### `CommitmentSearchResult`
 
@@ -31,40 +31,40 @@ The shape returned by the search endpoint and used internally:
 
 ```ts
 interface CommitmentSearchResult {
-  commitmentId: string
-  ownerAddress: string
-  asset: string
-  amount: string
-  status: string
-  riskType: string
-  complianceScore: number
+  commitmentId: string;
+  ownerAddress: string;
+  asset: string;
+  amount: string;
+  status: string;
+  riskType: string;
+  complianceScore: number;
 }
 ```
 
 ## Usage Example
 
 ```tsx
-import { AppSidebar } from '@/components/shell'
+import { AppSidebar } from '@/components/shell';
 
 // In your authenticated layout, pass the connected wallet address:
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { address } = useWallet()
+  const { address } = useWallet();
 
   return (
     <div className="flex">
       <AppSidebar ownerAddress={address} />
       <main className="flex-1">{children}</main>
     </div>
-  )
+  );
 }
 ```
 
 The `SidebarSearch` component is also available as a standalone export:
 
 ```tsx
-import { SidebarSearch } from '@/components/shell'
+import { SidebarSearch } from '@/components/shell';
 
-<SidebarSearch ownerAddress="GXYZ..." onResultSelect={() => closeDrawer()} />
+<SidebarSearch ownerAddress="GXYZ..." onResultSelect={() => closeDrawer()} />;
 ```
 
 ## Accessibility
@@ -82,11 +82,11 @@ Powered by `src/app/api/commitments/search/route.ts`.
 
 Query parameters used by `SidebarSearch`:
 
-| Param | Value |
-|-------|-------|
-| `ownerAddress` | Wallet address (required) |
-| `asset` | Uppercased query string (used as asset filter) |
-| `pageSize` | `5` |
+| Param          | Value                                          |
+| -------------- | ---------------------------------------------- |
+| `ownerAddress` | Wallet address (required)                      |
+| `asset`        | Uppercased query string (used as asset filter) |
+| `pageSize`     | `5`                                            |
 
 ## Related Documentation
 

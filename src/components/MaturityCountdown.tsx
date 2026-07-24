@@ -5,11 +5,9 @@ export interface MaturityCountdownProps {
   maturityTimestamp: number;
 }
 
-export const MaturityCountdown: React.FC<MaturityCountdownProps> = ({
-  maturityTimestamp,
-}) => {
+export const MaturityCountdown: React.FC<MaturityCountdownProps> = ({ maturityTimestamp }) => {
   const [countdown, setCountdown] = useState<RemainingMaturity>(() =>
-    formatRemaining(maturityTimestamp)
+    formatRemaining(maturityTimestamp),
   );
 
   useEffect(() => {
@@ -20,7 +18,7 @@ export const MaturityCountdown: React.FC<MaturityCountdownProps> = ({
     const interval = setInterval(() => {
       const updated = formatRemaining(maturityTimestamp);
       setCountdown(updated);
-      
+
       if (updated.status === 'matured') {
         clearInterval(interval);
       }

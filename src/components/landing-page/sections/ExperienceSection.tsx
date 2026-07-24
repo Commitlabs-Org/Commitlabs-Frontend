@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import { motion } from "framer-motion";
-import { FaGithub, FaEnvelope } from "react-icons/fa";
-import { IoDocumentText } from "react-icons/io5";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { FaGithub, FaEnvelope } from 'react-icons/fa';
+import { IoDocumentText } from 'react-icons/io5';
 
 const containerVariants = {
   hidden: {},
@@ -19,7 +19,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut" as const },
+    transition: { duration: 0.6, ease: 'easeOut' as const },
   },
 };
 
@@ -28,7 +28,7 @@ const cardVariants = {
   visible: {
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.5, ease: "easeOut" as const },
+    transition: { duration: 0.5, ease: 'easeOut' as const },
   },
 };
 
@@ -38,7 +38,7 @@ interface ActionCardProps {
   href?: string;
 }
 
-const ActionCard: React.FC<ActionCardProps> = ({ icon, label, href = "#" }) => {
+const ActionCard: React.FC<ActionCardProps> = ({ icon, label, href = '#' }) => {
   return (
     <motion.a
       href={href}
@@ -79,10 +79,7 @@ export const ExperienceSection: React.FC = () => {
         viewport={{ once: true, amount: 0.3 }}
       >
         {/* Heading */}
-        <motion.div
-          variants={itemVariants}
-          className="text-center mb-8 sm:mb-12"
-        >
+        <motion.div variants={itemVariants} className="text-center mb-8 sm:mb-12">
           <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-tight mb-4">
             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-[#99a1af]">
               Experience CommitLabs
@@ -94,8 +91,8 @@ export const ExperienceSection: React.FC = () => {
           </h2>
 
           <p className="font-['Inter',sans-serif] font-normal text-[#99a1af] text-base sm:text-lg lg:text-xl leading-relaxed max-w-2xl mx-auto mt-6">
-            Join us in building the future of DeFi infrastructure. Transform
-            passive capital into enforceable commitments.
+            Join us in building the future of DeFi infrastructure. Transform passive capital into
+            enforceable commitments.
           </p>
         </motion.div>
 
@@ -134,21 +131,9 @@ export const ExperienceSection: React.FC = () => {
           variants={itemVariants}
           className="flex flex-wrap items-center justify-center gap-6 sm:gap-8"
         >
-          <ActionCard
-            icon={<FaGithub size={40} />}
-            label="View on Github"
-            href="#"
-          />
-          <ActionCard
-            icon={<IoDocumentText size={40} />}
-            label="Read Docs"
-            href="#"
-          />
-          <ActionCard
-            icon={<FaEnvelope size={40} />}
-            label="Get in Touch"
-            href="#"
-          />
+          <ActionCard icon={<FaGithub size={40} />} label="View on Github" href="#" />
+          <ActionCard icon={<IoDocumentText size={40} />} label="Read Docs" href="#" />
+          <ActionCard icon={<FaEnvelope size={40} />} label="Get in Touch" href="#" />
         </motion.div>
       </motion.div>
     </section>

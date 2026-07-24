@@ -1,4 +1,4 @@
-import { getKV } from "./kv";
+import { getKV } from './kv';
 
 /**
  * Rate Limiting Strategy for Commitlabs Public API Endpoints.
@@ -21,19 +21,19 @@ function envInt(name: string, fallback: number): number {
 }
 
 function buildLimits(): Record<string, { windowMs: number; maxRequests: number }> {
-  const writeMax = envInt("RATE_LIMIT_WRITE_MAX_REQUESTS", 10);
-  const writeWindowSec = envInt("RATE_LIMIT_WRITE_WINDOW_SECONDS", 60);
-  const defaultMax = envInt("RATE_LIMIT_DEFAULT_MAX_REQUESTS", 20);
-  const defaultWindowSec = envInt("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60);
+  const writeMax = envInt('RATE_LIMIT_WRITE_MAX_REQUESTS', 10);
+  const writeWindowSec = envInt('RATE_LIMIT_WRITE_WINDOW_SECONDS', 60);
+  const defaultMax = envInt('RATE_LIMIT_DEFAULT_MAX_REQUESTS', 20);
+  const defaultWindowSec = envInt('RATE_LIMIT_DEFAULT_WINDOW_SECONDS', 60);
 
   return {
-    "api/auth/nonce": { windowMs: 60 * 1000, maxRequests: 5 },
-    "api/auth/verify": { windowMs: 60 * 1000, maxRequests: 5 },
-    "auth:nonce:address": { windowMs: 5 * 60 * 1000, maxRequests: 3 },
+    'api/auth/nonce': { windowMs: 60 * 1000, maxRequests: 5 },
+    'api/auth/verify': { windowMs: 60 * 1000, maxRequests: 5 },
+    'auth:nonce:address': { windowMs: 5 * 60 * 1000, maxRequests: 3 },
     // Write-heavy routes — tighter limits to protect on-chain operations
-    "api/commitments/create": { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
-    "api/commitments/settle": { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
-    "api/commitments/early-exit": { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
+    'api/commitments/create': { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
+    'api/commitments/settle': { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
+    'api/commitments/early-exit': { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
     default: { windowMs: defaultWindowSec * 1000, maxRequests: defaultMax },
   };
 }
@@ -48,11 +48,8 @@ export function getRateLimitWindowSeconds(routeId: string): number {
   return Math.ceil(config.windowMs / 1000);
 }
 
-export async function checkRateLimit(
-  key: string,
-  routeId: string,
-): Promise<boolean> {
-  const isDev = process.env.NODE_ENV === "development";
+export async function checkRateLimit(key: string, routeId: string): Promise<boolean> {
+  const isDev = process.env.NODE_ENV === 'development';
   const kv = getKV();
   const redisKey = `ratelimit:${routeId}:${key}`;
   const limits = buildLimits();
@@ -75,10 +72,7 @@ export async function checkRateLimit(
 
     return isAllowed;
   } catch (error) {
-    console.error(
-      `[RateLimit] Error checking rate limit for ${routeId}:`,
-      error,
-    );
+    console.error(`[RateLimit] Error checking rate limit for ${routeId}:`, error);
     return true;
   }
 }

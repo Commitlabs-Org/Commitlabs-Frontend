@@ -14,28 +14,28 @@ import {
 } from '@/lib/schemas/apiContracts';
 import { z } from 'zod';
 
-vi.mock("ioredis", () => ({ default: class {} }));
-vi.mock("@/lib/backend/cache/factory", () => ({
+vi.mock('ioredis', () => ({ default: class {} }));
+vi.mock('@/lib/backend/cache/factory', () => ({
   cache: {
     get: vi.fn(async () => null),
     set: vi.fn(async () => {}),
     delete: vi.fn(async () => {}),
   },
 }));
-vi.mock("@/lib/backend/counters/provider", () => ({
+vi.mock('@/lib/backend/counters/provider', () => ({
   getCountersAdapter: () => ({
     incrementSuccessfulActions: vi.fn(),
     incrementChainFailures: vi.fn(),
   }),
 }));
-vi.mock("@/lib/backend/config", () => ({
+vi.mock('@/lib/backend/config', () => ({
   getBackendConfig: () => ({
-    sorobanRpcUrl: "https://example.invalid",
-    networkPassphrase: "TEST",
-    contractAddresses: { commitmentCore: "CORE", attestationEngine: "ENGINE" },
+    sorobanRpcUrl: 'https://example.invalid',
+    networkPassphrase: 'TEST',
+    contractAddresses: { commitmentCore: 'CORE', attestationEngine: 'ENGINE' },
   }),
 }));
-vi.mock("@/lib/backend/logger", () => ({
+vi.mock('@/lib/backend/logger', () => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   logError: vi.fn(),
@@ -513,7 +513,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
       };
 
       // Simulate the parsing logic
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(0);
     });
 
@@ -530,7 +532,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         violationCount: 0,
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(50);
     });
 
@@ -547,7 +551,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         violationCount: 0,
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(100);
     });
 
@@ -564,7 +570,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         violationCount: 0,
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(85);
     });
   });
@@ -580,7 +588,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         recordedAt: '2026-04-23T23:31:42.241Z',
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(0);
     });
 
@@ -594,7 +604,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         recordedAt: '2026-04-23T23:31:42.241Z',
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(50);
     });
 
@@ -608,7 +620,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         recordedAt: '2026-04-23T23:31:42.241Z',
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(100);
     });
 
@@ -622,7 +636,9 @@ describe('Compliance Score Scaling Round-Trip', () => {
         recordedAt: '2026-04-23T23:31:42.241Z',
       };
 
-      const parsedScore = (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) * ANALYTICS_SCALE;
+      const parsedScore =
+        (typeof rawValue.complianceScore === 'number' ? rawValue.complianceScore : 0) *
+        ANALYTICS_SCALE;
       expect(parsedScore).toBe(92);
     });
   });
@@ -710,9 +726,7 @@ describe('settleCommitmentOnChain maturity gate', () => {
       expiresAt: undefined, // missing expiresAt
     } as any);
 
-    await expect(
-      settleCommitmentOnChain({ commitmentId: 'cm_123' })
-    ).rejects.toMatchObject({
+    await expect(settleCommitmentOnChain({ commitmentId: 'cm_123' })).rejects.toMatchObject({
       code: 'NOT_MATURED',
       message: 'Commitment maturity information is missing. Cannot settle.',
       status: 400,
@@ -734,9 +748,7 @@ describe('settleCommitmentOnChain maturity gate', () => {
       expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 hour in future
     } as any);
 
-    await expect(
-      settleCommitmentOnChain({ commitmentId: 'cm_123' })
-    ).rejects.toMatchObject({
+    await expect(settleCommitmentOnChain({ commitmentId: 'cm_123' })).rejects.toMatchObject({
       code: 'NOT_MATURED',
       message: 'Commitment has not matured yet and cannot be settled.',
       status: 400,

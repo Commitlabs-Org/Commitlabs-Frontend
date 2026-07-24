@@ -1,13 +1,14 @@
 # Findings — Dashboard (Commitments + Health Charts)
 
 Flow code:
-* [`src/app/commitments/page.tsx`](../../../src/app/commitments/page.tsx)
-* [`src/app/commitments/[id]/page.tsx`](../../../src/app/commitments/[id]/page.tsx)
-* [`src/components/MyCommitmentsStats/`](../../../src/components/MyCommitmentsStats/)
-* [`src/components/MyCommitmentsGrid.tsx`](../../../src/components/MyCommitmentsGrid.tsx)
-* [`src/components/dashboard/`](../../../src/components/dashboard/) (health charts)
-* [`src/components/KPICard/`](../../../src/components/KPICard/)
-* [`src/components/HealthMetricsSkeleton.tsx`](../../../src/components/HealthMetricsSkeleton.tsx)
+
+- [`src/app/commitments/page.tsx`](../../../src/app/commitments/page.tsx)
+- [`src/app/commitments/[id]/page.tsx`](../../../src/app/commitments/[id]/page.tsx)
+- [`src/components/MyCommitmentsStats/`](../../../src/components/MyCommitmentsStats/)
+- [`src/components/MyCommitmentsGrid.tsx`](../../../src/components/MyCommitmentsGrid.tsx)
+- [`src/components/dashboard/`](../../../src/components/dashboard/) (health charts)
+- [`src/components/KPICard/`](../../../src/components/KPICard/)
+- [`src/components/HealthMetricsSkeleton.tsx`](../../../src/components/HealthMetricsSkeleton.tsx)
 
 The dashboard is where the issue's "charts accessibility" requirement lands. Findings are
 heavy on the chart side because the chart components ship with no a11y wrapping at all.
@@ -16,11 +17,11 @@ heavy on the chart side because the chart components ship with no a11y wrapping 
 
 ### F-04-01 — Health charts have no text-equivalent path
 
-| | |
-| :---- | :---- |
-| Severity | **Critical** |
-| Effort | M (per chart, 4 charts) |
-| WCAG | 1.1.1 (Non-text Content), 1.3.1 (Info and Relationships), 2.1.1 (Keyboard) |
+|          |                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | **Critical**                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Effort   | M (per chart, 4 charts)                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| WCAG     | 1.1.1 (Non-text Content), 1.3.1 (Info and Relationships), 2.1.1 (Keyboard)                                                                                                                                                                                                                                                                                                                                                                   |
 | Location | [`HealthMetricsValueHistoryChart.tsx`](../../../src/components/dashboard/HealthMetricsValueHistoryChart.tsx), [`HealthMetricsDrawdownChart.tsx`](../../../src/components/dashboard/HealthMetricsDrawdownChart.tsx), [`HealthMetricsFeeGenerationChart.tsx`](../../../src/components/dashboard/HealthMetricsFeeGenerationChart.tsx), [`HealthMetricsComplianceChart.tsx`](../../../src/components/dashboard/HealthMetricsComplianceChart.tsx) |
 
 **Observation.** Each chart is a Recharts SVG with a custom tooltip that fires on
@@ -35,7 +36,7 @@ mouse-only.
 
 1. Wrap in `<figure role="figure">` with an `<figcaption>` containing a one-sentence
    plain-language summary: `Total committed value rose 5.2% over the last 30 days,
-   peaking at 52,600 XLM on Jan 28.` The summary is generated from the same data the
+peaking at 52,600 XLM on Jan 28.` The summary is generated from the same data the
    chart consumes.
 2. Add a visually-hidden `<table>` mirroring the chart series. Mobile users, SR users,
    and CSV-export users all benefit from this.
@@ -56,11 +57,11 @@ traverse data points and announce values; the visually-hidden table is reachable
 
 ### F-04-02 — KPI tile compact notation is announced as bare numbers
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 1.3.1 (Info and Relationships) |
+|          |                                                              |
+| :------- | :----------------------------------------------------------- |
+| Severity | High                                                         |
+| Effort   | S                                                            |
+| WCAG     | 1.3.1 (Info and Relationships)                               |
 | Location | [`KPICard.tsx`](../../../src/components/KPICard/KPICard.tsx) |
 
 **Observation.** Tiles displaying compact notation (`1.2M`, `342K`) include no
@@ -85,11 +86,11 @@ dollars".
 
 ### F-04-03 — KPI tile delta direction is conveyed by color and arrow icon only
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 1.4.1 (Use of Color), 1.3.1 (Info and Relationships) |
+|          |                                                              |
+| :------- | :----------------------------------------------------------- |
+| Severity | High                                                         |
+| Effort   | S                                                            |
+| WCAG     | 1.4.1 (Use of Color), 1.3.1 (Info and Relationships)         |
 | Location | [`KPICard.tsx`](../../../src/components/KPICard/KPICard.tsx) |
 
 **Observation.** Delta indicators show direction via color (green / red / neutral) and an
@@ -112,11 +113,11 @@ dollars, increase of 12.5 percent versus last month".
 
 ### F-04-04 — Stats grid has no heading
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | S |
-| WCAG | 2.4.6 (Headings and Labels), 1.3.1 (Info and Relationships) |
+|          |                                                                            |
+| :------- | :------------------------------------------------------------------------- |
+| Severity | Medium                                                                     |
+| Effort   | S                                                                          |
+| WCAG     | 2.4.6 (Headings and Labels), 1.3.1 (Info and Relationships)                |
 | Location | [`MyCommitmentsStats.tsx`](../../../src/components/MyCommitmentsStats.tsx) |
 
 **Observation.** The stats grid (Total Active, Committed Value, Avg Compliance, Fees)
@@ -137,11 +138,11 @@ design allows) above the stats grid. Group the tiles inside a region:
 
 ### F-04-05 — Commitment grid has no result-count announcement
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | S |
-| WCAG | 4.1.3 (Status Messages) |
+|          |                                                                                                                                                                      |
+| :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | High                                                                                                                                                                 |
+| Effort   | S                                                                                                                                                                    |
+| WCAG     | 4.1.3 (Status Messages)                                                                                                                                              |
 | Location | [`MyCommitmentsGrid.tsx`](../../../src/components/MyCommitmentsGrid.tsx), filter handlers in [`src/app/commitments/page.tsx`](../../../src/app/commitments/page.tsx) |
 
 **Observation.** Same shape as F-03-02 (marketplace) but for the commitments grid.
@@ -158,11 +159,11 @@ grid updates with `Showing <n> commitments`.
 
 ### F-04-06 — Commitment card actions buried inside whole-card click target
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | M |
-| WCAG | 4.1.2 (Name, Role, Value), 2.4.4 (Link Purpose) |
+|          |                                                                        |
+| :------- | :--------------------------------------------------------------------- |
+| Severity | Medium                                                                 |
+| Effort   | M                                                                      |
+| WCAG     | 4.1.2 (Name, Role, Value), 2.4.4 (Link Purpose)                        |
 | Location | [`MyCommitmentCard.tsx`](../../../src/components/MyCommitmentCard.tsx) |
 
 **Observation.** Same issue as F-03-05 (marketplace) — commitment cards combine multiple
@@ -183,11 +184,11 @@ button stops, all named distinctly.
 
 ### F-04-07 — Detail page chart tabs lack `role="tablist"` semantics
 
-| | |
-| :---- | :---- |
-| Severity | Medium |
-| Effort | M |
-| WCAG | 4.1.2 (Name, Role, Value), 2.1.1 (Keyboard) |
+|          |                                                                                                                                           |
+| :------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| Severity | Medium                                                                                                                                    |
+| Effort   | M                                                                                                                                         |
+| WCAG     | 4.1.2 (Name, Role, Value), 2.1.1 (Keyboard)                                                                                               |
 | Location | chart tab control inside the commitment detail page (`HealthMetricsSkeleton.tsx` shows the visual structure mirroring the populated view) |
 
 **Observation.** The tabs that switch between Value / Drawdown / Fees / Compliance
@@ -199,12 +200,13 @@ navigation between tabs and selection state are not exposed.
 through every tab rather than arrow-keying inside the group.
 
 **Recommended fix.** Adopt the [WAI tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/):
-* `<div role="tablist" aria-label="Health metrics">`.
-* Each tab is a `<button role="tab">` with `aria-selected` and `aria-controls` pointing
+
+- `<div role="tablist" aria-label="Health metrics">`.
+- Each tab is a `<button role="tab">` with `aria-selected` and `aria-controls` pointing
   to the corresponding panel's id.
-* Each panel has `role="tabpanel"`, `aria-labelledby` referencing the tab, and
+- Each panel has `role="tabpanel"`, `aria-labelledby` referencing the tab, and
   `tabindex="0"` to be focusable for SR navigation.
-* Arrow keys move selection within the tablist; Tab moves to the panel.
+- Arrow keys move selection within the tablist; Tab moves to the panel.
 
 **Verification.** With NVDA in tab-group mode: announce "Health metrics tab list, 4
 tabs"; arrow keys cycle; Tab moves to the panel content.
@@ -213,11 +215,11 @@ tabs"; arrow keys cycle; Tab moves to the panel content.
 
 ### F-04-08 — Volatility / compliance gauge widgets need text equivalents
 
-| | |
-| :---- | :---- |
-| Severity | High |
-| Effort | M |
-| WCAG | 1.1.1 (Non-text Content), 1.3.1 (Info and Relationships) |
+|          |                                                                                                         |
+| :------- | :------------------------------------------------------------------------------------------------------ |
+| Severity | High                                                                                                    |
+| Effort   | M                                                                                                       |
+| WCAG     | 1.1.1 (Non-text Content), 1.3.1 (Info and Relationships)                                                |
 | Location | [`VolatilityExposureMeter/`](../../../src/components/VolatilityExposureMeter/), `ReputationDisplay.tsx` |
 
 **Observation.** Visual gauges and meters convey state by needle position and color band.
@@ -237,16 +239,16 @@ both number and band.
 
 ## Summary
 
-| ID | Severity | Effort |
-| :- | :------- | :----- |
+| ID      | Severity | Effort         |
+| :------ | :------- | :------------- |
 | F-04-01 | Critical | M (× 4 charts) |
-| F-04-02 | High | S |
-| F-04-03 | High | S |
-| F-04-05 | High | S |
-| F-04-08 | High | M |
-| F-04-04 | Medium | S |
-| F-04-06 | Medium | M |
-| F-04-07 | Medium | M |
+| F-04-02 | High     | S              |
+| F-04-03 | High     | S              |
+| F-04-05 | High     | S              |
+| F-04-08 | High     | M              |
+| F-04-04 | Medium   | S              |
+| F-04-06 | Medium   | M              |
+| F-04-07 | Medium   | M              |
 
 **Recommendation:** F-04-01 is the largest item in the audit and the most consequential
 for charts a11y. Treat it as a single PR introducing the `<ChartFigure>` primitive with

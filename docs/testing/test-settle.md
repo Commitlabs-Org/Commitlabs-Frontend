@@ -17,6 +17,7 @@ Settles a matured commitment and returns the final funds to the owner.
 ## Response Format
 
 ### Success Response (200)
+
 ```json
 {
   "ok": true,
@@ -34,6 +35,7 @@ Settles a matured commitment and returns the final funds to the owner.
 ### Error Responses
 
 #### 400 - Bad Request (Non-mature commitment)
+
 ```json
 {
   "ok": false,
@@ -45,17 +47,19 @@ Settles a matured commitment and returns the final funds to the owner.
 ```
 
 #### 409 - Conflict (Already settled)
+
 ```json
 {
   "ok": false,
   "error": {
-    "code": "CONFLICT", 
+    "code": "CONFLICT",
     "message": "Commitment has already been settled."
   }
 }
 ```
 
 #### 404 - Not Found
+
 ```json
 {
   "ok": false,

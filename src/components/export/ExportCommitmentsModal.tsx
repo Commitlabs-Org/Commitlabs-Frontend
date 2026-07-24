@@ -52,8 +52,7 @@ function loadExportPreferences(): ExportPreferences {
           ) as ExportColumn[])
         : [...ALL_EXPORT_COLUMNS];
       const scheduleInterval =
-        parsed.scheduleInterval &&
-        SCHEDULE_OPTIONS.some((o) => o.value === parsed.scheduleInterval)
+        parsed.scheduleInterval && SCHEDULE_OPTIONS.some((o) => o.value === parsed.scheduleInterval)
           ? parsed.scheduleInterval
           : 'never';
       return { selectedColumns, scheduleInterval };
@@ -82,19 +81,13 @@ interface ExportCommitmentsModalProps {
   selectedIds?: string[];
 }
 
-const STORED_TOKEN_KEYS = [
-  'commitlabs.sessionToken',
-  'commitlabs:sessionToken',
-  'sessionToken',
-];
+const STORED_TOKEN_KEYS = ['commitlabs.sessionToken', 'commitlabs:sessionToken', 'sessionToken'];
 
 function getStoredSessionToken(): string | undefined {
   if (typeof window === 'undefined') return undefined;
 
   for (const key of STORED_TOKEN_KEYS) {
-    const value =
-      window.sessionStorage.getItem(key) ??
-      window.localStorage.getItem(key);
+    const value = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
 
     if (value?.trim()) {
       return value.trim();
@@ -239,7 +232,7 @@ export default function ExportCommitmentsModal({
 
       // Add selected IDs if provided
       if (selectedIds && selectedIds.length > 0) {
-        selectedIds.forEach(id => url.searchParams.append('ids', id));
+        selectedIds.forEach((id) => url.searchParams.append('ids', id));
       }
 
       const response = await fetch(url.toString(), {
@@ -308,23 +301,37 @@ export default function ExportCommitmentsModal({
       </div>
 
       <p id={descriptionId} className="mt-4 text-sm leading-6 text-white/70">
-        Download a CSV snapshot for the connected owner address. Choose which columns to
-        include and optionally set a reminder to export regularly.
+        Download a CSV snapshot for the connected owner address. Choose which columns to include and
+        optionally set a reminder to export regularly.
       </p>
 
       <div className="mt-6 grid gap-4">
         <label className="flex items-center gap-3 rounded-[14px] border border-[#0FF0FC33] bg-[#0FF0FC0D] px-4 py-3">
-          <input type="radio" name="exportScope" checked={!selectedIds || selectedIds.length === 0} readOnly />
+          <input
+            type="radio"
+            name="exportScope"
+            checked={!selectedIds || selectedIds.length === 0}
+            readOnly
+          />
           <span className="text-sm font-medium">All commitments</span>
         </label>
 
-        <label className={`flex items-center justify-between gap-3 rounded-[14px] border px-4 py-3 ${selectedIds && selectedIds.length > 0 ? 'border-[#0FF0FC33] bg-[#0FF0FC0D] text-white' : 'border-white/10 text-white/40'}`}>
+        <label
+          className={`flex items-center justify-between gap-3 rounded-[14px] border px-4 py-3 ${selectedIds && selectedIds.length > 0 ? 'border-[#0FF0FC33] bg-[#0FF0FC0D] text-white' : 'border-white/10 text-white/40'}`}
+        >
           <span className="flex items-center gap-3">
-            <input type="radio" name="exportScope" checked={selectedIds && selectedIds.length > 0} readOnly />
+            <input
+              type="radio"
+              name="exportScope"
+              checked={selectedIds && selectedIds.length > 0}
+              readOnly
+            />
             <span className="text-sm font-medium">Selected commitments</span>
           </span>
           {selectedIds && selectedIds.length > 0 && (
-            <span className="text-xs font-semibold text-[#0FF0FC]">{selectedIds.length} selected</span>
+            <span className="text-xs font-semibold text-[#0FF0FC]">
+              {selectedIds.length} selected
+            </span>
           )}
         </label>
 
@@ -382,10 +389,7 @@ export default function ExportCommitmentsModal({
           </p>
         )}
 
-        <ul
-          className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2"
-          aria-label="Export column selection"
-        >
+        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2" aria-label="Export column selection">
           {ALL_EXPORT_COLUMNS.map((col) => {
             const checked = selectedColumns.includes(col);
             return (

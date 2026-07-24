@@ -37,7 +37,7 @@ describe('useDraftPersistence', () => {
       JSON.stringify({
         version: 1,
         data: testDraft,
-      })
+      }),
     );
 
     const { result } = renderHook(() => useDraftPersistence());
@@ -50,7 +50,7 @@ describe('useDraftPersistence', () => {
       JSON.stringify({
         version: 999,
         data: {},
-      })
+      }),
     );
 
     const { result } = renderHook(() => useDraftPersistence());
@@ -66,7 +66,7 @@ describe('useDraftPersistence', () => {
         data: {
           step: 'not a number',
         },
-      })
+      }),
     );
 
     const { result } = renderHook(() => useDraftPersistence());
@@ -121,7 +121,7 @@ describe('useDraftPersistence', () => {
       JSON.stringify({
         version: 1,
         data: testDraft,
-      })
+      }),
     );
 
     const { result } = renderHook(() => useDraftPersistence());
@@ -151,7 +151,7 @@ describe('useDraftPersistence', () => {
       JSON.stringify({
         version: 1,
         data: testDraft,
-      })
+      }),
     );
 
     const { result } = renderHook(() => useDraftPersistence());

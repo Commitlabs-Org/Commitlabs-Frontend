@@ -82,10 +82,9 @@ export const POST = withApiHandler(
       }
 
       if (callerAddress && callerAddress !== commitment.ownerAddress) {
-        throw new ForbiddenError(
-          'Only the commitment owner may fund this commitment',
-          { commitmentId: id },
-        );
+        throw new ForbiddenError('Only the commitment owner may fund this commitment', {
+          commitmentId: id,
+        });
       }
 
       const funded = await fundEscrowOnChain({

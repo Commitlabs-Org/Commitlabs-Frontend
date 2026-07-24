@@ -12,12 +12,14 @@ It fetches data directly from the `/api/marketplace/stats` endpoint and visually
 - **Data Source**: `/api/marketplace/stats`
 
 ### KPI Chips Displayed
+
 Based on the current API structure, the following KPI chips are displayed:
-1. **Total Listings**: (`activeListings`) 
+
+1. **Total Listings**: (`activeListings`)
 2. **Average APY**: (`averageYield`)
 3. **Median Price**: (`medianPrice`)
 
-*Note: The original requirements mentioned displaying "24h volume" and "active sellers". However, these fields are not currently exposed by the `MarketplaceStats` backend interface, so the component strictly uses the real available fields to prevent fabricated data.*
+_Note: The original requirements mentioned displaying "24h volume" and "active sellers". However, these fields are not currently exposed by the `MarketplaceStats` backend interface, so the component strictly uses the real available fields to prevent fabricated data._
 
 ## Features & States
 

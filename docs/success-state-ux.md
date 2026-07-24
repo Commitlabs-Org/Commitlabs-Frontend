@@ -25,6 +25,7 @@ Every success state should follow this hierarchy:
 ## System Rules
 
 ### What Good Looks Like
+
 - Uses direct, calm language
 - Surfaces one obvious next step
 - Keeps completion and follow-up visually separate
@@ -32,6 +33,7 @@ Every success state should follow this hierarchy:
 - Uses the same trust cues as loading and error states
 
 ### What To Avoid
+
 - Promotional copy immediately after success
 - Auto-navigation away from the current context
 - Auto-opening external pages
@@ -44,15 +46,18 @@ Every success state should follow this hierarchy:
 ### Commitment Created
 
 #### User Need
+
 The user needs reassurance that the commitment is active and a quick way to inspect it.
 
 #### Canonical Component
+
 - Source: `src/components/modals/CommitmentCreatedModal.tsx`
 - Naming: PascalCase file and component name only
 - Scope: This is the only commitment-created success modal allowed in the codebase
 - Delivery: Modal renders in a portal, traps focus, closes on `Escape`, and restores page scroll on dismiss
 
 #### Modal Content
+
 - Heading: `Commitment Created`
 - Body: `Your liquidity commitment is active and available in your dashboard.`
 - Metadata:
@@ -63,6 +68,7 @@ The user needs reassurance that the commitment is active and a quick way to insp
 - Optional external: `View on Stellar Explorer`
 
 #### Visual Spec
+
 - Dark modal surface with a cyan success accent
 - One centered success icon above the headline
 - High-contrast commitment ID block using monospace text
@@ -72,6 +78,7 @@ The user needs reassurance that the commitment is active and a quick way to insp
 - External explorer link sits in a subdued footer row
 
 #### Full Page Additions
+
 - Commitment summary card
 - "What you can do next" recommendations
 - Related shortcut cards for dashboard and marketplace
@@ -79,9 +86,11 @@ The user needs reassurance that the commitment is active and a quick way to insp
 ### Commitment Settled
 
 #### User Need
+
 The user needs closure, clarity on what changed financially, and a path back to overview screens.
 
 #### Modal Content
+
 - Heading: `Commitment Settled`
 - Body: `Settlement is complete and this commitment is now closed.`
 - Metadata:
@@ -94,6 +103,7 @@ The user needs closure, clarity on what changed financially, and a path back to 
 - Optional external: `View Settlement on Explorer`
 
 #### Full Page Additions
+
 - Final state summary
 - Outcome callout explaining that no further actions are required
 - Links to related records, receipts, or portfolio pages
@@ -101,9 +111,11 @@ The user needs closure, clarity on what changed financially, and a path back to 
 ### Early Exit Penalty Preview
 
 #### User Need
+
 The user needs complete financial clarity regarding the penalty deductions, interest forfeitures, and net refund amount before making an irreversible on-chain exit.
 
 #### Modal Content
+
 - Heading: `Early Exit Warning`
 - Body: `This action is irreversible and carries penalties.`
 - Metadata (displayed in a semantic table):
@@ -121,9 +133,11 @@ The user needs complete financial clarity regarding the penalty deductions, inte
 ### Listing Published
 
 #### User Need
+
 The user needs confirmation that the listing is live plus an easy way to preview or share it.
 
 #### Modal Content
+
 - Heading: `Listing Published`
 - Body: `Your listing is live and visible in the marketplace.`
 - Metadata:
@@ -136,6 +150,7 @@ The user needs confirmation that the listing is live plus an easy way to preview
 - Optional external: `View Listing Transaction`
 
 #### Full Page Additions
+
 - Live listing preview card
 - Share card with copy link and native share option
 - Related discovery destinations in marketplace
@@ -145,12 +160,14 @@ The user needs confirmation that the listing is live plus an easy way to preview
 Next-step recommendations should be framed as suggestions, not tasks.
 
 ### Copy Style
+
 - Good: `You can review performance from your dashboard.`
 - Good: `If you want to share it, copy a public link.`
 - Avoid: `Next, list it now to maximize returns.`
 - Avoid: `Don't stop here.`
 
 ### Recommendation Limits
+
 - Show up to three recommendations
 - Order by usefulness, not business preference
 - Keep each recommendation to one line on mobile where possible
@@ -160,17 +177,20 @@ Next-step recommendations should be framed as suggestions, not tasks.
 Use a share view only when the completed object has a stable destination or public-safe reference.
 
 ### Modal Share Row
+
 - Compact row below secondary actions
 - Link copy first
 - Native share second when supported
 
 ### Full Page Share Card
+
 - Short explanation of what is being shared
 - Copy link button
 - Native share button when supported
 - Optional preview of destination title
 
 ### Privacy Rules
+
 - Do not expose sensitive wallet or balance details in share previews
 - Do not assume the item is public unless the product explicitly makes it public
 - Separate public listing URLs from authenticated management URLs
@@ -178,16 +198,19 @@ Use a share view only when the completed object has a stable destination or publ
 ## Safe External Links Pattern
 
 ### Behavior
+
 - Open in a new tab
 - Mark with external icon
 - Keep link styling understated
 - Provide enough context for the user to know where they are going
 
 ### Placement
+
 - Footer row in modals
 - Side card or lower-priority section on full pages
 
 ### Copy
+
 - `View on Stellar Explorer`
 - `Open Public Listing`
 
@@ -205,6 +228,7 @@ These text rules should stay consistent across all success states:
 Success states should feel related to loading and error states without becoming identical.
 
 ### Shared Traits
+
 - Clear headline area
 - High-contrast content blocks
 - Consistent spacing
@@ -212,6 +236,7 @@ Success states should feel related to loading and error states without becoming 
 - Strong focus treatment
 
 ### Distinct Success Cues
+
 - Positive iconography
 - Resolved tone
 - Reduced instructional density compared with error states

@@ -4,8 +4,8 @@ This directory captures **Architecture Decision Records** — short documents th
 record significant, cross-cutting technical decisions and, most importantly, the
 context and reasoning behind them.
 
-The rest of `docs/` explains *how* a given feature works today. ADRs explain
-*why* the project arrived at a particular approach, what alternatives were
+The rest of `docs/` explains _how_ a given feature works today. ADRs explain
+_why_ the project arrived at a particular approach, what alternatives were
 weighed, and what trade-offs were accepted. That history is easy to lose once
 the original contributors move on, which is exactly what ADRs are meant to
 prevent.
@@ -26,8 +26,8 @@ feature docs.
 
 ## Index
 
-| ADR | Title | Status |
-| --- | ----- | ------ |
+| ADR                                             | Title                                                       | Status   |
+| ----------------------------------------------- | ----------------------------------------------------------- | -------- |
 | [0001](0001-wallet-signature-authentication.md) | Wallet-signature authentication with cookie-backed sessions | Accepted |
 
 ## Statuses

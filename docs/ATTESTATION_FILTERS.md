@@ -11,6 +11,7 @@ The attestation history filtering feature adds severity tabs and type filters to
 **Location:** `src/components/attestation/AttestationFilterBar.tsx`
 
 A reusable filter bar component that provides:
+
 - **Severity tabs**: All, Info, Warning, Violation
 - **Type dropdown**: All attestation types (health_check, violation, fee_generation, drawdown)
 - **Count badges**: Shows the number of attestations matching each filter
@@ -21,34 +22,29 @@ A reusable filter bar component that provides:
 ```typescript
 interface AttestationFilterBarProps {
   attestations: Array<{
-    id: string
-    severity?: AttestationSeverity
-    attestationType?: AttestationType
-  }>
+    id: string;
+    severity?: AttestationSeverity;
+    attestationType?: AttestationType;
+  }>;
   onFilterChange: (filters: {
-    severity: AttestationSeverity | 'all'
-    type: AttestationType | 'all'
-  }) => void
+    severity: AttestationSeverity | 'all';
+    type: AttestationType | 'all';
+  }) => void;
 }
 ```
 
 #### Usage Example
 
 ```tsx
-import AttestationFilterBar from '@/components/attestation/AttestationFilterBar'
+import AttestationFilterBar from '@/components/attestation/AttestationFilterBar';
 
 function MyComponent() {
   const [filters, setFilters] = useState({
     severity: 'all' as const,
     type: 'all' as const,
-  })
+  });
 
-  return (
-    <AttestationFilterBar
-      attestations={attestations}
-      onFilterChange={setFilters}
-    />
-  )
+  return <AttestationFilterBar attestations={attestations} onFilterChange={setFilters} />;
 }
 ```
 
@@ -57,6 +53,7 @@ function MyComponent() {
 **Location:** `src/components/AttestationHistory.tsx`
 
 The main attestation history component that:
+
 - Fetches attestations from `/api/attestations`
 - Displays a compliance trend summary
 - Integrates the filter bar
@@ -93,6 +90,7 @@ The main attestation history component that:
 ### Combined Filtering
 
 Severity and type filters work together. For example:
+
 - Selecting "Warning" + "Health Check" shows only health check attestations with warning severity
 - Selecting "Violation" + "All Types" shows all violation attestations regardless of type
 
@@ -177,6 +175,7 @@ Potential improvements for future iterations:
 ### Empty State Shows When Filters Match Data
 
 If you see "No attestations match the current filters" but expect results:
+
 - Check that attestations have both `severity` and `kind` fields set
 - Verify the attestation type matches one of: `health_check`, `violaton`, `fee_generation`, `drawdown`
 - Ensure severity is one of: `ok`, `warning`, `violation`
@@ -184,6 +183,7 @@ If you see "No attestations match the current filters" but expect results:
 ### Counts Don't Update
 
 If count badges don't reflect the actual data:
+
 - Verify the `attestations` prop is being updated when data changes
 - Check that attestations have the correct `severity` and `attestationType` fields
 - Ensure the component re-renders when data changes
@@ -191,6 +191,7 @@ If count badges don't reflect the actual data:
 ### TypeScript Errors
 
 If you encounter TypeScript errors:
+
 - Ensure `AttestationSeverity` and `AttestationType` are imported from `@/lib/types/domain`
 - Verify the attestations array matches the expected interface
 - Check that `onFilterChange` callback has the correct signature

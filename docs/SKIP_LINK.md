@@ -10,14 +10,14 @@ persistent `AppSidebar` and move directly to the page content.
 the shell:
 
 ```tsx
-import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
 
 export default function CommitmentsPage() {
   return (
     <AppShellLayout>
       <h1>My Commitments</h1>
     </AppShellLayout>
-  )
+  );
 }
 ```
 

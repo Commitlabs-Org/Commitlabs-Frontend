@@ -12,11 +12,11 @@ filter or sort only re-renders the cards that actually changed.
 
 ## What changed
 
-| File | Change |
-| --- | --- |
-| [`src/components/MyCommitmentCard.tsx`](../../src/components/MyCommitmentCard.tsx) | Default export wrapped in `React.memo`. |
-| [`src/components/MarketplaceCard.tsx`](../../src/components/MarketplaceCard.tsx) | Component split into `MarketplaceCardComponent` and exported as `React.memo(MarketplaceCardComponent)`. |
-| [`src/app/commitments/page.tsx`](../../src/app/commitments/page.tsx) | The `onDetails` / `onAttestations` handlers passed to the grid are now wrapped in `useCallback` so their identity is stable across re-renders. |
+| File                                                                               | Change                                                                                                                                         |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`src/components/MyCommitmentCard.tsx`](../../src/components/MyCommitmentCard.tsx) | Default export wrapped in `React.memo`.                                                                                                        |
+| [`src/components/MarketplaceCard.tsx`](../../src/components/MarketplaceCard.tsx)   | Component split into `MarketplaceCardComponent` and exported as `React.memo(MarketplaceCardComponent)`.                                        |
+| [`src/app/commitments/page.tsx`](../../src/app/commitments/page.tsx)               | The `onDetails` / `onAttestations` handlers passed to the grid are now wrapped in `useCallback` so their identity is stable across re-renders. |
 
 No behaviour changed: the cards render the same markup, the filter/sort/search
 logic is untouched, and the list keys were already stable (`commitment.id` /
@@ -53,24 +53,24 @@ function runs after the described change.
 
 ### MyCommitmentsGrid (3 cards)
 
-| Interaction | Before (no memo) | After (memo + stable props) |
-| --- | --- | --- |
-| Initial mount | 3 | 3 |
-| Filter removes 1 card | 2 (both survivors re-render) | 0 |
-| One card's data changes | 3 | 1 (only the changed card) |
-| Sort-only reorder | 3 | 0 |
-| All card objects replaced | 3 | 3 |
+| Interaction               | Before (no memo)             | After (memo + stable props) |
+| ------------------------- | ---------------------------- | --------------------------- |
+| Initial mount             | 3                            | 3                           |
+| Filter removes 1 card     | 2 (both survivors re-render) | 0                           |
+| One card's data changes   | 3                            | 1 (only the changed card)   |
+| Sort-only reorder         | 3                            | 0                           |
+| All card objects replaced | 3                            | 3                           |
 
 ### MarketplaceGrid (3 cards)
 
-| Interaction | Before (no memo) | After (memo + stable props) |
-| --- | --- | --- |
-| Initial mount | 3 | 3 |
-| Filter removes 1 card | 2 (both survivors re-render) | 0 |
-| One listing's value changes | 3 | 1 (only the changed card) |
-| Sort-only reorder | 3 | 0 |
-| Listing objects cloned, no value change | 3 | 0 |
-| Every listing's value changes | 3 | 3 |
+| Interaction                             | Before (no memo)             | After (memo + stable props) |
+| --------------------------------------- | ---------------------------- | --------------------------- |
+| Initial mount                           | 3                            | 3                           |
+| Filter removes 1 card                   | 2 (both survivors re-render) | 0                           |
+| One listing's value changes             | 3                            | 1 (only the changed card)   |
+| Sort-only reorder                       | 3                            | 0                           |
+| Listing objects cloned, no value change | 3                            | 0                           |
+| Every listing's value changes           | 3                            | 3                           |
 
 In short: unchanged cards drop from **N re-renders per interaction to 0**, while
 the correctness of "changed cards still update" is preserved.

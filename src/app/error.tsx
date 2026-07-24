@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect } from 'react'
-import ErrorLayout from '@/components/ErrorLayout'
-import ErrorButton from '@/components/ErrorButton'
-import { reportError } from '@/lib/observability/reportError'
-import styles from './error.module.css'
+import { useCallback, useEffect } from 'react';
+import ErrorLayout from '@/components/ErrorLayout';
+import ErrorButton from '@/components/ErrorButton';
+import { reportError } from '@/lib/observability/reportError';
+import styles from './error.module.css';
 
 interface ErrorProps {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
 export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    reportError(error, window.location.pathname)
-  }, [error])
+    reportError(error, window.location.pathname);
+  }, [error]);
 
   const handleRetry = useCallback(() => {
-    reset()
-  }, [reset])
+    reset();
+  }, [reset]);
 
   return (
     <ErrorLayout>
@@ -36,12 +36,7 @@ export default function Error({ error, reset }: ErrorProps) {
             xmlns="http://www.w3.org/2000/svg"
           >
             <circle cx="60" cy="60" r="55" stroke="white" strokeWidth="2" opacity="0.3" />
-            <path
-              d="M60 35V65M60 75V85"
-              stroke="white"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
+            <path d="M60 35V65M60 75V85" stroke="white" strokeWidth="3" strokeLinecap="round" />
             <circle cx="40" cy="50" r="6" fill="white" opacity="0.6" />
             <circle cx="80" cy="50" r="6" fill="white" opacity="0.6" />
           </svg>
@@ -50,18 +45,15 @@ export default function Error({ error, reset }: ErrorProps) {
         {/* Message */}
         <h1 className={styles.title}>Something Went Wrong</h1>
         <p className={styles.description}>
-          We&apos;re experiencing technical difficulties. Our team has been notified and is working to fix the issue.
+          We&apos;re experiencing technical difficulties. Our team has been notified and is working
+          to fix the issue.
         </p>
 
         {/* Error Details (if available) */}
         {error && (
           <div className={styles.errorDetails}>
-            <p className={styles.errorMessage}>
-              {error.message || 'An unexpected error occurred'}
-            </p>
-            {error.digest && (
-              <p className={styles.errorDigest}>Error ID: {error.digest}</p>
-            )}
+            <p className={styles.errorMessage}>{error.message || 'An unexpected error occurred'}</p>
+            {error.digest && <p className={styles.errorDigest}>Error ID: {error.digest}</p>}
           </div>
         )}
 
@@ -71,15 +63,11 @@ export default function Error({ error, reset }: ErrorProps) {
           <ErrorButton href="/" variant="secondary">
             Go Home
           </ErrorButton>
-          <ErrorButton
-            href="https://stellar.org/contact"
-            variant="secondary"
-            isExternal
-          >
+          <ErrorButton href="https://stellar.org/contact" variant="secondary" isExternal>
             Report Issue
           </ErrorButton>
         </div>
       </div>
     </ErrorLayout>
-  )
+  );
 }

@@ -63,53 +63,51 @@ import { getCommitmentHistory } from '@/lib/backend/services/commitmentHistory';
 
 const DEFAULT_HISTORY_PAGE_SIZE = 20;
 
-export const GET = withApiHandler(async (
-  req: NextRequest,
-  context: { params: Record<string, string> },
-  correlationId: string,
-) => {
-  const commitmentId = context.params.id;
+export const GET = withApiHandler(
+  async (req: NextRequest, context: { params: Record<string, string> }, correlationId: string) => {
+    const commitmentId = context.params.id;
 
-  const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
-  const isAllowed = await checkRateLimit(ip, 'api/commitments/history');
-  if (!isAllowed) throw new TooManyRequestsError();
+    const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous';
+    const isAllowed = await checkRateLimit(ip, 'api/commitments/history');
+    if (!isAllowed) throw new TooManyRequestsError();
 
-  // Parse pagination
-  const { searchParams } = new URL(req.url);
-  let pagination;
-  try {
-    pagination = parsePaginationParams(searchParams, {
-      defaultPageSize: DEFAULT_HISTORY_PAGE_SIZE,
-    });
-  } catch (err) {
-    if (err instanceof PaginationParseError) {
-      return paginationErrorResponse(err);
+    // Parse pagination
+    const { searchParams } = new URL(req.url);
+    let pagination;
+    try {
+      pagination = parsePaginationParams(searchParams, {
+        defaultPageSize: DEFAULT_HISTORY_PAGE_SIZE,
+      });
+    } catch (err) {
+      if (err instanceof PaginationParseError) {
+        return paginationErrorResponse(err);
+      }
+      throw err;
     }
-    throw err;
-  }
 
-  // Resolve commitment — throws NotFoundError (→ 404) if absent
-  let commitment;
-  try {
-    commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
-  } catch {
-    throw new NotFoundError('Commitment', { commitmentId });
-  }
+    // Resolve commitment — throws NotFoundError (→ 404) if absent
+    let commitment;
+    try {
+      commitment = await getCommitmentFromChain(commitmentId, { requestId: correlationId });
+    } catch {
+      throw new NotFoundError('Commitment', { commitmentId });
+    }
 
-  // Aggregate history events
-  const { events } = await getCommitmentHistory(commitment);
+    // Aggregate history events
+    const { events } = await getCommitmentHistory(commitment);
 
-  // Paginate
-  const page = paginateArray(events, pagination);
+    // Paginate
+    const page = paginateArray(events, pagination);
 
-  return ok(
-    {
-      commitmentId,
-      events: page.data,
-      meta: page.meta,
-    },
-    undefined,
-    200,
-    correlationId,
-  );
-});
+    return ok(
+      {
+        commitmentId,
+        events: page.data,
+        meta: page.meta,
+      },
+      undefined,
+      200,
+      correlationId,
+    );
+  },
+);

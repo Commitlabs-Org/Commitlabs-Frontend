@@ -80,13 +80,7 @@ export class RedisAdapter implements CacheAdapter {
       const client = this.getClient();
       let cursor = '0';
       do {
-        const [next, keys] = await client.scan(
-          cursor,
-          'MATCH',
-          `${prefix}*`,
-          'COUNT',
-          100,
-        );
+        const [next, keys] = await client.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 100);
         cursor = next;
         if (keys.length > 0) await client.del(...keys);
       } while (cursor !== '0');

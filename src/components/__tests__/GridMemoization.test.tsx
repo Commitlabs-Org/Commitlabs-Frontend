@@ -49,17 +49,9 @@ vi.mock('@/components/modals/CommitmentDetailsModal', () => ({
 
 vi.mock('@/components/MarketplaceCard', async () => {
   const ReactMod = await import('react');
-  const MockCard = ReactMod.memo(function MockMarketplaceCard({
-    id,
-  }: {
-    id: string;
-  }) {
+  const MockCard = ReactMod.memo(function MockMarketplaceCard({ id }: { id: string }) {
     marketplaceRenders[id] = (marketplaceRenders[id] ?? 0) + 1;
-    return ReactMod.createElement(
-      'div',
-      { 'data-testid': `market-card-${id}` },
-      id,
-    );
+    return ReactMod.createElement('div', { 'data-testid': `market-card-${id}` }, id);
   });
   return { MarketplaceCard: MockCard };
 });
@@ -95,7 +87,10 @@ function makeCommitment(id: string, overrides: Partial<Commitment> = {}): Commit
   };
 }
 
-function makeListing(id: string, overrides: Partial<MarketplaceCardProps> = {}): MarketplaceCardProps {
+function makeListing(
+  id: string,
+  overrides: Partial<MarketplaceCardProps> = {},
+): MarketplaceCardProps {
   return {
     id,
     type: 'Safe',
@@ -221,9 +216,7 @@ describe('MyCommitmentsGrid memoization', () => {
 
     expect(screen.getByText('commitments found')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
-    expect(
-      screen.getByText('No commitments found matching your filters.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('No commitments found matching your filters.')).toBeInTheDocument();
     expect(myCardRenders).toEqual({});
   });
 });

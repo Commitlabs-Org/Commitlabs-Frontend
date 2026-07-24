@@ -7,6 +7,7 @@ for a commitment. It is designed for **efficient polling** — returning only
 the fields needed to track commitment health without the full payload.
 
 ## Request
+
 No request body or query parameters required.
 
 ## Response — 200 OK
@@ -25,22 +26,22 @@ No request body or query parameters required.
 }
 ```
 
-| Field           | Type            | Description                              |
-|-----------------|-----------------|------------------------------------------|
-| commitmentId    | string          | Unique commitment identifier             |
-| status          | string          | ACTIVE, SETTLED, VIOLATED, EARLY_EXIT    |
-| daysRemaining   | number          | Days until expiry (0 if expired)         |
-| complianceScore | number          | Current compliance score (0-100)         |
-| currentValue    | string          | Current value of the commitment          |
-| violationCount  | number          | Number of violations recorded            |
-| expiresAt       | string or null  | ISO 8601 expiry timestamp                |
+| Field           | Type           | Description                           |
+| --------------- | -------------- | ------------------------------------- |
+| commitmentId    | string         | Unique commitment identifier          |
+| status          | string         | ACTIVE, SETTLED, VIOLATED, EARLY_EXIT |
+| daysRemaining   | number         | Days until expiry (0 if expired)      |
+| complianceScore | number         | Current compliance score (0-100)      |
+| currentValue    | string         | Current value of the commitment       |
+| violationCount  | number         | Number of violations recorded         |
+| expiresAt       | string or null | ISO 8601 expiry timestamp             |
 
 ## Error Responses
 
-| Status | Code          | Description                    |
-|--------|---------------|--------------------------------|
-| 404    | NOT_FOUND     | Commitment does not exist      |
-| 429    | TOO_MANY_REQUESTS | Rate limit exceeded        |
+| Status | Code              | Description               |
+| ------ | ----------------- | ------------------------- |
+| 404    | NOT_FOUND         | Commitment does not exist |
+| 429    | TOO_MANY_REQUESTS | Rate limit exceeded       |
 
 ## Polling Recommendation
 

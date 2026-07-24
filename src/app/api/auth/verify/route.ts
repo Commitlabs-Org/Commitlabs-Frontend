@@ -20,44 +20,47 @@ const AUTH_VERIFY_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(AUTH_VERIFY_CORS_POLICY);
 
-export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  const ip = getClientIp(req);
+export const POST = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    const ip = getClientIp(req);
 
-  if (!(await checkRateLimit(ip, 'api/auth/verify'))) {
-    throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
-  }
+    if (!(await checkRateLimit(ip, 'api/auth/verify'))) {
+      throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
+    }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    throw new ValidationError('Invalid JSON in request body');
-  }
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      throw new ValidationError('Invalid JSON in request body');
+    }
 
-  const validation = VerifyRequestSchema.safeParse(body);
-  if (!validation.success) {
-    throw new ValidationError('Invalid request data', validation.error.issues);
-  }
+    const validation = VerifyRequestSchema.safeParse(body);
+    if (!validation.success) {
+      throw new ValidationError('Invalid request data', validation.error.issues);
+    }
 
-  const verificationResult = await verifySignatureWithNonce(validation.data);
-  if (!verificationResult.valid) {
-    throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
-  }
+    const verificationResult = await verifySignatureWithNonce(validation.data);
+    if (!verificationResult.valid) {
+      throw new UnauthorizedError(verificationResult.error || 'Signature verification failed');
+    }
 
-  const sessionToken = createSessionToken(validation.data.address);
+    const sessionToken = createSessionToken(validation.data.address);
 
-  return ok(
-    {
-      verified: true,
-      address: verificationResult.address,
-      message: 'Signature verified successfully',
-      sessionToken,
-    },
-    undefined,
-    200,
-    correlationId,
-  );
-}, { cors: AUTH_VERIFY_CORS_POLICY });
+    return ok(
+      {
+        verified: true,
+        address: verificationResult.address,
+        message: 'Signature verified successfully',
+        sessionToken,
+      },
+      undefined,
+      200,
+      correlationId,
+    );
+  },
+  { cors: AUTH_VERIFY_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['POST']);
 export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

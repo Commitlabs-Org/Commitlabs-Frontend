@@ -5,6 +5,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 ---
 
 ## 📖 Overview & General Guides
+
 - **[README.md](../README.md)** (Root) — Main project overview, features, configuration guide, and quick start instructions.
 - **[DEVELOPER_GUIDE.md](../DEVELOPER_GUIDE.md)** (Root) — Coding standards, TypeScript conventions, styling practices, package management, and testing workflows.
 - **[CHANGELOG.md](../CHANGELOG.md)** (Root) — Keep-a-Changelog record of notable frontend changes.
@@ -14,7 +15,8 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[todo/TODO.md](todo/TODO.md)** — Tracked checklist for self-hosting fonts performance feature.
 
 ## 🏗 Architecture & Design Systems
-- **[adr/README.md](adr/README.md)** — Architecture Decision Records: the *why* behind cross-cutting decisions, plus the template and process for adding new ones.
+
+- **[adr/README.md](adr/README.md)** — Architecture Decision Records: the _why_ behind cross-cutting decisions, plus the template and process for adding new ones.
 - **[ARCHITECTURE.md](../ARCHITECTURE.md)** (Root) — Global system design, modules, and soroban contract data flow.
 - **[FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md)** — Page routes mapping to React components and API routes, including wallet/auth state design.
 - **[CIRCULAR_DEPS.md](CIRCULAR_DEPS.md)** — Circular-dependency check with madge: config, the blocking CI gate, and how to break a reported cycle.
@@ -22,6 +24,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[TOAST_SYSTEM.md](TOAST_SYSTEM.md)** — Toast notification service, status emitters, and action triggers.
 
 ## 🚀 Features & User Flows
+
 - **[settlement-and-early-exit-flows.md](settlement-and-early-exit-flows.md)** — Eligibility calculations, exit premiums, smart contract validations, and confirmation modal states.
 - **[create-review-design.md](create-review-design.md)** — Layout and wizard states of the commitment creation flows.
 - **[success-state-ux.md](success-state-ux.md)** — Visual design parameters and user flows for transaction success feedback states.
@@ -39,6 +42,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[SEO_METADATA.md](SEO_METADATA.md)** — Document head metadata, Open Graph tags, and page description strategies.
 
 ## 🏪 Marketplace Documentation
+
 - **[SellerTrustGuidelines.md](SellerTrustGuidelines.md)** — Rules, scores, badges, and trust indicators for marketplace sellers.
 - **[MARKETPLACE_SEARCH_UI.md](MARKETPLACE_SEARCH_UI.md)** — Search filters, sorting logic, and layout grids for listings.
 - **[MARKETPLACE_COMPARE.md](MARKETPLACE_COMPARE.md)** — Side-by-side comparison tray interface for multiple listings.
@@ -48,6 +52,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[DETAIL_HEADER_COPY.md](DETAIL_HEADER_COPY.md)** — Commitment detail header copy-id and safe explorer-link actions.
 
 ## 🎨 UI/UX Design & Branding
+
 - **[design/FigmaDesign.md](design/FigmaDesign.md)** — Figma success state designs and visual directions.
 - **[design/Branding.txt](design/Branding.txt)** — Figma links and design briefs for CommitLabs logo branding assets.
 - **[design/Commitlabs Branding.txt](design/Commitlabs Branding.txt)** — Reserved placeholders for brand identity assets.
@@ -55,6 +60,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[hero-section-design.md](hero-section-design.md)** — Call-to-action layout, copy patterns, and spacing specifications for the home hero block.
 
 ## 🔒 Security, Audit & Threats
+
 - **[security/EXTERNAL_LINKS.md](security/EXTERNAL_LINKS.md)** — External-link & subresource policy: required `rel` on `target=_blank`, the ESLint guard, the allow-listed hosts, and the safe explorer-link helper.
 - **[audit/AUDIT.md](audit/AUDIT.md)** — Dead code search, TODO registry, and linting status audit documentation.
 - **[DEAD_CODE_SCAN.md](DEAD_CODE_SCAN.md)** — Automated unused files/exports/deps scan with knip: config, how to read the report, and triage.
@@ -63,6 +69,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[backend-session-csrf.md](backend-session-csrf.md)** — Anti-CSRF token handling and validation for state-modifying endpoints.
 
 ## 🧪 Testing & Verification
+
 - **[testing/FIXTURES.md](testing/FIXTURES.md)** — Index of shared test data (factories, API helpers, mock DB/seed) and the naming conventions for adding fixtures.
 - **[testing/test-auth.md](testing/test-auth.md)** — Step-by-step verification flows for wallet authentication and signature verification APIs.
 - **[testing/test-settle.md](testing/test-settle.md)** — Verification procedures, payloads, and mock responses for the commitment settlement API.
@@ -74,6 +81,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[testing/TRUST_BADGE_TESTS.md](testing/TRUST_BADGE_TESTS.md)** — Verification details for seller trust level badges.
 
 ## ♿ Accessibility & Performance
+
 - **[accessibility/ACCESSIBILITY_STATEMENT.md](accessibility/ACCESSIBILITY_STATEMENT.md)** — Overall WCAG 2.1 AA target, current conformance posture, known gaps, and how to report accessibility problems.
 - **[PERFORMANCE_BUDGET.md](PERFORMANCE_BUDGET.md)** — Core Web Vitals budget (LCP/CLS/INP), the field web-vitals reporting pipeline, and regression triage.
 - **[accessibility-dense-ui.md](accessibility-dense-ui.md)** — Layout rules and size considerations for data-dense tables.
@@ -87,6 +95,7 @@ Welcome to the CommitLabs documentation index. This document serves as a single 
 - **[performance/STARFIELD.md](performance/STARFIELD.md)** — Canvas rendering optimizations for animated background components.
 
 ## 📡 API & Backend Storage
+
 - **[observability/LOGGING_SCHEMA.md](observability/LOGGING_SCHEMA.md)** — Structured JSON logging contract: record shapes, levels, request-id correlation, and redaction.
 - **[observability/ERROR_MONITORING.md](observability/ERROR_MONITORING.md)** — Pluggable client error-reporting seam: record shape, call sites, the adapter contract, and redaction.
 - **[backend-api-reference.md](backend-api-reference.md)** — Detailed definitions of REST API routes, parameter validations, schemas, and return formats.

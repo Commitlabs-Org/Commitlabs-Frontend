@@ -1,15 +1,9 @@
-﻿'use client'
+﻿'use client';
 
-import React, {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { AlertCircle, ArrowLeft, Loader2, Search } from 'lucide-react'
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { AlertCircle, ArrowLeft, Loader2, Search } from 'lucide-react';
 import styles from './MarketplaceHeader.module.css';
 import { apiGet, apiFetch } from '@/lib/apiClient';
 import { MarketStatsBanner } from './MarketStatsBanner';
@@ -19,16 +13,16 @@ import { MarketStatsBanner } from './MarketStatsBanner';
 // ---------------------------------------------------------------------------
 
 export interface CommitmentSearchResult {
-  commitmentId: string
-  ownerAddress: string
-  asset: string
-  amount: string
-  status: string
-  riskType: string
-  complianceScore: number
-  currentValue: string
-  createdAt: string
-  expiresAt: string
+  commitmentId: string;
+  ownerAddress: string;
+  asset: string;
+  amount: string;
+  status: string;
+  riskType: string;
+  complianceScore: number;
+  currentValue: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 const SORT_OPTIONS = [
@@ -36,33 +30,33 @@ const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest' },
   { value: 'priceLow', label: 'Price: Low to High' },
   { value: 'priceHigh', label: 'Price: High to Low' },
-] as const
+] as const;
 
-type SortValue = (typeof SORT_OPTIONS)[number]['value']
+type SortValue = (typeof SORT_OPTIONS)[number]['value'];
 
 export interface MarketplaceHeaderProps {
   /** Called (debounced) whenever the search query changes. */
-  onSearchChange?: (query: string) => void
+  onSearchChange?: (query: string) => void;
   /** Debounce delay in ms. Default 300. */
-  searchDebounceMs?: number
+  searchDebounceMs?: number;
   /** Placeholder text for the search input. */
-  searchPlaceholder?: string
+  searchPlaceholder?: string;
   /** URL for the back link. Default "/". */
-  backHref?: string
+  backHref?: string;
   /** URL for the Create button. Default "/create". */
-  createHref?: string
+  createHref?: string;
   /** Optional controlled initial query value. */
-  searchQuery?: string
+  searchQuery?: string;
   /**
    * Owner address forwarded to /api/commitments/search.
    * When omitted requests will receive a 400 validation error (handled gracefully).
    */
-  ownerAddress?: string
+  ownerAddress?: string;
   /** Called when the user selects a result from the dropdown. */
-  onResultSelect?: (item: CommitmentSearchResult) => void
+  onResultSelect?: (item: CommitmentSearchResult) => void;
 }
 
-const DEFAULT_PLACEHOLDER = 'Search commitmentsâ€¦'
+const DEFAULT_PLACEHOLDER = 'Search commitmentsâ€¦';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -77,120 +71,121 @@ export function MarketplaceHeader({
   searchQuery: controlledQuery,
 }: MarketplaceHeaderProps) {
   // ── Sort ───────────────────────────────────────────────────────────────────
-  const [sortValue, setSortValue] = useState<SortValue>('popular')
+  const [sortValue, setSortValue] = useState<SortValue>('popular');
 
   // â”€â”€ Typeahead â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const [query, setQuery] = useState(controlledQuery ?? '')
-  const [results, setResults] = useState<CommitmentSearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(-1)
+  const [query, setQuery] = useState(controlledQuery ?? '');
+  const [results, setResults] = useState<CommitmentSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const abortRef = useRef<AbortController | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const uid = useId()
-  const listboxId = `${uid}-listbox`
+  const abortRef = useRef<AbortController | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const uid = useId();
+  const listboxId = `${uid}-listbox`;
 
   // ── Debounced typeahead search ─────────────────────────────────────────────
   useEffect(() => {
-    const trimmed = query.trim()
+    const trimmed = query.trim();
 
     if (!trimmed) {
-      abortRef.current?.abort()
-      setResults([])
-      setIsDropdownOpen(false)
-      setActiveIndex(-1)
-      onSearchChange?.('')
-      return
+      abortRef.current?.abort();
+      setResults([]);
+      setIsDropdownOpen(false);
+      setActiveIndex(-1);
+      onSearchChange?.('');
+      return;
     }
 
     const timerId = window.setTimeout(() => {
       // Cancel any in-flight request before starting the next one.
-      abortRef.current?.abort()
-      const controller = new AbortController()
-      abortRef.current = controller
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      setIsSearching(true)
-      setSearchError(null)
+      setIsSearching(true);
+      setSearchError(null);
 
       const params = new URLSearchParams({
         ownerAddress: ownerAddress ?? 'marketplace',
         asset: trimmed,
+      });
+
+      apiFetch<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, {
+        signal: controller.signal,
       })
-
-      apiFetch<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
-          .then((data) => {
-            setResults(data.data ?? []);
-            setIsDropdownOpen(true);
-            setActiveIndex(-1);
+        .then((data) => {
+          setResults(data.data ?? []);
+          setIsDropdownOpen(true);
+          setActiveIndex(-1);
+          setIsSearching(false);
+        })
+        .catch((err: any) => {
+          if (err.name !== 'AbortError') {
+            setSearchError(err.message || String(err));
+            setIsDropdownOpen(false);
             setIsSearching(false);
-          })
-          .catch((err: any) => {
-            if (err.name !== 'AbortError') {
-              setSearchError(err.message || String(err));
-              setIsDropdownOpen(false);
-              setIsSearching(false);
-            }
-          })
+          }
+        });
 
-      onSearchChange?.(trimmed)
-    }, searchDebounceMs)
+      onSearchChange?.(trimmed);
+    }, searchDebounceMs);
 
-    return () => clearTimeout(timerId)
-  }, [query, searchDebounceMs, ownerAddress, onSearchChange])
+    return () => clearTimeout(timerId);
+  }, [query, searchDebounceMs, ownerAddress, onSearchChange]);
 
   // â”€â”€ Keyboard navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSelect = useCallback(
     (item: CommitmentSearchResult) => {
-      setQuery(item.asset)
-      setIsDropdownOpen(false)
-      setActiveIndex(-1)
-      onResultSelect?.(item)
-      onSearchChange?.(item.asset)
+      setQuery(item.asset);
+      setIsDropdownOpen(false);
+      setActiveIndex(-1);
+      onResultSelect?.(item);
+      onSearchChange?.(item.asset);
     },
     [onResultSelect, onSearchChange],
-  )
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!isDropdownOpen) return
+      if (!isDropdownOpen) return;
       switch (e.key) {
         case 'ArrowDown':
-          e.preventDefault()
-          setActiveIndex((i) => Math.min(i + 1, results.length - 1))
-          break
+          e.preventDefault();
+          setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+          break;
         case 'ArrowUp':
-          e.preventDefault()
-          setActiveIndex((i) => Math.max(i - 1, 0))
-          break
+          e.preventDefault();
+          setActiveIndex((i) => Math.max(i - 1, 0));
+          break;
         case 'Enter':
-          e.preventDefault()
+          e.preventDefault();
           if (activeIndex >= 0 && results[activeIndex]) {
-            handleSelect(results[activeIndex])
+            handleSelect(results[activeIndex]);
           }
-          break
+          break;
         case 'Escape':
-          e.preventDefault()
-          setIsDropdownOpen(false)
-          setActiveIndex(-1)
-          break
+          e.preventDefault();
+          setIsDropdownOpen(false);
+          setActiveIndex(-1);
+          break;
       }
     },
     [isDropdownOpen, results, activeIndex, handleSelect],
-  )
+  );
 
   const handleBlur = useCallback(() => {
     // Small delay so a mousedown on an option fires before the input blurs.
     const id = window.setTimeout(() => {
-      setIsDropdownOpen(false)
-      setActiveIndex(-1)
-    }, 150)
-    return () => clearTimeout(id)
-  }, [])
+      setIsDropdownOpen(false);
+      setActiveIndex(-1);
+    }, 150);
+    return () => clearTimeout(id);
+  }, []);
 
-  const activeDescendant =
-    activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
+  const activeDescendant = activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
   // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
@@ -206,9 +201,7 @@ export function MarketplaceHeader({
             <span className={styles.headingGlow} aria-hidden />
             <h1 className={styles.title}>Commitment Marketplace</h1>
           </div>
-          <p className={styles.subheading}>
-            Browse and trade verified liquidity commitments
-          </p>
+          <p className={styles.subheading}>Browse and trade verified liquidity commitments</p>
         </div>
 
         {/* Right: controls */}
@@ -231,7 +224,7 @@ export function MarketplaceHeader({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => {
-                if (results.length > 0) setIsDropdownOpen(true)
+                if (results.length > 0) setIsDropdownOpen(true);
               }}
               onBlur={handleBlur}
               aria-label="Search commitments"
@@ -259,11 +252,7 @@ export function MarketplaceHeader({
               hidden={!isDropdownOpen}
             >
               {results.length === 0 ? (
-                <li
-                  role="option"
-                  aria-selected={false}
-                  className={styles.dropdownEmpty}
-                >
+                <li role="option" aria-selected={false} className={styles.dropdownEmpty}>
                   No results found
                 </li>
               ) : (
@@ -319,11 +308,7 @@ export function MarketplaceHeader({
           </div>
 
           {/* â”€â”€ Create button â”€â”€ */}
-          <Link
-            href={createHref}
-            className={styles.createButton}
-            aria-label="Create commitment"
-          >
+          <Link href={createHref} className={styles.createButton} aria-label="Create commitment">
             <Image
               src="/plus.png"
               alt=""
@@ -337,5 +322,5 @@ export function MarketplaceHeader({
         </div>
       </div>
     </header>
-  )
+  );
 }

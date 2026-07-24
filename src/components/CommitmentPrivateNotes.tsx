@@ -60,9 +60,7 @@ export function CommitmentPrivateNotes({ commitmentId }: CommitmentPrivateNotesP
         <h2 id="private-notes-heading" className="text-white text-base font-semibold">
           Private Notes
         </h2>
-        <span className="text-xs text-[#99a1af]">
-          {saved ? 'Saved locally ✓' : 'Unsaved'}
-        </span>
+        <span className="text-xs text-[#99a1af]">{saved ? 'Saved locally ✓' : 'Unsaved'}</span>
       </div>
 
       <textarea

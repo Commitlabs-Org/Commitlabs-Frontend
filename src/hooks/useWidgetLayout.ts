@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
 export interface WidgetConfig {
   id: string;
@@ -9,15 +9,15 @@ export interface WidgetConfig {
   order: number;
 }
 
-const STORAGE_KEY = "overview-widget-layout";
+const STORAGE_KEY = 'overview-widget-layout';
 
 export const DEFAULT_WIDGET_LAYOUT: WidgetConfig[] = [
-  { id: "at-risk", label: "At-Risk Commitments", visible: true, order: 0 },
-  { id: "commitment-detail", label: "Commitment Detail", visible: true, order: 1 },
+  { id: 'at-risk', label: 'At-Risk Commitments', visible: true, order: 0 },
+  { id: 'commitment-detail', label: 'Commitment Detail', visible: true, order: 1 },
 ];
 
 function loadFromStorage(): WidgetConfig[] | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -32,7 +32,7 @@ function loadFromStorage(): WidgetConfig[] | null {
 }
 
 function saveToStorage(layout: WidgetConfig[]): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
   } catch {
@@ -67,9 +67,7 @@ export function useWidgetLayout() {
 
   const toggleVisibility = useCallback((id: string) => {
     setWidgets((prev) => {
-      const updated = prev.map((w) =>
-        w.id === id ? { ...w, visible: !w.visible } : w
-      );
+      const updated = prev.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w));
       saveToStorage(updated);
       return updated;
     });

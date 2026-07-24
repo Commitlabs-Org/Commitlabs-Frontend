@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { methodNotAllowed } from '@/lib/backend/apiResponse';
-import {
-  ChainCommitment,
-  getUserCommitmentsFromChain
-} from '@/lib/backend/services/contracts';
+import { ChainCommitment, getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
 import {
   applyCorsPolicy,
   createCorsOptionsHandler,
@@ -11,11 +8,7 @@ import {
   toCorsErrorResponse,
   type CorsRoutePolicy,
 } from '@/lib/backend/cors';
-import {
-  BackendError,
-  normalizeBackendError,
-  toBackendErrorResponse
-} from '@/lib/backend/errors';
+import { BackendError, normalizeBackendError, toBackendErrorResponse } from '@/lib/backend/errors';
 import { isFeatureEnabled } from '@/lib/backend/config';
 
 interface UserAnalyticsResponse {
@@ -36,7 +29,7 @@ export const OPTIONS = createCorsOptionsHandler(ANALYTICS_USER_CORS_POLICY);
 
 function sumNumericStringField(
   commitments: ChainCommitment[],
-  field: 'amount' | 'feeEarned'
+  field: 'amount' | 'feeEarned',
 ): string {
   const total = commitments.reduce((acc, commitment) => {
     const value = Number(commitment[field]);
@@ -48,22 +41,20 @@ function sumNumericStringField(
 
 function buildUserAnalytics(
   ownerAddress: string,
-  commitments: ChainCommitment[]
+  commitments: ChainCommitment[],
 ): UserAnalyticsResponse {
   const totalCommitments = commitments.length;
   const activeCommitments = commitments.filter(
-    (commitment) => commitment.status === 'ACTIVE'
+    (commitment) => commitment.status === 'ACTIVE',
   ).length;
   const averageComplianceScore =
     totalCommitments === 0
       ? 0
-      : commitments.reduce(
-          (acc, commitment) => acc + commitment.complianceScore,
-          0
-        ) / totalCommitments;
+      : commitments.reduce((acc, commitment) => acc + commitment.complianceScore, 0) /
+        totalCommitments;
   const violationCount = commitments.reduce(
     (acc, commitment) => acc + commitment.violationCount,
-    0
+    0,
   );
 
   return {
@@ -73,7 +64,7 @@ function buildUserAnalytics(
     totalValueCommitted: sumNumericStringField(commitments, 'amount'),
     feesEarned: sumNumericStringField(commitments, 'feeEarned'),
     averageComplianceScore: Number(averageComplianceScore.toFixed(2)),
-    violationCount
+    violationCount,
   };
 }
 
@@ -89,15 +80,15 @@ export async function GET(req: NextRequest) {
       code: 'NOT_FOUND',
       message: 'User analytics endpoint is disabled.',
       status: 404,
-      details: { feature: 'analyticsUser' }
+      details: { feature: 'analyticsUser' },
     });
 
     return applyCorsPolicy(
       req,
       NextResponse.json(toBackendErrorResponse(error), {
-        status: error.status
+        status: error.status,
       }),
-      ANALYTICS_USER_CORS_POLICY
+      ANALYTICS_USER_CORS_POLICY,
     );
   }
 
@@ -107,14 +98,14 @@ export async function GET(req: NextRequest) {
     const error = new BackendError({
       code: 'BAD_REQUEST',
       message: 'Query param ownerAddress is required.',
-      status: 400
+      status: 400,
     });
     return applyCorsPolicy(
       req,
       NextResponse.json(toBackendErrorResponse(error), {
-        status: error.status
+        status: error.status,
       }),
-      ANALYTICS_USER_CORS_POLICY
+      ANALYTICS_USER_CORS_POLICY,
     );
   }
 
@@ -123,21 +114,21 @@ export async function GET(req: NextRequest) {
     return applyCorsPolicy(
       req,
       NextResponse.json(buildUserAnalytics(ownerAddress, commitments)),
-      ANALYTICS_USER_CORS_POLICY
+      ANALYTICS_USER_CORS_POLICY,
     );
   } catch (error) {
     const normalized = normalizeBackendError(error, {
       code: 'INTERNAL_ERROR',
       message: 'Failed to compute user analytics.',
-      status: 500
+      status: 500,
     });
 
     return applyCorsPolicy(
       req,
       NextResponse.json(toBackendErrorResponse(normalized), {
-        status: normalized.status
+        status: normalized.status,
       }),
-      ANALYTICS_USER_CORS_POLICY
+      ANALYTICS_USER_CORS_POLICY,
     );
   }
 }

@@ -11,10 +11,14 @@ const READY_CORS_POLICY = {
   GET: { access: 'public' },
 } satisfies CorsRoutePolicy;
 
-async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
+async function checkSorobanRpc(): Promise<{
+  reachable: boolean;
+  latencyMs?: number;
+  error?: string;
+}> {
   const env = getValidatedEnv();
   const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
-  
+
   if (!sorobanRpcUrl) {
     logger.warn('SOROBAN_RPC_URL not configured, skipping RPC connectivity check');
     return { reachable: false, error: 'SOROBAN_RPC_URL not configured' };
@@ -60,7 +64,7 @@ async function probeContractReachability(): Promise<{
 }> {
   const env = getValidatedEnv();
   const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
-  
+
   if (!sorobanRpcUrl) {
     return { reachable: false, error: 'RPC not configured' };
   }
@@ -71,7 +75,11 @@ async function probeContractReachability(): Promise<{
 
     if (!contractId) {
       logger.warn('Contract address not configured for reachability probe');
-      return { reachable: false, error: 'Contract address not configured', details: 'BLOCKCHAIN_UNAVAILABLE' };
+      return {
+        reachable: false,
+        error: 'Contract address not configured',
+        details: 'BLOCKCHAIN_UNAVAILABLE',
+      };
     }
 
     const start = Date.now();
@@ -94,28 +102,31 @@ async function probeContractReachability(): Promise<{
 
 export const OPTIONS = createCorsOptionsHandler(READY_CORS_POLICY);
 
-export const GET = withApiHandler(async () => {
-  logger.info('Readiness check requested');
+export const GET = withApiHandler(
+  async () => {
+    logger.info('Readiness check requested');
 
-  const env = getValidatedEnv();
-  const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
+    const env = getValidatedEnv();
+    const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
 
-  const rpc = await checkSorobanRpc();
-  const contract = await probeContractReachability();
+    const rpc = await checkSorobanRpc();
+    const contract = await probeContractReachability();
 
-  const ready = (rpc.reachable || !sorobanRpcUrl) && (contract.reachable || !sorobanRpcUrl);
-  const body = {
-    status: ready ? 'ready' : 'not_ready',
-    timestamp: new Date().toISOString(),
-    checks: {
-      sorobanRpc: sorobanRpcUrl ? { ...rpc } : { reachable: null, note: 'not configured' },
-      contract: sorobanRpcUrl ? { ...contract } : { reachable: null, note: 'not configured' },
-    },
-  };
+    const ready = (rpc.reachable || !sorobanRpcUrl) && (contract.reachable || !sorobanRpcUrl);
+    const body = {
+      status: ready ? 'ready' : 'not_ready',
+      timestamp: new Date().toISOString(),
+      checks: {
+        sorobanRpc: sorobanRpcUrl ? { ...rpc } : { reachable: null, note: 'not configured' },
+        contract: sorobanRpcUrl ? { ...contract } : { reachable: null, note: 'not configured' },
+      },
+    };
 
-  logger.info('Readiness check complete', { ready, rpc, contract });
-  return NextResponse.json(body, { status: ready ? 200 : 503 });
-}, { cors: READY_CORS_POLICY });
+    logger.info('Readiness check complete', { ready, rpc, contract });
+    return NextResponse.json(body, { status: ready ? 200 : 503 });
+  },
+  { cors: READY_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['GET']);
 export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

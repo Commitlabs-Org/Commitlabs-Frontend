@@ -11,16 +11,19 @@ const METRICS_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(METRICS_CORS_POLICY);
 
-export const GET = withApiHandler(async (_req: NextRequest, _context, correlationId) => {
-  const countersAdapter = getCountersAdapter();
-  const metrics: HealthMetrics = {
-    status: 'up',
-    uptime: process.uptime(),
-    ...(await countersAdapter.getMetrics()),
-  };
+export const GET = withApiHandler(
+  async (_req: NextRequest, _context, correlationId) => {
+    const countersAdapter = getCountersAdapter();
+    const metrics: HealthMetrics = {
+      status: 'up',
+      uptime: process.uptime(),
+      ...(await countersAdapter.getMetrics()),
+    };
 
-  return ok(metrics, undefined, 200, correlationId);
-}, { cors: METRICS_CORS_POLICY });
+    return ok(metrics, undefined, 200, correlationId);
+  },
+  { cors: METRICS_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['GET']);
 export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

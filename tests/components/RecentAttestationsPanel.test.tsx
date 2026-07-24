@@ -62,7 +62,7 @@ describe('RecentAttestationsPanel', () => {
         summary={SUMMARY}
         onSelectAttestation={vi.fn()}
         onViewAll={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByRole('list', { name: 'Recent Attestations' })).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('RecentAttestationsPanel', () => {
         summary={SUMMARY}
         onSelectAttestation={vi.fn()}
         onViewAll={vi.fn()}
-      />
+      />,
     );
 
     const rows = screen.getAllByRole('button', { name: /attestation:/i });
@@ -106,12 +106,16 @@ describe('RecentAttestationsPanel', () => {
         summary={SUMMARY}
         onSelectAttestation={vi.fn()}
         onViewAll={vi.fn()}
-      />
+      />,
     );
 
     const okRow = screen.getByRole('button', { name: 'ok attestation: All checks passed' });
-    const warningRow = screen.getByRole('button', { name: 'warning attestation: Minor issue detected' });
-    const violationRow = screen.getByRole('button', { name: 'violation attestation: Critical violation found' });
+    const warningRow = screen.getByRole('button', {
+      name: 'warning attestation: Minor issue detected',
+    });
+    const violationRow = screen.getByRole('button', {
+      name: 'violation attestation: Critical violation found',
+    });
 
     expect(okRow.className).toContain('ok');
     expect(warningRow.className).toContain('warning');
@@ -125,7 +129,7 @@ describe('RecentAttestationsPanel', () => {
         summary={SUMMARY}
         onSelectAttestation={vi.fn()}
         onViewAll={vi.fn()}
-      />
+      />,
     );
 
     const okRow = screen.getByRole('button', { name: /ok attestation:/i });
@@ -147,10 +151,12 @@ describe('RecentAttestationsPanel', () => {
         summary={SUMMARY}
         onSelectAttestation={onSelectAttestation}
         onViewAll={onViewAll}
-      />
+      />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'warning attestation: Minor issue detected' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'warning attestation: Minor issue detected' }),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'View all attestations' }));
 
     expect(onSelectAttestation).toHaveBeenCalledWith('warning-1');
@@ -164,7 +170,7 @@ describe('RecentAttestationsPanel', () => {
         summary={SUMMARY}
         onSelectAttestation={vi.fn()}
         onViewAll={vi.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText('No attestations available')).toBeInTheDocument();

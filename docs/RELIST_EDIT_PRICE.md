@@ -6,10 +6,10 @@ Sellers can manage their active marketplace listings directly from the
 My Commitments card without navigating to a separate page. Two actions are
 available depending on the listing status:
 
-| Listing Status | Action Shown | Behaviour |
-|----------------|-------------|-----------|
+| Listing Status | Action Shown   | Behaviour                                                                 |
+| -------------- | -------------- | ------------------------------------------------------------------------- |
 | `Active`       | **Edit price** | Cancels the current listing and creates a new one with the updated price. |
-| `Cancelled`    | **Relist**     | Creates a fresh listing for the commitment. |
+| `Cancelled`    | **Relist**     | Creates a fresh listing for the commitment.                               |
 
 ## Components
 
@@ -47,9 +47,9 @@ An inline editor that conditionally renders based on `listing.status`:
 
 ```typescript
 interface RelistPriceEditorProps {
-  listing: MarketplaceListing;   // Current listing (Active or Cancelled)
-  sellerAddress: string;         // Wallet address of the seller
-  commitmentAsset: string;       // e.g. "XLM", "USDC"
+  listing: MarketplaceListing; // Current listing (Active or Cancelled)
+  sellerAddress: string; // Wallet address of the seller
+  commitmentAsset: string; // e.g. "XLM", "USDC"
   onPriceUpdated?: (newPrice: string) => void;
 }
 ```
@@ -99,12 +99,12 @@ pnpm test -- src/components/marketplace/RelistPriceEditor.test.tsx
 
 ## Error Handling
 
-| Scenario | Behaviour |
-|----------|-----------|
-| Cancel API returns 4xx/5xx | Error toast with server message; price rolled back. |
-| Create API returns 4xx/5xx | Error toast with server message; price rolled back. |
-| Network failure | Error toast with generic message; price rolled back. |
-| Invalid input (client-side) | Inline validation error, no API call made. |
+| Scenario                    | Behaviour                                            |
+| --------------------------- | ---------------------------------------------------- |
+| Cancel API returns 4xx/5xx  | Error toast with server message; price rolled back.  |
+| Create API returns 4xx/5xx  | Error toast with server message; price rolled back.  |
+| Network failure             | Error toast with generic message; price rolled back. |
+| Invalid input (client-side) | Inline validation error, no API call made.           |
 
 ## Future Considerations
 

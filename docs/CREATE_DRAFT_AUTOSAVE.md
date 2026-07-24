@@ -41,12 +41,12 @@ import { useDraftPersistence } from '@/hooks/useDraftPersistence';
 
 function YourComponent() {
   const {
-    draft,         // Current saved draft (null if none)
-    saveDraft,     // Save a new draft state (debounced)
-    clearDraft,    // Clear the saved draft
-    resumeDraft,   // Return the current draft
+    draft, // Current saved draft (null if none)
+    saveDraft, // Save a new draft state (debounced)
+    clearDraft, // Clear the saved draft
+    resumeDraft, // Return the current draft
   } = useDraftPersistence();
-  
+
   // ... your logic
 }
 ```
@@ -56,8 +56,8 @@ function YourComponent() {
 ```typescript
 interface DraftState {
   step: number;
-  selectedType: "safe" | "balanced" | "aggressive" | null;
-  commitmentType: "safe" | "balanced" | "aggressive";
+  selectedType: 'safe' | 'balanced' | 'aggressive' | null;
+  commitmentType: 'safe' | 'balanced' | 'aggressive';
   amount: string;
   asset: string;
   durationDays: number;
@@ -88,6 +88,7 @@ pnpm test
 ```
 
 The tests cover:
+
 - Loading valid and invalid drafts
 - Schema version validation
 - Debounced save behavior

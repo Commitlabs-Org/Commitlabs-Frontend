@@ -1,23 +1,27 @@
 # 🔍 Marketplace Search UX Flow
 
-##  Overview
+## Overview
+
 This document defines the interaction flow for the **Marketplace Search system** in CommitLabs.
 
 The goal is to provide a **smooth, predictable, and helpful search experience** that supports discovery through typing, suggestions, and fallback states.
 
 ---
 
-##  Entry Points
+## Entry Points
+
 Users can access search via:
+
 - Marketplace page (primary search bar)
 - Dashboard (global search)
 - Mobile header search icon
 
 ---
 
-##  Search Interaction Flow
+## Search Interaction Flow
 
 ### 1. Default State (Idle)
+
 - Search bar is visible with placeholder text:
   > “Search commitments, tags, or categories”
 - Search icon is displayed inside input
@@ -26,6 +30,7 @@ Users can access search via:
 ---
 
 ### 2. Focus State
+
 User clicks or taps the search bar:
 
 - Input becomes active
@@ -37,6 +42,7 @@ User clicks or taps the search bar:
 ---
 
 ### 3. Typing State
+
 User begins typing:
 
 - Real-time filtering begins
@@ -49,14 +55,17 @@ User begins typing:
 ---
 
 ### 4. Typeahead Suggestions
+
 Dropdown includes:
 
 #### Suggested Results
+
 - Commitment titles
 - Keywords or tags
 - Category labels
 
 #### Behavior
+
 - Highlight matched text
 - Limit results (e.g. top 5–8)
 - Scroll if overflow
@@ -64,6 +73,7 @@ Dropdown includes:
 ---
 
 ### 5. Keyboard Interaction (Accessibility)
+
 - ↑ / ↓ → navigate suggestions
 - Enter → select highlighted result
 - Esc → close dropdown
@@ -72,6 +82,7 @@ Dropdown includes:
 ---
 
 ### 6. Selection State
+
 User selects a result:
 
 - Navigate to selected item OR
@@ -82,6 +93,7 @@ Search input updates with selected value
 ---
 
 ### 7. No Results State
+
 If no match is found:
 
 Display message:
@@ -89,15 +101,18 @@ Display message:
 > “No results found for ‘[query]’”
 
 Provide fallback:
+
 - Suggest similar searches
 - Show popular or recommended items
 
 ---
 
 ### 8. Empty Search State
+
 If user focuses but hasn’t typed:
 
 Show:
+
 - Recent searches
 - Suggested categories
 - Popular searches
@@ -105,6 +120,7 @@ Show:
 ---
 
 ### 9. Clear / Reset
+
 User clicks clear (✕ icon):
 
 - Input is cleared
@@ -115,33 +131,38 @@ User clicks clear (✕ icon):
 ## 📱 Mobile Behavior
 
 ### Mobile Search Entry
+
 - Tap search icon → expands to full-width input
 - Overlay or push-down layout
 
 ### Mobile Interaction
+
 - Larger tap targets
 - Full-width dropdown
 - Keyboard does not block results
 
 ### Mobile Close
+
 - “Cancel” button OR back navigation
 
 ---
 
-##  Edge Cases
+## Edge Cases
 
 ### Network Delay
+
 - Show loading indicator in dropdown
 - Prevent flickering results
 
 ### Error State
+
 Display message:
 
 > “Unable to load results. Please try again.”
 
 ---
 
-##  UX Guidelines
+## UX Guidelines
 
 - Keep suggestions **relevant and limited**
 - Avoid overwhelming the user
@@ -151,7 +172,7 @@ Display message:
 
 ---
 
-##  Design QA Checklist
+## Design QA Checklist
 
 - Can users understand what to search?
 - Are suggestions helpful and accurate?
@@ -162,7 +183,8 @@ Display message:
 
 ---
 
-##  Notes
+## Notes
+
 - Prioritize **speed and clarity over complexity**
 - Avoid advanced filters in initial interaction
 - Design should scale for future enhancements (filters, sorting)

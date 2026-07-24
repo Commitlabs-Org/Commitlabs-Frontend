@@ -6,7 +6,14 @@ import { generateETag } from '../../src/lib/backend/etag';
 // Mock dependencies
 vi.mock('../../src/lib/backend/apiResponse', () => ({
   getCorrelationId: () => 'test-correlation-id',
-  fail: (code: string, message: string, details?: unknown, status?: number, retryAfter?: number, correlationId?: string) => {
+  fail: (
+    code: string,
+    message: string,
+    details?: unknown,
+    status?: number,
+    retryAfter?: number,
+    correlationId?: string,
+  ) => {
     return new NextResponse(JSON.stringify({ code, message, details }), { status: status || 500 });
   },
 }));
@@ -25,9 +32,12 @@ describe('withApiHandler - ETag Integration', () => {
   describe('ETag generation and 304 handling', () => {
     it('should add ETag header to successful 200 responses', async () => {
       const testData = { id: 1, name: 'test' };
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -41,9 +51,12 @@ describe('withApiHandler - ETag Integration', () => {
       const testData = { id: 1, name: 'test' };
       const expectedETag = generateETag(testData);
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { 'If-None-Match': expectedETag },
@@ -60,9 +73,12 @@ describe('withApiHandler - ETag Integration', () => {
       const testData = { id: 1, name: 'test' };
       const oldETag = '"old-etag"';
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { 'If-None-Match': oldETag },
@@ -81,9 +97,12 @@ describe('withApiHandler - ETag Integration', () => {
       const currentETag = generateETag(testData);
       const multipleETags = `"old-etag-1", ${currentETag}, "old-etag-2"`;
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { 'If-None-Match': multipleETags },
@@ -98,9 +117,12 @@ describe('withApiHandler - ETag Integration', () => {
     it('should handle wildcard If-None-Match header', async () => {
       const testData = { id: 1, name: 'test' };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { 'If-None-Match': '*' },
@@ -114,9 +136,12 @@ describe('withApiHandler - ETag Integration', () => {
     it('should not add ETag when enableETag is false', async () => {
       const testData = { id: 1, name: 'test' };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: false });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: false },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -142,9 +167,12 @@ describe('withApiHandler - ETag Integration', () => {
     it('should not add ETag to non-200 responses', async () => {
       const testData = { error: 'Not found' };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 404 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 404 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -154,12 +182,15 @@ describe('withApiHandler - ETag Integration', () => {
     });
 
     it('should not add ETag to non-JSON responses', async () => {
-      const handler = withApiHandler(async () => {
-        return new NextResponse('plain text', {
-          status: 200,
-          headers: { 'Content-Type': 'text/plain' },
-        });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return new NextResponse('plain text', {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' },
+          });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -177,9 +208,12 @@ describe('withApiHandler - ETag Integration', () => {
         meta: { total: 2, page: 1 },
       };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -193,9 +227,12 @@ describe('withApiHandler - ETag Integration', () => {
       const testData = { id: 1, name: 'test' };
       let firstETag: string | null = null;
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       // First request
       const req1 = new NextRequest('http://localhost/api/test');
@@ -214,13 +251,19 @@ describe('withApiHandler - ETag Integration', () => {
       const data1 = { id: 1, name: 'test' };
       const data2 = { id: 2, name: 'test' };
 
-      const handler1 = withApiHandler(async () => {
-        return NextResponse.json(data1, { status: 200 });
-      }, { enableETag: true });
+      const handler1 = withApiHandler(
+        async () => {
+          return NextResponse.json(data1, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
-      const handler2 = withApiHandler(async () => {
-        return NextResponse.json(data2, { status: 200 });
-      }, { enableETag: true });
+      const handler2 = withApiHandler(
+        async () => {
+          return NextResponse.json(data2, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req1 = new NextRequest('http://localhost/api/test');
       const response1 = await handler1(req1, { params: {} });
@@ -236,9 +279,12 @@ describe('withApiHandler - ETag Integration', () => {
     it('should include correlation ID in all responses', async () => {
       const testData = { id: 1 };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -250,9 +296,12 @@ describe('withApiHandler - ETag Integration', () => {
     it('should include Cache-Control header with ETag', async () => {
       const testData = { id: 1 };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -263,9 +312,12 @@ describe('withApiHandler - ETag Integration', () => {
     it('should handle empty array responses', async () => {
       const testData: unknown[] = [];
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -275,9 +327,12 @@ describe('withApiHandler - ETag Integration', () => {
     });
 
     it('should handle null response body gracefully', async () => {
-      const handler = withApiHandler(async () => {
-        return new NextResponse(null, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return new NextResponse(null, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -295,9 +350,12 @@ describe('withApiHandler - ETag Integration', () => {
         })),
       };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(largeData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(largeData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -312,9 +370,12 @@ describe('withApiHandler - ETag Integration', () => {
       const testData = { id: 1, name: 'test' };
       const currentETag = generateETag(testData);
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { 'If-None-Match': currentETag },
@@ -331,9 +392,12 @@ describe('withApiHandler - ETag Integration', () => {
 
   describe('ETag with error handling', () => {
     it('should not add ETag to error responses', async () => {
-      const handler = withApiHandler(async () => {
-        throw new Error('Test error');
-      }, { enableETag: true });
+      const handler = withApiHandler(
+        async () => {
+          throw new Error('Test error');
+        },
+        { enableETag: true },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -347,12 +411,15 @@ describe('withApiHandler - ETag Integration', () => {
     it('should apply CORS policy to ETag responses', async () => {
       const testData = { id: 1 };
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, {
-        enableETag: true,
-        cors: { GET: { access: 'public' } },
-      });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        {
+          enableETag: true,
+          cors: { GET: { access: 'public' } },
+        },
+      );
 
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
@@ -365,12 +432,15 @@ describe('withApiHandler - ETag Integration', () => {
       const testData = { id: 1 };
       const currentETag = generateETag(testData);
 
-      const handler = withApiHandler(async () => {
-        return NextResponse.json(testData, { status: 200 });
-      }, {
-        enableETag: true,
-        cors: { GET: { access: 'public' } },
-      });
+      const handler = withApiHandler(
+        async () => {
+          return NextResponse.json(testData, { status: 200 });
+        },
+        {
+          enableETag: true,
+          cors: { GET: { access: 'public' } },
+        },
+      );
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { 'If-None-Match': currentETag },

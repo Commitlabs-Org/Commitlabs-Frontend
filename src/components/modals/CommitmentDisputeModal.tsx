@@ -73,9 +73,7 @@ export default function CommitmentDisputeModal({
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    const focusableElements = Array.from(
-      dialog.querySelectorAll<HTMLElement>(focusableSelector)
-    );
+    const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
 
     if (focusableElements.length === 0) return;
 
@@ -132,8 +130,9 @@ export default function CommitmentDisputeModal({
       </div>
 
       <p id={descriptionId} className="mt-4 text-sm leading-6 text-white/70">
-        Submit a formal dispute for commitment <span className="font-mono text-[#0FF0FC]">{commitmentId}</span>.
-        This action will be recorded on-chain.
+        Submit a formal dispute for commitment{' '}
+        <span className="font-mono text-[#0FF0FC]">{commitmentId}</span>. This action will be
+        recorded on-chain.
       </p>
 
       <div className="mt-6">
@@ -189,7 +188,11 @@ export default function CommitmentDisputeModal({
             disabled={isSubmitting || !reason.trim()}
             className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#FF8A0466] bg-[#FF8A041A] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(255,138,4,0.22)] transition-all hover:bg-[#FF8A0426] hover:shadow-[0_0_24px_rgba(255,138,4,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A04] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <AlertTriangle size={18} />}
+            {isSubmitting ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <AlertTriangle size={18} />
+            )}
             {isSubmitting ? 'Submitting dispute' : 'Submit dispute'}
           </button>
         )}

@@ -1,7 +1,7 @@
 # Component Spec Updates
 
 This document captures the **delta** that each existing component spec needs in order
-to reflect the audit's findings. It is a list of *amendments* to existing specs, plus
+to reflect the audit's findings. It is a list of _amendments_ to existing specs, plus
 two new component specs the audit recommends introducing.
 
 Updates here do not modify the spec files in this PR — implementation team will pick
@@ -44,18 +44,18 @@ When a `delta` is provided, the announced label includes:
 Example computed labels:
 
 - Hero tile, populated: `Total Revenue: 1.25 million dollars, increase of 12.5 percent
-  versus last month.`
+versus last month.`
 - Hero tile, semantic-inverted: `Drawdown: 0.8 percent, increase of 0.3 percent — warning.`
 
 ### Required props
 
 Add the following props to drive the expanded label:
 
-| Prop | Type | Required when | Notes |
-| :--- | :--- | :------------ | :---- |
-| `valueExpanded` | `string` | format ∈ {`count`, `currency`} | Pre-computed expanded form when caller knows it; otherwise derived |
-| `unitName` | `string` | format ∈ {`currency`, `count`} with non-default unit | Singular noun read aloud (`dollar`, `Stellar Lumen`) |
-| `semanticInversion` | `boolean` | metric semantics demand it (e.g., drawdown) | When `true`, "up" deltas render with warning treatment |
+| Prop                | Type      | Required when                                        | Notes                                                              |
+| :------------------ | :-------- | :--------------------------------------------------- | :----------------------------------------------------------------- |
+| `valueExpanded`     | `string`  | format ∈ {`count`, `currency`}                       | Pre-computed expanded form when caller knows it; otherwise derived |
+| `unitName`          | `string`  | format ∈ {`currency`, `count`} with non-default unit | Singular noun read aloud (`dollar`, `Stellar Lumen`)               |
+| `semanticInversion` | `boolean` | metric semantics demand it (e.g., drawdown)          | When `true`, "up" deltas render with warning treatment             |
 
 ### Required visual state
 
@@ -80,29 +80,29 @@ content below is what it should contain.
 
 A single, vetted modal/dialog primitive that owns:
 
-* `role="dialog"`, `aria-modal="true"`, mandatory `aria-labelledby`.
-* Focus capture on open, focus trap during use, focus restore on close.
-* `Esc` to close (configurable for non-dismissible dialogs).
-* Backdrop click-outside to close (configurable).
-* Body scroll-lock with stacking-safe counter.
-* Animations gated on `prefers-reduced-motion`.
-* Optional acknowledgement-required confirm pattern.
+- `role="dialog"`, `aria-modal="true"`, mandatory `aria-labelledby`.
+- Focus capture on open, focus trap during use, focus restore on close.
+- `Esc` to close (configurable for non-dismissible dialogs).
+- Backdrop click-outside to close (configurable).
+- Body scroll-lock with stacking-safe counter.
+- Animations gated on `prefers-reduced-motion`.
+- Optional acknowledgement-required confirm pattern.
 
 ### Required props
 
-| Prop | Type | Required | Notes |
-| :--- | :--- | :------- | :---- |
-| `isOpen` | `boolean` | yes | Controlled |
-| `onClose` | `() => void` | yes | Called on Esc, scrim click, close button |
-| `title` | `ReactNode \| string` | yes | Wired via `aria-labelledby` |
-| `description` | `ReactNode \| string` | no | Wired via `aria-describedby` |
-| `dismissible` | `boolean` | default `true` | When `false`, Esc + scrim click are disabled and a close button is not rendered |
-| `acknowledgementRequired` | `boolean` | default `false` | Renders an acknowledgement checkbox bound to the primary action's `aria-disabled` |
-| `acknowledgementText` | `ReactNode \| string` | required when `acknowledgementRequired` | The visible label and the checkbox's accessible name |
-| `primaryAction` | `{ label, onClick, variant? }` | no | Renders the primary footer button |
-| `secondaryAction` | `{ label, onClick, variant? }` | no | Renders the secondary footer button |
-| `size` | `'sm' \| 'md' \| 'lg'` | default `'md'` | Width tokens |
-| `initialFocus` | `RefObject<HTMLElement>` | no | Override the default first-focusable target |
+| Prop                      | Type                           | Required                                | Notes                                                                             |
+| :------------------------ | :----------------------------- | :-------------------------------------- | :-------------------------------------------------------------------------------- |
+| `isOpen`                  | `boolean`                      | yes                                     | Controlled                                                                        |
+| `onClose`                 | `() => void`                   | yes                                     | Called on Esc, scrim click, close button                                          |
+| `title`                   | `ReactNode \| string`          | yes                                     | Wired via `aria-labelledby`                                                       |
+| `description`             | `ReactNode \| string`          | no                                      | Wired via `aria-describedby`                                                      |
+| `dismissible`             | `boolean`                      | default `true`                          | When `false`, Esc + scrim click are disabled and a close button is not rendered   |
+| `acknowledgementRequired` | `boolean`                      | default `false`                         | Renders an acknowledgement checkbox bound to the primary action's `aria-disabled` |
+| `acknowledgementText`     | `ReactNode \| string`          | required when `acknowledgementRequired` | The visible label and the checkbox's accessible name                              |
+| `primaryAction`           | `{ label, onClick, variant? }` | no                                      | Renders the primary footer button                                                 |
+| `secondaryAction`         | `{ label, onClick, variant? }` | no                                      | Renders the secondary footer button                                               |
+| `size`                    | `'sm' \| 'md' \| 'lg'`         | default `'md'`                          | Width tokens                                                                      |
+| `initialFocus`            | `RefObject<HTMLElement>`       | no                                      | Override the default first-focusable target                                       |
 
 ### Behavior
 
@@ -130,12 +130,12 @@ A single, vetted modal/dialog primitive that owns:
 
 When migrating existing modals to the primitive:
 
-| Old modal | New |
-| :-------- | :-- |
-| [`Commitmentcreatedmodal.tsx`](../../src/components/modals/Commitmentcreatedmodal.tsx) | `<Dialog title="Commitment created" …>` |
-| [`CommitmentDetailsModal.tsx`](../../src/components/modals/CommitmentDetailsModal.tsx) | `<Dialog title="Commitment details" size="lg" …>` |
-| [`CommitmentSuccess.tsx`](../../src/components/modals/CommitmentSuccess.tsx) | `<Dialog title="…" size="sm" …>` |
-| [`CommitmentEarlyExitModal/`](../../src/components/CommitmentEarlyExitModal/) | `<Dialog title="Confirm early exit" acknowledgementRequired acknowledgementText="…" …>` |
+| Old modal                                                                              | New                                                                                     |
+| :------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| [`Commitmentcreatedmodal.tsx`](../../src/components/modals/Commitmentcreatedmodal.tsx) | `<Dialog title="Commitment created" …>`                                                 |
+| [`CommitmentDetailsModal.tsx`](../../src/components/modals/CommitmentDetailsModal.tsx) | `<Dialog title="Commitment details" size="lg" …>`                                       |
+| [`CommitmentSuccess.tsx`](../../src/components/modals/CommitmentSuccess.tsx)           | `<Dialog title="…" size="sm" …>`                                                        |
+| [`CommitmentEarlyExitModal/`](../../src/components/CommitmentEarlyExitModal/)          | `<Dialog title="Confirm early exit" acknowledgementRequired acknowledgementText="…" …>` |
 
 ---
 
@@ -148,22 +148,22 @@ every chart in the app is accessible by default.
 
 A single primitive that wraps any Recharts (or future) chart and provides:
 
-* `<figure role="figure">` semantics with `<figcaption>`.
-* A visually-hidden `<table>` mirroring the chart's series.
-* An arrow-key navigable cursor across data points; the focused point announces its
+- `<figure role="figure">` semantics with `<figcaption>`.
+- A visually-hidden `<table>` mirroring the chart's series.
+- An arrow-key navigable cursor across data points; the focused point announces its
   label and value via `aria-live`.
-* A plain-language summary slot for the caption.
-* Automatic disabling of motion under `prefers-reduced-motion`.
+- A plain-language summary slot for the caption.
+- Automatic disabling of motion under `prefers-reduced-motion`.
 
 ### Required props
 
-| Prop | Type | Required | Notes |
-| :--- | :--- | :------- | :---- |
-| `caption` | `string` | yes | Plain-language summary read into `<figcaption>` |
-| `data` | `Array<{ label: string, [seriesKey]: number }>` | yes | Source for both the chart and the hidden table |
-| `series` | `Array<{ key: string, name: string, unit?: string }>` | yes | Series metadata for axis/legend/table |
-| `summary` | `string` | recommended | One-sentence "rose 5.2% over 30 days, peaking at …" — generated upstream |
-| `children` | `ReactNode` | yes | The chart itself (Recharts components consuming `data`/`series`) |
+| Prop       | Type                                                  | Required    | Notes                                                                    |
+| :--------- | :---------------------------------------------------- | :---------- | :----------------------------------------------------------------------- |
+| `caption`  | `string`                                              | yes         | Plain-language summary read into `<figcaption>`                          |
+| `data`     | `Array<{ label: string, [seriesKey]: number }>`       | yes         | Source for both the chart and the hidden table                           |
+| `series`   | `Array<{ key: string, name: string, unit?: string }>` | yes         | Series metadata for axis/legend/table                                    |
+| `summary`  | `string`                                              | recommended | One-sentence "rose 5.2% over 30 days, peaking at …" — generated upstream |
+| `children` | `ReactNode`                                           | yes         | The chart itself (Recharts components consuming `data`/`series`)         |
 
 ### Behavior
 
@@ -180,10 +180,10 @@ A single primitive that wraps any Recharts (or future) chart and provides:
 
 The `caption` prop must:
 
-* Lead with the metric name and overall direction.
-* Cite the period.
-* Cite at least one anchor value (peak, trough, or ending value).
-* Avoid "good" / "bad" judgments — direction is a fact; meaning belongs in insights.
+- Lead with the metric name and overall direction.
+- Cite the period.
+- Cite at least one anchor value (peak, trough, or ending value).
+- Avoid "good" / "bad" judgments — direction is a fact; meaning belongs in insights.
 
 Example: `Total committed value rose 5.2% over the last 30 days, peaking at 52,600 XLM
 on Jan 28.`
@@ -195,11 +195,11 @@ on Jan 28.`
 The audit recommends a `<Tooltip>` primitive replacing every `title=""` attribute used
 as a tooltip in the codebase (F-02-05). The spec should at minimum require:
 
-* The trigger is a real `<button>` (not a styled `<span>`).
-* Tooltip content is in a node with `role="tooltip"`.
-* Form controls reference the tooltip via `aria-describedby`.
-* Tooltip persists on focus, dismisses on `Esc`.
-* Hoverable: pointer can move from trigger to tooltip without dismissal (1.4.13 — Content
+- The trigger is a real `<button>` (not a styled `<span>`).
+- Tooltip content is in a node with `role="tooltip"`.
+- Form controls reference the tooltip via `aria-describedby`.
+- Tooltip persists on focus, dismisses on `Esc`.
+- Hoverable: pointer can move from trigger to tooltip without dismissal (1.4.13 — Content
   on Hover or Focus).
 
 The full spec is out of scope for this audit; the constraints above are the spec's
@@ -212,28 +212,28 @@ minimum bar.
 For every audited component, the matching findings are listed below. When implementing,
 each component's spec should reference its findings.
 
-| Component | Findings to address |
-| :-------- | :------------------ |
-| `Navigation.tsx` | F-01-01, F-01-02, F-01-03, F-01-04, F-01-07 |
-| `Footer.tsx` | (no Critical/High; verify color contrast in audit Phase 4) |
-| section components | F-01-05 (`tabindex="-1"` on hash-anchor targets) |
-| `CreateCommitmentStepSelectType.tsx` | F-02-11 |
-| `CreateCommitmentStepConfigure.tsx` | F-02-01, F-02-05, F-02-06, F-02-07, F-02-08, F-02-09, F-02-10 |
-| `CreateCommitmentStepReview.tsx` | (no Critical/High; verify in Phase 4) |
-| `src/app/create/page.tsx` | F-02-02, F-02-03, F-02-04 |
-| `MarketplaceFilter/` | F-03-03, F-03-07 |
-| `MarketplaceHeader.tsx` | F-03-06 |
-| `MarketplaceCard.tsx` | F-03-05 |
-| `src/app/marketplace/page.tsx` | F-03-01, F-03-02, F-03-04, F-03-08 |
-| `KPICard.tsx` | F-04-02, F-04-03 |
-| `MyCommitmentsStats.tsx` | F-04-04 |
-| `MyCommitmentCard.tsx` | F-04-06 |
-| `MyCommitmentsGrid.tsx` | F-04-05 |
-| dashboard chart components | F-04-01, F-04-07 |
-| `VolatilityExposureMeter/`, `ReputationDisplay.tsx` | F-04-08 |
-| `Commitmentcreatedmodal.tsx` and other modals | F-05-01, F-05-02, F-05-05, F-05-06, F-05-08 |
-| `CommitmentEarlyExitModal/` | F-05-04 |
-| (architectural) | F-05-03, F-05-07 → Dialog primitive |
+| Component                                           | Findings to address                                           |
+| :-------------------------------------------------- | :------------------------------------------------------------ |
+| `Navigation.tsx`                                    | F-01-01, F-01-02, F-01-03, F-01-04, F-01-07                   |
+| `Footer.tsx`                                        | (no Critical/High; verify color contrast in audit Phase 4)    |
+| section components                                  | F-01-05 (`tabindex="-1"` on hash-anchor targets)              |
+| `CreateCommitmentStepSelectType.tsx`                | F-02-11                                                       |
+| `CreateCommitmentStepConfigure.tsx`                 | F-02-01, F-02-05, F-02-06, F-02-07, F-02-08, F-02-09, F-02-10 |
+| `CreateCommitmentStepReview.tsx`                    | (no Critical/High; verify in Phase 4)                         |
+| `src/app/create/page.tsx`                           | F-02-02, F-02-03, F-02-04                                     |
+| `MarketplaceFilter/`                                | F-03-03, F-03-07                                              |
+| `MarketplaceHeader.tsx`                             | F-03-06                                                       |
+| `MarketplaceCard.tsx`                               | F-03-05                                                       |
+| `src/app/marketplace/page.tsx`                      | F-03-01, F-03-02, F-03-04, F-03-08                            |
+| `KPICard.tsx`                                       | F-04-02, F-04-03                                              |
+| `MyCommitmentsStats.tsx`                            | F-04-04                                                       |
+| `MyCommitmentCard.tsx`                              | F-04-06                                                       |
+| `MyCommitmentsGrid.tsx`                             | F-04-05                                                       |
+| dashboard chart components                          | F-04-01, F-04-07                                              |
+| `VolatilityExposureMeter/`, `ReputationDisplay.tsx` | F-04-08                                                       |
+| `Commitmentcreatedmodal.tsx` and other modals       | F-05-01, F-05-02, F-05-05, F-05-06, F-05-08                   |
+| `CommitmentEarlyExitModal/`                         | F-05-04                                                       |
+| (architectural)                                     | F-05-03, F-05-07 → Dialog primitive                           |
 
 ---
 
@@ -242,15 +242,15 @@ each component's spec should reference its findings.
 These are not specs themselves but spec-adjacent constraints the implementation team
 should encode once the primitives land:
 
-* **eslint-plugin-jsx-a11y** with the `recommended` rule set, plus:
-  * `jsx-a11y/no-noninteractive-element-interactions` (catches click handlers on
+- **eslint-plugin-jsx-a11y** with the `recommended` rule set, plus:
+  - `jsx-a11y/no-noninteractive-element-interactions` (catches click handlers on
     non-interactive elements).
-  * `jsx-a11y/aria-props` and `jsx-a11y/role-has-required-aria-props`.
-* **Custom rule** to flag `disabled` paired with `aria-disabled` on buttons (catches
+  - `jsx-a11y/aria-props` and `jsx-a11y/role-has-required-aria-props`.
+- **Custom rule** to flag `disabled` paired with `aria-disabled` on buttons (catches
   F-02-01-class issues at compile time).
-* **jest-axe** assertions on the primary state of each component test (`Dialog`,
+- **jest-axe** assertions on the primary state of each component test (`Dialog`,
   `KPICard`, `ChartFigure`, `Tooltip`, wizard step components).
-* **Storybook a11y addon** for design-system primitives — the `Dialog` and
+- **Storybook a11y addon** for design-system primitives — the `Dialog` and
   `ChartFigure` stories must each render the a11y panel green.
 
 These guardrails are tracked as Phase 1 follow-up work in

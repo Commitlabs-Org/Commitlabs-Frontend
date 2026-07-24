@@ -195,9 +195,7 @@ describe('KPICard', () => {
     });
 
     it('renders icon when provided', () => {
-      const { container } = render(
-        <KPICard label="Activity" value={42} icon={Activity} />,
-      );
+      const { container } = render(<KPICard label="Activity" value={42} icon={Activity} />);
       expect(container.querySelector('svg')).toBeInTheDocument();
     });
   });
@@ -246,13 +244,7 @@ describe('KPICard', () => {
 
   describe('delta indicators', () => {
     it('renders the delta percentage value', () => {
-      render(
-        <KPICard
-          label="Users"
-          value={5420}
-          delta={{ value: 8.2, direction: 'up' }}
-        />,
-      );
+      render(<KPICard label="Users" value={5420} delta={{ value: 8.2, direction: 'up' }} />);
       expect(screen.getByText('8.2%')).toBeInTheDocument();
     });
 
@@ -269,11 +261,7 @@ describe('KPICard', () => {
 
     it('renders a TrendingUp SVG icon for direction="up"', () => {
       const { container } = render(
-        <KPICard
-          label="Revenue"
-          value={120}
-          delta={{ value: 10, direction: 'up' }}
-        />,
+        <KPICard label="Revenue" value={120} delta={{ value: 10, direction: 'up' }} />,
       );
       // Delta container renders an SVG (the TrendingUp icon)
       const deltaEl = container.querySelector('[class*="_delta_"]');
@@ -282,11 +270,7 @@ describe('KPICard', () => {
 
     it('renders a TrendingDown SVG icon for direction="down"', () => {
       const { container } = render(
-        <KPICard
-          label="Revenue"
-          value={80}
-          delta={{ value: 10, direction: 'down' }}
-        />,
+        <KPICard label="Revenue" value={80} delta={{ value: 10, direction: 'down' }} />,
       );
       const deltaEl = container.querySelector('[class*="_delta_"]');
       expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
@@ -294,11 +278,7 @@ describe('KPICard', () => {
 
     it('renders a Minus SVG icon for direction="neutral"', () => {
       const { container } = render(
-        <KPICard
-          label="Revenue"
-          value={100}
-          delta={{ value: 0, direction: 'neutral' }}
-        />,
+        <KPICard label="Revenue" value={100} delta={{ value: 0, direction: 'neutral' }} />,
       );
       const deltaEl = container.querySelector('[class*="_delta_"]');
       expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
@@ -374,11 +354,7 @@ describe('KPICard', () => {
       const directions: DeltaDirection[] = ['up', 'down', 'neutral'];
       directions.forEach((direction) => {
         const { container, unmount } = render(
-          <KPICard
-            label="Metric"
-            value={100}
-            delta={{ value: 5, direction }}
-          />,
+          <KPICard label="Metric" value={100} delta={{ value: 5, direction }} />,
         );
         const deltaEl = container.querySelector('[class*="_delta_"]');
         expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
@@ -396,13 +372,7 @@ describe('KPICard', () => {
     });
 
     it('renders a custom loading message', () => {
-      render(
-        <KPICard
-          label="Revenue"
-          state="loading"
-          loadingMessage="Fetching data..."
-        />,
-      );
+      render(<KPICard label="Revenue" state="loading" loadingMessage="Fetching data..." />);
       expect(screen.getByText('Fetching data...')).toBeInTheDocument();
     });
 
@@ -442,13 +412,7 @@ describe('KPICard', () => {
     });
 
     it('renders a custom error message', () => {
-      render(
-        <KPICard
-          label="Revenue"
-          state="error"
-          errorMessage="Network request failed"
-        />,
-      );
+      render(<KPICard label="Revenue" state="error" errorMessage="Network request failed" />);
       expect(screen.getByText('Network request failed')).toBeInTheDocument();
     });
 
@@ -459,12 +423,8 @@ describe('KPICard', () => {
     });
 
     it('renders a Retry button when onRetry is provided', () => {
-      render(
-        <KPICard label="Revenue" state="error" onRetry={() => {}} />,
-      );
-      expect(
-        screen.getByRole('button', { name: 'Retry loading data' }),
-      ).toBeInTheDocument();
+      render(<KPICard label="Revenue" state="error" onRetry={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Retry loading data' })).toBeInTheDocument();
     });
 
     it('calls onRetry when the Retry button is clicked', () => {
@@ -502,19 +462,12 @@ describe('KPICard', () => {
   // ── Color variants ────────────────────────────────────────────────────────
 
   describe('color variants', () => {
-    const variants: KPICardVariant[] = [
-      'teal', 'green', 'blue', 'purple', 'orange', 'neutral',
-    ];
+    const variants: KPICardVariant[] = ['teal', 'green', 'blue', 'purple', 'orange', 'neutral'];
 
-    it.each(variants)(
-      'applies the CSS module class for the "%s" variant',
-      (variant) => {
-        const { container } = render(
-          <KPICard label="Metric" value={1} variant={variant} />,
-        );
-        expect(getRoot(container).className).toContain(`_${variant}_`);
-      },
-    );
+    it.each(variants)('applies the CSS module class for the "%s" variant', (variant) => {
+      const { container } = render(<KPICard label="Metric" value={1} variant={variant} />);
+      expect(getRoot(container).className).toContain(`_${variant}_`);
+    });
 
     it('defaults to the "teal" variant when variant is omitted', () => {
       const { container } = render(<KPICard label="Metric" value={1} />);
@@ -527,15 +480,10 @@ describe('KPICard', () => {
   describe('size variants', () => {
     const sizes: KPICardSize[] = ['small', 'medium', 'large'];
 
-    it.each(sizes)(
-      'applies the CSS module class for the "%s" size',
-      (size) => {
-        const { container } = render(
-          <KPICard label="Metric" value={1} size={size} />,
-        );
-        expect(getRoot(container).className).toContain(`_${size}_`);
-      },
-    );
+    it.each(sizes)('applies the CSS module class for the "%s" size', (size) => {
+      const { container } = render(<KPICard label="Metric" value={1} size={size} />);
+      expect(getRoot(container).className).toContain(`_${size}_`);
+    });
 
     it('defaults to the "medium" size when size is omitted', () => {
       const { container } = render(<KPICard label="Metric" value={1} />);
@@ -588,24 +536,14 @@ describe('KPICard', () => {
       const { container } = render(
         <KPICard label="Total Revenue" value={1250} format="currency" decimals={0} />,
       );
-      expect(getRoot(container)).toHaveAttribute(
-        'aria-label',
-        'Total Revenue: $1,250',
-      );
+      expect(getRoot(container)).toHaveAttribute('aria-label', 'Total Revenue: $1,250');
     });
 
     it('overrides aria-label with ariaLabel prop', () => {
       const { container } = render(
-        <KPICard
-          label="Revenue"
-          value={1000}
-          ariaLabel="Custom accessible label"
-        />,
+        <KPICard label="Revenue" value={1000} ariaLabel="Custom accessible label" />,
       );
-      expect(getRoot(container)).toHaveAttribute(
-        'aria-label',
-        'Custom accessible label',
-      );
+      expect(getRoot(container)).toHaveAttribute('aria-label', 'Custom accessible label');
     });
 
     it('auto-generated aria-label uses "--" when value is undefined', () => {
@@ -614,12 +552,8 @@ describe('KPICard', () => {
     });
 
     it('Retry button has accessible label "Retry loading data"', () => {
-      render(
-        <KPICard label="X" state="error" onRetry={() => {}} />,
-      );
-      expect(
-        screen.getByRole('button', { name: 'Retry loading data' }),
-      ).toBeInTheDocument();
+      render(<KPICard label="X" state="error" onRetry={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Retry loading data' })).toBeInTheDocument();
     });
   });
 
@@ -658,361 +592,347 @@ describe('KPICard', () => {
     });
 
     it('delta value of 0 renders "0.0%"', () => {
-      render(
-        <KPICard label="X" value={100} delta={{ value: 0, direction: 'neutral' }} />,
-      );
+      render(<KPICard label="X" value={100} delta={{ value: 0, direction: 'neutral' }} />);
       expect(screen.getByText('0.0%')).toBeInTheDocument();
     });
   });
 });
 
 describe('KPICard states', () => {
-    it('renders the value, label, and accessible label in the default state', () => {
-        render(<KPICard label="Total Revenue" value={1250} />);
+  it('renders the value, label, and accessible label in the default state', () => {
+    render(<KPICard label="Total Revenue" value={1250} />);
 
-        expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-        expect(screen.getByText('1,250')).toBeInTheDocument();
-        expect(screen.getByLabelText('Total Revenue: 1,250')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+    expect(screen.getByText('1,250')).toBeInTheDocument();
+    expect(screen.getByLabelText('Total Revenue: 1,250')).toBeInTheDocument();
+  });
 
-    it('shows the spinner and loading message in the loading state', () => {
-        render(
-            <KPICard
-                label="Total Revenue"
-                value={1250}
-                state="loading"
-                loadingMessage="Fetching revenue..."
-            />,
-        );
-
-        expect(screen.getByText('Fetching revenue...')).toBeInTheDocument();
-        expect(screen.queryByText('Total Revenue')).not.toBeInTheDocument();
-        expect(screen.queryByText('1,250')).not.toBeInTheDocument();
-
-        const spinner = document.querySelector(`.${styles.spinner}`);
-        expect(spinner).toBeInTheDocument();
-        expect(spinner?.tagName).toBe('svg');
-    });
-
-    it('shows the alert icon, error message, and retry button in the error state', () => {
-        const onRetry = vi.fn();
-        render(
-            <KPICard
-                label="Total Revenue"
-                state="error"
-                errorMessage="Could not load revenue"
-                onRetry={onRetry}
-            />,
-        );
-
-        expect(screen.getByText('Could not load revenue')).toBeInTheDocument();
-        const retryButton = screen.getByRole('button', { name: 'Retry loading data' });
-        expect(retryButton).toBeInTheDocument();
-
-        const errorIcon = document.querySelector(`.${styles.errorIcon}`);
-        expect(errorIcon).toBeInTheDocument();
-        expect(errorIcon?.tagName).toBe('svg');
-    });
-
-    it('falls back to a default error message when none is provided', () => {
-        render(<KPICard label="Total Revenue" state="error" />);
-
-        expect(screen.getByText('Failed to load')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Retry loading data' })).not.toBeInTheDocument();
-    });
-
-    it('shows the empty affordance in the empty state', () => {
-        render(<KPICard label="Total Revenue" state="empty" />);
-
-        expect(screen.getByText('No data available')).toBeInTheDocument();
-        expect(screen.queryByText('Total Revenue')).not.toBeInTheDocument();
-    });
-
-    it('shows a custom empty message when no data state is reached', () => {
-        render(<KPICard label="Total Revenue" state="empty" />);
-
-        const empty = document.querySelector(`.${styles.emptyState}`);
-        expect(empty).toBeInTheDocument();
-    });
-
-    it('renders the description and tooltip when provided', () => {
-        render(
-            <KPICard
-                label="Total Revenue"
-                value={1250}
-                description="Net of refunds"
-                tooltip="Calculated daily"
-            />,
-        );
-
-        expect(screen.getByText('Net of refunds')).toBeInTheDocument();
-        expect(screen.getByTitle('Calculated daily')).toBeInTheDocument();
-    });
-
-    it.each(['small', 'large'] as const)(
-        'renders the %s size for the default, loading, and error states',
-        (size) => {
-            const { unmount } = render(<KPICard label="Total Revenue" value={1} size={size} />);
-            expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-            unmount();
-
-            const loading = render(<KPICard label="Total Revenue" state="loading" size={size} />);
-            expect(document.querySelector(`.${styles.spinner}`)).toBeInTheDocument();
-            loading.unmount();
-
-            render(<KPICard label="Total Revenue" state="error" size={size} />);
-            expect(document.querySelector(`.${styles.errorIcon}`)).toBeInTheDocument();
-        },
+  it('shows the spinner and loading message in the loading state', () => {
+    render(
+      <KPICard
+        label="Total Revenue"
+        value={1250}
+        state="loading"
+        loadingMessage="Fetching revenue..."
+      />,
     );
 
-    it.each<{ state: CardState }>([
-        { state: 'default' },
-        { state: 'loading' },
-        { state: 'error' },
-        { state: 'empty' },
-    ])('applies the card root class for the $state state', ({ state }) => {
-        render(<KPICard label="Total Revenue" value={1} state={state} />);
+    expect(screen.getByText('Fetching revenue...')).toBeInTheDocument();
+    expect(screen.queryByText('Total Revenue')).not.toBeInTheDocument();
+    expect(screen.queryByText('1,250')).not.toBeInTheDocument();
 
-        const card = document.querySelector(`.${styles.card}`);
-        expect(card).toBeInTheDocument();
-    });
+    const spinner = document.querySelector(`.${styles.spinner}`);
+    expect(spinner).toBeInTheDocument();
+    expect(spinner?.tagName).toBe('svg');
+  });
+
+  it('shows the alert icon, error message, and retry button in the error state', () => {
+    const onRetry = vi.fn();
+    render(
+      <KPICard
+        label="Total Revenue"
+        state="error"
+        errorMessage="Could not load revenue"
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(screen.getByText('Could not load revenue')).toBeInTheDocument();
+    const retryButton = screen.getByRole('button', { name: 'Retry loading data' });
+    expect(retryButton).toBeInTheDocument();
+
+    const errorIcon = document.querySelector(`.${styles.errorIcon}`);
+    expect(errorIcon).toBeInTheDocument();
+    expect(errorIcon?.tagName).toBe('svg');
+  });
+
+  it('falls back to a default error message when none is provided', () => {
+    render(<KPICard label="Total Revenue" state="error" />);
+
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry loading data' })).not.toBeInTheDocument();
+  });
+
+  it('shows the empty affordance in the empty state', () => {
+    render(<KPICard label="Total Revenue" state="empty" />);
+
+    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(screen.queryByText('Total Revenue')).not.toBeInTheDocument();
+  });
+
+  it('shows a custom empty message when no data state is reached', () => {
+    render(<KPICard label="Total Revenue" state="empty" />);
+
+    const empty = document.querySelector(`.${styles.emptyState}`);
+    expect(empty).toBeInTheDocument();
+  });
+
+  it('renders the description and tooltip when provided', () => {
+    render(
+      <KPICard
+        label="Total Revenue"
+        value={1250}
+        description="Net of refunds"
+        tooltip="Calculated daily"
+      />,
+    );
+
+    expect(screen.getByText('Net of refunds')).toBeInTheDocument();
+    expect(screen.getByTitle('Calculated daily')).toBeInTheDocument();
+  });
+
+  it.each(['small', 'large'] as const)(
+    'renders the %s size for the default, loading, and error states',
+    (size) => {
+      const { unmount } = render(<KPICard label="Total Revenue" value={1} size={size} />);
+      expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+      unmount();
+
+      const loading = render(<KPICard label="Total Revenue" state="loading" size={size} />);
+      expect(document.querySelector(`.${styles.spinner}`)).toBeInTheDocument();
+      loading.unmount();
+
+      render(<KPICard label="Total Revenue" state="error" size={size} />);
+      expect(document.querySelector(`.${styles.errorIcon}`)).toBeInTheDocument();
+    },
+  );
+
+  it.each<{ state: CardState }>([
+    { state: 'default' },
+    { state: 'loading' },
+    { state: 'error' },
+    { state: 'empty' },
+  ])('applies the card root class for the $state state', ({ state }) => {
+    render(<KPICard label="Total Revenue" value={1} state={state} />);
+
+    const card = document.querySelector(`.${styles.card}`);
+    expect(card).toBeInTheDocument();
+  });
 });
 
 describe('KPICard delta directions', () => {
-    it.each<{ direction: DeltaDirection; iconLabel: string }>([
-        { direction: 'up', iconLabel: 'lucide-trending-up' },
-        { direction: 'down', iconLabel: 'lucide-trending-down' },
-        { direction: 'neutral', iconLabel: 'lucide-minus' },
-    ])('renders the $direction delta icon and styling', ({ direction, iconLabel }) => {
-        render(
-            <KPICard
-                label="Active Users"
-                value={500}
-                delta={{ value: 5, direction }}
-            />,
-        );
+  it.each<{ direction: DeltaDirection; iconLabel: string }>([
+    { direction: 'up', iconLabel: 'lucide-trending-up' },
+    { direction: 'down', iconLabel: 'lucide-trending-down' },
+    { direction: 'neutral', iconLabel: 'lucide-minus' },
+  ])('renders the $direction delta icon and styling', ({ direction, iconLabel }) => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction }} />);
 
-        const icon = document.querySelector(`svg.${iconLabel}`);
-        expect(icon).toBeInTheDocument();
-        expect(icon).toHaveAttribute('aria-hidden', 'true');
-        expect(screen.getByText('5.0%')).toBeInTheDocument();
-    });
+    const icon = document.querySelector(`svg.${iconLabel}`);
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('5.0%')).toBeInTheDocument();
+  });
 
-    it('marks an up delta as positive', () => {
-        render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction: 'up' }} />);
+  it('marks an up delta as positive', () => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction: 'up' }} />);
 
-        const delta = document.querySelector(`.${styles.deltaPositive}`);
-        expect(delta).toBeInTheDocument();
-    });
+    const delta = document.querySelector(`.${styles.deltaPositive}`);
+    expect(delta).toBeInTheDocument();
+  });
 
-    it('marks a down delta as negative', () => {
-        render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction: 'down' }} />);
+  it('marks a down delta as negative', () => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction: 'down' }} />);
 
-        const delta = document.querySelector(`.${styles.deltaNegative}`);
-        expect(delta).toBeInTheDocument();
-    });
+    const delta = document.querySelector(`.${styles.deltaNegative}`);
+    expect(delta).toBeInTheDocument();
+  });
 
-    it('marks a neutral delta as neutral, including a zero delta value', () => {
-        render(<KPICard label="Active Users" value={500} delta={{ value: 0, direction: 'neutral' }} />);
+  it('marks a neutral delta as neutral, including a zero delta value', () => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: 0, direction: 'neutral' }} />);
 
-        const delta = document.querySelector(`.${styles.deltaNeutral}`);
-        expect(delta).toBeInTheDocument();
-        expect(screen.getByText('0.0%')).toBeInTheDocument();
-    });
+    const delta = document.querySelector(`.${styles.deltaNeutral}`);
+    expect(delta).toBeInTheDocument();
+    expect(screen.getByText('0.0%')).toBeInTheDocument();
+  });
 
-    it('renders the period label when provided', () => {
-        render(
-            <KPICard
-                label="Active Users"
-                value={500}
-                delta={{ value: 12.5, direction: 'up', period: 'vs last 30 days' }}
-            />,
-        );
+  it('renders the period label when provided', () => {
+    render(
+      <KPICard
+        label="Active Users"
+        value={500}
+        delta={{ value: 12.5, direction: 'up', period: 'vs last 30 days' }}
+      />,
+    );
 
-        expect(screen.getByText('vs last 30 days')).toBeInTheDocument();
-    });
+    expect(screen.getByText('vs last 30 days')).toBeInTheDocument();
+  });
 
-    it('omits the period label when not provided', () => {
-        render(<KPICard label="Active Users" value={500} delta={{ value: 12.5, direction: 'up' }} />);
+  it('omits the period label when not provided', () => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: 12.5, direction: 'up' }} />);
 
-        expect(document.querySelector(`.${styles.deltaPeriod}`)).not.toBeInTheDocument();
-    });
+    expect(document.querySelector(`.${styles.deltaPeriod}`)).not.toBeInTheDocument();
+  });
 
-    it('renders a negative delta value with a down direction', () => {
-        render(
-            <KPICard
-                label="Active Users"
-                value={500}
-                delta={{ value: -8.2, direction: 'down' }}
-            />,
-        );
+  it('renders a negative delta value with a down direction', () => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: -8.2, direction: 'down' }} />);
 
-        expect(screen.getByText('-8.2%')).toBeInTheDocument();
-        expect(document.querySelector(`.${styles.deltaNegative}`)).toBeInTheDocument();
-    });
+    expect(screen.getByText('-8.2%')).toBeInTheDocument();
+    expect(document.querySelector(`.${styles.deltaNegative}`)).toBeInTheDocument();
+  });
 
-    it('derives the delta from previousValue when no explicit delta is given', () => {
-        render(<KPICard label="Active Users" value={150} previousValue={100} />);
+  it('derives the delta from previousValue when no explicit delta is given', () => {
+    render(<KPICard label="Active Users" value={150} previousValue={100} />);
 
-        expect(document.querySelector(`.${styles.deltaPositive}`)).toBeInTheDocument();
-        expect(screen.getByText('50.0%')).toBeInTheDocument();
-    });
+    expect(document.querySelector(`.${styles.deltaPositive}`)).toBeInTheDocument();
+    expect(screen.getByText('50.0%')).toBeInTheDocument();
+  });
 
-    it('does not render a delta indicator when neither delta nor previousValue is provided', () => {
-        render(<KPICard label="Active Users" value={150} />);
+  it('does not render a delta indicator when neither delta nor previousValue is provided', () => {
+    render(<KPICard label="Active Users" value={150} />);
 
-        expect(document.querySelector(`.${styles.delta}`)).not.toBeInTheDocument();
-    });
+    expect(document.querySelector(`.${styles.delta}`)).not.toBeInTheDocument();
+  });
 
-    it('treats a zero previousValue as neutral instead of dividing by zero', () => {
-        render(<KPICard label="Active Users" value={150} previousValue={0} />);
+  it('treats a zero previousValue as neutral instead of dividing by zero', () => {
+    render(<KPICard label="Active Users" value={150} previousValue={0} />);
 
-        expect(document.querySelector(`.${styles.deltaNeutral}`)).toBeInTheDocument();
-        expect(screen.getByText('0.0%')).toBeInTheDocument();
-    });
+    expect(document.querySelector(`.${styles.deltaNeutral}`)).toBeInTheDocument();
+    expect(screen.getByText('0.0%')).toBeInTheDocument();
+  });
 });
 
 describe('KPICard metric formatting', () => {
-    it('formats the default "value" category as a plain number', () => {
-        render(<KPICard label="Score" value={1234} format="value" />);
+  it('formats the default "value" category as a plain number', () => {
+    render(<KPICard label="Score" value={1234} format="value" />);
 
-        expect(screen.getByText('1,234')).toBeInTheDocument();
-    });
+    expect(screen.getByText('1,234')).toBeInTheDocument();
+  });
 
-    it('formats the "currency" category as USD by default', () => {
-        render(<KPICard label="Revenue" value={1234.5} format="currency" decimals={2} />);
+  it('formats the "currency" category as USD by default', () => {
+    render(<KPICard label="Revenue" value={1234.5} format="currency" decimals={2} />);
 
-        expect(screen.getByText('$1,234.50')).toBeInTheDocument();
-    });
+    expect(screen.getByText('$1,234.50')).toBeInTheDocument();
+  });
 
-    it('formats the "currency" category with a custom unit/currency code', () => {
-        render(<KPICard label="Revenue" value={10} format="currency" unit="EUR" decimals={2} />);
+  it('formats the "currency" category with a custom unit/currency code', () => {
+    render(<KPICard label="Revenue" value={10} format="currency" unit="EUR" decimals={2} />);
 
-        expect(screen.getByText('€10.00')).toBeInTheDocument();
-    });
+    expect(screen.getByText('€10.00')).toBeInTheDocument();
+  });
 
-    it('formats the "percentage" category', () => {
-        render(<KPICard label="Conversion" value={42.567} format="percentage" decimals={1} />);
+  it('formats the "percentage" category', () => {
+    render(<KPICard label="Conversion" value={42.567} format="percentage" decimals={1} />);
 
-        expect(screen.getByText('42.6%')).toBeInTheDocument();
-    });
+    expect(screen.getByText('42.6%')).toBeInTheDocument();
+  });
 
-    it('formats the "count" category as a compact number in millions', () => {
-        render(<KPICard label="Followers" value={1_500_000} format="count" />);
+  it('formats the "count" category as a compact number in millions', () => {
+    render(<KPICard label="Followers" value={1_500_000} format="count" />);
 
-        expect(screen.getByText('1.5M')).toBeInTheDocument();
-    });
+    expect(screen.getByText('1.5M')).toBeInTheDocument();
+  });
 
-    it('formats the "count" category as a compact number in thousands', () => {
-        render(<KPICard label="Followers" value={1_500} format="count" />);
+  it('formats the "count" category as a compact number in thousands', () => {
+    render(<KPICard label="Followers" value={1_500} format="count" />);
 
-        expect(screen.getByText('1.5K')).toBeInTheDocument();
-    });
+    expect(screen.getByText('1.5K')).toBeInTheDocument();
+  });
 
-    it('formats the "count" category below 1,000 without a suffix', () => {
-        render(<KPICard label="Followers" value={42} format="count" />);
+  it('formats the "count" category below 1,000 without a suffix', () => {
+    render(<KPICard label="Followers" value={42} format="count" />);
 
-        expect(screen.getByText('42')).toBeInTheDocument();
-    });
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
 
-    it('formats the "score" category as a plain number with decimals', () => {
-        render(<KPICard label="Health Score" value={9.5} format="score" decimals={1} />);
+  it('formats the "score" category as a plain number with decimals', () => {
+    render(<KPICard label="Health Score" value={9.5} format="score" decimals={1} />);
 
-        expect(screen.getByText('9.5')).toBeInTheDocument();
-    });
+    expect(screen.getByText('9.5')).toBeInTheDocument();
+  });
 
-    it('renders very large numbers correctly for the count category', () => {
-        render(<KPICard label="Total Hits" value={2_300_000_000} format="count" />);
+  it('renders very large numbers correctly for the count category', () => {
+    render(<KPICard label="Total Hits" value={2_300_000_000} format="count" />);
 
-        expect(screen.getByText('2.3B')).toBeInTheDocument();
-    });
+    expect(screen.getByText('2.3B')).toBeInTheDocument();
+  });
 
-    it('renders a fallback dash when value is missing in the default state', () => {
-        render(<KPICard label="Total Revenue" />);
+  it('renders a fallback dash when value is missing in the default state', () => {
+    render(<KPICard label="Total Revenue" />);
 
-        expect(screen.getByText('--')).toBeInTheDocument();
-        expect(screen.getByLabelText('Total Revenue: --')).toBeInTheDocument();
-    });
+    expect(screen.getByText('--')).toBeInTheDocument();
+    expect(screen.getByLabelText('Total Revenue: --')).toBeInTheDocument();
+  });
 
-    it('renders a fallback dash when value cannot be parsed as a number', () => {
-        render(<KPICard label="Total Revenue" value="not-a-number" />);
+  it('renders a fallback dash when value cannot be parsed as a number', () => {
+    render(<KPICard label="Total Revenue" value="not-a-number" />);
 
-        expect(screen.getByText('--')).toBeInTheDocument();
-    });
+    expect(screen.getByText('--')).toBeInTheDocument();
+  });
 });
 
 describe('KPICard variants', () => {
-    it.each<{ variant: KPICardVariant }>([
-        { variant: 'teal' },
-        { variant: 'green' },
-        { variant: 'blue' },
-        { variant: 'purple' },
-        { variant: 'orange' },
-        { variant: 'neutral' },
-    ])('applies the $variant variant class', ({ variant }) => {
-        render(<KPICard label="Total Revenue" value={1} variant={variant} />);
+  it.each<{ variant: KPICardVariant }>([
+    { variant: 'teal' },
+    { variant: 'green' },
+    { variant: 'blue' },
+    { variant: 'purple' },
+    { variant: 'orange' },
+    { variant: 'neutral' },
+  ])('applies the $variant variant class', ({ variant }) => {
+    render(<KPICard label="Total Revenue" value={1} variant={variant} />);
 
-        const card = document.querySelector(`.${styles[variant]}`);
-        expect(card).toBeInTheDocument();
-        expect(card?.className).toContain(styles.card);
-    });
+    const card = document.querySelector(`.${styles[variant]}`);
+    expect(card).toBeInTheDocument();
+    expect(card?.className).toContain(styles.card);
+  });
 });
 
 describe('KPICard accessibility', () => {
-    it('associates the label text with the card via aria-label', () => {
-        render(<KPICard label="Total Revenue" value={1250} format="currency" />);
+  it('associates the label text with the card via aria-label', () => {
+    render(<KPICard label="Total Revenue" value={1250} format="currency" />);
 
-        expect(screen.getByLabelText('Total Revenue: $1,250')).toBeInTheDocument();
-    });
+    expect(screen.getByLabelText('Total Revenue: $1,250')).toBeInTheDocument();
+  });
 
-    it('uses a custom ariaLabel when provided, overriding the derived one', () => {
-        render(<KPICard label="Total Revenue" value={1250} ariaLabel="Custom accessible name" />);
+  it('uses a custom ariaLabel when provided, overriding the derived one', () => {
+    render(<KPICard label="Total Revenue" value={1250} ariaLabel="Custom accessible name" />);
 
-        expect(screen.getByLabelText('Custom accessible name')).toBeInTheDocument();
-    });
+    expect(screen.getByLabelText('Custom accessible name')).toBeInTheDocument();
+  });
 
-    it('hides decorative delta icons from assistive technology', () => {
-        render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction: 'up' }} />);
+  it('hides decorative delta icons from assistive technology', () => {
+    render(<KPICard label="Active Users" value={500} delta={{ value: 5, direction: 'up' }} />);
 
-        const icon = document.querySelector('svg.lucide-trending-up');
-        expect(icon).toHaveAttribute('aria-hidden', 'true');
-    });
+    const icon = document.querySelector('svg.lucide-trending-up');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
 
-    it('hides the decorative header icon from assistive technology', () => {
-        render(<KPICard label="Revenue" value={500} icon={DollarSign} />);
+  it('hides the decorative header icon from assistive technology', () => {
+    render(<KPICard label="Revenue" value={500} icon={DollarSign} />);
 
-        const icon = document.querySelector('svg.lucide-dollar-sign');
-        expect(icon).toHaveAttribute('aria-hidden', 'true');
-    });
+    const icon = document.querySelector('svg.lucide-dollar-sign');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
 
-    it('hides the decorative loading spinner from assistive technology', () => {
-        render(<KPICard label="Revenue" state="loading" />);
+  it('hides the decorative loading spinner from assistive technology', () => {
+    render(<KPICard label="Revenue" state="loading" />);
 
-        const icon = document.querySelector(`.${styles.spinner}`);
-        expect(icon).toHaveAttribute('aria-hidden', 'true');
-    });
+    const icon = document.querySelector(`.${styles.spinner}`);
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
 
-    it('hides the decorative error icon from assistive technology', () => {
-        render(<KPICard label="Revenue" state="error" />);
+  it('hides the decorative error icon from assistive technology', () => {
+    render(<KPICard label="Revenue" state="error" />);
 
-        const icon = document.querySelector(`.${styles.errorIcon}`);
-        expect(icon).toHaveAttribute('aria-hidden', 'true');
-    });
+    const icon = document.querySelector(`.${styles.errorIcon}`);
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
 
-    it('exposes the card as a button when onClick is provided, and triggers it on Enter', () => {
-        const onClick = vi.fn();
-        render(<KPICard label="Total Revenue" value={1250} onClick={onClick} />);
+  it('exposes the card as a button when onClick is provided, and triggers it on Enter', () => {
+    const onClick = vi.fn();
+    render(<KPICard label="Total Revenue" value={1250} onClick={onClick} />);
 
-        const card = screen.getByRole('button', { name: 'Total Revenue: 1,250' });
-        expect(card).toHaveAttribute('tabIndex', '0');
+    const card = screen.getByRole('button', { name: 'Total Revenue: 1,250' });
+    expect(card).toHaveAttribute('tabIndex', '0');
 
-        fireEvent.keyDown(card, { key: 'Enter' });
-        expect(onClick).toHaveBeenCalledTimes(1);
-    });
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
 
-    it('does not expose a button role when onClick is not provided', () => {
-        render(<KPICard label="Total Revenue" value={1250} />);
+  it('does not expose a button role when onClick is not provided', () => {
+    render(<KPICard label="Total Revenue" value={1250} />);
 
-        expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    });
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
 });

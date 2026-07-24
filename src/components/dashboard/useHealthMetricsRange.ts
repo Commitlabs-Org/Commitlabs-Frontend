@@ -1,2 +1,2 @@
-export * from "./useHealthMetrixRange";
-export { default } from "./useHealthMetrixRange";
+export * from './useHealthMetrixRange';
+export { default } from './useHealthMetrixRange';

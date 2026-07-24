@@ -9,10 +9,10 @@ Commitlabs escrow commitment, and the UX flow that guides users through it.
 
 The backend enforces a two-phase lifecycle for every commitment:
 
-| Phase | Status | Description |
-|-------|--------|-------------|
+| Phase           | Status    | Description                                                                    |
+| --------------- | --------- | ------------------------------------------------------------------------------ |
 | **1 — Created** | `CREATED` | Commitment record exists on-chain; escrow is empty. Yield does not accrue yet. |
-| **2 — Funded** | `ACTIVE` | Escrow has been funded; yield accrual and compliance monitoring begin. |
+| **2 — Funded**  | `ACTIVE`  | Escrow has been funded; yield accrual and compliance monitoring begin.         |
 
 Without completing Phase 2, a commitment is permanently in the `CREATED` state
 and never earns yield or becomes tradeable on the marketplace.
@@ -47,14 +47,14 @@ Content-Type: application/json
 
 **Error codes handled by the UI**
 
-| Status | Meaning | UI behaviour |
-|--------|---------|--------------|
-| 200 | Funded | Transition to `success` state, show `txHash` |
-| 409 | Already funded | Treated as success (idempotent) |
-| 403 | Caller is not the owner | Error panel with ownership message |
-| 429 | Rate-limited | Error panel with retry guidance |
-| 4xx / 5xx | Validation / server error | Error panel with server message |
-| network | Fetch threw | Error panel with JS error message |
+| Status    | Meaning                   | UI behaviour                                 |
+| --------- | ------------------------- | -------------------------------------------- |
+| 200       | Funded                    | Transition to `success` state, show `txHash` |
+| 409       | Already funded            | Treated as success (idempotent)              |
+| 403       | Caller is not the owner   | Error panel with ownership message           |
+| 429       | Rate-limited              | Error panel with retry guidance              |
+| 4xx / 5xx | Validation / server error | Error panel with server message              |
+| network   | Fetch threw               | Error panel with JS error message            |
 
 **Idempotency:** The route supports an optional `Idempotency-Key` header. The
 frontend does not currently set this header, but it can be added in the
@@ -119,10 +119,10 @@ error ──► skipped (Fund Later clicked from error panel)
 
 ### `CommitmentCreatedModal` — new props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `callerAddress` | `string \| undefined` | `undefined` | Connected wallet address forwarded to the fund API for ownership validation. |
-| `onFundLater` | `() => void \| undefined` | `undefined` | If provided, shows the "Fund Later" button. Called when the user skips. |
+| Prop            | Type                      | Default     | Description                                                                  |
+| --------------- | ------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `callerAddress` | `string \| undefined`     | `undefined` | Connected wallet address forwarded to the fund API for ownership validation. |
+| `onFundLater`   | `() => void \| undefined` | `undefined` | If provided, shows the "Fund Later" button. Called when the user skips.      |
 
 All pre-existing props (`isOpen`, `commitmentId`, `onViewCommitment`,
 `onCreateAnother`, `onClose`, `onViewOnExplorer`) are unchanged.
@@ -152,12 +152,12 @@ Skipping funding is always reversible. When the user skips:
 
 ## Error Handling
 
-| Scenario | Behaviour |
-|----------|-----------|
-| Network unreachable | Error panel with `err.message`; retry available |
-| 403 Forbidden | Specific ownership message; user may still skip |
-| 409 Conflict (already funded) | Silently treated as success; no user interruption |
-| 429 Too Many Requests | Message asks user to wait; retry available |
+| Scenario                       | Behaviour                                             |
+| ------------------------------ | ----------------------------------------------------- |
+| Network unreachable            | Error panel with `err.message`; retry available       |
+| 403 Forbidden                  | Specific ownership message; user may still skip       |
+| 409 Conflict (already funded)  | Silently treated as success; no user interruption     |
+| 429 Too Many Requests          | Message asks user to wait; retry available            |
 | JSON parse failure on response | Gracefully ignored; falls back to status-code message |
 
 ---

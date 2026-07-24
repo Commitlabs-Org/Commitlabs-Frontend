@@ -15,9 +15,7 @@ const DEFAULT_PROPS = {
   onClose: vi.fn(),
 };
 
-function renderModal(
-  overrides: Partial<React.ComponentProps<typeof CommitmentDisputeModal>> = {},
-) {
+function renderModal(overrides: Partial<React.ComponentProps<typeof CommitmentDisputeModal>> = {}) {
   return render(<CommitmentDisputeModal {...DEFAULT_PROPS} {...overrides} />);
 }
 
@@ -96,14 +94,14 @@ describe('CommitmentDisputeModal — submit error states', () => {
     fireEvent.change(textarea, { target: { value: 'Duplicate dispute' } });
     fireEvent.click(screen.getByRole('button', { name: /submit dispute/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/Dispute already filed/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Dispute already filed/i)).toBeInTheDocument());
   });
 
   it('shows server error message after non-OK response with message field', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ message: 'Commitment not eligible' }), { status: 422 }) as Response,
+      new Response(JSON.stringify({ message: 'Commitment not eligible' }), {
+        status: 422,
+      }) as Response,
     );
     renderModal();
     fireEvent.change(screen.getByPlaceholderText(/describe the issue/i), {
@@ -111,9 +109,7 @@ describe('CommitmentDisputeModal — submit error states', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /submit dispute/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/Commitment not eligible/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Commitment not eligible/i)).toBeInTheDocument());
   });
 
   it('shows fallback error message when response body cannot be parsed', async () => {
@@ -126,9 +122,7 @@ describe('CommitmentDisputeModal — submit error states', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /submit dispute/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/failed to submit dispute/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/failed to submit dispute/i)).toBeInTheDocument());
   });
 
   it('shows network error message when fetch rejects', async () => {
@@ -139,15 +133,15 @@ describe('CommitmentDisputeModal — submit error states', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /submit dispute/i }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/network failure/i),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/network failure/i));
   });
 
   it('shows submitting state during pending fetch', async () => {
     let resolveRequest!: (v: Response) => void;
     vi.spyOn(global, 'fetch').mockReturnValue(
-      new Promise<Response>((r) => { resolveRequest = r; }),
+      new Promise<Response>((r) => {
+        resolveRequest = r;
+      }),
     );
     renderModal();
     fireEvent.change(screen.getByPlaceholderText(/describe the issue/i), {

@@ -24,14 +24,27 @@ const actionSpy = vi.fn();
 
 function TestConsumer() {
   const toast = useToast();
-  return React.createElement('div', null,
+  return React.createElement(
+    'div',
+    null,
     React.createElement('button', { onClick: () => toast.success({ title: 'ok' }) }, 'success'),
-    React.createElement('button', { onClick: () => toast.success({ title: 'short', duration: 1000 }) }, 'short success'),
-    React.createElement('button', { onClick: () => toast.success({ title: 'actionable', action: { label: 'Undo', onClick: actionSpy } }) }, 'action success'),
+    React.createElement(
+      'button',
+      { onClick: () => toast.success({ title: 'short', duration: 1000 }) },
+      'short success',
+    ),
+    React.createElement(
+      'button',
+      {
+        onClick: () =>
+          toast.success({ title: 'actionable', action: { label: 'Undo', onClick: actionSpy } }),
+      },
+      'action success',
+    ),
     React.createElement('button', { onClick: () => toast.error({ title: 'bad' }) }, 'error'),
     React.createElement('button', { onClick: () => toast.info({ title: 'info' }) }, 'info'),
     React.createElement('button', { onClick: () => toast.warning({ title: 'warn' }) }, 'warning'),
-    React.createElement('button', { onClick: () => toast.dismissAll() }, 'dismiss all')
+    React.createElement('button', { onClick: () => toast.dismissAll() }, 'dismiss all'),
   );
 }
 
@@ -45,20 +58,12 @@ describe('ToastProvider', () => {
   });
 
   it('renders children and exposes toast methods', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
     expect(screen.getByText('success')).toBeDefined();
   });
 
   it('enqueues and auto-dismisses a success toast', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('success').click());
     const viewport = document.querySelector('[data-toast-viewport]')!;
@@ -69,11 +74,7 @@ describe('ToastProvider', () => {
   });
 
   it('renders no action button for toasts without an action', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('success').click());
     const viewport = document.querySelector('[data-toast-viewport]')!;
@@ -82,11 +83,7 @@ describe('ToastProvider', () => {
   });
 
   it('invokes an action and dismisses the toast by default', async () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('action success').click());
     const viewport = document.querySelector('[data-toast-viewport]')!;
@@ -101,11 +98,7 @@ describe('ToastProvider', () => {
   });
 
   it('pauses auto-dismiss while hovered and resumes with remaining time', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('short success').click());
     const toastElement = document.querySelector('[data-toast-viewport] [data-toast]');
@@ -125,11 +118,7 @@ describe('ToastProvider', () => {
   });
 
   it('dismisses a toast manually', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('error').click());
     const viewport = document.querySelector('[data-toast-viewport]')!;
@@ -140,11 +129,7 @@ describe('ToastProvider', () => {
   });
 
   it('dismisses all toasts', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('info').click());
     act(() => screen.getByText('warning').click());
@@ -156,11 +141,7 @@ describe('ToastProvider', () => {
   });
 
   it('caps visible toasts to max limit', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('success').click());
     act(() => screen.getByText('error').click());
@@ -172,11 +153,7 @@ describe('ToastProvider', () => {
   });
 
   it('announces a success toast in the polite live region', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('success').click());
 
@@ -187,11 +164,7 @@ describe('ToastProvider', () => {
   });
 
   it('announces an error toast in the assertive live region', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('error').click());
 
@@ -202,11 +175,7 @@ describe('ToastProvider', () => {
   });
 
   it('announces info and warning toasts in the polite region', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('info').click());
     expect(document.querySelector('[data-toast-announcer="polite"]')?.textContent).toBe('info');
@@ -217,11 +186,7 @@ describe('ToastProvider', () => {
   });
 
   it('clears the opposing region when severity changes', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     act(() => screen.getByText('error').click());
     expect(document.querySelector('[data-toast-announcer="assertive"]')?.textContent).toBe('bad');
@@ -232,11 +197,7 @@ describe('ToastProvider', () => {
   });
 
   it('polite announcer has aria-live="polite" and assertive has aria-live="assertive"', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     const polite = document.querySelector('[data-toast-announcer="polite"]');
     const assertive = document.querySelector('[data-toast-announcer="assertive"]');
@@ -245,11 +206,7 @@ describe('ToastProvider', () => {
   });
 
   it('announcer regions are visually hidden', () => {
-    render(
-      React.createElement(ToastProvider, null,
-        React.createElement(TestConsumer, null)
-      )
-    );
+    render(React.createElement(ToastProvider, null, React.createElement(TestConsumer, null)));
 
     const polite = document.querySelector('[data-toast-announcer="polite"]') as HTMLElement | null;
     expect(polite?.style.position).toBe('absolute');

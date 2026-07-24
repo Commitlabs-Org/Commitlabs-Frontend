@@ -9,7 +9,7 @@ export async function getUserNotifications(ownerAddress: string): Promise<Notifi
   // For now, we use mockDb.
 
   const mockData = await getMockData();
-  
+
   // In a real environment, we'd only filter by commitments owned by the user.
   // The mock-db doesn't store ownerAddress on commitments natively, so we'll pretend
   // they belong to the requested ownerAddress or we'd filter if it exists.
@@ -58,7 +58,12 @@ export async function getUserNotifications(ownerAddress: string): Promise<Notifi
 
   // Derive notifications from attestations
   for (const a of userAttestations) {
-    if (a.severity === 'violation' || a.verdict === 'fail' || (a as any).status === 'Violated' || (a as any).status === 'Invalid') {
+    if (
+      a.severity === 'violation' ||
+      a.verdict === 'fail' ||
+      (a as any).status === 'Violated' ||
+      (a as any).status === 'Invalid'
+    ) {
       notifications.push({
         id: crypto.randomUUID(),
         ownerAddress,

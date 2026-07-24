@@ -27,7 +27,7 @@ describe('MarketStatsBanner', () => {
     // Verify skeleton/loading indicators are present
     expect(screen.getByLabelText('Loading market stats')).toBeInTheDocument();
     expect(screen.getAllByText('Loading metrics...').length).toBeGreaterThan(0);
-    
+
     // Resolve to avoid unhandled promises in tests
     resolvePromise({ activeListings: 10, averageYield: 5, medianPrice: 100 });
   });
@@ -47,12 +47,12 @@ describe('MarketStatsBanner', () => {
     });
 
     expect(screen.getByLabelText('Market statistics')).toBeInTheDocument();
-    
+
     // Check if the specific KPI labels are rendered
     expect(screen.getByText('Total Listings')).toBeInTheDocument();
     expect(screen.getByText('Average APY')).toBeInTheDocument();
     expect(screen.getByText('Median Price')).toBeInTheDocument();
-    
+
     // Check if values are rendered (relying on KPICard formatting count, currency, percentage)
     // 1542 might be formatted as 1.5K or 1,542.
     // 250 might be $250.00

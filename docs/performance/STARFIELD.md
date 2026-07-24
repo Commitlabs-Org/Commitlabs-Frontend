@@ -22,11 +22,13 @@ user toggles the setting in OS preferences without reloading the page.
 ### Behavior
 
 **When `prefers-reduced-motion: reduce` is active:**
+
 - The animation class (`motion-safe:animate-pulse`) is NOT applied to stars
 - Stars render as a static snapshot — fully visible, no flicker or movement
 - The static appearance maintains the visual design without animation overhead
 
 **When `prefers-reduced-motion: no-preference` (default):**
+
 - Animation class is applied, creating a gentle pulse via CSS `opacity` keyframe
 - Only `opacity` animates — no layout recalculation per frame
 - Animation runs on the compositor thread (zero layout thrash)
@@ -39,6 +41,7 @@ When the tab becomes hidden (`document.visibilitychange` with `document.hidden =
 the animation loop pauses to save CPU/battery on inactive tabs.
 
 When the tab becomes visible again:
+
 - Animation resumes **only if `prefers-reduced-motion` is not active**
 - If reduced-motion is enabled, stars remain static
 
@@ -50,6 +53,7 @@ accessibility preferences.
 ## Mobile & Low-Power Viewport Optimization
 
 On viewports narrower than 768px (mobile breakpoint):
+
 - Star count is capped at 40 (down from 150 on desktop)
 - Fewer DOM elements reduce paint and reflow cost
 - Smaller set still creates a visually satisfying starfield effect
@@ -76,20 +80,21 @@ reach interactive content underneath. The Tailwind class maps to
 
 ## Render Cost
 
-| Concern | Decision |
-|---|---|
-| Per-frame JS | None — pure CSS animation (when enabled) |
-| Layout thrash | None — `opacity` only, compositor-friendly |
-| DOM count | 40–150 static `<div>` elements; painted once, then composited |
-| Reflow triggers | None at runtime |
-| Star positions | Pre-computed percentage values; no dynamic calculation |
-| Tab visibility | Animation paused entirely when tab is hidden |
+| Concern         | Decision                                                      |
+| --------------- | ------------------------------------------------------------- |
+| Per-frame JS    | None — pure CSS animation (when enabled)                      |
+| Layout thrash   | None — `opacity` only, compositor-friendly                    |
+| DOM count       | 40–150 static `<div>` elements; painted once, then composited |
+| Reflow triggers | None at runtime                                               |
+| Star positions  | Pre-computed percentage values; no dynamic calculation        |
+| Tab visibility  | Animation paused entirely when tab is hidden                  |
 
 ---
 
 ## Event Listeners & Cleanup
 
 The component manages these listeners:
+
 1. **`prefers-reduced-motion` media query change** — detects OS setting updates
 2. **`visibilitychange` on document** — pauses animation when tab is hidden
 

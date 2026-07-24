@@ -58,8 +58,8 @@ export const NetworkMismatchBanner: React.FC<NetworkMismatchBannerProps> = ({ on
       className="flex items-center justify-between gap-3 bg-yellow-900/80 border border-yellow-500/60 text-yellow-100 px-4 py-3 text-sm"
     >
       <span>
-        Your wallet is on a different network than this app. Please switch your
-        Freighter wallet to the correct network before making any transactions.
+        Your wallet is on a different network than this app. Please switch your Freighter wallet to
+        the correct network before making any transactions.
         {switchError && <span className="ml-1 text-red-300">({switchError})</span>}
       </span>
       <div className="flex items-center gap-2 shrink-0">

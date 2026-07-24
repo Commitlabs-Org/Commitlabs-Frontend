@@ -8,9 +8,9 @@
 
 ### `GET /api/commitments/search`
 
-| Query param    | Type   | Required | Description                                  |
-| -------------- | ------ | -------- | -------------------------------------------- |
-| `asset`        | string | yes      | Search term (URL-encoded by `URLSearchParams`) |
+| Query param    | Type   | Required | Description                                                      |
+| -------------- | ------ | -------- | ---------------------------------------------------------------- |
+| `asset`        | string | yes      | Search term (URL-encoded by `URLSearchParams`)                   |
 | `ownerAddress` | string | yes      | Stellar public key or `"marketplace"` for the public browse view |
 
 **Success — `200 OK`**
@@ -27,14 +27,14 @@
 
 ```ts
 interface MarketplaceHeaderProps {
-  onSearchChange?: (query: string) => void   // debounced callback
-  searchDebounceMs?: number                  // default 300
-  searchPlaceholder?: string
-  backHref?: string                          // default "/"
-  createHref?: string                        // default "/create"
-  searchQuery?: string                       // controlled initial value
-  ownerAddress?: string                      // forwarded to API; defaults to "marketplace"
-  onResultSelect?: (item: CommitmentSearchResult) => void
+  onSearchChange?: (query: string) => void; // debounced callback
+  searchDebounceMs?: number; // default 300
+  searchPlaceholder?: string;
+  backHref?: string; // default "/"
+  createHref?: string; // default "/create"
+  searchQuery?: string; // controlled initial value
+  ownerAddress?: string; // forwarded to API; defaults to "marketplace"
+  onResultSelect?: (item: CommitmentSearchResult) => void;
 }
 ```
 
@@ -61,26 +61,26 @@ user types "XLM"      → previous timer cleared, new timer starts
 
 The search input follows the [ARIA combobox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/):
 
-| Attribute / role         | Value / behaviour                                          |
-| ------------------------ | ---------------------------------------------------------- |
-| `role="combobox"`        | on the `<input>`                                           |
-| `aria-autocomplete`      | `"list"`                                                   |
-| `aria-expanded`          | `"true"` when dropdown is open, `"false"` otherwise        |
-| `aria-controls`          | points to the `<ul role="listbox">` (always in the DOM)    |
-| `aria-activedescendant`  | set to the active option's `id` during keyboard navigation |
-| `aria-busy`              | `"true"` while a fetch is in flight                        |
-| `role="listbox"`         | on the `<ul>` (hidden via HTML `hidden` when closed)       |
-| `role="option"`          | on each `<li>` result                                      |
-| `aria-selected`          | `"true"` on the keyboard-highlighted option only           |
+| Attribute / role        | Value / behaviour                                          |
+| ----------------------- | ---------------------------------------------------------- |
+| `role="combobox"`       | on the `<input>`                                           |
+| `aria-autocomplete`     | `"list"`                                                   |
+| `aria-expanded`         | `"true"` when dropdown is open, `"false"` otherwise        |
+| `aria-controls`         | points to the `<ul role="listbox">` (always in the DOM)    |
+| `aria-activedescendant` | set to the active option's `id` during keyboard navigation |
+| `aria-busy`             | `"true"` while a fetch is in flight                        |
+| `role="listbox"`        | on the `<ul>` (hidden via HTML `hidden` when closed)       |
+| `role="option"`         | on each `<li>` result                                      |
+| `aria-selected`         | `"true"` on the keyboard-highlighted option only           |
 
 ### Keyboard shortcuts
 
-| Key        | Effect                                              |
-| ---------- | --------------------------------------------------- |
-| `ArrowDown`| Move highlight to the next option (clamps at last)  |
-| `ArrowUp`  | Move highlight to the previous option (clamps at 0) |
-| `Enter`    | Select the highlighted option, close dropdown       |
-| `Escape`   | Close dropdown without selecting                    |
+| Key         | Effect                                              |
+| ----------- | --------------------------------------------------- |
+| `ArrowDown` | Move highlight to the next option (clamps at last)  |
+| `ArrowUp`   | Move highlight to the previous option (clamps at 0) |
+| `Enter`     | Select the highlighted option, close dropdown       |
+| `Escape`    | Close dropdown without selecting                    |
 
 ---
 

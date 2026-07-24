@@ -20,8 +20,7 @@ describe('useDebounce', () => {
 
   it('updates the debounced value only after the specified delay', () => {
     const { result, rerender } = renderHook(
-      ({ value, delay }: { value: string; delay: number }) =>
-        useDebounce(value, delay),
+      ({ value, delay }: { value: string; delay: number }) => useDebounce(value, delay),
       { initialProps: { value: 'initial', delay: 300 } },
     );
 
@@ -81,10 +80,9 @@ describe('useDebounce', () => {
   });
 
   it('uses a default delay of 300 ms when none is provided', () => {
-    const { result, rerender } = renderHook(
-      ({ value }: { value: number }) => useDebounce(value),
-      { initialProps: { value: 0 } },
-    );
+    const { result, rerender } = renderHook(({ value }: { value: number }) => useDebounce(value), {
+      initialProps: { value: 0 },
+    });
 
     rerender({ value: 42 });
 

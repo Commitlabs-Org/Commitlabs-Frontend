@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  KeyValueStorageAdapter,
-  MemoryStorageAdapter,
-  createStorageAdapter,
-} from './storage';
+import { KeyValueStorageAdapter, MemoryStorageAdapter, createStorageAdapter } from './storage';
 
 describe('MemoryStorageAdapter', () => {
   let storage: MemoryStorageAdapter;
@@ -61,11 +57,9 @@ describe('KeyValueStorageAdapter', () => {
     const storage = new KeyValueStorageAdapter(client);
 
     await storage.set('session:key', { count: 3 }, { ttlMs: 1500 });
-    expect(client.set).toHaveBeenCalledWith(
-      'session:key',
-      JSON.stringify({ count: 3 }),
-      { ttlSeconds: 2 },
-    );
+    expect(client.set).toHaveBeenCalledWith('session:key', JSON.stringify({ count: 3 }), {
+      ttlSeconds: 2,
+    });
 
     expect(await storage.get<{ count: number }>('session:key')).toEqual({
       count: 3,
@@ -88,9 +82,7 @@ describe('KeyValueStorageAdapter', () => {
 
     const storage = new KeyValueStorageAdapter(client);
 
-    await expect(storage.get('nonce:key')).rejects.toThrow(
-      'Storage operation failed',
-    );
+    await expect(storage.get('nonce:key')).rejects.toThrow('Storage operation failed');
   });
 });
 

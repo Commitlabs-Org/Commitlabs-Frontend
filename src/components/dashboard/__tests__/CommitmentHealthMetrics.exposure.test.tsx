@@ -6,10 +6,7 @@ import React from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { HealthMetricsValueHistoryChart } from '../HealthMetricsValueHistoryChart';
-import {
-  computeCommitmentExposure,
-  type CommitmentExposureResult,
-} from '@/utils/exposure';
+import { computeCommitmentExposure, type CommitmentExposureResult } from '@/utils/exposure';
 
 beforeAll(() => {
   global.ResizeObserver = class ResizeObserver {
@@ -35,9 +32,7 @@ const valueData = [
 ];
 
 function renderWithExposure(exposure: CommitmentExposureResult) {
-  return render(
-    <HealthMetricsValueHistoryChart data={valueData} exposure={exposure} />,
-  );
+  return render(<HealthMetricsValueHistoryChart data={valueData} exposure={exposure} />);
 }
 
 describe('VolatilityExposureMeter live binding', () => {

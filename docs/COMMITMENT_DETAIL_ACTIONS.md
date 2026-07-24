@@ -4,23 +4,23 @@ The `CommitmentDetailActions` component renders the primary control surface for 
 
 ## Actions
 
-| Button | Destination | Implementation |
-|---|---|---|
-| **Early Exit** | `CommitmentEarlyExitModal` | Opens the early exit modal with penalty breakdown. Disabled via `canEarlyExit`. |
+| Button                            | Destination                | Implementation                                                                                          |
+| --------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Early Exit**                    | `CommitmentEarlyExitModal` | Opens the early exit modal with penalty breakdown. Disabled via `canEarlyExit`.                         |
 | **View Full Attestation History** | Attestation panel (scroll) | Scrolls the page to the `#attestations-section` element using `scrollIntoView({ behavior: 'smooth' })`. |
-| **Export Commitment Data** | `ExportCommitmentsModal` | Opens the existing export modal to download a CSV snapshot. |
-| **Report an Issue** | `CommitmentDisputeModal` | Opens the dispute submission modal which POSTs to `/api/commitments/[id]/dispute`. |
+| **Export Commitment Data**        | `ExportCommitmentsModal`   | Opens the existing export modal to download a CSV snapshot.                                             |
+| **Report an Issue**               | `CommitmentDisputeModal`   | Opens the dispute submission modal which POSTs to `/api/commitments/[id]/dispute`.                      |
 
 ## Props
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `canEarlyExit` | `boolean` | — | Whether the Early Exit button is enabled |
-| `onEarlyExit` | `() => void` | — | Called when the enabled Early Exit button is clicked |
-| `onViewAttestations` | `() => void` | — | Called when View Attestations is clicked |
-| `onExportData` | `() => void` | — | Called when Export Data is clicked |
-| `onReportIssue` | `() => void` | — | Called when Report Issue is clicked |
-| `earlyExitDisabledReason` | `string` | `'Early exit is only available before maturity'` | Tooltip text shown on the disabled Early Exit button |
+| Prop                      | Type         | Default                                          | Description                                          |
+| ------------------------- | ------------ | ------------------------------------------------ | ---------------------------------------------------- |
+| `canEarlyExit`            | `boolean`    | —                                                | Whether the Early Exit button is enabled             |
+| `onEarlyExit`             | `() => void` | —                                                | Called when the enabled Early Exit button is clicked |
+| `onViewAttestations`      | `() => void` | —                                                | Called when View Attestations is clicked             |
+| `onExportData`            | `() => void` | —                                                | Called when Export Data is clicked                   |
+| `onReportIssue`           | `() => void` | —                                                | Called when Report Issue is clicked                  |
+| `earlyExitDisabledReason` | `string`     | `'Early exit is only available before maturity'` | Tooltip text shown on the disabled Early Exit button |
 
 ## State-driven affordances
 
@@ -50,18 +50,18 @@ const attestationsRef = useRef<HTMLDivElement>(null);
 
 // Callbacks
 const handleViewAttestations = useCallback(() => {
-    attestationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  attestationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }, []);
 
 const handleExportData = useCallback(() => {
-    setExportModalOpen(true);
+  setExportModalOpen(true);
 }, []);
 
 const handleReportIssue = useCallback(() => {
-    setDisputeModalOpen(true);
+  setDisputeModalOpen(true);
 }, []);
 
 const handleEarlyExit = useCallback(() => {
-    setEarlyExitModalOpen(true);
+  setEarlyExitModalOpen(true);
 }, []);
 ```
