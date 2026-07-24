@@ -11,7 +11,7 @@ const STEPS = ['Select Type', 'Configure', 'Review'] as const;
 
 export default function WizardStepper({ currentStep }: WizardStepperProps) {
   return (
-    <nav className={styles.stepper} aria-label="Wizard progress">
+    <nav className={styles.stepper} aria-label="Wizard progress" data-testid="wizard-stepper">
       <div className={styles.track}>
         {STEPS.map((label, idx) => {
           const stepNum = (idx + 1) as 1 | 2 | 3;

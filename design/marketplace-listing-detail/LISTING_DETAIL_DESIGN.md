@@ -6,7 +6,7 @@ This document specifies the UI/UX design for the marketplace listing detail page
 
 **Scope**: UI/UX design only. No implementation code included.
 
-**Reference**: This design builds on [SellerTrustGuidelines.md](../../docs/SellerTrustGuidelines.md), [FigmaDesign.md](../../FigmaDesign.md), and [success-state-ux.md](../../docs/success-state-ux.md).
+**Reference**: This design builds on [SellerTrustGuidelines.md](../../docs/SellerTrustGuidelines.md), [FigmaDesign.md](../../docs/design/FigmaDesign.md), and [success-state-ux.md](../../docs/success-state-ux.md).
 
 ---
 
@@ -627,8 +627,8 @@ This design specification covers:
 ## 15. Related Documentation
 
 - [SellerTrustGuidelines.md](../../docs/SellerTrustGuidelines.md) — Trust badge and reputation display standards
-- [FigmaDesign.md](../../FigmaDesign.md) — Success state UX patterns (relevant for post-purchase states)
-- [ERROR_PAGES_README.md](../../ERROR_PAGES_README.md) — Error page patterns and recovery flows
+- [FigmaDesign.md](../../docs/design/FigmaDesign.md) — Success state UX patterns (relevant for post-purchase states)
+- [ERROR_PAGES_README.md](../../docs/error-pages/ERROR_PAGES_README.md) — Error page patterns and recovery flows
 - [DEVELOPER_GUIDE.md](../../DEVELOPER_GUIDE.md) — Coding standards and component patterns
 - [ARCHITECTURE.md](../../ARCHITECTURE.md) — System architecture and data flow
 

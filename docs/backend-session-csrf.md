@@ -41,6 +41,7 @@ Requests with `Authorization: Bearer <non-empty>` **skip** CSRF enforcement (int
 | `GET /api/auth/csrf` | Requires `cl_session`; returns current `csrfToken` | N/A |
 | `POST /api/commitments` | — | Yes, when cookie present |
 | `POST /api/commitments/[id]/settle` | — | Yes |
+| `POST /api/commitments/[id]/fund` | — | Yes |
 | `POST /api/commitments/[id]/early-exit` | — | Yes |
 | `POST /api/attestations` | — | Yes |
 | `POST /api/marketplace/listings` | — | Yes |

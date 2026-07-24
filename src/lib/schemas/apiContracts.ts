@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ─── Envelope schemas ─────────────────────────────────────────────────────────
 
@@ -24,7 +24,8 @@ export function OkBodySchema<T extends z.ZodTypeAny>(dataSchema: T) {
 export const HealthResponseSchema = OkBodySchema(
   z.object({
     status: z.string(),
-    timestamp: z.string().datetime(),
+    uptime: z.number().nonnegative(),
+    version: z.string(),
   }),
 );
 
@@ -40,6 +41,7 @@ export const CommitmentItemSchema = z.object({
   violationCount: z.number().optional(),
   createdAt: z.string(),
   expiresAt: z.string(),
+  contractVersion: z.string().optional(),
 });
 
 export const CommitmentsListResponseSchema = OkBodySchema(
@@ -48,6 +50,45 @@ export const CommitmentsListResponseSchema = OkBodySchema(
     page: z.number().int().positive(),
     pageSize: z.number().int().positive(),
     total: z.number().int().nonnegative(),
+  }),
+);
+
+export const CommitmentSearchItemSchema = z.object({
+  commitmentId: z.string(),
+  ownerAddress: z.string(),
+  asset: z.string(),
+  amount: z.string(),
+  status: z.enum(['ACTIVE', 'SETTLED', 'VIOLATED', 'EARLY_EXIT', 'UNKNOWN']),
+  riskType: z.string(),
+  complianceScore: z.number(),
+  currentValue: z.string(),
+  feeEarned: z.string(),
+  violationCount: z.number(),
+  createdAt: z.string(),
+  expiresAt: z.string(),
+});
+
+export const CommitmentSearchFiltersSchema = z.object({
+  asset: z.string().nullable(),
+  status: z.string().nullable(),
+  riskType: z.string().nullable(),
+  minCompliance: z.number().nullable(),
+  sortBy: z.string(),
+  sortOrder: z.enum(['asc', 'desc']),
+});
+
+export const CommitmentSearchResponseSchema = OkBodySchema(
+  z.object({
+    data: z.array(CommitmentSearchItemSchema),
+    meta: z.object({
+      page: z.number().int().positive(),
+      pageSize: z.number().int().positive(),
+      total: z.number().int().nonnegative(),
+      totalPages: z.number().int().positive(),
+      hasNextPage: z.boolean(),
+      hasPrevPage: z.boolean(),
+    }),
+    filters: CommitmentSearchFiltersSchema,
   }),
 );
 
@@ -62,13 +103,16 @@ export const CommitmentDetailSchema = z.object({
   currentValue: z.string(),
   status: z.string(),
   daysRemaining: z.number().int().min(0),
-  drawdownPercent: z.number().optional(),
+  drawdownPercent: z.number().nullable().optional(),
   maxLossPercent: z.number().nullable(),
-  tokenId: z.string().optional(),
+  tokenId: z.string().nullable().optional(),
   nftMetadataLink: z.string().optional(),
+  contractVersion: z.string().optional(),
 });
 
-export const CommitmentDetailResponseSchema = OkBodySchema(CommitmentDetailSchema);
+export const CommitmentDetailResponseSchema = OkBodySchema(
+  CommitmentDetailSchema,
+);
 
 export const MarketplaceListingCardSchema = z.object({
   id: z.string(),
@@ -96,6 +140,7 @@ export const AttestationSummarySchema = z.object({
   violation: z.boolean(),
   feeEarned: z.string().optional(),
   recordedAt: z.string(),
+  contractVersion: z.string().optional(),
 });
 
 export const AttestationPostResponseSchema = OkBodySchema(
@@ -104,3 +149,59 @@ export const AttestationPostResponseSchema = OkBodySchema(
     txReference: z.string().nullable(),
   }),
 );
+
+export const ProtocolConstantsSchema = z.object({
+  protocolVersion: z.string().min(1),
+  network: z.string().min(1),
+  fees: z.object({
+    networkBaseFeeStroops: z.number().int().nonnegative(),
+    platformFeePercent: z.number().finite(),
+  }),
+  penalties: z.array(
+    z.object({
+      type: z.string().min(1),
+      earlyExitPenaltyPercent: z.number().finite(),
+      description: z.string().min(1),
+    }),
+  ),
+  commitmentLimits: z.object({
+    minAmountXlm: z.number().finite(),
+    maxAmountXlm: z.number().finite(),
+    minDurationDays: z.number().int().nonnegative(),
+    maxDurationDays: z.number().int().nonnegative(),
+    maxLossPercentCeiling: z.number().finite(),
+    earlyExitGracePeriodDays: z.number().int().nonnegative(),
+  }),
+  cachedAt: z.string().datetime(),
+});
+
+export const ProtocolConstantsResponseSchema = OkBodySchema(
+  ProtocolConstantsSchema,
+);
+
+// ─── Early-exit request validation ──────────────────────────────────────────
+
+/**
+ * Request body schema for POST /api/commitments/[id]/early-exit
+ *
+ * Validates:
+ * - reason: Human-readable reason for early exit (required, max 500 chars)
+ * - callerAddress: Stellar public key of the commitment owner (required, must match session)
+ */
+export const EarlyExitRequestBodySchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Reason is required")
+    .max(500, "Reason must be 500 characters or less"),
+  callerAddress: z
+    .string()
+    .trim()
+    .min(1, "Caller address is required")
+    .regex(
+      /^[A-Z0-9]{56}$/,
+      "Caller address must be a valid Stellar public key",
+    ),
+});
+
+export type EarlyExitRequestBody = z.infer<typeof EarlyExitRequestBodySchema>;

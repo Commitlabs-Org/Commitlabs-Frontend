@@ -192,6 +192,22 @@ export function logListingCancellationFailed(payload: AnalyticsPayload = {}) {
     });
 }
 
+export function logDisputeOpened(payload: AnalyticsPayload = {}) {
+    emit({
+        event: 'DisputeOpened',
+        timestamp: new Date().toISOString(),
+        payload
+    });
+}
+
+export function logDisputeResolved(payload: AnalyticsPayload = {}) {
+    emit({
+        event: 'DisputeResolved',
+        timestamp: new Date().toISOString(),
+        payload
+    });
+}
+
 export const logger = {
     info: (message: string, context?: Record<string, unknown>) =>
         logInfo(undefined, message, context),

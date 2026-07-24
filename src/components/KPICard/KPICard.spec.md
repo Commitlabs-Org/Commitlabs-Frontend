@@ -460,3 +460,59 @@ function RevenueDashboard() {
 ## Changelog
 
 - **v1.0.0** (Initial release): KPI Card component with loading/error states, delta indicators, and formatting utilities
+
+---
+
+## MyCommitmentsStats KPI Band
+
+### Overview
+
+`MyCommitmentsStats` renders a responsive four-card KPI band using `KPICard`. It accepts a `CommitmentStats` object (from `src/types/commitment.ts`) and an optional `trends` map for per-metric delta indicators.
+
+### Metric → KPICard Mapping
+
+| Metric | `CommitmentStats` field | `format` | `variant` | Icon |
+|--------|------------------------|----------|-----------|------|
+| Total Active Commitments | `totalActive` | `count` | `teal` | `TrendingUp` |
+| Total Committed Value | `totalCommittedValue` | `currency` | `green` | `DollarSign` |
+| Average Compliance Score | `avgComplianceScore` | `percentage` | `blue` | `Award` |
+| Total Fees Generated | `totalFeesGenerated` | `currency` | `purple` | `Coins` |
+
+### Trend Indicators
+
+Pass `trends` on `CommitmentStats` to show directional deltas. Each trend uses `{ value, direction, period? }` and maps to a `KPIDelta`. The `DeltaIndicator` renders a `TrendingUp`, `TrendingDown`, or `Minus` icon — never color-only — satisfying WCAG 1.4.1 (Use of Color).
+
+```tsx
+<MyCommitmentsStats
+  totalActive={12}
+  totalCommittedValue="150000"
+  avgComplianceScore={94.2}
+  totalFeesGenerated="3200"
+  trends={{
+    totalActive:        { value: 20, direction: 'up',      period: 'vs last month' },
+    totalCommittedValue:{ value: 5.3, direction: 'up',     period: 'vs last month' },
+    avgComplianceScore: { value: 1.8, direction: 'neutral' },
+    totalFeesGenerated: { value: 12,  direction: 'down',   period: 'vs last month' },
+  }}
+/>
+```
+
+### Responsive Breakpoints
+
+| Viewport | Columns | Gap |
+|----------|---------|-----|
+| ≥ 1025 px (desktop) | 4 | 1.5 rem |
+| 641 – 1024 px (tablet) | 2 | 1 rem |
+| ≤ 640 px (mobile) | 1 | 0.75 rem |
+
+Breakpoints are defined in `MyCommitmentsStats.module.css`. Card-level styles (padding, typography, hover) are inherited from `KPICard.module.css`.
+
+### Accessibility
+
+- The grid wrapper carries `role="region"` and `aria-label="Commitment statistics"`.
+- Each `KPICard` auto-generates `aria-label="${label}: ${formattedValue}"`.
+- Trend direction is conveyed by icon shape (TrendingUp / TrendingDown / Minus) in addition to color.
+
+### Changelog
+
+- **v1.1.0**: Replaced custom `MetricCard` with `KPICard`; added `trends` support via `CommitmentStats.trends`.

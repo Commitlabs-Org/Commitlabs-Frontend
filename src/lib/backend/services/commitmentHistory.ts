@@ -77,7 +77,6 @@ function buildTerminalEvent(
       // Use expiresAt as a proxy timestamp until the indexer provides the real one
       occurredAt: commitment.expiresAt ?? new Date().toISOString(),
       payload: {
-        penaltyAmount: undefined,
         exitedBy: commitment.ownerAddress,
       },
     };

@@ -11,6 +11,16 @@ repository = "https://github.com/Commitlabs-Org/Commitlabs-Frontend"
 [workspace.dependencies]
 soroban-sdk = "23"
 
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Allow common Soroban/no_std patterns that would otherwise be flagged
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+wildcard_imports = "allow"
+
 [profile.release]
 opt-level = "z"
 overflow-checks = true

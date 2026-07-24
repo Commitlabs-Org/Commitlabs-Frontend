@@ -327,8 +327,8 @@ Before implementation, the following must be approved:
 - [ARCHITECTURE.md](../../ARCHITECTURE.md) — System architecture and data flow
 - [DEVELOPER_GUIDE.md](../../DEVELOPER_GUIDE.md) — Coding standards and component patterns
 - [docs/SellerTrustGuidelines.md](../../docs/SellerTrustGuidelines.md) — Trust badge and reputation standards
-- [FigmaDesign.md](../../FigmaDesign.md) — Success state UX patterns
-- [ERROR_PAGES_README.md](../../ERROR_PAGES_README.md) — Error page patterns
+- [FigmaDesign.md](../../docs/design/FigmaDesign.md) — Success state UX patterns
+- [ERROR_PAGES_README.md](../../docs/error-pages/ERROR_PAGES_README.md) — Error page patterns
 - [docs/success-state-ux.md](../../docs/success-state-ux.md) — Post-success state patterns
 
 ---

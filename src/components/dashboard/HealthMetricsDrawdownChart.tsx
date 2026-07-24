@@ -13,11 +13,23 @@ import {
     ReferenceLine,
 } from 'recharts';
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
+import type { CommitmentExposureResult } from '@/utils/exposure';
+
+export interface LifecycleEvent {
+    /** Date string matching a point in the chart data (e.g. "2024-01"). */
+    date: string;
+    /** Short label shown on the annotation line (e.g. "Inception", "Rebalance"). */
+    label: string;
+    /** Optional colour override. Defaults to amber (#F59E0B). */
+    color?: string;
+}
 
 interface HealthMetricsDrawdownChartProps {
     data: Array<{ date: string; drawdownPercent: number }>;
     thresholdPercent?: number;
     volatilityPercent?: number;
+    /** Vertical annotation lines for lifecycle events (inception, rebalances, etc.). */
+    lifecycleEvents?: LifecycleEvent[];
 }
 
 interface TooltipPayload {
@@ -30,11 +42,12 @@ interface TooltipPayload {
 
 const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
     if (active && payload && payload.length) {
+        const entry = payload[0];
         return (
             <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
                 <p className="text-[#99a1af] text-sm mb-1">{label}</p>
-                <p className="text-[#DC2626] text-sm font-medium">
-                    Drawdown: {(payload[0].value * 100).toFixed(1)}%
+                <p className="text-[#f87171] text-sm font-medium">
+                    Drawdown: {((entry?.value ?? 0) * 100).toFixed(1)}%
                 </p>
             </div>
         );
@@ -46,6 +59,7 @@ export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProp
     data,
     thresholdPercent,
     volatilityPercent,
+    lifecycleEvents = [],
 }) => {
     return (
         <>
@@ -68,15 +82,15 @@ export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProp
                         />
                         <XAxis
                             dataKey="date"
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             dy={10}
                         />
                         <YAxis
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             domain={[0, 1]}
@@ -104,6 +118,21 @@ export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProp
                                 opacity={0.6}
                             />
                         )}
+                        {lifecycleEvents.map((ev) => (
+                            <ReferenceLine
+                                key={ev.date}
+                                x={ev.date}
+                                stroke={ev.color ?? '#F59E0B'}
+                                strokeWidth={1.5}
+                                strokeDasharray="4 3"
+                                label={{
+                                    value: ev.label,
+                                    position: 'top',
+                                    fill: ev.color ?? '#F59E0B',
+                                    fontSize: 10,
+                                }}
+                            />
+                        ))}
                         <Area
                             type="monotone"
                             dataKey="drawdownPercent"
@@ -122,10 +151,12 @@ export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProp
                 </div>
             </div>
             
-            {volatilityPercent !== undefined && (
+            {exposure && (
                 <div className="mt-4">
                     <VolatilityExposureMeter
-                        valuePercent={volatilityPercent}
+                        insufficientData={exposure.status === 'insufficient_data'}
+                        valuePercent={exposure.exposurePercent}
+                        zoneThresholds={exposure.zoneThresholds}
                         description="Current exposure to volatile assets based on allocation and market conditions."
                     />
                 </div>

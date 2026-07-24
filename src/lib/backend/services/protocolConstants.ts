@@ -41,6 +41,8 @@ export interface CommitmentLimits {
   maxDurationDays: number;
   /** Maximum allowed drawdown / loss percentage (0–100). */
   maxLossPercentCeiling: number;
+  /** Number of days before maturity where early exit becomes penalty-free. */
+  earlyExitGracePeriodDays: number;
 }
 
 export interface ProtocolConstants {
@@ -68,6 +70,7 @@ const DEFAULT_MAX_AMOUNT_XLM = 1_000_000;
 const DEFAULT_MIN_DURATION_DAYS = 1;
 const DEFAULT_MAX_DURATION_DAYS = 365;
 const DEFAULT_MAX_LOSS_PERCENT_CEILING = 100;
+const DEFAULT_EARLY_EXIT_GRACE_PERIOD_DAYS = 7;
 
 const DEFAULT_PENALTY_TIERS: PenaltyTier[] = [
   {
@@ -164,6 +167,7 @@ export function getProtocolConstants(): ProtocolConstants {
       minDurationDays: envInt("COMMITLABS_MIN_DURATION_DAYS", DEFAULT_MIN_DURATION_DAYS),
       maxDurationDays: envInt("COMMITLABS_MAX_DURATION_DAYS", DEFAULT_MAX_DURATION_DAYS),
       maxLossPercentCeiling: envInt("COMMITLABS_MAX_LOSS_PERCENT_CEILING", DEFAULT_MAX_LOSS_PERCENT_CEILING),
+      earlyExitGracePeriodDays: envInt("COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS", DEFAULT_EARLY_EXIT_GRACE_PERIOD_DAYS),
     },
     cachedAt: new Date().toISOString(),
   };

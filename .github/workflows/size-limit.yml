@@ -1,0 +1,47 @@
+# .github/workflows/size-limit.yml
+# Enforces a per-entry client bundle-size budget with size-limit.
+#
+# size-limit measures the production build output, so this job builds the app
+# and then checks the gzipped chunk sizes against .size-limit.json. It fails
+# when a budget is exceeded.
+#
+# NOTE: this requires a successful `next build`. See docs/performance/BUNDLE_BUDGET.md.
+
+name: Size Limit
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  size-limit:
+    name: size-limit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          # Builds must be deterministic for size comparison.
+          NODE_ENV: production
+
+      - name: Check bundle size budget
+        run: npm run size

@@ -446,8 +446,8 @@ Ref: https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/[NUMBER]
 - [ARCHITECTURE.md](../../ARCHITECTURE.md) — System architecture
 - [DEVELOPER_GUIDE.md](../../DEVELOPER_GUIDE.md) — Coding standards
 - [docs/SellerTrustGuidelines.md](../../docs/SellerTrustGuidelines.md) — Trust standards
-- [ERROR_PAGES_README.md](../../ERROR_PAGES_README.md) — Error patterns
-- [FigmaDesign.md](../../FigmaDesign.md) — Success state UX
+- [ERROR_PAGES_README.md](../../docs/error-pages/ERROR_PAGES_README.md) — Error patterns
+- [FigmaDesign.md](../../docs/design/FigmaDesign.md) — Success state UX
 
 ### External References
 

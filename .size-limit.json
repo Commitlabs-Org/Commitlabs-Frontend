@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Client JS — all chunks (gzip)",
+    "path": ".next/static/chunks/**/*.js",
+    "limit": "1500 kB"
+  },
+  {
+    "name": "Framework + main entry (gzip)",
+    "path": [
+      ".next/static/chunks/framework-*.js",
+      ".next/static/chunks/main-*.js",
+      ".next/static/chunks/webpack-*.js"
+    ],
+    "limit": "120 kB"
+  },
+  {
+    "name": "Heavy shared vendor (recharts/framer-motion/stellar-sdk) (gzip)",
+    "path": ".next/static/chunks/+([0-9])-*.js",
+    "limit": "600 kB"
+  }
+]

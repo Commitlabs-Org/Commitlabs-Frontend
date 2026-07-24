@@ -10,8 +10,12 @@ description = "Soroban escrow contract for CommitLabs liquidity commitments (cre
 crate-type = ["cdylib", "rlib"]
 doctest = false
 
+[lints]
+workspace = true
+
 [dependencies]
 soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+proptest = "1.5"

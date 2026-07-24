@@ -11,6 +11,14 @@
         "varsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_"
       }
+    ],
+    "react/jsx-no-target-blank": [
+      "error",
+      {
+        "allowReferrer": false,
+        "enforceDynamicLinks": "always",
+        "warnOnSpreadAttributes": true
+      }
     ]
   }
 }

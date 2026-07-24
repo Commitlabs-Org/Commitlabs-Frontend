@@ -124,7 +124,7 @@ export const GET = withApiHandler(async (req: NextRequest, _context, correlation
     cards: listings.map(toMarketplaceCard),
     total: listings.length,
   }, undefined, 200, correlationId);
-}, { cors: MARKETPLACE_LISTINGS_CORS_POLICY });
+}, { cors: MARKETPLACE_LISTINGS_CORS_POLICY, enableETag: true });
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
   const body = await parseJsonWithLimit(req, {
