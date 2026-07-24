@@ -150,6 +150,35 @@ export const AttestationPostResponseSchema = OkBodySchema(
   }),
 );
 
+export const ProtocolConstantsSchema = z.object({
+  protocolVersion: z.string().min(1),
+  network: z.string().min(1),
+  fees: z.object({
+    networkBaseFeeStroops: z.number().int().nonnegative(),
+    platformFeePercent: z.number().finite(),
+  }),
+  penalties: z.array(
+    z.object({
+      type: z.string().min(1),
+      earlyExitPenaltyPercent: z.number().finite(),
+      description: z.string().min(1),
+    }),
+  ),
+  commitmentLimits: z.object({
+    minAmountXlm: z.number().finite(),
+    maxAmountXlm: z.number().finite(),
+    minDurationDays: z.number().int().nonnegative(),
+    maxDurationDays: z.number().int().nonnegative(),
+    maxLossPercentCeiling: z.number().finite(),
+    earlyExitGracePeriodDays: z.number().int().nonnegative(),
+  }),
+  cachedAt: z.string().datetime(),
+});
+
+export const ProtocolConstantsResponseSchema = OkBodySchema(
+  ProtocolConstantsSchema,
+);
+
 // ─── Early-exit request validation ──────────────────────────────────────────
 
 /**

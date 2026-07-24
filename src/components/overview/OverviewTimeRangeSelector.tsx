@@ -69,7 +69,8 @@ export const OverviewTimeRangeSelector: React.FC<OverviewTimeRangeSelectorProps>
       }
       if (next >= 0) {
         e.preventDefault();
-        const nextOption = OVERVIEW_RANGE_OPTIONS[next];
+        const nextOption =
+          OVERVIEW_RANGE_OPTIONS[next] ?? OVERVIEW_RANGE_OPTIONS[0];
         handleSelect(nextOption);
         buttonRefs.current[next]?.focus();
       }

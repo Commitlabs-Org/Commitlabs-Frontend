@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useToast } from '@/components/toast/ToastProvider'
+import { apiRequest } from '@/lib/client/apiClient'
 
 export function useTestNotification(channelId: string) {
   const [isSending, setIsSending] = useState(false)
@@ -11,7 +12,7 @@ export function useTestNotification(channelId: string) {
     setIsSending(true)
     try {
       // Simulate an API call to a test path
-      const res = await fetch('/api/notifications/test', {
+      await apiRequest('/api/notifications/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel: channelId })
@@ -19,10 +20,6 @@ export function useTestNotification(channelId: string) {
 
       // Simulate network delay for effect
       await new Promise(resolve => setTimeout(resolve, 800))
-
-      if (!res.ok && res.status !== 404) {
-        throw new Error(`Request failed with status ${res.status}`)
-      }
 
       success({
         title: 'Test Sent',

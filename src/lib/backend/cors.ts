@@ -67,8 +67,11 @@ function getConfiguredFirstPartyOrigins(): string[] {
 
     const configuredOrigins = configured ? splitOriginList(configured) : [];
 
-    return uniqueOrigins([...DEFAULT_FIRST_PARTY_ORIGINS, ...envOrigins, ...configuredOrigins]);
-}
+    const isProduction = process.env.NODE_ENV === 'production';
+    const localhostOrigins = isProduction ? [] : DEFAULT_FIRST_PARTY_ORIGINS;
+
+    return uniqueOrigins([...localhostOrigins, ...envOrigins, ...configuredOrigins]);
+    }
 
 function getConfiguredPublicOrigins(): AllowedOrigins {
     const configured = process.env.COMMITLABS_PUBLIC_API_ORIGINS?.trim();

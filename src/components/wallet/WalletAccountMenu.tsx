@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
+import { openExplorerUrl } from '@/utils/explorerLinks';
 import { Copy, ExternalLink, LogOut, ChevronDown } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -40,6 +40,9 @@ export const WalletAccountMenu: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [network, setNetwork] = useState<'public' | 'testnet'>('public');
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
+  const menuItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const wasMenuOpenRef = useRef(false);
 
   useEffect(() => {
     // Fetch network from protocol constants
@@ -54,7 +57,7 @@ export const WalletAccountMenu: React.FC = () => {
             setNetwork('public');
           }
         }
-      } catch (e) {
+      } catch {
         // Default to public if fetch fails
         setNetwork('public');
       }
@@ -87,6 +90,47 @@ export const WalletAccountMenu: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (menuOpen) {
+      const frame = requestAnimationFrame(() => {
+        menuItemRefs.current[0]?.focus();
+      });
+
+      wasMenuOpenRef.current = true;
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (wasMenuOpenRef.current) {
+      triggerButtonRef.current?.focus();
+      wasMenuOpenRef.current = false;
+    }
+  }, [menuOpen]);
+
+  const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+
+    event.preventDefault();
+
+    const menuItems = menuItemRefs.current.filter(
+      (item): item is HTMLButtonElement => item !== null
+    );
+    if (menuItems.length === 0) return;
+
+    const currentIndex = menuItems.indexOf(
+      document.activeElement as HTMLButtonElement
+    );
+    const nextIndex =
+      event.key === 'ArrowDown'
+        ? currentIndex < 0
+          ? 0
+          : (currentIndex + 1) % menuItems.length
+        : currentIndex < 0
+          ? menuItems.length - 1
+          : (currentIndex - 1 + menuItems.length) % menuItems.length;
+
+    menuItems[nextIndex]?.focus();
+  };
+
   const handleCopyAddress = async () => {
     if (!address) return;
     try {
@@ -117,6 +161,7 @@ export const WalletAccountMenu: React.FC = () => {
       {connected ? (
         <div ref={containerRef} className='relative inline-block text-left'>
           <button
+            ref={triggerButtonRef}
             type='button'
             className='inline-flex items-center justify-center rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-4 py-2 text-sm font-medium text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-white'
             aria-haspopup='menu'
@@ -137,6 +182,7 @@ export const WalletAccountMenu: React.FC = () => {
               className='origin-top-right absolute right-0 mt-2 w-64 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0a] shadow-[0_0_22px_rgba(0,0,0,0.45)] ring-1 ring-white ring-opacity-10'
               role='menu'
               aria-label='Wallet account menu'
+              onKeyDown={handleMenuKeyDown}
             >
               <div className='px-4 py-3 border-b border-[rgba(255,255,255,0.08)]'>
                 <p className='text-xs text-[#94A3B8] mb-1'>Connected Address</p>
@@ -165,6 +211,9 @@ export const WalletAccountMenu: React.FC = () => {
               </div>
               <div className='py-1'>
                 <button
+                  ref={(element) => {
+                    menuItemRefs.current[0] = element;
+                  }}
                   type='button'
                   className='flex items-center gap-2 w-full rounded-[14px] px-4 py-2 text-left text-sm text-white transition-colors duration-200 ease-[ease] hover:bg-[rgba(0,212,255,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white'
                   role='menuitem'
@@ -177,6 +226,9 @@ export const WalletAccountMenu: React.FC = () => {
                   View on Stellar.Expert
                 </button>
                 <button
+                  ref={(element) => {
+                    menuItemRefs.current[1] = element;
+                  }}
                   type='button'
                   className='flex items-center gap-2 w-full rounded-[14px] px-4 py-2 text-left text-sm text-white transition-colors duration-200 ease-[ease] hover:bg-[rgba(0,212,255,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white'
                   role='menuitem'

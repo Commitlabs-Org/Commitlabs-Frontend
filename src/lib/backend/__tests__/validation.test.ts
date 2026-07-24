@@ -10,7 +10,7 @@ import {
 import { PARAMETER_BOUNDS } from "../config";
 
 // A valid Stellar Ed25519 public key for use in tests
-const VALID_ADDRESS = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
+const VALID_ADDRESS = "GBVFTZL5HIPT4PFQVTZVIWR77V7LWYCXU4CLYWWHHOEXB64XPG5LDMTU";
 
 describe("validateCommitmentDraft", () => {
   describe("valid draft", () => {

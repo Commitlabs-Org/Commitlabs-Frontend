@@ -5,33 +5,9 @@
  * tokens, nonces, and other security-sensitive values.
  */
 
-/**
- * Default denylist of sensitive field names
- */
-const DEFAULT_DENYLIST = new Set([
-  'signature',
-  'token',
-  'nonce',
-  'authorization',
-  'password',
-  'secret',
-  'key',
-  'privatekey',
-  'publickey',
-  'mnemonic',
-  'seed',
-  'hash',
-  'digest',
-  'auth',
-  'bearer',
-  'apikey',
-  'api_key',
-  'session',
-  'cookie',
-  'csrf',
-  'xss',
-  'sql',
-])
+import { SENSITIVE_FIELDS } from '@/lib/shared/sensitiveFields'
+
+const DEFAULT_DENYLIST = SENSITIVE_FIELDS
 
 /**
  * Configuration options for redaction
