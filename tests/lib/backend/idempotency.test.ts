@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { IdempotencyService, InMemoryKVStore } from '@/lib/backend/idempotency';
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import { IdempotencyService, InMemoryKVStore, clearCleanupInterval } from '@/lib/backend/idempotency';
 
 describe('IdempotencyService with InMemoryKVStore', () => {
+  afterAll(() => {
+    clearCleanupInterval();
+  });
   let store: InMemoryKVStore;
   let service: IdempotencyService;
   const ttlSeconds = 60;
@@ -128,5 +131,11 @@ describe('IdempotencyService with InMemoryKVStore', () => {
 
   it('should delete a non-existent key without error', async () => {
     await expect(store.delete('non-existent')).resolves.not.toThrow();
+  });
+
+  it('should expose clearCleanupInterval and clear the module-level interval', () => {
+    expect(clearCleanupInterval).toBeDefined();
+    expect(typeof clearCleanupInterval).toBe('function');
+    expect(() => clearCleanupInterval()).not.toThrow();
   });
 });
