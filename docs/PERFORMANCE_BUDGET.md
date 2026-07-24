@@ -20,6 +20,9 @@ Field targets use Google's "good" thresholds, encoded in `WEB_VITALS_BUDGET` in
 | **LCP** (Largest Contentful Paint) | ≤ 2500 ms | Main content rendered |
 | **INP** (Interaction to Next Paint) | ≤ 200 ms | Responsiveness to input |
 | **CLS** (Cumulative Layout Shift) | ≤ 0.1 | Visual stability |
+| **FCP** (First Contentful Paint) | ≤ 1800 ms | Time until first content is painted |
+| **TTFB** (Time to First Byte) | ≤ 800 ms | Server/network responsiveness |
+| **FID** (First Input Delay) | ≤ 100 ms | Legacy input latency (prefer INP for new work) |
 
 ### Key routes
 

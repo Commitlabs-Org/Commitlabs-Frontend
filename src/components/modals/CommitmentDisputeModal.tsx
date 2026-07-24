@@ -62,36 +62,6 @@ export default function CommitmentDisputeModal({
     }
   }, [commitmentId, reason]);
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape' && status !== 'submitting') {
-      onClose();
-      return;
-    }
-
-    if (event.key !== 'Tab') return;
-
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    const focusableElements = Array.from(
-      dialog.querySelectorAll<HTMLElement>(focusableSelector)
-    );
-
-    if (focusableElements.length === 0) return;
-
-    const first = focusableElements[0] as HTMLElement | undefined;
-    const last = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
-    if (!first || !last) return;
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
   if (!isOpen) return null;
 
   const isSubmitting = status === 'submitting';
@@ -106,7 +76,8 @@ export default function CommitmentDisputeModal({
       className="w-full max-w-[520px] rounded-[18px] border border-[#FF8A0433] bg-[#0A0A0A] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
       backdropClassName="bg-black/70 px-4 py-6"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="outline-none">
+        <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#FF8A04]/30 bg-[#FF8A04]/10">
             <AlertTriangle className="h-6 w-6 text-[#FF8A04]" aria-hidden="true" />
@@ -173,26 +144,27 @@ export default function CommitmentDisputeModal({
         </div>
       ) : null}
 
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={isSubmitting}
-          className="rounded-[14px] border border-white/10 px-5 py-3 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {status === 'success' ? 'Close' : 'Cancel'}
-        </button>
-        {status !== 'success' && (
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting || !reason.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#FF8A0466] bg-[#FF8A041A] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(255,138,4,0.22)] transition-all hover:bg-[#FF8A0426] hover:shadow-[0_0_24px_rgba(255,138,4,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A04] disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-[14px] border border-white/10 px-5 py-3 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <AlertTriangle size={18} />}
-            {isSubmitting ? 'Submitting dispute' : 'Submit dispute'}
+            {status === 'success' ? 'Close' : 'Cancel'}
           </button>
-        )}
+          {status !== 'success' && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !reason.trim()}
+              className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#FF8A0466] bg-[#FF8A041A] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(255,138,4,0.22)] transition-all hover:bg-[#FF8A0426] hover:shadow-[0_0_24px_rgba(255,138,4,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A04] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <AlertTriangle size={18} />}
+              {isSubmitting ? 'Submitting dispute' : 'Submit dispute'}
+            </button>
+          )}
+        </div>
       </div>
     </Dialog>
   );

@@ -11,6 +11,7 @@ import {
   type HealthMetricsExportData,
   type HealthMetricsTab,
 } from '@/utils/chartExport';
+import { useToast } from '@/components/toast/ToastProvider';
 
 interface ChartExportMenuProps {
   commitmentId: string;
@@ -37,6 +38,7 @@ export function ChartExportMenu({
   chartContainerRef,
 }: ChartExportMenuProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const toast = useToast();
 
   const handleCsvExport = async () => {
     if (disabled || isExporting) return;
@@ -45,6 +47,11 @@ export function ChartExportMenu({
       const csv = buildHealthMetricsCsvContent(tab, data);
       const filename = buildHealthMetricsFilename(commitmentId, tab, 'csv');
       await downloadCsvContent(csv, filename);
+    } catch (err) {
+      toast.error({
+        title: 'Export failed',
+        description: err instanceof Error ? err.message : 'Failed to export CSV content',
+      });
     } finally {
       setIsExporting(false);
     }
@@ -59,6 +66,11 @@ export function ChartExportMenu({
     try {
       const filename = buildHealthMetricsFilename(commitmentId, tab, 'png');
       await exportChartContainerToPng(container, filename);
+    } catch (err) {
+      toast.error({
+        title: 'Export failed',
+        description: err instanceof Error ? err.message : 'Failed to export PNG image',
+      });
     } finally {
       setIsExporting(false);
     }
@@ -73,6 +85,11 @@ export function ChartExportMenu({
       const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
       const filename = buildHealthMetricsFilename(commitmentId, tab, 'json' as 'csv');
       await downloadBlob(blob, filename);
+    } catch (err) {
+      toast.error({
+        title: 'Export failed',
+        description: err instanceof Error ? err.message : 'Failed to export JSON data',
+      });
     } finally {
       setIsExporting(false);
     }

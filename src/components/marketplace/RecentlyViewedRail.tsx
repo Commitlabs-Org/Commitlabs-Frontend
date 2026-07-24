@@ -25,6 +25,12 @@ interface RecentlyViewedRailProps {
   onViewListing: (id: string) => void;
 }
 
+const typeVariantMap: Record<'Safe' | 'Balanced' | 'Aggressive', 'safe' | 'balanced' | 'aggressive'> = {
+  Safe: 'safe',
+  Balanced: 'balanced',
+  Aggressive: 'aggressive',
+};
+
 function TypeIcon({ type }: { type: 'Safe' | 'Balanced' | 'Aggressive' }) {
   if (type === 'Safe') {
     return React.createElement(
@@ -203,7 +209,7 @@ export function RecentlyViewedRail({ recentIds, listings, onClear, onViewListing
           style: { scrollbarWidth: 'none', msOverflowStyle: 'none' },
           tabIndex: 0,
           'aria-label': 'Recently viewed listings rail',
-          onKeyDown: (e) => {
+          onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
             if (e.key === 'ArrowLeft') {
               scroll('left');
             } else if (e.key === 'ArrowRight') {
@@ -295,7 +301,7 @@ export function RecentlyViewedRail({ recentIds, listings, onClear, onViewListing
         onClose: () => setSelectedListing(null),
         commitmentId: selectedListing.id,
         typeLabel: selectedListing.type + ' Commitment',
-        typeVariant: selectedListing.type.toLowerCase() as any,
+        typeVariant: typeVariantMap[selectedListing.type],
         currentPrice: selectedListing.price,
         amountCommitted: selectedListing.amount,
         remainingDuration: selectedListing.duration,

@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock useDebounce to return value immediately in tests
 vi.mock('@/hooks/useDebounce', () => ({
-  useDebounce: <T>(value: T) => value,
+  useDebounce: <T,>(value: T) => value,
 }))
 
 const mockSearchResults = [
