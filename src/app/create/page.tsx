@@ -77,6 +77,17 @@ export default function CreateCommitment() {
     }
   }, [draft]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("startTour") === "true") {
+        startTour();
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, [startTour]);
+
   const handleResumeDraft = () => {
     if (draft) {
       setStep(draft.step);
@@ -202,6 +213,9 @@ export default function CreateCommitment() {
       setIsSubmitting(false);
       const newCommitmentId = generateCommitmentId();
       setCommitmentId(newCommitmentId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("commitlabs:created-commitment", "true");
+      }
       setShowSuccessModal(true);
       clearDraft();
     }, 2000);

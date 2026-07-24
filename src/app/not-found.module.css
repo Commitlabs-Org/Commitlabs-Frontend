@@ -44,14 +44,38 @@
 
 .searchBox {
   margin-bottom: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.searchLabel {
+  /* Visually hidden but accessible to screen readers */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.searchRow {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  gap: 0;
 }
 
 .searchInput {
-  width: 100%;
-  max-width: 400px;
+  flex: 1;
   padding: 0.875rem 1.25rem;
-  border-radius: 8px;
+  border-radius: 8px 0 0 8px;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  border-right: none;
   background: rgba(255, 255, 255, 0.1);
   color: white;
   font-size: 1rem;
@@ -67,6 +91,29 @@
   border-color: white;
   background: rgba(255, 255, 255, 0.15);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.searchButton {
+  padding: 0.875rem 1.25rem;
+  border-radius: 0 8px 8px 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.searchButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: white;
+}
+
+.searchButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
 .actions {
@@ -95,6 +142,14 @@
 
   .searchInput {
     max-width: 100%;
+  }
+
+  .searchRow {
+    width: 100%;
+  }
+
+  .searchButton {
+    padding: 0.875rem 1rem;
   }
 
   .actions {

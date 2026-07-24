@@ -630,16 +630,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
 
-  /api/auth:
-    post:
-      summary: Authenticate wallet session
-      responses:
-        '200':
-          description: Session established.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessEnvelope'
 
   /api/auth/csrf:
     get:
@@ -662,6 +652,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
+
+  /api/auth/sessions:
+    get:
+      summary: List active sessions
+      description: Returns the list of active sessions for the authenticated user. The current session is marked with isCurrent true.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: List of sessions retrieved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sessions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                userAgent:
+                                  type: string
+                                ipAddress:
+                                  type: string
+                                createdAt:
+                                  type: string
+                                  format: date-time
+                                isCurrent:
+                                  type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/sessions/revoke-others:
+    post:
+      summary: Revoke other sessions
+      description: Revokes all other active sessions belonging to the authenticated user, preserving only the current session.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Other sessions revoked successfully.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                          revokedCount:
+                            type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/auth/nonce:
     post:

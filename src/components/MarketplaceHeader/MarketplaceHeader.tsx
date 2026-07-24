@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, {
   useCallback,
@@ -11,7 +11,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AlertCircle, ArrowLeft, Loader2, Search } from 'lucide-react'
 import styles from './MarketplaceHeader.module.css';
-import { apiGet, apiFetch } from '@/lib/apiClient';
+import { apiRequest } from '@/lib/client/apiClient';
+import { useApi } from '@/hooks/useApi';
 import { MarketStatsBanner } from './MarketStatsBanner';
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,9 @@ export function MarketplaceHeader({
   backHref = '/',
   createHref = '/create',
   searchQuery: controlledQuery,
+  ownerAddress,
+  onResultSelect,
+}: MarketplaceHeaderProps) {
 }: MarketplaceHeaderProps) {
   // ── Sort ───────────────────────────────────────────────────────────────────
   const [sortValue, setSortValue] = useState<SortValue>('popular')
@@ -91,6 +95,11 @@ export function MarketplaceHeader({
   const inputRef = useRef<HTMLInputElement>(null)
   const uid = useId()
   const listboxId = `${uid}-listbox`
+
+  const { data: stats, error: statsError } = useApi<MarketplaceStats>(
+    (signal) => apiRequest<MarketplaceStats>('/api/marketplace/stats', { method: 'GET', signal }),
+    [],
+  )
 
   // ── Debounced typeahead search ─────────────────────────────────────────────
   useEffect(() => {
@@ -119,20 +128,21 @@ export function MarketplaceHeader({
         asset: trimmed,
       })
 
-      apiFetch<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
-          .then((data) => {
-            setResults(data.data ?? []);
-            setIsDropdownOpen(true);
-            setActiveIndex(-1);
+      apiRequest<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
+        .then((data) => {
+          setResults(data.data ?? []);
+          setIsDropdownOpen(true);
+          setActiveIndex(-1);
+          setIsSearching(false);
+        })
+        .catch((err: unknown) => {
+          const e = err as { name?: string; message?: string }
+          if (e.name !== 'AbortError') {
+            setSearchError(e.message || String(err));
+            setIsDropdownOpen(false);
             setIsSearching(false);
-          })
-          .catch((err: any) => {
-            if (err.name !== 'AbortError') {
-              setSearchError(err.message || String(err));
-              setIsDropdownOpen(false);
-              setIsSearching(false);
-            }
-          })
+          }
+        })
 
       onSearchChange?.(trimmed)
     }, searchDebounceMs)
@@ -296,6 +306,18 @@ export function MarketplaceHeader({
           </div>
 
           {/* ── Stats summary ── */}
+          {stats && (
+            <div className={styles.statsSummary} aria-live="polite">
+              <span className={styles.statItem}>Listings: {stats.activeListings}</span>
+              <span className={styles.statItem}>Avg Yield: {stats.averageYield}%</span>
+              <span className={styles.statItem}>Median Price: ${stats.medianPrice}</span>
+            </div>
+          )}
+          {statsError && (
+            <div className={styles.error}>Error: {statsError.message}</div>
+          )}
+
+          {/* ── Sort control ── */}
           <MarketStatsBanner />
 
           {/* â”€â”€ Sort control â”€â”€ */}

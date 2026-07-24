@@ -3,6 +3,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import CommitmentDisputeModal from '@/components/modals/CommitmentDisputeModal';
 
 const DEFAULT_PROPS = {
@@ -162,6 +163,63 @@ describe('CommitmentDisputeModal', () => {
     // Click Cancel button
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('cycles focus with Tab and Shift+Tab within the open modal', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    const closeButton = screen.getByRole('button', { name: 'Close dispute modal' });
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    const textarea = screen.getByPlaceholderText(/describe the issue/i);
+    const submitButton = screen.getByRole('button', { name: /submit dispute/i });
+
+    // Enter a reason so the submit button is enabled and part of the tab order.
+    fireEvent.change(textarea, { target: { value: 'Some dispute reason' } });
+
+    // The dialog auto-focuses the first focusable element shortly after mount.
+    // Wait for that to settle before driving Tab, so it can't race our assertions.
+    await waitFor(() => expect(document.activeElement).toBe(closeButton));
+
+    await user.tab();
+    expect(document.activeElement).toBe(textarea);
+
+    await user.tab();
+    expect(document.activeElement).toBe(cancelButton);
+
+    await user.tab();
+    expect(document.activeElement).toBe(submitButton);
+
+    await user.tab();
+    expect(document.activeElement).toBe(closeButton);
+
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(submitButton);
+
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(cancelButton);
+  });
+
+  it('excludes the disabled submit button from the tab cycle when the reason is empty', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    const closeButton = screen.getByRole('button', { name: 'Close dispute modal' });
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    const textarea = screen.getByPlaceholderText(/describe the issue/i);
+    const submitButton = screen.getByRole('button', { name: /submit dispute/i });
+
+    expect(submitButton).toBeDisabled();
+    await waitFor(() => expect(document.activeElement).toBe(closeButton));
+
+    await user.tab();
+    expect(document.activeElement).toBe(textarea);
+
+    await user.tab();
+    expect(document.activeElement).toBe(cancelButton);
+
+    await user.tab();
+    expect(document.activeElement).toBe(closeButton);
   });
 
   it('locks body scroll while open', () => {

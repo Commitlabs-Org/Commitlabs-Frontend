@@ -14,8 +14,8 @@ We are committed to resolving security vulnerabilities quickly and carefully. Cu
 
 We take the security of CommitLabs very seriously. If you discover a security vulnerability, please do **not** open a public issue.
 
-Instead, please report it privately to our security team via email:
-**[placeholder: security@commitlabs.com]**
+Instead, please report it privately to our security team through GitHub Security Advisories:
+[Report a vulnerability](https://github.com/Commitlabs-Org/Commitlabs-Frontend/security/advisories/new)
 
 When reporting a vulnerability, please include:
 - A detailed description of the vulnerability and its potential impact.

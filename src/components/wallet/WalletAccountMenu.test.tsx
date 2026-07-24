@@ -186,6 +186,48 @@ describe('WalletAccountMenu', () => {
     );
   });
 
+  it('supports arrow-key navigation inside the account menu', async () => {
+    mockedGetAddress.mockResolvedValueOnce({
+      address: 'GABCD1234EFGH5678IJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOP',
+    });
+
+    render(<WalletAccountMenu />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
+    );
+
+    const accountButton = screen.getByRole('button', {
+      name: /connected wallet/i,
+    });
+    fireEvent.click(accountButton);
+
+    const menu = await screen.findByRole('menu', {
+      name: /wallet account menu/i,
+    });
+    const explorerMenuItem = screen.getByRole('menuitem', {
+      name: /View on Stellar.Expert/i,
+    });
+    const disconnectButton = screen.getByRole('menuitem', {
+      name: /Disconnect/i,
+    });
+
+    await waitFor(() => expect(explorerMenuItem).toHaveFocus());
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(disconnectButton).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(explorerMenuItem).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'ArrowUp' });
+    expect(disconnectButton).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(accountButton).toHaveFocus());
+  });
+
   it('shows a recovery message when the user rejects the connection in Freighter', async () => {
     mockedGetAddress.mockResolvedValueOnce({ error: 'User rejected request' });
 
