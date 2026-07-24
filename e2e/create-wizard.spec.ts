@@ -11,6 +11,50 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Create Wizard — Amount Validation (Condition-Based Waits)", () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept validate and fund API calls to keep them fully mock/hermetic
+    await page.route('**/api/commitments/validate', async (route) => {
+      const request = route.request();
+      const body = request.postDataJSON();
+      const amount = Number(body.amount);
+      if (amount > 10000) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            valid: false,
+            errors: [{ field: 'amount', message: 'Amount exceeds available balance' }],
+            warnings: [],
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            valid: true,
+            errors: [],
+            warnings: [],
+          }),
+        });
+      }
+    });
+
+    await page.route('**/api/commitments/*/fund', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          data: {
+            commitmentId: 'CMT-MOCK123',
+            txHash: '0xmocktxhash1234567890abcdef1234567890',
+            reference: 'MOCK_REFERENCE',
+            fundedAt: new Date().toISOString(),
+          },
+        }),
+      });
+    });
+
     await page.goto("/create");
     // Wait for the wizard to render (step 1 — Select Type)
     await expect(
