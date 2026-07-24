@@ -187,7 +187,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
             ref={sidebarRef}
             initial={false}
             animate={{
-              x: isMobileOpen ? 0 : undefined,
+              x: isMobileOpen ? 0 : 0,
               width: isCollapsed ? 80 : 240
             }}
             exit={{ x: '-100%' }}
@@ -243,7 +243,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
             {/* Global Search */}
             <div className="border-b border-white/10">
               <SidebarSearch
-                ownerAddress={ownerAddress}
+                {...(ownerAddress !== undefined ? { ownerAddress } : {})}
                 isCollapsed={isCollapsed}
                 onResultSelect={() => setIsMobileOpen(false)}
               />
