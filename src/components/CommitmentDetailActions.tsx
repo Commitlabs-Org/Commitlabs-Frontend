@@ -34,6 +34,12 @@ export function CommitmentDetailActions ({
   const focusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]';
 
+  const settlementChecklistProps = {
+    ...(onSettle !== undefined ? { onSettle } : {}),
+    ...(settleDisabledReason !== undefined ? { disabledReason: settleDisabledReason } : {}),
+    ...(previewRefreshTrigger !== undefined ? { refreshTrigger: previewRefreshTrigger } : {}),
+  };
+
   return (
     <div className="w-full">
       {/* Section Heading */}
@@ -74,9 +80,7 @@ export function CommitmentDetailActions ({
         <div className="mb-8">
           <SettlementEligibilityChecklist
             commitmentId={commitmentId}
-            onSettle={onSettle}
-            disabledReason={settleDisabledReason}
-            refreshTrigger={previewRefreshTrigger}
+            {...settlementChecklistProps}
           />
         </div>
       ) : null}
