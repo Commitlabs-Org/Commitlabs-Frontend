@@ -11,6 +11,7 @@ export interface Commitment {
   id: string;
   type: CommitmentType;
   status: CommitmentStatus;
+  ownerAddress?: string;
   asset: string;
   amount: string;
   currentValue?: string;
@@ -50,8 +51,10 @@ export interface Attestation {
   id: string;
   commitmentId: string;
   kind?: string;
+  status?: string;
   verdict?: AttestationVerdict;
   observedAt: string;
+  timestamp?: string;
   title?: string;
   description?: string;
   txHash?: string;
