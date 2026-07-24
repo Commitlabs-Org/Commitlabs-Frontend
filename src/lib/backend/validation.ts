@@ -58,7 +58,7 @@ const amountSchema = z.union([z.string(), z.number()]).transform((val) => {
   return num;
 });
 
-const paginationSchema = z
+const _paginationSchema = z
   .object({
     page: z
       .union([z.string(), z.number()])
@@ -87,6 +87,12 @@ const paginationSchema = z
     page: data.page,
     limit: data.limit,
   }));
+const addressSchema = z
+  .string()
+  .trim()
+  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
+    message: "Must be a valid Stellar address (G... format).",
+  });
 
 export const createCommitmentSchemaOld = z.object({
   title: z.string().min(1, "Title is required"),
@@ -129,7 +135,7 @@ const amountSchema2 = z.coerce
   .number()
   .positive("Amount must be a positive number");
 
-const paginationSchema2 = z.object({
+const _paginationSchema2 = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
 });
@@ -421,7 +427,7 @@ export function validateSupportedAsset(
  * @example
  * z.object({ ownerAddress: stellarAddressSchema })
  */
-export { addressSchema, addressSchema as stellarAddressSchema };
+export { addressSchema2 as addressSchema, addressSchema2 as stellarAddressSchema };
 
 // Amount schema: accept number or numeric string and coerce to number
 const amountSchema3 = z.union([z.number(), z.string()]).transform((v) => {
@@ -431,7 +437,7 @@ const amountSchema3 = z.union([z.number(), z.string()]).transform((v) => {
 }).refine((n) => n > 0, { message: 'Amount must be a positive number' });
 
 // Simple pagination schema
-const paginationSchema3 = z.object({
+const _paginationSchema3 = z.object({
   page: z.number().int().min(1).optional(),
   limit: z.number().int().min(1).optional(),
 });

@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { clsx } from 'clsx';
-import { 
-    TrendingUp, 
-    TrendingDown, 
-    Minus, 
-    AlertCircle, 
+import {
+    TrendingUp,
+    TrendingDown,
+    Minus,
+    AlertCircle,
     Loader2,
-    LucideIcon 
+    LucideIcon
 } from 'lucide-react';
 import styles from './KPICard.module.css';
 import { formatNumber, formatCurrency, formatPercent } from '@/utils/format';
@@ -35,25 +35,25 @@ export interface KPICardProps {
     label: string;
     value?: string | number;
     previousValue?: string | number;
-    
+
     // Visual configuration
     variant?: KPICardVariant;
     size?: KPICardSize;
     icon?: LucideIcon;
-    
+
     // Delta/change tracking
     delta?: KPIDelta;
-    
+
     // State management
     state?: CardState;
     loadingMessage?: string;
     errorMessage?: string;
-    
+
     // Formatting
     format?: MetricCategory;
     unit?: string;
     decimals?: number;
-    
+
     // Optional metadata
     description?: string;
     tooltip?: string;
@@ -125,7 +125,7 @@ const Sparkline: React.FC<SparklineProps> = ({ data, width = 80, height = 28 }) 
 export function formatNumber(value: string | number, decimals: number = 0): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     return num.toLocaleString('en-US', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
@@ -136,13 +136,13 @@ export function formatNumber(value: string | number, decimals: number = 0): stri
  * Format as currency (USD by default)
  */
 export function formatCurrency(
-    value: string | number, 
+    value: string | number,
     currency: string = 'USD',
     decimals: number = 2
 ): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
@@ -155,16 +155,16 @@ export function formatCurrency(
  * Format as percentage
  */
 export function formatPercentage(
-    value: string | number, 
+    value: string | number,
     decimals: number = 1,
     showSign: boolean = false
 ): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     const formatted = Math.abs(num).toFixed(decimals);
     const sign = showSign && num > 0 ? '+' : '';
-    
+
     return `${sign}${formatted}%`;
 }
 
@@ -174,7 +174,7 @@ export function formatPercentage(
 export function formatCompact(value: string | number): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     if (num >= 1_000_000_000) {
         return `${(num / 1_000_000_000).toFixed(1)}B`;
     }
@@ -191,18 +191,18 @@ export function formatCompact(value: string | number): string {
  * Calculate delta between two values
  */
 export function calculateDelta(
-    current: string | number, 
+    current: string | number,
     previous: string | number
 ): KPIDelta {
     const curr = typeof current === 'string' ? parseFloat(current) : current;
     const prev = typeof previous === 'string' ? parseFloat(previous) : previous;
-    
+
     if (isNaN(curr) || isNaN(prev) || prev === 0) {
         return { value: 0, direction: 'neutral' };
     }
-    
+
     const percentChange = ((curr - prev) / prev) * 100;
-    
+
     return {
         value: Math.abs(percentChange),
         direction: percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'neutral',
@@ -220,17 +220,17 @@ interface DeltaIndicatorProps {
 }
 
 const DeltaIndicator: React.FC<DeltaIndicatorProps> = ({ delta, size = 'medium' }) => {
-    const Icon = delta.direction === 'up' 
-        ? TrendingUp 
-        : delta.direction === 'down' 
-            ? TrendingDown 
+    const Icon = delta.direction === 'up'
+        ? TrendingUp
+        : delta.direction === 'down'
+            ? TrendingDown
             : Minus;
-    
+
     const isPositive = delta.direction === 'up';
     const isNegative = delta.direction === 'down';
-    
+
     return (
-        <div 
+        <div
             className={clsx(
                 styles.delta,
                 styles[`delta${size.charAt(0).toUpperCase() + size.slice(1)}`],
@@ -286,7 +286,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, size = 'mediu
             <AlertCircle className={styles.errorIcon} size={size === 'small' ? 16 : size === 'large' ? 28 : 20} />
             <span className={styles.errorMessage}>{message || 'Failed to load'}</span>
             {onRetry && (
-                <button 
+                <button
                     className={styles.retryButton}
                     onClick={onRetry}
                     aria-label="Retry loading data"
@@ -366,9 +366,9 @@ export const KPICard: React.FC<KPICardProps> = ({
     // Format value based on format type
     const formattedValue = (() => {
         if (value === undefined || value === null) return '--';
-        
+
         switch (format) {
-           case 'currency':
+            case 'currency':
                 return formatCurrency(value, { currency: unit || 'USD', decimals });
             case 'percentage':
                 return formatPercent(value, { decimals });
@@ -383,8 +383,8 @@ export const KPICard: React.FC<KPICardProps> = ({
 
     // Calculate delta if previous value provided
     const displayDelta = delta || (
-        previousValue !== undefined 
-            ? calculateDelta(value as string | number, previousValue) 
+        previousValue !== undefined
+            ? calculateDelta(value as string | number, previousValue)
             : undefined
     );
 
@@ -415,10 +415,10 @@ export const KPICard: React.FC<KPICardProps> = ({
 
     // Default state
     return (
-        <div 
+        <div
             className={clsx(
-                styles.card, 
-                styles[variant], 
+                styles.card,
+                styles[variant],
                 styles[size],
                 { [styles.clickable]: !!onClick }
             )}
