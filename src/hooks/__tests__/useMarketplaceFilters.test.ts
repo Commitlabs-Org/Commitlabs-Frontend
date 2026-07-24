@@ -129,4 +129,70 @@ describe('useMarketplaceFilters', () => {
       maxLoss: 100,
     });
   });
+
+  it('clamps out-of-range minCompliance to 0-100', () => {
+    mockSearchParams.set('minCompliance', '500');
+    const { result } = renderHook(() => useMarketplaceFilters());
+    expect(result.current.filters.minCompliance).toBe(100);
+
+    mockSearchParams.set('minCompliance', '-50');
+    const { result: result2 } = renderHook(() => useMarketplaceFilters());
+    expect(result2.current.filters.minCompliance).toBe(0);
+  });
+
+  it('clamps out-of-range maxLoss to 0-100', () => {
+    mockSearchParams.set('maxLoss', '500');
+    const { result } = renderHook(() => useMarketplaceFilters());
+    expect(result.current.filters.maxLoss).toBe(100);
+
+    mockSearchParams.set('maxLoss', '-50');
+    const { result: result2 } = renderHook(() => useMarketplaceFilters());
+    expect(result2.current.filters.maxLoss).toBe(0);
+  });
+
+  it('clamps out-of-range priceRange to [0, 1000000]', () => {
+    mockSearchParams.set('priceRange', '999999,-5');
+    const { result } = renderHook(() => useMarketplaceFilters());
+    expect(result.current.filters.priceRange).toEqual([0, 1000000]);
+
+    mockSearchParams.set('priceRange', '-100,2000000');
+    const { result: result2 } = renderHook(() => useMarketplaceFilters());
+    expect(result2.current.filters.priceRange).toEqual([0, 1000000]);
+  });
+
+  it('clamps out-of-range durationRange to [0, 90]', () => {
+    mockSearchParams.set('durationRange', '100,200');
+    const { result } = renderHook(() => useMarketplaceFilters());
+    expect(result.current.filters.durationRange).toEqual([90, 90]);
+
+    mockSearchParams.set('durationRange', '-10,-5');
+    const { result: result2 } = renderHook(() => useMarketplaceFilters());
+    expect(result2.current.filters.durationRange).toEqual([0, 0]);
+  });
+
+  it('corrects inverted range values', () => {
+    mockSearchParams.set('priceRange', '500000,100000');
+    const { result } = renderHook(() => useMarketplaceFilters());
+    expect(result.current.filters.priceRange).toEqual([100000, 500000]);
+
+    mockSearchParams.set('durationRange', '60,30');
+    const { result: result2 } = renderHook(() => useMarketplaceFilters());
+    expect(result2.current.filters.durationRange).toEqual([30, 60]);
+  });
+
+  it('handles combination of out-of-range and inverted values', () => {
+    mockSearchParams.set('priceRange', '999999,-5');
+    mockSearchParams.set('durationRange', '100,-10');
+    mockSearchParams.set('minCompliance', '500');
+    mockSearchParams.set('maxLoss', '-50');
+    const { result } = renderHook(() => useMarketplaceFilters());
+    expect(result.current.filters).toEqual({
+      sortBy: 'price',
+      commitmentType: ['balanced'],
+      priceRange: [0, 1000000],
+      durationRange: [0, 90],
+      minCompliance: 100,
+      maxLoss: 0,
+    });
+  });
 });
