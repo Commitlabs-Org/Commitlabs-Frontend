@@ -19,7 +19,7 @@ import { RecentlyViewedRail } from '@/components/marketplace/RecentlyViewedRail'
 
 
 // Listing type for marketplace items
-interface Listing {
+export interface Listing {
   id: string
   type: 'Safe' | 'Balanced' | 'Aggressive'
   score: number
@@ -238,7 +238,7 @@ function ListTypeIcon({ type }: { type: 'Safe' | 'Balanced' | 'Aggressive' }) {
   )
 }
 
-function MarketplaceRow({ item }: { item: Listing }) {
+export function MarketplaceRow({ item }: { item: Listing }) {
   const badgeClass =
     item.type === "Safe"
       ? "bg-[#0f2a1d] text-[#00C950]"
@@ -308,14 +308,14 @@ function MarketplaceRow({ item }: { item: Listing }) {
       {/* Actions */}
       <div className="flex items-center gap-3 pt-4 sm:pt-0 border-t border-white/5 sm:border-0">
         <Link
-          href={`/commitments?id=${item.id}`}
+          href={`/commitments/${item.id}`}
           className="flex-1 sm:flex-none text-center rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 sm:px-4 sm:py-2.5 text-sm font-semibold transition-colors hover:bg-white/10"
         >
           Details
         </Link>
         {item.forSale && (
           <Link
-            href={`/marketplace/trade?id=${item.id}`}
+            href={`/commitments/${item.id}`}
             className="flex-1 sm:flex-none text-center rounded-xl border border-[#0FF0FC]/40 bg-[#0FF0FC]/10 px-6 py-3.5 sm:px-4 sm:py-2.5 text-sm font-bold text-[#0FF0FC] transition-colors hover:bg-[#0FF0FC]/20"
           >
             Trade

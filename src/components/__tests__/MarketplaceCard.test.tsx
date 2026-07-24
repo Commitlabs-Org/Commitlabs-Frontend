@@ -306,7 +306,7 @@ describe("MarketplaceCard", () => {
       const link = screen.getByRole("link", { name: /Trade/ });
       expect(link).toHaveAttribute(
         "href",
-        `/marketplace/trade?id=${encodeURIComponent("abc def")}`,
+        `/commitments/${encodeURIComponent("abc def")}`,
       );
     });
 
@@ -475,7 +475,7 @@ describe("MarketplaceCard", () => {
       renderCard({ forSale: true, id: "a b&c" });
       const link = screen.getByRole("link", { name: /Trade/ });
       expect(link.getAttribute("href")).toBe(
-        `/marketplace/trade?id=${encodeURIComponent("a b&c")}`,
+        `/commitments/${encodeURIComponent("a b&c")}`,
       );
     });
   });
