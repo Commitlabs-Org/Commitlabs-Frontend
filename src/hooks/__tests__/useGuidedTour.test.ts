@@ -13,6 +13,7 @@ function makeProps(overrides = {}) {
 
 beforeEach(() => {
   localStorage.clear();
+  document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'; // clear cookies
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
 });
 
@@ -92,5 +93,23 @@ describe('useGuidedTour — tour-progress store (replayable + dismissible)', () 
     const { result } = renderHook(() => useGuidedTour(makeProps()));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.totalSteps).toBe(TOUR_STEPS.length);
+  });
+
+  it('skipTour only attempts API PUT if document.cookie contains a real session', async () => {
+    // 1. Without session
+    const { result, unmount } = renderHook(() => useGuidedTour(makeProps({ walletAddress: '0x123' })));
+    await waitFor(() => expect(result.current.isActive).toBe(true));
+    act(() => result.current.skipTour());
+    // Should not call fetch because session= is missing
+    expect(global.fetch).not.toHaveBeenCalledWith('/api/user/preferences', expect.objectContaining({ method: 'PUT' }));
+    unmount();
+
+    // 2. With session
+    document.cookie = 'session=real_token_123';
+    const { result: result2 } = renderHook(() => useGuidedTour(makeProps({ walletAddress: '0x123' })));
+    await waitFor(() => expect(result2.current.isActive).toBe(true));
+    act(() => result2.current.skipTour());
+    // Should call fetch
+    expect(global.fetch).toHaveBeenCalledWith('/api/user/preferences', expect.objectContaining({ method: 'PUT' }));
   });
 });
