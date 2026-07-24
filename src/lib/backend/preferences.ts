@@ -206,24 +206,13 @@ export function requireWalletAuth(authHeader: string | null): string {
 
     const token = parts[1];
 
-    // 1. Try to verify session token via the session store first
+    // Try to verify session token via the session store
     const session = verifySessionToken(token);
-    if (session.valid && session.address) {
-        return session.address;
-    }
-
-    // 2. Fall back to placeholder token: session_<address>_<timestamp>
-    const match = token.match(/^session_([A-Z0-9]+)_\d+$/);
-    if (!match) {
+    if (!session.valid || !session.address) {
         throw new UnauthorizedError('Invalid or expired session token.');
     }
 
-    const address = match[1];
-    if (!address) {
-        throw new UnauthorizedError('Could not resolve wallet address from token.');
-    }
-
-    return address;
+    return session.address;
 }        
 
 

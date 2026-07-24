@@ -12,7 +12,7 @@
  *   - Edge cases (empty payload, unknown fields ignored, concurrent writes)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
     GET,
     PUT,
@@ -24,6 +24,7 @@ import {
     type UserPreferences,
     type PreferencesStore,
 } from '@/lib/backend/preferences';
+import { createSessionToken } from '@/lib/backend/auth';
 import { createMockRequest, parseResponse } from './helpers';
 
 // ─── Test store factory ──────────────────────────────────────────────────────
@@ -70,8 +71,8 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 const BASE_URL = 'http://localhost:3000/api/user/preferences';
 const VALID_ADDRESS = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDE';
-/** Mirrors `createSessionToken` placeholder format. */
-const VALID_TOKEN = `session_${VALID_ADDRESS}_1714000000000`;
+/** Generate a real valid session token via the backend's auth store. */
+const VALID_TOKEN = createSessionToken(VALID_ADDRESS);
 const AUTH_HEADER = { authorization: `Bearer ${VALID_TOKEN}` };
 
 function getReq(headers: Record<string, string> = AUTH_HEADER) {
@@ -125,16 +126,25 @@ describe('GET /api/user/preferences', () => {
 
     it('returns 401 when Authorization header is empty string', async () => {
         const res = await GET(getReq({ authorization: '' }), { params: {} });
-        const { status, data } = await parseResponse(res);
+        const { status } = await parseResponse(res);
 
         expect(status).toBe(401);
     });
 
     it('returns 401 when token has no address segment', async () => {
         const res = await GET(getReq({ authorization: 'Bearer session__1234567890' }), { params: {} });
+        const { status } = await parseResponse(res);
+
+        expect(status).toBe(401);
+    });
+
+    it('returns 401 when an unsigned forged token (matching the old fallback format) is used', async () => {
+        const forgedToken = `session_${VALID_ADDRESS}_1714000000000`;
+        const res = await GET(getReq({ authorization: `Bearer ${forgedToken}` }), { params: {} });
         const { status, data } = await parseResponse(res);
 
         expect(status).toBe(401);
+        expect(data.error.code).toBe('UNAUTHORIZED');
     });
 
     // ── Default preferences ──────────────────────────────────────────────────
@@ -170,7 +180,7 @@ describe('GET /api/user/preferences', () => {
 
     it('preferences for different wallets are isolated', async () => {
         const otherAddress = 'GOTHER0000000000000000000000000000000000000';
-        const otherToken = `session_${otherAddress}_9999999999999`;
+        createSessionToken(otherAddress);
         store._data[otherAddress] = { displayCurrency: 'GBP' };
 
         const res = await GET(getReq(), { params: {} });
@@ -201,7 +211,7 @@ describe('PUT /api/user/preferences', () => {
 
     it('returns 401 when token format is invalid', async () => {
         const res = await PUT(putReq({ displayCurrency: 'EUR' }, { authorization: 'Bearer garbage' }), { params: {} });
-        const { status, data } = await parseResponse(res);
+        const { status } = await parseResponse(res);
 
         expect(status).toBe(401);
     });
@@ -239,7 +249,7 @@ describe('PUT /api/user/preferences', () => {
 
     it('returns 400 when notifications.email is not boolean', async () => {
         const res = await PUT(putReq({ notifications: { email: 'yes' } }), { params: {} });
-        const { status, data } = await parseResponse(res);
+        const { status } = await parseResponse(res);
 
         expect(status).toBe(400);
     });
