@@ -245,6 +245,7 @@ export default function CreateCommitmentStepConfigure({
                   min="1"
                   max="365"
                   aria-label="Duration slider"
+                  aria-valuetext={`${durationDays} days`}
                   style={{
                     background: `linear-gradient(to right, #00d4aa ${(durationDays / 365) * 100}%, #2a2a2a ${(durationDays / 365) * 100}%)`
                   }}
@@ -290,6 +291,7 @@ export default function CreateCommitmentStepConfigure({
                   min="0"
                   max="100"
                   aria-label="Maximum loss slider"
+                  aria-valuetext={`${maxLossPercent}% max loss`}
                   style={{
                     background: maxLossWarning
                       ? `linear-gradient(to right, #f5a623 ${maxLossPercent}%, #2a2a2a ${maxLossPercent}%)`
@@ -387,6 +389,7 @@ export default function CreateCommitmentStepConfigure({
                     value={slippageTolerance}
                     onChange={(e) => setSlippageTolerance(Number(e.target.value))}
                     min="0" max="10" step="0.5"
+                    aria-valuetext={`${slippageTolerance}% slippage tolerance`}
                     style={{ background: `linear-gradient(to right, #00d4aa ${(slippageTolerance / 10) * 100}%, #2a2a2a ${(slippageTolerance / 10) * 100}%)` }}
                   />
                 </div>
@@ -422,6 +425,7 @@ export default function CreateCommitmentStepConfigure({
                     value={liquidationBuffer}
                     onChange={(e) => setLiquidationBuffer(Number(e.target.value))}
                     min="1" max="20"
+                    aria-valuetext={`${liquidationBuffer}% liquidation buffer`}
                     style={{ background: `linear-gradient(to right, #00d4aa ${(liquidationBuffer / 20) * 100}%, #2a2a2a ${(liquidationBuffer / 20) * 100}%)` }}
                   />
                 </div>
