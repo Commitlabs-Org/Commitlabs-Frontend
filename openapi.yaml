@@ -630,16 +630,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
 
-  /api/auth:
-    post:
-      summary: Authenticate wallet session
-      responses:
-        '200':
-          description: Session established.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessEnvelope'
 
   /api/auth/csrf:
     get:
