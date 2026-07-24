@@ -11,9 +11,7 @@ const DEFAULT_PROPS = {
   onClose: vi.fn(),
 };
 
-function renderModal(
-  overrides: Partial<React.ComponentProps<typeof CommitmentDisputeModal>> = {},
-) {
+function renderModal(overrides: Partial<React.ComponentProps<typeof CommitmentDisputeModal>> = {}) {
   const props = { ...DEFAULT_PROPS, ...overrides };
   const view = render(<CommitmentDisputeModal {...props} />);
   return { props, ...view };
@@ -83,7 +81,7 @@ describe('CommitmentDisputeModal', () => {
         ok: true,
         status: 200,
         json: async () => ({ success: true }),
-      })
+      }),
     );
 
     renderModal();
@@ -107,7 +105,7 @@ describe('CommitmentDisputeModal', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ reason: 'Some dispute reason' }),
-      })
+      }),
     );
   });
 
@@ -118,7 +116,7 @@ describe('CommitmentDisputeModal', () => {
         ok: false,
         status: 400,
         json: async () => ({ message: 'Specific dispute submission failure error message' }),
-      })
+      }),
     );
 
     renderModal();

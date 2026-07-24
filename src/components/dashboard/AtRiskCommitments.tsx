@@ -34,7 +34,7 @@ export function AtRiskCommitments({ commitments = [], rangeLabel }: AtRiskCommit
   });
   const [showSettings, setShowSettings] = useState(false);
   const [complianceInput, setComplianceInput] = useState(
-    String(thresholds.complianceScoreThreshold)
+    String(thresholds.complianceScoreThreshold),
   );
   const [daysInput, setDaysInput] = useState(String(thresholds.daysRemainingThreshold));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -104,9 +104,9 @@ export function AtRiskCommitments({ commitments = [], rangeLabel }: AtRiskCommit
       >
         <h3 className="text-lg font-medium text-white mb-2">All Commitments Healthy</h3>
         <p className="text-zinc-400 text-sm">
-          {rangeLabel && rangeLabel !== "All"
+          {rangeLabel && rangeLabel !== 'All'
             ? `No commitments need attention in the last ${rangeLabel}.`
-            : "No commitments currently need your attention."}
+            : 'No commitments currently need your attention.'}
         </p>
       </div>
     );

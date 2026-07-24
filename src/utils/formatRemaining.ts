@@ -7,7 +7,7 @@ export interface RemainingMaturity {
 
 export const formatRemaining = (
   maturityTimestamp: number,
-  currentTimestamp: number = Date.now()
+  currentTimestamp: number = Date.now(),
 ): RemainingMaturity => {
   const diffMs = maturityTimestamp - currentTimestamp;
 

@@ -49,11 +49,7 @@ export function LocaleSwitcher({ onChange }: LocaleSwitcherProps) {
   return (
     <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
       <span className="sr-only">Language</span>
-      <select
-        aria-label="Select language"
-        onChange={handleChange}
-        value={locale}
-      >
+      <select aria-label="Select language" onChange={handleChange} value={locale}>
         {locales.map((l) => (
           <option key={l} value={l}>
             {LOCALE_LABELS[l]}

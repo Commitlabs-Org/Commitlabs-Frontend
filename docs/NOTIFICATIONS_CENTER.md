@@ -16,12 +16,12 @@ The Notifications Center provides users with a durable, filterable inbox for all
 
 ### Notification Types
 
-| Type | Description | Severity |
-|------|-------------|----------|
-| `expiry` | Commitment nearing expiry warning | warning |
-| `violation` | Commitment violation or attestation failure | critical |
-| `health_check` | Health check warnings from attestations | warning |
-| `marketplace` | Marketplace events (listings sold, purchased, etc.) | info |
+| Type           | Description                                         | Severity |
+| -------------- | --------------------------------------------------- | -------- |
+| `expiry`       | Commitment nearing expiry warning                   | warning  |
+| `violation`    | Commitment violation or attestation failure         | critical |
+| `health_check` | Health check warnings from attestations             | warning  |
+| `marketplace`  | Marketplace events (listings sold, purchased, etc.) | info     |
 
 ### UI States
 
@@ -97,6 +97,7 @@ Users can access the notifications center at `/notifications`. The page requires
 ### Filtering Notifications
 
 Click on category tabs to filter notifications:
+
 - **All**: Shows all notifications
 - **Expiry**: Only expiry warnings
 - **Violations**: Only violation alerts
@@ -114,6 +115,7 @@ Each tab shows a count badge with the number of notifications in that category.
 ### Navigating to Related Entities
 
 Click on any notification card to navigate to:
+
 - Commitment details page (`/commitments/{id}`) for commitment-related notifications
 - Marketplace with listing filter (`/marketplace?listing={id}`) for marketplace notifications
 
@@ -198,6 +200,7 @@ await fetch('/api/user/preferences', {
 ## Styling
 
 The notifications center uses the existing design system:
+
 - Dark theme with `[#0a0a0a]` background
 - Cyan accent color `[#0FF0FC]` for active states and unread indicators
 - Severity-based color coding (red for critical, yellow for warning, blue for info)

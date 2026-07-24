@@ -1,6 +1,9 @@
 import React from 'react';
 
-export const SearchIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className }) => (
+export const SearchIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 20,
+  className,
+}) => (
   <svg
     width={size}
     height={size}
@@ -17,7 +20,10 @@ export const SearchIcon: React.FC<{ size?: number; className?: string }> = ({ si
   </svg>
 );
 
-export const ChevronDownIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
+export const ChevronDownIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 16,
+  className,
+}) => (
   <svg
     width={size}
     height={size}

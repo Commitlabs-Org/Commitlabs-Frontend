@@ -7,11 +7,11 @@ to a chosen time window.
 ## Supported Ranges
 
 | Key   | Label | Days looked back |
-|-------|-------|-----------------|
-| `7d`  | 7 D   | 7               |
-| `30d` | 30 D  | 30 *(default)*  |
-| `90d` | 90 D  | 90              |
-| `all` | All   | unlimited       |
+| ----- | ----- | ---------------- |
+| `7d`  | 7 D   | 7                |
+| `30d` | 30 D  | 30 _(default)_   |
+| `90d` | 90 D  | 90               |
+| `all` | All   | unlimited        |
 
 ## Behavior
 
@@ -30,35 +30,35 @@ to a chosen time window.
 ### `<OverviewTimeRangeSelector>`
 
 ```tsx
-import OverviewTimeRangeSelector from "@/components/overview/OverviewTimeRangeSelector";
+import OverviewTimeRangeSelector from '@/components/overview/OverviewTimeRangeSelector';
 
 <OverviewTimeRangeSelector
-  selected={selectedRange}   // OverviewRangeKey
-  onChange={setRange}        // (range: OverviewRangeKey) => void
-  className="..."            // optional extra classes
-/>
+  selected={selectedRange} // OverviewRangeKey
+  onChange={setRange} // (range: OverviewRangeKey) => void
+  className="..." // optional extra classes
+/>;
 ```
 
-| Prop        | Type                                  | Required | Description                          |
-|-------------|---------------------------------------|----------|--------------------------------------|
-| `selected`  | `OverviewRangeKey`                    | yes      | Currently active range key           |
-| `onChange`  | `(range: OverviewRangeKey) => void`   | yes      | Callback fired on selection change   |
-| `className` | `string`                              | no       | Extra Tailwind classes for the group |
+| Prop        | Type                                | Required | Description                          |
+| ----------- | ----------------------------------- | -------- | ------------------------------------ |
+| `selected`  | `OverviewRangeKey`                  | yes      | Currently active range key           |
+| `onChange`  | `(range: OverviewRangeKey) => void` | yes      | Callback fired on selection change   |
+| `className` | `string`                            | no       | Extra Tailwind classes for the group |
 
 ### `useOverviewTimeRange()`
 
 ```ts
-import { useOverviewTimeRange } from "@/hooks/useOverviewTimeRange";
+import { useOverviewTimeRange } from '@/hooks/useOverviewTimeRange';
 
 const { selectedRange, setRange, filterByRange, rangeStart } = useOverviewTimeRange();
 ```
 
-| Return value      | Type                                                    | Description                                        |
-|-------------------|---------------------------------------------------------|----------------------------------------------------|
-| `selectedRange`   | `OverviewRangeKey`                                      | Currently selected range                           |
-| `setRange`        | `(range: OverviewRangeKey) => void`                     | Update the range and persist it                    |
-| `filterByRange`   | `<T>(data: T[], getDate: (item: T) => string\|Date) => T[]` | Filter an array to the active range            |
-| `rangeStart`      | `Date \| null`                                          | Start-of-day boundary for the range, null for All  |
+| Return value    | Type                                                        | Description                                       |
+| --------------- | ----------------------------------------------------------- | ------------------------------------------------- |
+| `selectedRange` | `OverviewRangeKey`                                          | Currently selected range                          |
+| `setRange`      | `(range: OverviewRangeKey) => void`                         | Update the range and persist it                   |
+| `filterByRange` | `<T>(data: T[], getDate: (item: T) => string\|Date) => T[]` | Filter an array to the active range               |
+| `rangeStart`    | `Date \| null`                                              | Start-of-day boundary for the range, null for All |
 
 ### `overviewRangeStartDate(days: number | null): Date | null`
 
@@ -77,10 +77,10 @@ Utility that returns a `Date` set to midnight `days` calendar days ago, or `null
 ## Usage Example
 
 ```tsx
-"use client";
+'use client';
 
-import OverviewTimeRangeSelector from "@/components/overview/OverviewTimeRangeSelector";
-import { useOverviewTimeRange } from "@/hooks/useOverviewTimeRange";
+import OverviewTimeRangeSelector from '@/components/overview/OverviewTimeRangeSelector';
+import { useOverviewTimeRange } from '@/hooks/useOverviewTimeRange';
 
 export default function CommitmentOverviewPage() {
   const { selectedRange, setRange, filterByRange } = useOverviewTimeRange();
@@ -98,13 +98,13 @@ export default function CommitmentOverviewPage() {
 
 ## Files
 
-| Path | Role |
-|------|------|
-| `src/app/commitments/overview/page.tsx` | Overview page — wires the selector |
-| `src/components/overview/OverviewTimeRangeSelector.tsx` | Accessible segmented-control component |
-| `src/hooks/useOverviewTimeRange.ts` | State management + sessionStorage persistence |
-| `src/components/dashboard/AtRiskCommitments.tsx` | Accepts `rangeLabel` prop for contextual empty state |
-| `src/app/commitments/OverviewTimeRange.test.tsx` | Jest/Vitest + RTL test suite |
+| Path                                                    | Role                                                 |
+| ------------------------------------------------------- | ---------------------------------------------------- |
+| `src/app/commitments/overview/page.tsx`                 | Overview page — wires the selector                   |
+| `src/components/overview/OverviewTimeRangeSelector.tsx` | Accessible segmented-control component               |
+| `src/hooks/useOverviewTimeRange.ts`                     | State management + sessionStorage persistence        |
+| `src/components/dashboard/AtRiskCommitments.tsx`        | Accepts `rangeLabel` prop for contextual empty state |
+| `src/app/commitments/OverviewTimeRange.test.tsx`        | Jest/Vitest + RTL test suite                         |
 
 ## Tests
 

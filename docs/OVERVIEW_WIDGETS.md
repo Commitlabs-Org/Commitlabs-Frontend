@@ -14,22 +14,22 @@ Renders a list of widgets with show/hide toggles, drag-and-drop reordering, and 
 
 #### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `widgets` | `WidgetConfig[]` | Ordered list of widget configurations |
-| `onReorder` | `(fromIndex: number, toIndex: number) => void` | Called when widget order changes |
-| `onToggleVisibility` | `(id: string) => void` | Called to show or hide a widget by id |
-| `onReset` | `() => void` | Called to reset layout to defaults |
-| `children` | `(id: string) => React.ReactNode` | Render function per widget id |
+| Prop                 | Type                                           | Description                           |
+| -------------------- | ---------------------------------------------- | ------------------------------------- |
+| `widgets`            | `WidgetConfig[]`                               | Ordered list of widget configurations |
+| `onReorder`          | `(fromIndex: number, toIndex: number) => void` | Called when widget order changes      |
+| `onToggleVisibility` | `(id: string) => void`                         | Called to show or hide a widget by id |
+| `onReset`            | `() => void`                                   | Called to reset layout to defaults    |
+| `children`           | `(id: string) => React.ReactNode`              | Render function per widget id         |
 
 #### `WidgetConfig`
 
 ```ts
 interface WidgetConfig {
-  id: string;       // Unique identifier
-  label: string;    // Human-readable name shown in the control bar
+  id: string; // Unique identifier
+  label: string; // Human-readable name shown in the control bar
   visible: boolean; // Whether the widget content is rendered
-  order: number;    // Ascending sort order
+  order: number; // Ascending sort order
 }
 ```
 
@@ -41,18 +41,18 @@ Custom hook that manages widget state and persists it to `localStorage`.
 const { widgets, reorder, toggleVisibility, reset } = useWidgetLayout();
 ```
 
-| Return | Type | Description |
-|--------|------|-------------|
-| `widgets` | `WidgetConfig[]` | Current sorted widget configs |
-| `reorder` | `(from: number, to: number) => void` | Move widget at `from` to `to` |
-| `toggleVisibility` | `(id: string) => void` | Toggle a widget's `visible` flag |
-| `reset` | `() => void` | Restore `DEFAULT_WIDGET_LAYOUT` |
+| Return             | Type                                 | Description                      |
+| ------------------ | ------------------------------------ | -------------------------------- |
+| `widgets`          | `WidgetConfig[]`                     | Current sorted widget configs    |
+| `reorder`          | `(from: number, to: number) => void` | Move widget at `from` to `to`    |
+| `toggleVisibility` | `(id: string) => void`               | Toggle a widget's `visible` flag |
+| `reset`            | `() => void`                         | Restore `DEFAULT_WIDGET_LAYOUT`  |
 
 ## Usage Example
 
 ```tsx
-import { OverviewWidgetGrid } from "@/components/dashboard/OverviewWidgetGrid";
-import { useWidgetLayout } from "@/hooks/useWidgetLayout";
+import { OverviewWidgetGrid } from '@/components/dashboard/OverviewWidgetGrid';
+import { useWidgetLayout } from '@/hooks/useWidgetLayout';
 
 export default function MyPage() {
   const { widgets, reorder, toggleVisibility, reset } = useWidgetLayout();
@@ -65,7 +65,7 @@ export default function MyPage() {
       onReset={reset}
     >
       {(id) => {
-        if (id === "my-widget") return <MyWidget />;
+        if (id === 'my-widget') return <MyWidget />;
         return null;
       }}
     </OverviewWidgetGrid>

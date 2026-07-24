@@ -17,7 +17,7 @@ describe('MaturityCountdown', () => {
   it('renders healthy status for > 7 days', () => {
     const tenDaysLater = new Date('2026-07-09T00:00:00Z').getTime();
     render(<MaturityCountdown maturityTimestamp={tenDaysLater} />);
-    
+
     const badge = screen.getByText('10d 0h 0m');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveClass('badge-healthy');
@@ -26,7 +26,7 @@ describe('MaturityCountdown', () => {
   it('renders warning status for <= 7 days', () => {
     const fiveDaysLater = new Date('2026-07-04T00:00:00Z').getTime();
     render(<MaturityCountdown maturityTimestamp={fiveDaysLater} />);
-    
+
     const badge = screen.getByText('5d 0h 0m');
     expect(badge).toHaveClass('badge-warning');
   });
@@ -34,7 +34,7 @@ describe('MaturityCountdown', () => {
   it('renders critical status for <= 24 hours', () => {
     const twelveHoursLater = new Date('2026-06-29T12:00:00Z').getTime();
     render(<MaturityCountdown maturityTimestamp={twelveHoursLater} />);
-    
+
     const badge = screen.getByText('12h 0m');
     expect(badge).toHaveClass('badge-critical');
   });
@@ -42,7 +42,7 @@ describe('MaturityCountdown', () => {
   it('renders matured status and text when time has passed', () => {
     const pastTime = new Date('2026-06-28T00:00:00Z').getTime();
     render(<MaturityCountdown maturityTimestamp={pastTime} />);
-    
+
     const badge = screen.getByText('Matured');
     expect(badge).toHaveClass('badge-matured');
   });
@@ -50,13 +50,13 @@ describe('MaturityCountdown', () => {
   it('updates text dynamically and clears interval on unmount', () => {
     const target = new Date('2026-06-29T00:02:00Z').getTime();
     const { unmount } = render(<MaturityCountdown maturityTimestamp={target} />);
-    
+
     expect(screen.getByText('2m')).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(60000); // Advance 1 minute
     });
-    
+
     expect(screen.getByText('1m')).toBeInTheDocument();
 
     // Verify interval cleanup

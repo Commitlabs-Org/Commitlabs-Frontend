@@ -10,22 +10,22 @@ import { AUTH_COOKIE_NAME, verifySessionToken, revokeOtherSessions } from '@/lib
  * preserving only the current session.
  */
 export const POST = withApiHandler(async (req: NextRequest) => {
-    const sessionCookie = req.cookies.get(AUTH_COOKIE_NAME);
-    const token = sessionCookie?.value;
+  const sessionCookie = req.cookies.get(AUTH_COOKIE_NAME);
+  const token = sessionCookie?.value;
 
-    if (!token) {
-        return fail('UNAUTHORIZED', 'Not authenticated', undefined, 401);
-    }
+  if (!token) {
+    return fail('UNAUTHORIZED', 'Not authenticated', undefined, 401);
+  }
 
-    const verification = verifySessionToken(token);
-    if (!verification.valid) {
-        return fail('UNAUTHORIZED', verification.error ?? 'Invalid session', undefined, 401);
-    }
+  const verification = verifySessionToken(token);
+  if (!verification.valid) {
+    return fail('UNAUTHORIZED', verification.error ?? 'Invalid session', undefined, 401);
+  }
 
-    const revokedCount = revokeOtherSessions(token);
+  const revokedCount = revokeOtherSessions(token);
 
-    return ok({
-        message: `Revoked ${revokedCount} other session${revokedCount !== 1 ? 's' : ''}.`,
-        revokedCount,
-    });
+  return ok({
+    message: `Revoked ${revokedCount} other session${revokedCount !== 1 ? 's' : ''}.`,
+    revokedCount,
+  });
 });

@@ -1,11 +1,11 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
-type Props = { params: { id: string } }
+type Props = { params: { id: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const id = params.id
-  const title = `Commitment #${id} — CommitLabs`
-  const description = `View performance metrics, compliance scores, and activity for commitment #${id} on CommitLabs.`
+  const id = params.id;
+  const title = `Commitment #${id} — CommitLabs`;
+  const description = `View performance metrics, compliance scores, and activity for commitment #${id} on CommitLabs.`;
 
   return {
     title,
@@ -25,13 +25,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: ['/og-image.jpg'],
     },
-  }
+  };
 }
 
-export default function CommitmentDetailLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return children
+export default function CommitmentDetailLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

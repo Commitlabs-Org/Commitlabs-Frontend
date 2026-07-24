@@ -55,7 +55,7 @@ export function MarketStatsBanner() {
         <div className={styles.errorContainer}>
           <AlertCircle size={16} aria-hidden />
           <span>Market stats unavailable.</span>
-          <button 
+          <button
             type="button"
             onClick={() => fetchStats({ value: false })}
             className={styles.retryButton}
@@ -82,26 +82,26 @@ export function MarketStatsBanner() {
   // Success state matching actual API fields
   return (
     <div className={styles.root} aria-live="polite" aria-label="Market statistics">
-      <KPICard 
-        label="Total Listings" 
-        value={stats?.activeListings ?? 0} 
-        format="count" 
-        size="small" 
-        variant="teal" 
+      <KPICard
+        label="Total Listings"
+        value={stats?.activeListings ?? 0}
+        format="count"
+        size="small"
+        variant="teal"
       />
-      <KPICard 
-        label="Average APY" 
-        value={stats?.averageYield ?? 0} 
-        format="percentage" 
-        size="small" 
-        variant="blue" 
+      <KPICard
+        label="Average APY"
+        value={stats?.averageYield ?? 0}
+        format="percentage"
+        size="small"
+        variant="blue"
       />
-      <KPICard 
-        label="Median Price" 
-        value={stats?.medianPrice ?? 0} 
-        format="currency" 
-        size="small" 
-        variant="green" 
+      <KPICard
+        label="Median Price"
+        value={stats?.medianPrice ?? 0}
+        format="currency"
+        size="small"
+        variant="green"
       />
     </div>
   );

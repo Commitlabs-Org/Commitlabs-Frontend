@@ -14,7 +14,7 @@ export const ReputationDisplay: React.FC<ReputationDisplayProps> = ({
   score,
   totalCommitments,
   successRate,
-  className = ''
+  className = '',
 }) => {
   const getScoreColor = (s: number) => {
     if (s >= 90) return 'text-[#00C950]';
@@ -23,9 +23,13 @@ export const ReputationDisplay: React.FC<ReputationDisplayProps> = ({
   };
 
   return (
-    <div className={`flex flex-col gap-3 p-4 rounded-xl bg-white/5 border border-white/10 ${className}`}>
+    <div
+      className={`flex flex-col gap-3 p-4 rounded-xl bg-white/5 border border-white/10 ${className}`}
+    >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-white/40">Seller Reputation</span>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-white/40">
+          Seller Reputation
+        </span>
         <div className="flex items-center gap-1">
           <Star className={`w-3.5 h-3.5 fill-current ${getScoreColor(score)}`} />
           <span className={`text-sm font-bold ${getScoreColor(score)}`}>{score}/100</span>
@@ -56,7 +60,8 @@ export const ReputationDisplay: React.FC<ReputationDisplayProps> = ({
 
       <div className="pt-2 mt-1 border-t border-white/5">
         <p className="text-[9px] leading-relaxed text-white/30 italic">
-          Reputation is calculated based on successful commitment completions, timely attestations, and tenure on the platform.
+          Reputation is calculated based on successful commitment completions, timely attestations,
+          and tenure on the platform.
         </p>
       </div>
     </div>

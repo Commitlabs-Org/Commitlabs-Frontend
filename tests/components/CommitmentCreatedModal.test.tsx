@@ -25,12 +25,14 @@ describe('CommitmentCreatedModal', () => {
         onCreateAnother={onCreateAnother}
         onClose={onClose}
         onViewOnExplorer={onViewOnExplorer}
-      />
+      />,
     );
 
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Commitment Created' })).toBeTruthy();
-    expect(screen.getByText('Your liquidity commitment is active and available in your dashboard.')).toBeTruthy();
+    expect(
+      screen.getByText('Your liquidity commitment is active and available in your dashboard.'),
+    ).toBeTruthy();
     expect(screen.getByText('CMT-ABC1234')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'View Commitment' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create Another' })).toBeTruthy();

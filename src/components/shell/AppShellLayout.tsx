@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { AppSidebar } from './AppSidebar'
+import React from 'react';
+import { AppSidebar } from './AppSidebar';
 
 export interface AppShellLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export const AppShellLayout: React.FC<AppShellLayoutProps> = ({ children }) => {
   const handleSkipToMain = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    const mainContent = document.getElementById('main-content')
+    const mainContent = document.getElementById('main-content');
 
     if (!mainContent) {
-      return
+      return;
     }
 
-    event.preventDefault()
-    mainContent.focus()
-    mainContent.scrollIntoView()
-  }
+    event.preventDefault();
+    mainContent.focus();
+    mainContent.scrollIntoView();
+  };
 
   return (
     <div className="flex min-h-screen bg-[#0a0a0a]">
@@ -34,5 +34,5 @@ export const AppShellLayout: React.FC<AppShellLayoutProps> = ({ children }) => {
         {children}
       </main>
     </div>
-  )
-}
+  );
+};

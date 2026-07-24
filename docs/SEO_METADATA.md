@@ -20,10 +20,10 @@ that is a **server component** and exports the metadata.
 
 ### Page type → Metadata location
 
-| Page type | Where metadata lives | Example |
-|-----------|---------------------|---------|
-| Server component (`page.tsx` without `'use client'`) | `export const metadata` in `page.tsx` | Root landing page |
-| Client component (`page.tsx` with `'use client'`) | `export const metadata` in sibling `layout.tsx` | Marketplace, Commitments, Create, Settings |
+| Page type                                            | Where metadata lives                            | Example                                    |
+| ---------------------------------------------------- | ----------------------------------------------- | ------------------------------------------ |
+| Server component (`page.tsx` without `'use client'`) | `export const metadata` in `page.tsx`           | Root landing page                          |
+| Client component (`page.tsx` with `'use client'`)    | `export const metadata` in sibling `layout.tsx` | Marketplace, Commitments, Create, Settings |
 
 ### Required fields
 
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     description: 'Short description for Twitter cards.',
     images: ['/og-image.jpg'],
   },
-}
+};
 ```
 
 ### Metadata defaults
@@ -69,14 +69,14 @@ is a client component (`'use client'`), place `generateMetadata` in the sibling
 
 ```ts
 // src/app/commitments/[id]/layout.tsx
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
-type Props = { params: { id: string } }
+type Props = { params: { id: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const id = params.id
-  const title = `Commitment #${id} — CommitLabs`
-  const description = `View performance metrics, compliance scores, and activity for commitment #${id} on CommitLabs.`
+  const id = params.id;
+  const title = `Commitment #${id} — CommitLabs`;
+  const description = `View performance metrics, compliance scores, and activity for commitment #${id} on CommitLabs.`;
   return {
     title,
     description,
@@ -95,11 +95,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: ['/og-image.jpg'],
     },
-  }
+  };
 }
 
 export default function CommitmentDetailLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return children;
 }
 ```
 
@@ -108,10 +108,10 @@ The page **must** be a server component (or wrapped in a server-component layout
 
 ### Implemented per-route metadata
 
-| Route | File | Metadata type | Notes |
-|-------|------|--------------|-------|
-| `/commitments/[id]` | `src/app/commitments/[id]/layout.tsx` | `generateMetadata` | Derives title/OG from `params.id`; safe fallback for unknown ids |
-| `/marketplace` | `src/app/marketplace/layout.tsx` | `export const metadata` | Static; full OG + Twitter card |
+| Route               | File                                  | Metadata type           | Notes                                                            |
+| ------------------- | ------------------------------------- | ----------------------- | ---------------------------------------------------------------- |
+| `/commitments/[id]` | `src/app/commitments/[id]/layout.tsx` | `generateMetadata`      | Derives title/OG from `params.id`; safe fallback for unknown ids |
+| `/marketplace`      | `src/app/marketplace/layout.tsx`      | `export const metadata` | Static; full OG + Twitter card                                   |
 
 ## Sitemap
 
@@ -119,37 +119,37 @@ The sitemap at `src/app/sitemap.ts` enumerates **public routes only**.
 
 ### Public routes (indexed)
 
-| Route | Priority | Change frequency | Notes |
-|-------|----------|-----------------|-------|
-| `/` | 1.0 | yearly | Landing page |
-| `/marketplace` | 0.8 | weekly | Public marketplace browsing |
-| `/transaction-error` | 0.1 | monthly | Transaction error page |
-| `/network-error` | 0.1 | monthly | Network error page |
+| Route                | Priority | Change frequency | Notes                       |
+| -------------------- | -------- | ---------------- | --------------------------- |
+| `/`                  | 1.0      | yearly           | Landing page                |
+| `/marketplace`       | 0.8      | weekly           | Public marketplace browsing |
+| `/transaction-error` | 0.1      | monthly          | Transaction error page      |
+| `/network-error`     | 0.1      | monthly          | Network error page          |
 
 ### Private / wallet-gated routes (excluded from sitemap)
 
-| Route | Reason |
-|-------|--------|
-| `/create` | Requires wallet connection |
-| `/commitments` | Requires wallet connection |
-| `/commitments/[id]` | Requires wallet connection |
+| Route                   | Reason                     |
+| ----------------------- | -------------------------- |
+| `/create`               | Requires wallet connection |
+| `/commitments`          | Requires wallet connection |
+| `/commitments/[id]`     | Requires wallet connection |
 | `/commitments/overview` | Requires wallet connection |
-| `/settings` | Requires wallet connection |
+| `/settings`             | Requires wallet connection |
 
 ## Robots.txt
 
 The `src/app/robots.ts` file provides a dynamic `robots.txt` generated via a typed route. It returns a `MetadataRoute.Robots` object with generic allow rules and a `sitemap` reference that matches the dynamic sitemap URL.
 
 ```ts
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
-const BASE_URL = 'https://commitlabs.com'
+const BASE_URL = 'https://commitlabs.com';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [{ userAgent: '*', allow: '/' }],
     sitemap: `${BASE_URL}/sitemap.xml`,
-  }
+  };
 }
 ```
 

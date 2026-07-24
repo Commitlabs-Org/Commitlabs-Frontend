@@ -21,7 +21,7 @@ describe('useWallet authentication', () => {
     // Clear cookies cleanly
     document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    
+
     // Default mock response to avoid unhandled TypeErrors in the background
     mockSignMessage.mockResolvedValue({ signedMessage: 'mock_signature' });
   });
@@ -246,9 +246,16 @@ describe('useWallet authentication', () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => new Promise(resolve => setTimeout(() => resolve({
-        data: { nonce: 'n', message: 'msg' },
-      }), 50)),
+      json: async () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                data: { nonce: 'n', message: 'msg' },
+              }),
+            50,
+          ),
+        ),
     } as Response);
 
     mockFetch.mockResolvedValueOnce({

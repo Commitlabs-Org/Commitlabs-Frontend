@@ -1,7 +1,7 @@
-import { NextRequest } from "next/server";
-import { withApiHandler } from "@/lib/backend/withApiHandler";
-import { ok } from "@/lib/backend/apiResponse";
-import { validateCommitmentDraft } from "@/lib/backend/validation";
+import { NextRequest } from 'next/server';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { ok } from '@/lib/backend/apiResponse';
+import { validateCommitmentDraft } from '@/lib/backend/validation';
 
 export const POST = withApiHandler(async (req: NextRequest) => {
   const body = await req.json();
@@ -15,7 +15,7 @@ export const POST = withApiHandler(async (req: NextRequest) => {
         errors: result.errors,
         warnings: [],
       },
-      200
+      200,
     );
   }
 

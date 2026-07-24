@@ -50,7 +50,9 @@ describe('SettlementModal ineligible reasons', () => {
 
     expect(screen.getByRole('alert').getAttribute('data-reason-category')).toBe('already_settled');
     expect(screen.getByText('Terminal state')).toBeTruthy();
-    expect(screen.getByText('Terminal reason: settlement cannot be retried for this state.')).toBeTruthy();
+    expect(
+      screen.getByText('Terminal reason: settlement cannot be retried for this state.'),
+    ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'View settlement details' }).getAttribute('href')).toBe(
       '/commitments/CMT-123',
     );
@@ -85,14 +87,14 @@ describe('SettlementModal ineligible reasons', () => {
       ineligibleReason: 'Unexpected settlement preflight response',
     });
 
-    expect(getSettlementIneligibleReasonCopy('Unexpected settlement preflight response').category).toBe(
-      'unknown',
-    );
+    expect(
+      getSettlementIneligibleReasonCopy('Unexpected settlement preflight response').category,
+    ).toBe('unknown');
     expect(screen.getByRole('alert').getAttribute('data-reason-category')).toBe('unknown');
     expect(screen.getByText('Settlement is unavailable')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Review commitment details' }).getAttribute('href')).toBe(
-      '/commitments/CMT-123',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Review commitment details' }).getAttribute('href'),
+    ).toBe('/commitments/CMT-123');
   });
 
   it('uses the same safe default when reason text is missing', () => {
@@ -156,7 +158,9 @@ describe('SettlementModal ineligible reasons', () => {
       onReturnToDashboard,
     });
 
-    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-settled-title');
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe(
+      'settlement-settled-title',
+    );
     expect(screen.getByText('Settlement complete')).toBeTruthy();
     expect(screen.getByText('100 XLM')).toBeTruthy();
 
@@ -174,7 +178,9 @@ describe('SettlementModal ineligible reasons', () => {
       onConfirmSettlement,
     });
 
-    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-eligible-title');
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe(
+      'settlement-eligible-title',
+    );
     expect(screen.getByText('Ready to settle')).toBeTruthy();
     expect(screen.getByText('Previewed settlement amount')).toBeTruthy();
     expect(screen.getByText('125 XLM')).toBeTruthy();
@@ -190,7 +196,9 @@ describe('SettlementModal ineligible reasons', () => {
       settlementAmount: '125 XLM',
     });
 
-    expect(screen.getByRole('button', { name: 'Confirm settlement' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Confirm settlement' }).hasAttribute('disabled'),
+    ).toBe(true);
   });
 
   it.each([
@@ -203,7 +211,9 @@ describe('SettlementModal ineligible reasons', () => {
       processingStep,
     });
 
-    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-processing-title');
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe(
+      'settlement-processing-title',
+    );
     expect(screen.getByText('Settlement in progress')).toBeTruthy();
     expect(screen.getByLabelText('Settlement progress')).toBeTruthy();
     expect(screen.getByText(label)).toBeTruthy();
@@ -220,7 +230,9 @@ describe('SettlementModal ineligible reasons', () => {
       onReturnToDashboard,
     });
 
-    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe('settlement-error-title');
+    expect(screen.getByRole('dialog').getAttribute('aria-labelledby')).toBe(
+      'settlement-error-title',
+    );
     expect(screen.getByText('Settlement needs attention')).toBeTruthy();
     expect(screen.getByText('The transaction timed out before finalization.')).toBeTruthy();
 

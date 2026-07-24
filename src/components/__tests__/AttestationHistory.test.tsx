@@ -1,17 +1,17 @@
-import React from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import AttestationHistory from '../AttestationHistory'
+import React from 'react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AttestationHistory from '../AttestationHistory';
 import {
   type Attestation,
   type AttestationSeverity,
   type AttestationType,
-} from '@/lib/types/domain'
+} from '@/lib/types/domain';
 
-const COMMITMENT_ID = 'commitment-1'
-const NOW = new Date('2026-06-29T12:00:00Z')
+const COMMITMENT_ID = 'commitment-1';
+const NOW = new Date('2026-06-29T12:00:00Z');
 
-let fetchMock: ReturnType<typeof vi.fn>
+let fetchMock: ReturnType<typeof vi.fn>;
 
 function makeAttestation(overrides: Partial<Attestation> = {}): Attestation {
   return {
@@ -24,48 +24,48 @@ function makeAttestation(overrides: Partial<Attestation> = {}): Attestation {
     txHash: '0xabcdef123456789012',
     severity: 'ok' as AttestationSeverity,
     ...overrides,
-  } as Attestation
+  } as Attestation;
 }
 
 function mockAttestationResponse(attestations: Attestation[]) {
   fetchMock.mockResolvedValue({
     ok: true,
     json: async () => ({ attestations }),
-  })
+  });
 }
 
 async function findTimelineItems() {
-  const list = await screen.findByRole('list')
-  return within(list).findAllByRole('listitem')
+  const list = await screen.findByRole('list');
+  return within(list).findAllByRole('listitem');
 }
 
 function getTimelineTitles(items: HTMLElement[]) {
-  return items.map((item) => within(item).getByRole('heading', { level: 4 }).textContent)
+  return items.map((item) => within(item).getByRole('heading', { level: 4 }).textContent);
 }
 
 function getComplianceSummary() {
-  const heading = screen.getByRole('heading', { name: 'Compliance Trend Summary' })
-  const summary = heading.closest('div')
+  const heading = screen.getByRole('heading', { name: 'Compliance Trend Summary' });
+  const summary = heading.closest('div');
 
   if (!summary) {
-    throw new Error('Compliance summary container was not rendered')
+    throw new Error('Compliance summary container was not rendered');
   }
 
-  return summary
+  return summary;
 }
 
 describe('AttestationHistory', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    vi.setSystemTime(NOW)
-    fetchMock = vi.fn()
-    vi.stubGlobal('fetch', fetchMock)
-  })
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(NOW);
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
 
   afterEach(() => {
-    vi.useRealTimers()
-    vi.unstubAllGlobals()
-  })
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it('renders the empty state and zero-count compliance trend for an empty matching series', async () => {
     mockAttestationResponse([
@@ -73,32 +73,36 @@ describe('AttestationHistory', () => {
         id: 'other-commitment-attestation',
         commitmentId: 'other-commitment',
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    expect(await screen.findByText('No attestations match the current filters.')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Attestation History' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /All\s*\(0\)/i })).toBeInTheDocument()
+    expect(
+      await screen.findByText('No attestations match the current filters.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Attestation History' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /All\s*\(0\)/i })).toBeInTheDocument();
 
-    const summary = getComplianceSummary()
-    expect(summary).toHaveTextContent(/0\s*Total/)
-    expect(summary).toHaveTextContent(/0\s*Info/)
-    expect(summary).toHaveTextContent(/0\s*Warnings/)
-    expect(summary).toHaveTextContent(/0\s*Violations/)
-  })
+    const summary = getComplianceSummary();
+    expect(summary).toHaveTextContent(/0\s*Total/);
+    expect(summary).toHaveTextContent(/0\s*Info/);
+    expect(summary).toHaveTextContent(/0\s*Warnings/);
+    expect(summary).toHaveTextContent(/0\s*Violations/);
+  });
 
   it('treats a response without an attestations array as an empty series', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({}),
-    })
+    });
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    expect(await screen.findByText('No attestations match the current filters.')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /All\s*\(0\)/i })).toBeInTheDocument()
-  })
+    expect(
+      await screen.findByText('No attestations match the current filters.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /All\s*\(0\)/i })).toBeInTheDocument();
+  });
 
   it('renders a populated timeline with details, transaction text, and compliance trend counts', async () => {
     mockAttestationResponse([
@@ -127,26 +131,26 @@ describe('AttestationHistory', () => {
         commitmentId: 'commitment-2',
         severity: 'violation',
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    const items = await findTimelineItems()
-    expect(items).toHaveLength(3)
+    const items = await findTimelineItems();
+    expect(items).toHaveLength(3);
     expect(getTimelineTitles(items)).toEqual([
       'Healthy reserve check',
       'Drawdown warning',
       'Limit violation',
-    ])
-    expect(screen.getAllByText('TX: 0xabcd...789012')).toHaveLength(3)
-    expect(screen.getByText('View details')).toBeInTheDocument()
+    ]);
+    expect(screen.getAllByText('TX: 0xabcd...789012')).toHaveLength(3);
+    expect(screen.getByText('View details')).toBeInTheDocument();
 
-    const summary = getComplianceSummary()
-    expect(summary).toHaveTextContent(/3\s*Total/)
-    expect(summary).toHaveTextContent(/1\s*Info/)
-    expect(summary).toHaveTextContent(/1\s*Warnings/)
-    expect(summary).toHaveTextContent(/1\s*Violations/)
-  })
+    const summary = getComplianceSummary();
+    expect(summary).toHaveTextContent(/3\s*Total/);
+    expect(summary).toHaveTextContent(/1\s*Info/);
+    expect(summary).toHaveTextContent(/1\s*Warnings/);
+    expect(summary).toHaveTextContent(/1\s*Violations/);
+  });
 
   it('maps mixed severities to accessible timeline items and their colour classes', async () => {
     mockAttestationResponse([
@@ -170,34 +174,31 @@ describe('AttestationHistory', () => {
         title: 'Unclassified attestation',
         severity: undefined,
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
     expect(
       await screen.findByRole('listitem', { name: /Healthy reserve check ok severity/i }),
-    ).toHaveClass('border-green-500', 'bg-green-50')
-    expect(screen.getByRole('listitem', { name: /Warning threshold crossed warning severity/i })).toHaveClass(
-      'border-yellow-500',
-      'bg-yellow-50',
-    )
-    expect(screen.getByRole('listitem', { name: /Violation recorded violation severity/i })).toHaveClass(
-      'border-red-500',
-      'bg-red-50',
-    )
-    expect(screen.getByRole('listitem', { name: /Unclassified attestation unknown severity/i })).toHaveClass(
-      'border-gray-300',
-      'bg-gray-50',
-    )
-  })
+    ).toHaveClass('border-green-500', 'bg-green-50');
+    expect(
+      screen.getByRole('listitem', { name: /Warning threshold crossed warning severity/i }),
+    ).toHaveClass('border-yellow-500', 'bg-yellow-50');
+    expect(
+      screen.getByRole('listitem', { name: /Violation recorded violation severity/i }),
+    ).toHaveClass('border-red-500', 'bg-red-50');
+    expect(
+      screen.getByRole('listitem', { name: /Unclassified attestation unknown severity/i }),
+    ).toHaveClass('border-gray-300', 'bg-gray-50');
+  });
 
   it('sorts unsorted input newest first and places missing or invalid timestamps last', async () => {
     const missingTimestamp = makeAttestation({
       id: 'attestation-missing-timestamp',
       title: 'Missing timestamp',
       severity: 'warning',
-    })
-    delete (missingTimestamp as Partial<Attestation>).observedAt
+    });
+    delete (missingTimestamp as Partial<Attestation>).observedAt;
 
     mockAttestationResponse([
       makeAttestation({
@@ -221,20 +222,20 @@ describe('AttestationHistory', () => {
         title: 'Middle attestation',
         observedAt: '2026-06-28T12:00:00Z',
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    const items = await findTimelineItems()
+    const items = await findTimelineItems();
     expect(getTimelineTitles(items)).toEqual([
       'Newest attestation',
       'Middle attestation',
       'Oldest attestation',
       'Invalid timestamp',
       'Missing timestamp',
-    ])
-    expect(screen.getAllByText('Timestamp unavailable')).toHaveLength(2)
-  })
+    ]);
+    expect(screen.getAllByText('Timestamp unavailable')).toHaveLength(2);
+  });
 
   it('falls back to attestation kind or a generic title when title is missing', async () => {
     mockAttestationResponse([
@@ -248,17 +249,17 @@ describe('AttestationHistory', () => {
         title: undefined,
         kind: undefined,
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
     expect(
       await screen.findByRole('listitem', { name: /fee_generation ok severity/i }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('listitem', { name: /Attestation ok severity/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'fee_generation' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Attestation' })).toBeInTheDocument()
-  })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: /Attestation ok severity/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'fee_generation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Attestation' })).toBeInTheDocument();
+  });
 
   it('renders a single attestation without losing singular trend or timestamp wording', async () => {
     mockAttestationResponse([
@@ -268,21 +269,21 @@ describe('AttestationHistory', () => {
         observedAt: '2026-06-29T11:00:00Z',
         txHash: '0x123',
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    const items = await findTimelineItems()
-    expect(items).toHaveLength(1)
-    expect(screen.getByText('1 hour ago')).toBeInTheDocument()
-    expect(screen.getByText('TX: 0x123')).toBeInTheDocument()
+    const items = await findTimelineItems();
+    expect(items).toHaveLength(1);
+    expect(screen.getByText('1 hour ago')).toBeInTheDocument();
+    expect(screen.getByText('TX: 0x123')).toBeInTheDocument();
 
-    const summary = getComplianceSummary()
-    expect(summary).toHaveTextContent(/1\s*Total/)
-    expect(summary).toHaveTextContent(/1\s*Info/)
-    expect(summary).toHaveTextContent(/0\s*Warnings/)
-    expect(summary).toHaveTextContent(/0\s*Violations/)
-  })
+    const summary = getComplianceSummary();
+    expect(summary).toHaveTextContent(/1\s*Total/);
+    expect(summary).toHaveTextContent(/1\s*Info/);
+    expect(summary).toHaveTextContent(/0\s*Warnings/);
+    expect(summary).toHaveTextContent(/0\s*Violations/);
+  });
 
   it('filters the timeline by severity and type without changing the source trend counts', async () => {
     mockAttestationResponse([
@@ -304,24 +305,28 @@ describe('AttestationHistory', () => {
         kind: 'violation',
         severity: 'violation',
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
-    await screen.findByText('Healthy reserve check')
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
+    await screen.findByText('Healthy reserve check');
 
-    fireEvent.click(screen.getByRole('tab', { name: /Warning\s*\(1\)/i }))
-    expect(screen.getByRole('listitem', { name: /Drawdown warning warning severity/i })).toBeInTheDocument()
-    expect(screen.queryByRole('listitem', { name: /Healthy reserve check ok severity/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: /Warning\s*\(1\)/i }));
+    expect(
+      screen.getByRole('listitem', { name: /Drawdown warning warning severity/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('listitem', { name: /Healthy reserve check ok severity/i }),
+    ).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Type:'), { target: { value: 'violation' } })
-    expect(screen.getByText('No attestations match the current filters.')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Type:'), { target: { value: 'violation' } });
+    expect(screen.getByText('No attestations match the current filters.')).toBeInTheDocument();
 
-    const summary = getComplianceSummary()
-    expect(summary).toHaveTextContent(/3\s*Total/)
-    expect(summary).toHaveTextContent(/1\s*Info/)
-    expect(summary).toHaveTextContent(/1\s*Warnings/)
-    expect(summary).toHaveTextContent(/1\s*Violations/)
-  })
+    const summary = getComplianceSummary();
+    expect(summary).toHaveTextContent(/3\s*Total/);
+    expect(summary).toHaveTextContent(/1\s*Info/);
+    expect(summary).toHaveTextContent(/1\s*Warnings/);
+    expect(summary).toHaveTextContent(/1\s*Violations/);
+  });
 
   it('formats timeline timestamps across relative time ranges and safe fallbacks', async () => {
     mockAttestationResponse([
@@ -385,40 +390,44 @@ describe('AttestationHistory', () => {
         title: 'Years attestation',
         observedAt: '2024-04-20T12:00:00Z',
       }),
-    ])
+    ]);
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    expect(await screen.findByText('just now')).toBeInTheDocument()
-    expect(screen.getByText('1 minute ago')).toBeInTheDocument()
-    expect(screen.getByText('2 minutes ago')).toBeInTheDocument()
-    expect(screen.getByText('2 hours ago')).toBeInTheDocument()
-    expect(screen.getByText('1 day ago')).toBeInTheDocument()
-    expect(screen.getByText('2 days ago')).toBeInTheDocument()
-    expect(screen.getByText('1 week ago')).toBeInTheDocument()
-    expect(screen.getByText('2 weeks ago')).toBeInTheDocument()
-    expect(screen.getByText('1 month ago')).toBeInTheDocument()
-    expect(screen.getByText('2 months ago')).toBeInTheDocument()
-    expect(screen.getByText('1 year ago')).toBeInTheDocument()
-    expect(screen.getByText('2 years ago')).toBeInTheDocument()
-  })
+    expect(await screen.findByText('just now')).toBeInTheDocument();
+    expect(screen.getByText('1 minute ago')).toBeInTheDocument();
+    expect(screen.getByText('2 minutes ago')).toBeInTheDocument();
+    expect(screen.getByText('2 hours ago')).toBeInTheDocument();
+    expect(screen.getByText('1 day ago')).toBeInTheDocument();
+    expect(screen.getByText('2 days ago')).toBeInTheDocument();
+    expect(screen.getByText('1 week ago')).toBeInTheDocument();
+    expect(screen.getByText('2 weeks ago')).toBeInTheDocument();
+    expect(screen.getByText('1 month ago')).toBeInTheDocument();
+    expect(screen.getByText('2 months ago')).toBeInTheDocument();
+    expect(screen.getByText('1 year ago')).toBeInTheDocument();
+    expect(screen.getByText('2 years ago')).toBeInTheDocument();
+  });
 
   it('renders the fetch error state', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       json: async () => ({}),
-    })
+    });
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    expect(await screen.findByText('Error loading attestations: Failed to fetch attestations')).toBeInTheDocument()
-  })
+    expect(
+      await screen.findByText('Error loading attestations: Failed to fetch attestations'),
+    ).toBeInTheDocument();
+  });
 
   it('renders an unknown error message for non-Error failures', async () => {
-    fetchMock.mockRejectedValue('network unavailable')
+    fetchMock.mockRejectedValue('network unavailable');
 
-    render(<AttestationHistory commitmentId={COMMITMENT_ID} />)
+    render(<AttestationHistory commitmentId={COMMITMENT_ID} />);
 
-    expect(await screen.findByText('Error loading attestations: Unknown error')).toBeInTheDocument()
-  })
-})
+    expect(
+      await screen.findByText('Error loading attestations: Unknown error'),
+    ).toBeInTheDocument();
+  });
+});

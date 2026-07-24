@@ -26,10 +26,7 @@ function getRequestIp(req: NextRequest): string | undefined {
   return normalizeIp(req.ip);
 }
 
-function getForwardedIp(
-  req: NextRequest,
-  trustedProxyCount: number
-): string | undefined {
+function getForwardedIp(req: NextRequest, trustedProxyCount: number): string | undefined {
   if (trustedProxyCount <= 0) return undefined;
 
   const xForwardedFor = req.headers.get('x-forwarded-for');
@@ -46,10 +43,7 @@ function getForwardedIp(
   return normalizeIp(entries[clientIndex]);
 }
 
-export function getClientIp(
-  req: NextRequest,
-  options: GetClientIpOptions = {}
-): string {
+export function getClientIp(req: NextRequest, options: GetClientIpOptions = {}): string {
   const requestIp = getRequestIp(req);
   const trustedProxyCount = Math.max(0, Math.trunc(options.trustedProxyCount ?? 0));
   const forwardedIp = getForwardedIp(req, trustedProxyCount);

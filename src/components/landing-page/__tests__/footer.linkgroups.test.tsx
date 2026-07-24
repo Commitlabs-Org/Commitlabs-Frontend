@@ -20,7 +20,11 @@ vi.mock('next/link', () => ({
     'aria-label': ariaLabel,
     ...rest
   }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) =>
-    React.createElement('a', { href, className, target, rel, 'aria-label': ariaLabel, ...rest }, children),
+    React.createElement(
+      'a',
+      { href, className, target, rel, 'aria-label': ariaLabel, ...rest },
+      children,
+    ),
 }));
 
 vi.mock('react-icons/fa', () => ({
@@ -89,9 +93,7 @@ describe('Footer — external-link safety', () => {
     const socialLinks = screen
       .getAllByRole('link')
       .filter(
-        (l) =>
-          l.getAttribute('href')?.startsWith('http') &&
-          l.getAttribute('aria-label') !== null,
+        (l) => l.getAttribute('href')?.startsWith('http') && l.getAttribute('aria-label') !== null,
       );
     socialLinks.forEach((link) => {
       expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
@@ -104,9 +106,7 @@ describe('Footer — external-link safety', () => {
     const socialLinks = screen
       .getAllByRole('link')
       .filter(
-        (l) =>
-          l.getAttribute('href')?.startsWith('http') &&
-          l.getAttribute('aria-label') !== null,
+        (l) => l.getAttribute('href')?.startsWith('http') && l.getAttribute('aria-label') !== null,
       );
     socialLinks.forEach((link) => {
       expect(link).toHaveAttribute('target', '_blank');

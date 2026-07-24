@@ -12,11 +12,11 @@ Export controls are disabled while chart data is loading.
 
 ## Implementation
 
-| Piece | Location |
-|-------|----------|
-| CSV + PNG helpers | `src/utils/chartExport.ts` |
-| Export menu UI | `src/components/dashboard/ChartExportMenu.tsx` |
-| Tab wiring | `src/components/dashboard/CommitmentHealthMetrics.tsx` |
+| Piece             | Location                                               |
+| ----------------- | ------------------------------------------------------ |
+| CSV + PNG helpers | `src/utils/chartExport.ts`                             |
+| Export menu UI    | `src/components/dashboard/ChartExportMenu.tsx`         |
+| Tab wiring        | `src/components/dashboard/CommitmentHealthMetrics.tsx` |
 
 ## CSV format
 

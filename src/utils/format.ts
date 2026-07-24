@@ -20,7 +20,7 @@
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 /** Sentinel returned when a value cannot be meaningfully displayed. */
-export const FORMAT_FALLBACK = "--";
+export const FORMAT_FALLBACK = '--';
 
 /**
  * Coerce an unknown value to a finite number.
@@ -28,7 +28,7 @@ export const FORMAT_FALLBACK = "--";
  */
 function toFinite(value: string | number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
-  const n = typeof value === "string" ? parseFloat(value) : value;
+  const n = typeof value === 'string' ? parseFloat(value) : value;
   return Number.isFinite(n) ? n : null;
 }
 
@@ -59,15 +59,15 @@ export interface FormatNumberOptions {
  */
 export function formatNumber(
   value: string | number | null | undefined,
-  options: FormatNumberOptions = {}
+  options: FormatNumberOptions = {},
 ): string {
   const n = toFinite(value);
   if (n === null) return FORMAT_FALLBACK;
 
-  const { decimals = 0, locale = "en-US", compact = false } = options;
+  const { decimals = 0, locale = 'en-US', compact = false } = options;
 
   return new Intl.NumberFormat(locale, {
-    notation: compact ? "compact" : "standard",
+    notation: compact ? 'compact' : 'standard',
     minimumFractionDigits: compact ? 0 : decimals,
     maximumFractionDigits: compact ? 1 : decimals,
   }).format(n);
@@ -101,17 +101,17 @@ export interface FormatCurrencyOptions {
  */
 export function formatCurrency(
   value: string | number | null | undefined,
-  options: FormatCurrencyOptions = {}
+  options: FormatCurrencyOptions = {},
 ): string {
   const n = toFinite(value);
   if (n === null) return FORMAT_FALLBACK;
 
-  const { currency = "USD", decimals = 2, locale = "en-US", compact = false } = options;
+  const { currency = 'USD', decimals = 2, locale = 'en-US', compact = false } = options;
 
   return new Intl.NumberFormat(locale, {
-    style: "currency",
+    style: 'currency',
     currency,
-    notation: compact ? "compact" : "standard",
+    notation: compact ? 'compact' : 'standard',
     minimumFractionDigits: compact ? 0 : decimals,
     maximumFractionDigits: compact ? 1 : decimals,
   }).format(n);
@@ -153,27 +153,27 @@ export interface FormatPercentOptions {
  */
 export function formatPercent(
   value: string | number | null | undefined,
-  options: FormatPercentOptions = {}
+  options: FormatPercentOptions = {},
 ): string {
   const n = toFinite(value);
   if (n === null) return FORMAT_FALLBACK;
 
-  const { decimals = 1, isDecimal = false, showSign = false, locale = "en-US" } = options;
+  const { decimals = 1, isDecimal = false, showSign = false, locale = 'en-US' } = options;
   const pct = isDecimal ? n : n / 100;
 
   const formatted = new Intl.NumberFormat(locale, {
-    style: "percent",
+    style: 'percent',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(Math.abs(pct));
 
-  const sign = showSign && n > 0 ? "+" : n < 0 ? "-" : "";
+  const sign = showSign && n > 0 ? '+' : n < 0 ? '-' : '';
   return `${sign}${formatted}`;
 }
 
 // ── formatDate ────────────────────────────────────────────────────────────────
 
-export type FormatDateStyle = "short" | "medium" | "long" | "full";
+export type FormatDateStyle = 'short' | 'medium' | 'long' | 'full';
 
 export interface FormatDateOptions {
   /**
@@ -211,14 +211,14 @@ export interface FormatDateOptions {
  */
 export function formatDate(
   value: Date | string | number | null | undefined,
-  options: FormatDateOptions = {}
+  options: FormatDateOptions = {},
 ): string {
   if (value === null || value === undefined) return FORMAT_FALLBACK;
 
   const date = value instanceof Date ? value : new Date(value);
   if (isNaN(date.getTime())) return FORMAT_FALLBACK;
 
-  const { style = "medium", includeTime = false, locale = "en-US" } = options;
+  const { style = 'medium', includeTime = false, locale = 'en-US' } = options;
 
   return new Intl.DateTimeFormat(locale, {
     dateStyle: style,

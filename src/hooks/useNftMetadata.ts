@@ -36,7 +36,7 @@ export function useNftMetadata({
       const response = await fetch(metadataUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 

@@ -110,7 +110,9 @@ describe('POST /api/auth/nonce', () => {
   });
 
   it('returns 500 on unexpected handler error', async () => {
-    vi.mocked(generateNonce).mockImplementation(() => { throw new Error('boom'); });
+    vi.mocked(generateNonce).mockImplementation(() => {
+      throw new Error('boom');
+    });
 
     const res = await POST(makeRequest({ address: 'GABC' }), { params: {} });
     const body = await res.json();

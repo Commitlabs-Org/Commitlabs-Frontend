@@ -97,13 +97,14 @@ export default function CommitmentCreatedModal({
       if (event.key !== 'Tab' || !modalRef.current) return;
 
       const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
 
       if (focusableElements.length === 0) return;
 
       const firstElement = focusableElements[0] as HTMLElement | undefined;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
+      const lastElement = focusableElements[focusableElements.length - 1] as
+        HTMLElement | undefined;
       if (!firstElement || !lastElement) return;
 
       if (event.shiftKey && document.activeElement === firstElement) {
@@ -197,8 +198,8 @@ export default function CommitmentCreatedModal({
         </span>
       </div>
       <p className="mb-4 text-[13px] leading-relaxed text-white/60">
-        Your commitment has been created but is not yet active. Fund the escrow
-        now to start earning yield. You can also fund later from the detail page.
+        Your commitment has been created but is not yet active. Fund the escrow now to start earning
+        yield. You can also fund later from the detail page.
       </p>
       <div className="flex gap-3">
         <button
@@ -232,13 +233,8 @@ export default function CommitmentCreatedModal({
       aria-live="polite"
       aria-label="Funding in progress"
     >
-      <Loader2
-        className="mx-auto mb-3 h-8 w-8 animate-spin text-[#0FF0FC]"
-        aria-hidden="true"
-      />
-      <p className="text-[14px] font-medium text-white/70">
-        Funding escrow on-chain…
-      </p>
+      <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-[#0FF0FC]" aria-hidden="true" />
+      <p className="text-[14px] font-medium text-white/70">Funding escrow on-chain…</p>
       <p className="mt-1 text-[12px] text-white/30">This may take a few seconds</p>
     </div>
   );
@@ -256,9 +252,7 @@ export default function CommitmentCreatedModal({
           Escrow Funded
         </span>
       </div>
-      <p className="text-[13px] text-white/60">
-        Your commitment is now active and earning yield.
-      </p>
+      <p className="text-[13px] text-white/60">Your commitment is now active and earning yield.</p>
       {fundResult?.txHash && (
         <p className="mt-2 break-all font-mono text-[11px] text-white/30">
           Tx: {fundResult.txHash}
@@ -315,8 +309,8 @@ export default function CommitmentCreatedModal({
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
         <p className="text-[13px] leading-relaxed text-white/60">
-          Commitment is not yet active. You can fund the escrow anytime from the
-          commitment detail page.
+          Commitment is not yet active. You can fund the escrow anytime from the commitment detail
+          page.
         </p>
       </div>
     </div>
@@ -355,10 +349,7 @@ export default function CommitmentCreatedModal({
           <div className="relative mb-6 h-20 w-20 sm:h-24 sm:w-24">
             <div className="absolute inset-0 rounded-full bg-[#0FF0FC] opacity-20 blur-2xl animate-pulse" />
             <div className="relative z-10 flex h-full w-full items-center justify-center rounded-full border-2 border-[#0FF0FC] bg-[#0FF0FC]/10 shadow-[inset_0_0_20px_rgba(15,240,252,0.2)]">
-              <CheckCircle
-                className="h-10 w-10 text-[#0FF0FC] sm:h-12 sm:w-12"
-                strokeWidth={2.5}
-              />
+              <CheckCircle className="h-10 w-10 text-[#0FF0FC] sm:h-12 sm:w-12" strokeWidth={2.5} />
             </div>
           </div>
         </div>

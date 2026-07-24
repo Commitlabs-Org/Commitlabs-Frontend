@@ -10,28 +10,28 @@
 
 ### Key props
 
-| Prop | Type | Notes |
-|------|------|-------|
-| `id` | `string` | Used in ID label, aria-labels, and default trade href |
-| `type` | `"Safe" \| "Balanced" \| "Aggressive"` | Controls border, badge, and score colours |
-| `score` | `number` | Clamped to `[0, 100]` and rounded before display |
-| `amount` | `string` | Displayed verbatim |
-| `duration` | `string` | Displayed verbatim |
-| `yield` | `string` | Displayed verbatim |
-| `maxLoss` | `string` | Displayed verbatim |
-| `owner` | `string` | Truncated to `XXXXXX...YYYY` when longer than 12 chars |
-| `price` | `string` | Shown in the price block (forSale only) |
-| `forSale` | `boolean` | Switches between "for sale" and "not for sale" layouts |
-| `tradeHref?` | `string` | Overrides the default `/marketplace/trade?id=…` href |
-| `trustLevel?` | `TrustLevel` | Defaults to `"unverified"` |
+| Prop          | Type                                   | Notes                                                  |
+| ------------- | -------------------------------------- | ------------------------------------------------------ |
+| `id`          | `string`                               | Used in ID label, aria-labels, and default trade href  |
+| `type`        | `"Safe" \| "Balanced" \| "Aggressive"` | Controls border, badge, and score colours              |
+| `score`       | `number`                               | Clamped to `[0, 100]` and rounded before display       |
+| `amount`      | `string`                               | Displayed verbatim                                     |
+| `duration`    | `string`                               | Displayed verbatim                                     |
+| `yield`       | `string`                               | Displayed verbatim                                     |
+| `maxLoss`     | `string`                               | Displayed verbatim                                     |
+| `owner`       | `string`                               | Truncated to `XXXXXX...YYYY` when longer than 12 chars |
+| `price`       | `string`                               | Shown in the price block (forSale only)                |
+| `forSale`     | `boolean`                              | Switches between "for sale" and "not for sale" layouts |
+| `tradeHref?`  | `string`                               | Overrides the default `/marketplace/trade?id=…` href   |
+| `trustLevel?` | `TrustLevel`                           | Defaults to `"unverified"`                             |
 
 ---
 
 ## Mocks
 
-| Module | Mock strategy |
-|--------|---------------|
-| `next/link` | Renders a plain `<a href="...">` — preserves `href` and `aria-label` for assertion |
+| Module                                       | Mock strategy                                                                                                                                      |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `next/link`                                  | Renders a plain `<a href="...">` — preserves `href` and `aria-label` for assertion                                                                 |
 | `@/components/modals/CommitmentDetailsModal` | Renders `<div role="dialog" data-commitment-id="…">` when `isOpen=true`, nothing otherwise — isolates MarketplaceCard from Dialog/portal internals |
 
 ---
@@ -52,12 +52,12 @@ Parametrised over `Safe`, `Balanced`, and `Aggressive` using `it.each`:
 
 Tests the `clampScore` utility embedded in the component:
 
-| Input | Expected display |
-|-------|-----------------|
-| `NaN` | `0%` |
-| `-10` | `0%` |
-| `150` | `100%` |
-| `84.6` | `85%` (rounds) |
+| Input       | Expected display      |
+| ----------- | --------------------- |
+| `NaN`       | `0%`                  |
+| `-10`       | `0%`                  |
+| `150`       | `100%`                |
+| `84.6`      | `85%` (rounds)        |
 | `100` / `0` | exact boundary values |
 
 ### Data fields (7 tests)

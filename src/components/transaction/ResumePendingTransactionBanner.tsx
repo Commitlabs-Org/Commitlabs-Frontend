@@ -41,9 +41,7 @@ export function ResumePendingTransactionBanner({
 
   if (!pending) return null;
 
-  const elapsed = Math.round(
-    (Date.now() - new Date(pending.startedAt).getTime()) / 1000,
-  );
+  const elapsed = Math.round((Date.now() - new Date(pending.startedAt).getTime()) / 1000);
   const elapsedLabel = elapsed < 60 ? `${elapsed}s ago` : `${Math.round(elapsed / 60)}m ago`;
 
   const handleResume = () => {
@@ -70,8 +68,8 @@ export function ResumePendingTransactionBanner({
         <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" aria-hidden="true" />
         <p className="text-amber-200 truncate">
           Pending transaction on commitment{' '}
-          <strong className="font-semibold">#{pending.commitmentId}</strong>{' '}
-          — paused at <span className="capitalize">{pending.phase}</span>{' '}
+          <strong className="font-semibold">#{pending.commitmentId}</strong> — paused at{' '}
+          <span className="capitalize">{pending.phase}</span>{' '}
           <span className="text-amber-400/70">({elapsedLabel})</span>
         </p>
       </div>

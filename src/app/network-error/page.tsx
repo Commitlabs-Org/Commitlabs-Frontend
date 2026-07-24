@@ -1,26 +1,26 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import ErrorLayout from '@/components/ErrorLayout'
-import ErrorButton from '@/components/ErrorButton'
-import styles from './page.module.css'
+import { useState, useCallback } from 'react';
+import ErrorLayout from '@/components/ErrorLayout';
+import ErrorButton from '@/components/ErrorButton';
+import styles from './page.module.css';
 
 export default function NetworkError() {
-  const [isRetrying, setIsRetrying] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const handleRetry = useCallback(async () => {
-    setIsRetrying(true)
+    setIsRetrying(true);
     try {
       // Try a simple fetch to check connectivity
-      const response = await fetch('/', { method: 'HEAD' })
+      const response = await fetch('/', { method: 'HEAD' });
       if (response.ok) {
-        window.location.reload()
+        window.location.reload();
       }
     } catch {
       // Network still unavailable
-      setIsRetrying(false)
+      setIsRetrying(false);
     }
-  }, [])
+  }, []);
 
   return (
     <ErrorLayout>
@@ -72,10 +72,7 @@ export default function NetworkError() {
 
         {/* Action Buttons */}
         <div className={styles.actions}>
-          <ErrorButton
-            onClick={handleRetry}
-            disabled={isRetrying}
-          >
+          <ErrorButton onClick={handleRetry} disabled={isRetrying}>
             {isRetrying ? 'Retrying...' : 'Retry'}
           </ErrorButton>
           <ErrorButton href="/" variant="secondary">
@@ -84,5 +81,5 @@ export default function NetworkError() {
         </div>
       </div>
     </ErrorLayout>
-  )
+  );
 }

@@ -90,9 +90,7 @@ describe('CreateCommitmentStepSelectType – accessibility', () => {
   it('radiogroup has an accessible name', () => {
     render(<CreateCommitmentStepSelectType {...selectTypeDefaults} />);
 
-    expect(
-      screen.getByRole('radiogroup', { name: /commitment type/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: /commitment type/i })).toBeInTheDocument();
   });
 
   it('each radio card exposes aria-checked=false when nothing is selected', () => {
@@ -105,20 +103,17 @@ describe('CreateCommitmentStepSelectType – accessibility', () => {
   });
 
   it('selected card flips aria-checked to true', () => {
-    render(
-      <CreateCommitmentStepSelectType
-        {...selectTypeDefaults}
-        selectedType="safe"
-      />,
+    render(<CreateCommitmentStepSelectType {...selectTypeDefaults} selectedType="safe" />);
+
+    expect(screen.getByRole('radio', { name: /Safe Commitment/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
     );
 
-    expect(
-      screen.getByRole('radio', { name: /Safe Commitment/ }),
-    ).toHaveAttribute('aria-checked', 'true');
-
-    expect(
-      screen.getByRole('radio', { name: /Balanced Commitment/ }),
-    ).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: /Balanced Commitment/ })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 
   it('all radio cards have tabIndex 0 so they are keyboard reachable', () => {
@@ -158,17 +153,16 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
   it('step heading receives focus on mount', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    expect(
-      screen.getByRole('heading', { name: 'Configure Parameters' }),
-    ).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Configure Parameters' })).toHaveFocus();
   });
 
   it('step heading has tabIndex -1', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    expect(
-      screen.getByRole('heading', { name: 'Configure Parameters' }),
-    ).toHaveAttribute('tabIndex', '-1');
+    expect(screen.getByRole('heading', { name: 'Configure Parameters' })).toHaveAttribute(
+      'tabIndex',
+      '-1',
+    );
   });
 
   // -- Amount input ----------------------------------------------------------
@@ -191,10 +185,7 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
   it('amount input has aria-invalid=false when no error', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    expect(screen.getByLabelText(/Commitment Amount/)).toHaveAttribute(
-      'aria-invalid',
-      'false',
-    );
+    expect(screen.getByLabelText(/Commitment Amount/)).toHaveAttribute('aria-invalid', 'false');
   });
 
   it('amount input sets aria-invalid=true and aria-describedby includes error id when amountError is provided', () => {
@@ -236,16 +227,11 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
   it('duration input has aria-invalid=false when value is in range', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    expect(screen.getByLabelText(/Duration \(days\)/)).toHaveAttribute(
-      'aria-invalid',
-      'false',
-    );
+    expect(screen.getByLabelText(/Duration \(days\)/)).toHaveAttribute('aria-invalid', 'false');
   });
 
   it('duration input sets aria-invalid=true and shows role=alert error when out of range', () => {
-    render(
-      <CreateCommitmentStepConfigure {...configureDefaults} durationDays={0} />,
-    );
+    render(<CreateCommitmentStepConfigure {...configureDefaults} durationDays={0} />);
 
     const durationInput = screen.getByLabelText(/Duration \(days\)/);
     expect(durationInput).toHaveAttribute('aria-invalid', 'true');
@@ -253,10 +239,7 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
     const describedBy = durationInput.getAttribute('aria-describedby') ?? '';
     expect(describedBy).toContain('duration-error');
 
-    expect(screen.getByText('Minimum duration is 1 day.')).toHaveAttribute(
-      'role',
-      'alert',
-    );
+    expect(screen.getByText('Minimum duration is 1 day.')).toHaveAttribute('role', 'alert');
   });
 
   // -- Max loss input --------------------------------------------------------
@@ -283,18 +266,14 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
   it('max loss input has aria-invalid=false when value is in range', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    expect(
-      screen.getByRole('spinbutton', { name: /Maximum Acceptable Loss/ }),
-    ).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByRole('spinbutton', { name: /Maximum Acceptable Loss/ })).toHaveAttribute(
+      'aria-invalid',
+      'false',
+    );
   });
 
   it('max loss input sets aria-invalid=true and shows role=alert error when out of range', () => {
-    render(
-      <CreateCommitmentStepConfigure
-        {...configureDefaults}
-        maxLossPercent={101}
-      />,
-    );
+    render(<CreateCommitmentStepConfigure {...configureDefaults} maxLossPercent={101} />);
 
     const maxLossInput = screen.getByRole('spinbutton', {
       name: /Maximum Acceptable Loss/,
@@ -304,19 +283,12 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
     const describedBy = maxLossInput.getAttribute('aria-describedby') ?? '';
     expect(describedBy).toContain('maxloss-error');
 
-    expect(screen.getByText('Cannot exceed 100%.')).toHaveAttribute(
-      'role',
-      'alert',
-    );
+    expect(screen.getByText('Cannot exceed 100%.')).toHaveAttribute('role', 'alert');
   });
 
   it('max loss input aria-describedby references warning element when maxLossWarning is true', () => {
     render(
-      <CreateCommitmentStepConfigure
-        {...configureDefaults}
-        maxLossPercent={85}
-        maxLossWarning
-      />,
+      <CreateCommitmentStepConfigure {...configureDefaults} maxLossPercent={85} maxLossWarning />,
     );
 
     const maxLossInput = screen.getByRole('spinbutton', {
@@ -335,21 +307,21 @@ describe('CreateCommitmentStepConfigure – accessibility', () => {
   it('advanced section toggle button has aria-expanded=false by default', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    expect(
-      screen.getByRole('button', { name: /Advanced Risk Parameters/ }),
-    ).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /Advanced Risk Parameters/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 
   it('advanced section toggle button sets aria-expanded=true when opened', () => {
     render(<CreateCommitmentStepConfigure {...configureDefaults} />);
 
-    fireEvent.click(
-      screen.getByRole('button', { name: /Advanced Risk Parameters/ }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: /Advanced Risk Parameters/ }));
 
-    expect(
-      screen.getByRole('button', { name: /Advanced Risk Parameters/ }),
-    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Advanced Risk Parameters/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
   });
 });
 
@@ -361,25 +333,22 @@ describe('CreateCommitmentStepReview – accessibility', () => {
   it('step heading receives focus on mount', () => {
     render(<CreateCommitmentStepReview {...reviewDefaults} />);
 
-    expect(
-      screen.getByRole('heading', { name: 'Review & Confirm' }),
-    ).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Review & Confirm' })).toHaveFocus();
   });
 
   it('step heading has tabIndex -1', () => {
     render(<CreateCommitmentStepReview {...reviewDefaults} />);
 
-    expect(
-      screen.getByRole('heading', { name: 'Review & Confirm' }),
-    ).toHaveAttribute('tabIndex', '-1');
+    expect(screen.getByRole('heading', { name: 'Review & Confirm' })).toHaveAttribute(
+      'tabIndex',
+      '-1',
+    );
   });
 
   // -- Section structure -----------------------------------------------------
 
   it('each review section is a semantic <section> element with aria-labelledby', () => {
-    const { container } = render(
-      <CreateCommitmentStepReview {...reviewDefaults} />,
-    );
+    const { container } = render(<CreateCommitmentStepReview {...reviewDefaults} />);
 
     const sections = container.querySelectorAll('section');
     expect(sections.length).toBe(4);

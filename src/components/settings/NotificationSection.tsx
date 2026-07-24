@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { motion } from 'framer-motion'
+import React from 'react';
+import { motion } from 'framer-motion';
 
 interface NotificationSectionProps {
-  title: string
-  description?: string
-  icon?: React.ReactNode
-  children: React.ReactNode
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export const NotificationSection: React.FC<NotificationSectionProps> = ({
@@ -17,7 +17,7 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
   children,
 }) => {
   return (
-    <motion.section 
+    <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -31,15 +31,11 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
         )}
         <div>
           <h2 className="text-xl font-bold text-white">{title}</h2>
-          {description && (
-            <p className="text-sm text-white/40 mt-1">{description}</p>
-          )}
+          {description && <p className="text-sm text-white/40 mt-1">{description}</p>}
         </div>
       </div>
-      
-      <div className="grid gap-4">
-        {children}
-      </div>
+
+      <div className="grid gap-4">{children}</div>
     </motion.section>
-  )
-}
+  );
+};

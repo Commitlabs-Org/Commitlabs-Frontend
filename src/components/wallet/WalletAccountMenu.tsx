@@ -34,8 +34,7 @@ const walletErrorMessage = (error: string | null) => {
 };
 
 export const WalletAccountMenu: React.FC = () => {
-  const { connected, address, connect, disconnect, error, connecting } =
-    useWallet();
+  const { connected, address, connect, disconnect, error, connecting } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [network, setNetwork] = useState<'public' | 'testnet'>('public');
@@ -64,10 +63,7 @@ export const WalletAccountMenu: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     };
@@ -113,13 +109,13 @@ export const WalletAccountMenu: React.FC = () => {
   const errorMessage = walletErrorMessage(error);
 
   return (
-    <div className='relative inline-flex flex-col items-end gap-2 max-w-[240px]'>
+    <div className="relative inline-flex flex-col items-end gap-2 max-w-[240px]">
       {connected ? (
-        <div ref={containerRef} className='relative inline-block text-left'>
+        <div ref={containerRef} className="relative inline-block text-left">
           <button
-            type='button'
-            className='inline-flex items-center justify-center rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-4 py-2 text-sm font-medium text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-white'
-            aria-haspopup='menu'
+            type="button"
+            className="inline-flex items-center justify-center rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-4 py-2 text-sm font-medium text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-label={`Connected wallet ${truncateAddress(address)}`}
             onClick={() => setMenuOpen((open) => !open)}
@@ -134,55 +130,51 @@ export const WalletAccountMenu: React.FC = () => {
 
           {menuOpen && (
             <div
-              className='origin-top-right absolute right-0 mt-2 w-64 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0a] shadow-[0_0_22px_rgba(0,0,0,0.45)] ring-1 ring-white ring-opacity-10'
-              role='menu'
-              aria-label='Wallet account menu'
+              className="origin-top-right absolute right-0 mt-2 w-64 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0a] shadow-[0_0_22px_rgba(0,0,0,0.45)] ring-1 ring-white ring-opacity-10"
+              role="menu"
+              aria-label="Wallet account menu"
             >
-              <div className='px-4 py-3 border-b border-[rgba(255,255,255,0.08)]'>
-                <p className='text-xs text-[#94A3B8] mb-1'>Connected Address</p>
-                <div className='flex items-center gap-2'>
-                  <span className='text-sm text-white font-mono'>
-                    {truncateAddress(address)}
-                  </span>
+              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)]">
+                <p className="text-xs text-[#94A3B8] mb-1">Connected Address</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white font-mono">{truncateAddress(address)}</span>
                   <button
-                    type='button'
+                    type="button"
                     onClick={handleCopyAddress}
-                    className='p-1 rounded hover:bg-[rgba(0,212,255,0.15)]'
-                    aria-label='Copy address'
+                    className="p-1 rounded hover:bg-[rgba(0,212,255,0.15)]"
+                    aria-label="Copy address"
                   >
-                    <Copy className='h-4 w-4 text-[#94A3B8]' />
+                    <Copy className="h-4 w-4 text-[#94A3B8]" />
                   </button>
                 </div>
-                {copied && (
-                  <p className='text-xs text-[#0FF0FC] mt-1'>Copied!</p>
-                )}
+                {copied && <p className="text-xs text-[#0FF0FC] mt-1">Copied!</p>}
               </div>
-              <div className='px-4 py-3 border-b border-[rgba(255,255,255,0.08)]'>
-                <p className='text-xs text-[#94A3B8] mb-1'>Network</p>
-                <span className='text-sm text-white font-medium'>
+              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.08)]">
+                <p className="text-xs text-[#94A3B8] mb-1">Network</p>
+                <span className="text-sm text-white font-medium">
                   {network.charAt(0).toUpperCase() + network.slice(1)}
                 </span>
               </div>
-              <div className='py-1'>
+              <div className="py-1">
                 <button
-                  type='button'
-                  className='flex items-center gap-2 w-full rounded-[14px] px-4 py-2 text-left text-sm text-white transition-colors duration-200 ease-[ease] hover:bg-[rgba(0,212,255,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white'
-                  role='menuitem'
+                  type="button"
+                  className="flex items-center gap-2 w-full rounded-[14px] px-4 py-2 text-left text-sm text-white transition-colors duration-200 ease-[ease] hover:bg-[rgba(0,212,255,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  role="menuitem"
                   onClick={() => {
                     openExplorerUrl('account', address, network);
                     setMenuOpen(false);
                   }}
                 >
-                  <ExternalLink className='h-4 w-4' />
+                  <ExternalLink className="h-4 w-4" />
                   View on Stellar.Expert
                 </button>
                 <button
-                  type='button'
-                  className='flex items-center gap-2 w-full rounded-[14px] px-4 py-2 text-left text-sm text-white transition-colors duration-200 ease-[ease] hover:bg-[rgba(0,212,255,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white'
-                  role='menuitem'
+                  type="button"
+                  className="flex items-center gap-2 w-full rounded-[14px] px-4 py-2 text-left text-sm text-white transition-colors duration-200 ease-[ease] hover:bg-[rgba(0,212,255,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  role="menuitem"
                   onClick={handleDisconnect}
                 >
-                  <LogOut className='h-4 w-4' />
+                  <LogOut className="h-4 w-4" />
                   Disconnect
                 </button>
               </div>
@@ -191,11 +183,11 @@ export const WalletAccountMenu: React.FC = () => {
         </div>
       ) : (
         <button
-          type='button'
-          className='inline-flex items-center justify-center rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-6 py-2 text-sm font-medium text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-60'
+          type="button"
+          className="inline-flex items-center justify-center rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-6 py-2 text-sm font-medium text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-60"
           onClick={connect}
           disabled={connecting}
-          aria-live='polite'
+          aria-live="polite"
         >
           {connecting ? 'Connecting…' : 'Connect Wallet'}
         </button>
@@ -203,9 +195,9 @@ export const WalletAccountMenu: React.FC = () => {
 
       {errorMessage ? (
         <p
-          role='alert'
-          className='max-w-[240px] text-left text-[13px] leading-5 text-[#F8C3C3]'
-          aria-live='polite'
+          role="alert"
+          className="max-w-[240px] text-left text-[13px] leading-5 text-[#F8C3C3]"
+          aria-live="polite"
         >
           {errorMessage}
         </p>

@@ -8,7 +8,7 @@ Every page template and layout MUST use semantic HTML5 landmarks to define the p
 
 - **`<header>`**: Used for the primary top-level application shell and navigation banner.
 - **`<nav>`**: Used for navigation links within the header (`id="primary-navigation"`) and footer.
-- **`<main id="main-content">`**: The primary wrapper for the unique content of the route. 
+- **`<main id="main-content">`**: The primary wrapper for the unique content of the route.
   - **Requirement:** Every single page must have exactly one `<main id="main-content">` tag.
   - **Why:** The application layout includes a `<a href="#main-content" className="skip-link">` that allows keyboard users and screen readers to bypass repetitive navigation links. If the target `id="main-content"` is missing, the skip link breaks.
 - **`<footer>`**: Used for the bottom site footer.
@@ -16,7 +16,7 @@ Every page template and layout MUST use semantic HTML5 landmarks to define the p
 ### Example Layout
 
 ```tsx
-import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
 
 export default function MyPage() {
   return (
@@ -25,13 +25,13 @@ export default function MyPage() {
         {/* Page specific content goes here */}
       </main>
     </AppShellLayout>
-  )
+  );
 }
 ```
 
 ## Heading Hierarchy
 
-We enforce a strict, logically nested heading hierarchy on all pages. 
+We enforce a strict, logically nested heading hierarchy on all pages.
 
 - **Single `<h1>` Rule**: Every page must have **exactly one** `<h1>` tag that describes the primary topic or purpose of the page.
 - **Logical Nesting**: Headings must not skip levels (e.g., do not jump from an `<h1>` to an `<h3>`). Use `<h2>` for major sections, `<h3>` for subsections, and so forth.

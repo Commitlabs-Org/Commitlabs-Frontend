@@ -1,13 +1,13 @@
-"use client";
-import { ReputationDisplay } from "./ReputationDisplay";
+'use client';
+import { ReputationDisplay } from './ReputationDisplay';
 
-import { memo, useState, useEffect } from "react";
-import Link from "next/link";
-import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
-import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
-import { TrustBadge, TrustLevel } from "./TrustBadge";
+import { memo, useState, useEffect } from 'react';
+import Link from 'next/link';
+import { CommitmentDetailsModal } from './modals/CommitmentDetailsModal';
+import PurchaseSuccessModal from './modals/PurchaseSuccessModal';
+import { TrustBadge, TrustLevel } from './TrustBadge';
 import { formatPercent } from '@/utils/format';
-export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
+export type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
 export interface MarketplaceCardProps {
   id: string;
@@ -45,22 +45,16 @@ function clampScore(score: number) {
 // }
 
 function truncateAddress(addr: string) {
-  const s = addr?.trim() ?? "";
+  const s = addr?.trim() ?? '';
   if (s.length <= 12) return s;
   return `${s.slice(0, 6)}...${s.slice(-4)}`;
 }
 
 function TypeIcon({ type }: { type: CommitmentType }) {
   // Minimal inline SVGs so we don’t pull in any icon deps.
-  if (type === "Safe") {
+  if (type === 'Safe') {
     return (
-      <svg
-        width="28"
-        height="28"
-        viewBox="0 0 28 28"
-        fill="none"
-        className="w-[26px] h-[26px]"
-      >
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="w-[26px] h-[26px]">
         <path
           d="M23.3292 15.164C23.3292 20.9962 19.2466 23.9124 14.3942 25.6037C14.1401 25.6898 13.8641 25.6857 13.6127 25.5921C8.74859 23.9124 4.66602 20.9962 4.66602 15.164V6.99884C4.66602 6.68948 4.78891 6.39279 5.00766 6.17404C5.22641 5.95529 5.5231 5.83239 5.83247 5.83239C8.16536 5.83239 11.0815 4.43265 13.1111 2.65965C13.3582 2.44852 13.6726 2.33252 13.9976 2.33252C14.3226 2.33252 14.637 2.44852 14.8841 2.65965C16.9254 4.44432 19.8299 5.83239 22.1628 5.83239C22.4721 5.83239 22.7688 5.95529 22.9876 6.17404C23.2063 6.39279 23.3292 6.68948 23.3292 6.99884V15.164Z"
           stroke="#05DF72"
@@ -72,7 +66,7 @@ function TypeIcon({ type }: { type: CommitmentType }) {
     );
   }
 
-  if (type === "Balanced") {
+  if (type === 'Balanced') {
     return (
       <svg
         width="28"
@@ -101,13 +95,7 @@ function TypeIcon({ type }: { type: CommitmentType }) {
   }
 
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 28 28"
-      fill="none"
-      className="w-[26px] h-[26px]"
-    >
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="w-[26px] h-[26px]">
       <path
         d="M9.91461 16.9137C10.688 16.9137 11.4297 16.6064 11.9766 16.0596C12.5235 15.5127 12.8307 14.771 12.8307 13.9976C12.8307 12.3879 12.2475 11.6647 11.6643 10.4982C10.4138 7.99851 11.403 5.76942 13.9972 3.49951C14.5804 6.41564 16.3301 9.21512 18.663 11.0814C20.9959 12.9478 22.1623 15.164 22.1623 17.4969C22.1623 18.5692 21.9511 19.6309 21.5408 20.6216C21.1305 21.6122 20.529 22.5123 19.7708 23.2705C19.0126 24.0287 18.1125 24.6302 17.1218 25.0405C16.1312 25.4509 15.0694 25.6621 13.9972 25.6621C12.9249 25.6621 11.8632 25.4509 10.8725 25.0405C9.88187 24.6302 8.98175 24.0287 8.22355 23.2705C7.46534 22.5123 6.8639 21.6122 6.45357 20.6216C6.04323 19.6309 5.83203 18.5692 5.83203 17.4969C5.83203 16.152 6.3371 14.8211 6.99848 13.9976C6.99848 14.771 7.30571 15.5127 7.85259 16.0596C8.39947 16.6064 9.1412 16.9137 9.91461 16.9137Z"
         stroke="#FF8904"
@@ -121,13 +109,7 @@ function TypeIcon({ type }: { type: CommitmentType }) {
 
 function ViewIcon() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g clipPath="url(#clip0_158_2158)">
         <path
           d="M1.37467 8.23122C1.31912 8.08156 1.31912 7.91693 1.37467 7.76727C1.91575 6.45532 2.83419 5.33356 4.01357 4.54422C5.19294 3.75488 6.58014 3.3335 7.99929 3.3335C9.41844 3.3335 10.8056 3.75488 11.985 4.54422C13.1644 5.33356 14.0828 6.45532 14.6239 7.76727C14.6795 7.91693 14.6795 8.08156 14.6239 8.23122C14.0828 9.54317 13.1644 10.6649 11.985 11.4543C10.8056 12.2436 9.41844 12.665 7.99929 12.665C6.58014 12.665 5.19294 12.2436 4.01357 11.4543C2.83419 10.6649 1.91575 9.54317 1.37467 8.23122Z"
@@ -176,16 +158,10 @@ function DollarSignIcon() {
 
 function CompareIcon({ selected }: { selected: boolean }) {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
         d="M2 4H14M2 8H14M2 12H10"
-        stroke={selected ? "#0FF0FC" : "currentColor"}
+        stroke={selected ? '#0FF0FC' : 'currentColor'}
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -227,28 +203,27 @@ function MarketplaceCardComponent({
 
   const clampedScore = clampScore(score);
   const cardBorderClass =
-    type === "Safe"
-      ? "border-[#00C95066]"
-      : type === "Balanced"
-        ? "border-[#2B7FFF66]"
-        : "border-[#FF690066]";
+    type === 'Safe'
+      ? 'border-[#00C95066]'
+      : type === 'Balanced'
+        ? 'border-[#2B7FFF66]'
+        : 'border-[#FF690066]';
 
   const scoreColorClass =
-    type === "Safe"
-      ? "text-[#00C950]/95"
-      : type === "Balanced"
-        ? "text-[#51A2FF]/95"
-        : "text-[#FF8904]/95";
+    type === 'Safe'
+      ? 'text-[#00C950]/95'
+      : type === 'Balanced'
+        ? 'text-[#51A2FF]/95'
+        : 'text-[#FF8904]/95';
 
   const badgeClass =
-    type === "Safe"
-      ? "bg-[#0f2a1d] text-[#00C950]"
-      : type === "Balanced"
-        ? "bg-[#122238] text-[#51A2FF]"
-        : "bg-[#2b1c10] text-[#FF8904]";
+    type === 'Safe'
+      ? 'bg-[#0f2a1d] text-[#00C950]'
+      : type === 'Balanced'
+        ? 'bg-[#122238] text-[#51A2FF]'
+        : 'bg-[#2b1c10] text-[#FF8904]';
 
-  const resolvedTradeHref =
-    tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
+  const resolvedTradeHref = tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
 
   async function handleTrade() {
     if (onPurchase) {
@@ -283,10 +258,10 @@ function MarketplaceCardComponent({
               type="button"
               className={`focus-ring inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-colors ${
                 compareSelected
-                  ? "border-[#0FF0FC]/50 bg-[#0FF0FC]/15 text-[#0FF0FC]"
+                  ? 'border-[#0FF0FC]/50 bg-[#0FF0FC]/15 text-[#0FF0FC]'
                   : compareDisabled
-                    ? "border-white/10 bg-white/[0.02] text-white/30 cursor-not-allowed"
-                    : "border-white/15 bg-white/[0.04] text-white/70 hover:bg-white/[0.08]"
+                    ? 'border-white/10 bg-white/[0.02] text-white/30 cursor-not-allowed'
+                    : 'border-white/15 bg-white/[0.04] text-white/70 hover:bg-white/[0.08]'
               }`}
               onClick={onCompareToggle}
               disabled={compareDisabled && !compareSelected}
@@ -300,7 +275,7 @@ function MarketplaceCardComponent({
               }
             >
               <CompareIcon selected={compareSelected} />
-              {compareSelected ? "Comparing" : "Compare"}
+              {compareSelected ? 'Comparing' : 'Compare'}
             </button>
           )}
           <span
@@ -308,32 +283,32 @@ function MarketplaceCardComponent({
           >
             {type}
           </span>
-            {/* Compact reputation display */}
-            {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
-            <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>{formatPercent(clampedScore, { decimals: 0 })}</span>
-            ) : (
-              <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">New seller</span>
-            )}
+          {/* Compact reputation display */}
+          {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
+            <span
+              className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}
+            >
+              {formatPercent(clampedScore, { decimals: 0 })}
+            </span>
+          ) : (
+            <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">
+              New seller
+            </span>
+          )}
         </div>
       </header>
 
       <div className="flex-1 pt-[10px] px-[2px] pb-0">
-        <div className="font-mono text-[13px] text-white/65 mb-3">
-          #CMT-{id.padStart(3, "0")}
-        </div>
+        <div className="font-mono text-[13px] text-white/65 mb-3">#CMT-{id.padStart(3, '0')}</div>
 
         <dl className="grid gap-3">
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-white/60 text-[14px]">Amount</dt>
-            <dd className="m-0 text-[15px] font-[650] text-white/90">
-              {amount}
-            </dd>
+            <dd className="m-0 text-[15px] font-[650] text-white/90">{amount}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-white/60 text-[14px]">Duration</dt>
-            <dd className="m-0 text-[15px] font-[650] text-white/90">
-              {duration}
-            </dd>
+            <dd className="m-0 text-[15px] font-[650] text-white/90">{duration}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-white/60 text-[14px]">Yield</dt>
@@ -341,9 +316,7 @@ function MarketplaceCardComponent({
           </div>
           <div className="flex items-baseline justify-between gap-4">
             <dt className="text-white/60 text-[14px]">Max Loss</dt>
-            <dd className="m-0 text-[15px] font-[650] text-white/90">
-              {maxLoss}
-            </dd>
+            <dd className="m-0 text-[15px] font-[650] text-white/90">{maxLoss}</dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-white/60 text-[14px]">Owner</dt>
@@ -351,10 +324,7 @@ function MarketplaceCardComponent({
               <span className="text-[15px] font-mono font-semibold text-white/80">
                 {truncateAddress(owner)}
               </span>
-              <TrustBadge
-                level={trustLevel ?? "unverified"}
-                showTooltip={false}
-              />
+              <TrustBadge level={trustLevel ?? 'unverified'} showTooltip={false} />
               {/* Render ReputationDisplay compactly when data available */}
               {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' && (
                 <ReputationDisplay
@@ -439,7 +409,7 @@ function MarketplaceCardComponent({
         onClose={() => setIsModalOpen(false)}
         commitmentId={id}
         typeLabel={`${type} Commitment`}
-        typeVariant={type.toLowerCase() as "safe" | "balanced" | "aggressive"}
+        typeVariant={type.toLowerCase() as 'safe' | 'balanced' | 'aggressive'}
         currentPrice={price}
         amountCommitted={amount}
         remainingDuration={duration}
@@ -447,22 +417,22 @@ function MarketplaceCardComponent({
         maxLoss={maxLoss}
         complianceItems={[
           {
-            id: "volatility-exposure",
-            label: "Volatility Exposure",
-            statusLabel: "Within limits",
-            statusVariant: "ok",
+            id: 'volatility-exposure',
+            label: 'Volatility Exposure',
+            statusLabel: 'Within limits',
+            statusVariant: 'ok',
           },
           {
-            id: "fee-generation",
-            label: "Fee Generation",
-            statusLabel: "On track",
-            statusVariant: "ok",
+            id: 'fee-generation',
+            label: 'Fee Generation',
+            statusLabel: 'On track',
+            statusVariant: 'ok',
           },
           {
-            id: "drawdown-events",
-            label: "Drawdown Events",
-            statusLabel: "None detected",
-            statusVariant: "ok",
+            id: 'drawdown-events',
+            label: 'Drawdown Events',
+            statusLabel: 'None detected',
+            statusVariant: 'ok',
           },
         ]}
         // Pass reputation data to modal

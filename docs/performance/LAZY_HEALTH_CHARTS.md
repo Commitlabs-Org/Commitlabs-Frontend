@@ -7,6 +7,7 @@ Reduce the initial JavaScript bundle for the commitment detail page by lazy-load
 ## Changes
 
 `src/components/dashboard/CommitmentHealthMetrics.tsx`:
+
 - Removed static imports of `HealthMetricsValueHistoryChart`,
   `HealthMetricsDrawdownChart`, `HealthMetricsFeeGenerationChart`,
   `HealthMetricsComplianceChart`.
@@ -16,9 +17,9 @@ Reduce the initial JavaScript bundle for the commitment detail page by lazy-load
 
 ## Bundle Impact (estimated)
 
-| Metric                      | Before  | After   | Savings |
-|-----------------------------|---------|---------|---------|
-| Recharts + dependent charts | ~135 kB | ~0 kB   | ~135 kB |
+| Metric                      | Before  | After | Savings |
+| --------------------------- | ------- | ----- | ------- |
+| Recharts + dependent charts | ~135 kB | ~0 kB | ~135 kB |
 
 Recharts itself is ~130 kB minified. Combined with the four chart components,
 this chunk accounts for roughly **135 kB** that is now deferred until the user

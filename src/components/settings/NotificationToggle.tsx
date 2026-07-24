@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { motion } from 'framer-motion'
-import { Bell, BellOff, Send } from 'lucide-react'
-import { useTestNotification } from '@/hooks/useTestNotification'
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Bell, BellOff, Send } from 'lucide-react';
+import { useTestNotification } from '@/hooks/useTestNotification';
 
 interface NotificationToggleProps {
-  id: string
-  label: string
-  description: string
-  enabled: boolean
-  onChange: (enabled: boolean) => void
-  onTestSend?: () => void
-  isTestSending?: boolean
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+  onTestSend?: () => void;
+  isTestSending?: boolean;
 }
 
 export const NotificationToggle: React.FC<NotificationToggleProps> = ({
@@ -24,19 +24,16 @@ export const NotificationToggle: React.FC<NotificationToggleProps> = ({
   onTestSend,
   isTestSending,
 }) => {
-  const { sendTest, isSending } = useTestNotification(id)
+  const { sendTest, isSending } = useTestNotification(id);
 
-  const handleTestSend = onTestSend || sendTest
-  const currentIsSending = isTestSending !== undefined ? isTestSending : isSending
+  const handleTestSend = onTestSend || sendTest;
+  const currentIsSending = isTestSending !== undefined ? isTestSending : isSending;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-white/10 bg-white/5 transition-all hover:border-white/20 hover:bg-white/10">
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <label 
-            htmlFor={id} 
-            className="text-base font-semibold text-white cursor-pointer"
-          >
+          <label htmlFor={id} className="text-base font-semibold text-white cursor-pointer">
             {label}
           </label>
           {enabled ? (
@@ -45,9 +42,7 @@ export const NotificationToggle: React.FC<NotificationToggleProps> = ({
             <BellOff size={14} className="text-white/30" />
           )}
         </div>
-        <p className="text-sm text-white/50 leading-relaxed max-w-2xl">
-          {description}
-        </p>
+        <p className="text-sm text-white/50 leading-relaxed max-w-2xl">{description}</p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -76,7 +71,7 @@ export const NotificationToggle: React.FC<NotificationToggleProps> = ({
           <span className="sr-only">Toggle {label}</span>
           <motion.span
             layout
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             className={`
               pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 
               ${enabled ? 'translate-x-6' : 'translate-x-1'}
@@ -85,5 +80,5 @@ export const NotificationToggle: React.FC<NotificationToggleProps> = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};

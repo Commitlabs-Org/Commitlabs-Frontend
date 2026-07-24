@@ -29,7 +29,8 @@ function isValidPrice(value: string): { valid: true } | { valid: false; error: s
   const num = Number(trimmed);
   if (!Number.isFinite(num)) return { valid: false, error: 'Price must be a valid number' };
   if (num <= 0) return { valid: false, error: 'Price must be positive' };
-  if (num > MAX_PRICE) return { valid: false, error: `Price cannot exceed ${MAX_PRICE.toLocaleString()}` };
+  if (num > MAX_PRICE)
+    return { valid: false, error: `Price cannot exceed ${MAX_PRICE.toLocaleString()}` };
   return { valid: true };
 }
 
@@ -128,7 +129,17 @@ export default function RelistPriceEditor({
     } finally {
       setIsSubmitting(false);
     }
-  }, [price, isActive, listing.id, listing.commitmentId, commitmentAsset, sellerAddress, onPriceUpdated, toast, listing.price]);
+  }, [
+    price,
+    isActive,
+    listing.id,
+    listing.commitmentId,
+    commitmentAsset,
+    sellerAddress,
+    onPriceUpdated,
+    toast,
+    listing.price,
+  ]);
 
   if (!isActive && !isCancelled) return null;
 
@@ -136,9 +147,7 @@ export default function RelistPriceEditor({
     return (
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] tracking-[0.05em] text-[#94A3B8]">
-            Listing Price
-          </span>
+          <span className="text-[11px] tracking-[0.05em] text-[#94A3B8]">Listing Price</span>
           <span className="text-[14px] font-semibold text-white">
             {listing.price} {listing.currencyAsset}
           </span>
@@ -169,10 +178,7 @@ export default function RelistPriceEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <label
-        htmlFor={inputId}
-        className="text-[11px] tracking-[0.05em] text-[#94A3B8]"
-      >
+      <label htmlFor={inputId} className="text-[11px] tracking-[0.05em] text-[#94A3B8]">
         {isActive ? 'Edit Price' : 'Set Price'}
       </label>
       <div className="flex items-center gap-2">
@@ -193,25 +199,37 @@ export default function RelistPriceEditor({
           aria-invalid={!!validationError}
           aria-describedby={validationError ? `${inputId}-error` : undefined}
         />
-        <span className="text-[12px] text-[#94A3B8] font-medium">
-          {commitmentAsset}
-        </span>
+        <span className="text-[12px] text-[#94A3B8] font-medium">{commitmentAsset}</span>
       </div>
       {marketplaceStats && (
-        <div className="rounded-[6px] border border-white/5 bg-white/3 px-3 py-2 text-[11px] text-[#94A3B8]" aria-label="Marketplace price hints">
-          <span className="mr-3">Floor: <strong className="text-white/80">{marketplaceStats.floorPrice} {commitmentAsset}</strong></span>
-          <span className="mr-3">Median: <strong className="text-white/80">{marketplaceStats.medianPrice} {commitmentAsset}</strong></span>
+        <div
+          className="rounded-[6px] border border-white/5 bg-white/3 px-3 py-2 text-[11px] text-[#94A3B8]"
+          aria-label="Marketplace price hints"
+        >
+          <span className="mr-3">
+            Floor:{' '}
+            <strong className="text-white/80">
+              {marketplaceStats.floorPrice} {commitmentAsset}
+            </strong>
+          </span>
+          <span className="mr-3">
+            Median:{' '}
+            <strong className="text-white/80">
+              {marketplaceStats.medianPrice} {commitmentAsset}
+            </strong>
+          </span>
           {marketplaceStats.lastSoldPrice && (
-            <span>Last sold: <strong className="text-white/80">{marketplaceStats.lastSoldPrice} {commitmentAsset}</strong></span>
+            <span>
+              Last sold:{' '}
+              <strong className="text-white/80">
+                {marketplaceStats.lastSoldPrice} {commitmentAsset}
+              </strong>
+            </span>
           )}
         </div>
       )}
       {validationError && (
-        <p
-          id={`${inputId}-error`}
-          role="alert"
-          className="text-[11px] text-[#EF4444]"
-        >
+        <p id={`${inputId}-error`} role="alert" className="text-[11px] text-[#EF4444]">
           {validationError}
         </p>
       )}
@@ -223,11 +241,7 @@ export default function RelistPriceEditor({
           className="flex items-center gap-1.5 rounded-[8px] border border-[rgba(5,223,114,0.3)] bg-[rgba(5,223,114,0.08)] px-2.5 py-1.5 text-[12px] font-semibold text-[#05DF72] transition-all duration-200 hover:bg-[rgba(5,223,114,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#05DF72] disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={isSubmitting ? 'Saving...' : 'Save price'}
         >
-          {isSubmitting ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Check size={14} />
-          )}
+          {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
           {isSubmitting ? 'Saving...' : 'Save'}
         </button>
         <button

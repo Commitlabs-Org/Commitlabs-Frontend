@@ -21,10 +21,7 @@ describe('GET /api/auth/csrf', () => {
   it('issues the session CSRF token for an authenticated session', async () => {
     const { sessionId, csrfToken } = createBrowserSession('GABC');
 
-    const res = await GET(
-      makeRequest(`${SESSION_COOKIE_NAME}=${sessionId}`),
-      { params: {} },
-    );
+    const res = await GET(makeRequest(`${SESSION_COOKIE_NAME}=${sessionId}`), { params: {} });
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -41,10 +38,7 @@ describe('GET /api/auth/csrf', () => {
   });
 
   it('returns 401 when the session cookie references an unknown session', async () => {
-    const res = await GET(
-      makeRequest(`${SESSION_COOKIE_NAME}=does-not-exist`),
-      { params: {} },
-    );
+    const res = await GET(makeRequest(`${SESSION_COOKIE_NAME}=does-not-exist`), { params: {} });
 
     expect(res.status).toBe(401);
   });

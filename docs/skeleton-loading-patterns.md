@@ -18,6 +18,7 @@ The foundation component with the following features:
 ### 2. Commitment List Skeleton (`src/components/MyCommitmentsGridSkeleton.tsx`)
 
 Skeleton for the commitments list page showing:
+
 - Stats section skeleton (4 cards)
 - Filters section skeleton
 - Commitment cards grid (6 cards by default)
@@ -25,12 +26,14 @@ Skeleton for the commitments list page showing:
 ### 3. Marketplace Skeleton (`src/components/MarketplaceGridSkeleton.tsx`)
 
 Skeleton for the marketplace page showing:
+
 - Results count skeleton
 - Marketplace cards grid (6 cards by default)
 
 ### 4. Health Charts Skeleton (`src/components/HealthMetricsSkeleton.tsx`)
 
 Skeleton for health metrics charts showing:
+
 - Chart tabs skeleton
 - Chart area with grid lines and axes
 - Additional metrics cards
@@ -38,11 +41,13 @@ Skeleton for health metrics charts showing:
 ## Integration Points
 
 ### Commitments Page (`src/app/commitments/page.tsx`)
+
 - Added loading state (`isLoading`)
 - Shows `MyCommitmentsGridSkeleton` while loading
 - Loading simulates 1-second delay (configurable)
 
 ### Marketplace Page (`src/app/marketplace/page.tsx`)
+
 - Added loading state (`isLoading`)
 - Shows `MarketplaceGridSkeleton` while loading
 - Loading simulates 1.5-second delay (configurable)
@@ -50,11 +55,13 @@ Skeleton for health metrics charts showing:
 ## Accessibility Considerations
 
 ### 1. Reduced Motion Support
+
 - All skeleton animations respect `prefers-reduced-motion` media query
 - When reduced motion is preferred, static gradients replace shimmer animations
 - Implemented via `window.matchMedia('(prefers-reduced-motion: reduce)')`
 
 ### 2. Screen Reader Support
+
 - Each skeleton has `aria-label="Loading content"` and `role="status"`
 - Parent components include descriptive aria-labels:
   - `aria-label="Loading commitments"`
@@ -62,16 +69,22 @@ Skeleton for health metrics charts showing:
   - `aria-label="Loading health metrics"`
 
 ### 3. Color Contrast
+
 - Skeleton colors (`#1a1a1a`, `#222`, `#252525`) provide sufficient contrast against dark background (`#0a0a0a`)
 - Shimmer effect uses low opacity (`rgba(255,255,255,0.05)`) to avoid visual discomfort
 
 ## Animation Details
 
 ### Shimmer Animation
+
 ```css
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .animate-shimmer {
@@ -87,18 +100,21 @@ Skeleton for health metrics charts showing:
 ```
 
 ### Timing Guidelines
+
 - **Commitments List**: 1-second simulated loading
-- **Marketplace**: 1.5-second simulated loading  
+- **Marketplace**: 1.5-second simulated loading
 - **Health Charts**: Can be integrated similarly when async data loading is implemented
 
 ## Usage Guidelines
 
 ### When to Use Skeleton Loading
+
 1. **Initial page load** - When fetching data from API
 2. **Filter/sort operations** - When results are being refetched
 3. **Tab switching** - When loading new chart data
 
 ### When Not to Use Skeleton Loading
+
 1. **Instantaneous operations** (< 200ms)
 2. **Partial updates** - Use optimistic updates instead
 3. **Form submissions** - Use button loading states
@@ -116,13 +132,7 @@ useEffect(() => {
 
 // 3. Conditionally render skeleton
 return (
-  <div>
-    {isLoading ? (
-      <MyCommitmentsGridSkeleton />
-    ) : (
-      <MyCommitmentsGrid commitments={data} />
-    )}
-  </div>
+  <div>{isLoading ? <MyCommitmentsGridSkeleton /> : <MyCommitmentsGrid commitments={data} />}</div>
 );
 ```
 
@@ -136,6 +146,7 @@ return (
 ## Testing
 
 ### Manual Testing Checklist
+
 - [ ] Skeleton appears during loading
 - [ ] Content replaces skeleton when loaded
 - [ ] Reduced motion preference disables animations
@@ -143,7 +154,9 @@ return (
 - [ ] No layout shift when skeleton transitions to content
 
 ### Automated Testing
+
 Consider adding tests for:
+
 - Skeleton component rendering
 - Reduced motion detection
 - Accessibility attributes
@@ -159,3 +172,4 @@ docs: define skeleton loading UX patterns for lists and charts to improve percei
 - Integrated skeleton loading into commitments and marketplace pages
 - Added accessibility features and documentation
 - Follows UI/UX guidelines for loading states
+```

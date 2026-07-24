@@ -42,7 +42,11 @@ describe('SettlementEligibilityChecklist', () => {
   });
 
   it('shows the blocking reason when the preview is ineligible', async () => {
-    mockPreviewResponse({ eligible: false, reason: 'Commitment has not matured yet and cannot be settled.', estimatedSettlement: null });
+    mockPreviewResponse({
+      eligible: false,
+      reason: 'Commitment has not matured yet and cannot be settled.',
+      estimatedSettlement: null,
+    });
 
     render(<SettlementEligibilityChecklist commitmentId="abc123" onSettle={vi.fn()} />);
 
@@ -50,7 +54,9 @@ describe('SettlementEligibilityChecklist', () => {
       expect(screen.getByText('Blocked')).toBeTruthy();
     });
 
-    expect(screen.getAllByText('Commitment has not matured yet and cannot be settled.').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Commitment has not matured yet and cannot be settled.').length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /settle/i })).toBeDisabled();
   });
 

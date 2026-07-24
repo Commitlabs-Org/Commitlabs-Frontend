@@ -197,7 +197,9 @@ describe('RelistPriceEditor', () => {
       const fetchMock = vi.spyOn(globalThis, 'fetch');
       fetchMock
         .mockResolvedValueOnce(new Response(JSON.stringify({ cancelled: true }), { status: 200 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify({ listing: { id: 'lst-002' } }), { status: 201 }));
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ listing: { id: 'lst-002' } }), { status: 201 }),
+        );
 
       const { onPriceUpdated } = renderEditor(activeListing);
       clickButton('Edit listing price');
@@ -227,7 +229,9 @@ describe('RelistPriceEditor', () => {
 
     it('creates new listing on relist submit (no cancel call)', async () => {
       const fetchMock = vi.spyOn(globalThis, 'fetch');
-      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ listing: { id: 'lst-003' } }), { status: 201 }));
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ listing: { id: 'lst-003' } }), { status: 201 }),
+      );
 
       const { onPriceUpdated } = renderEditor(cancelledListing);
       clickButton('Relist commitment');
@@ -326,9 +330,7 @@ describe('RelistPriceEditor', () => {
 
     it('disables Save and Cancel buttons while submitting', () => {
       const fetchMock = vi.spyOn(globalThis, 'fetch');
-      fetchMock.mockImplementationOnce(
-        () => new Promise(() => {}),
-      );
+      fetchMock.mockImplementationOnce(() => new Promise(() => {}));
 
       renderEditor(activeListing);
       clickButton('Edit listing price');

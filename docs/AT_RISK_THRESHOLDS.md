@@ -65,10 +65,10 @@ import { AtRiskCommitments } from '@/components/dashboard/AtRiskCommitments';
 
 ## Validation rules
 
-| Field | Min | Max | Error message |
-|---|---|---|---|
-| `complianceScoreThreshold` | 0 | 100 | "Compliance score must be between 0 and 100." |
-| `daysRemainingThreshold` | 0 | 365 | "Days remaining must be between 0 and 365." |
+| Field                      | Min | Max | Error message                                 |
+| -------------------------- | --- | --- | --------------------------------------------- |
+| `complianceScoreThreshold` | 0   | 100 | "Compliance score must be between 0 and 100." |
+| `daysRemainingThreshold`   | 0   | 365 | "Days remaining must be between 0 and 365."   |
 
 Invalid values are rejected with an inline `role="alert"` message; the thresholds are not updated until valid values are applied.
 

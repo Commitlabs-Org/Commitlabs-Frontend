@@ -160,7 +160,9 @@ describe('GET /api/commitments/[id]/events', () => {
 
     // No new event enqueued — the stream should remain open but not have data ready
     let resolved = false;
-    reader.read().then(() => { resolved = true; });
+    reader.read().then(() => {
+      resolved = true;
+    });
     // Yield microtasks without advancing timers further
     await Promise.resolve();
     // Should NOT have resolved with new data immediately after no-change poll

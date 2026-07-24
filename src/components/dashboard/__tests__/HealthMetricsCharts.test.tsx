@@ -119,9 +119,7 @@ describe('HealthMetricsComplianceChart CustomTooltip', () => {
   });
 
   it('returns null when payload is empty', () => {
-    const { container } = render(
-      <ComplianceTooltip active={true} payload={[]} label="Jan" />,
-    );
+    const { container } = render(<ComplianceTooltip active={true} payload={[]} label="Jan" />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -196,9 +194,7 @@ describe('HealthMetricsDrawdownChart CustomTooltip', () => {
   });
 
   it('returns null when payload is empty', () => {
-    const { container } = render(
-      <DrawdownTooltip active={true} payload={[]} label="Jan" />,
-    );
+    const { container } = render(<DrawdownTooltip active={true} payload={[]} label="Jan" />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -273,9 +269,7 @@ describe('HealthMetricsFeeGenerationChart CustomTooltip', () => {
   });
 
   it('returns null when payload is empty', () => {
-    const { container } = render(
-      <FeeTooltip active={true} payload={[]} label="Jan" />,
-    );
+    const { container } = render(<FeeTooltip active={true} payload={[]} label="Jan" />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -367,9 +361,7 @@ describe('HealthMetricsValueHistoryChart CustomTooltip', () => {
   });
 
   it('returns null when payload is empty', () => {
-    const { container } = render(
-      <ValueTooltip active={true} payload={[]} label="Jan" />,
-    );
+    const { container } = render(<ValueTooltip active={true} payload={[]} label="Jan" />);
     expect(container.firstChild).toBeNull();
   });
 

@@ -149,7 +149,10 @@ export function CompareView({ listings, isOpen, onClose, onRemove }: CompareView
                         #CMT-{listing.id.padStart(3, '0')}
                       </span>
                       <div className="flex items-center gap-2">
-                        <TrustBadge level={listing.trustLevel ?? 'unverified'} showTooltip={false} />
+                        <TrustBadge
+                          level={listing.trustLevel ?? 'unverified'}
+                          showTooltip={false}
+                        />
                         <button
                           type="button"
                           className="focus-ring ml-auto rounded-md border border-white/10 px-2 py-1 text-xs text-white/60 hover:bg-white/5"
@@ -167,21 +170,26 @@ export function CompareView({ listings, isOpen, onClose, onRemove }: CompareView
             <tbody>
               {COMPARE_FIELDS.map((field) => (
                 <tr key={field.label} className="border-t border-white/5">
-                  <th
-                    scope="row"
-                    className="py-3 pr-4 text-sm font-medium text-white/50 align-top"
-                  >
+                  <th scope="row" className="py-3 pr-4 text-sm font-medium text-white/50 align-top">
                     {field.label}
                   </th>
                   {listings.map((listing) => (
-                    <td key={`${listing.id}-${field.label}`} className="py-3 px-4 text-sm text-white/90">
+                    <td
+                      key={`${listing.id}-${field.label}`}
+                      className="py-3 px-4 text-sm text-white/90"
+                    >
                       {field.label === 'Seller' ? (
                         <span className="inline-flex items-center gap-2">
                           <span className="font-mono">{truncateAddress(listing.owner)}</span>
-                          <TrustBadge level={listing.trustLevel ?? 'unverified'} showTooltip={false} />
+                          <TrustBadge
+                            level={listing.trustLevel ?? 'unverified'}
+                            showTooltip={false}
+                          />
                         </span>
                       ) : field.label === 'Yield (APY)' ? (
-                        <span className="font-semibold text-[#0FF0FC]">{field.getValue(listing)}</span>
+                        <span className="font-semibold text-[#0FF0FC]">
+                          {field.getValue(listing)}
+                        </span>
                       ) : (
                         field.getValue(listing)
                       )}

@@ -31,16 +31,14 @@ function ToastHistoryItem({ entry, onMarkRead }: ToastHistoryItemProps) {
       data-read={entry.read}
       aria-label={`${severityLabel[entry.severity]}: ${entry.title}${entry.description ? ` — ${entry.description}` : ''}, dismissed at ${timeString}`}
     >
-      <span className={`toast-history-badge toast-history-badge--${entry.severity}`} aria-hidden="true" />
+      <span
+        className={`toast-history-badge toast-history-badge--${entry.severity}`}
+        aria-hidden="true"
+      />
       <div className="toast-history-content">
         <p className="toast-history-title">{entry.title}</p>
-        {entry.description && (
-          <p className="toast-history-description">{entry.description}</p>
-        )}
-        <time
-          className="toast-history-time"
-          dateTime={new Date(entry.dismissedAt).toISOString()}
-        >
+        {entry.description && <p className="toast-history-description">{entry.description}</p>}
+        <time className="toast-history-time" dateTime={new Date(entry.dismissedAt).toISOString()}>
           {timeString}
         </time>
       </div>
@@ -77,45 +75,29 @@ export function ToastHistory({ maxEntries }: ToastHistoryProps) {
   const { history, clearHistory, markHistoryRead, markAllHistoryRead } = useToast();
 
   // Filter to client-toast entries only — never mix with server notifications.
-  const entries = history
-    .filter((e) => e.source === 'toast')
-    .slice(0, maxEntries);
+  const entries = history.filter((e) => e.source === 'toast').slice(0, maxEntries);
 
   const unreadCount = entries.filter((e) => !e.read).length;
 
   return (
-    <section
-      aria-label="Notification history"
-      data-toast-history
-    >
+    <section aria-label="Notification history" data-toast-history>
       <div className="toast-history-header">
         <h2 className="toast-history-heading">
           Notifications
           {unreadCount > 0 && (
-            <span
-              className="toast-history-unread-badge"
-              aria-label={`${unreadCount} unread`}
-            >
+            <span className="toast-history-unread-badge" aria-label={`${unreadCount} unread`}>
               {unreadCount}
             </span>
           )}
         </h2>
         <div className="toast-history-actions">
           {unreadCount > 0 && (
-            <button
-              type="button"
-              className="toast-history-action-btn"
-              onClick={markAllHistoryRead}
-            >
+            <button type="button" className="toast-history-action-btn" onClick={markAllHistoryRead}>
               Mark all read
             </button>
           )}
           {entries.length > 0 && (
-            <button
-              type="button"
-              className="toast-history-action-btn"
-              onClick={clearHistory}
-            >
+            <button type="button" className="toast-history-action-btn" onClick={clearHistory}>
               Clear all
             </button>
           )}
@@ -127,17 +109,9 @@ export function ToastHistory({ maxEntries }: ToastHistoryProps) {
           No notifications yet.
         </p>
       ) : (
-        <ul
-          className="toast-history-list"
-          role="list"
-          aria-label="Dismissed notifications"
-        >
+        <ul className="toast-history-list" role="list" aria-label="Dismissed notifications">
           {entries.map((entry) => (
-            <ToastHistoryItem
-              key={entry.id}
-              entry={entry}
-              onMarkRead={markHistoryRead}
-            />
+            <ToastHistoryItem key={entry.id} entry={entry} onMarkRead={markHistoryRead} />
           ))}
         </ul>
       )}

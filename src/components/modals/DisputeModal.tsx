@@ -45,7 +45,12 @@ function mapDisputeErrorMessage(status: number, fallback: string) {
   }
 }
 
-export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitted }: DisputeModalProps) {
+export default function DisputeModal({
+  isOpen,
+  commitmentId,
+  onClose,
+  onSubmitted,
+}: DisputeModalProps) {
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -139,7 +144,10 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
     }
   }, [address, category, commitmentId, connected, evidence, onSubmitted, reason]);
 
-  const isDisabled = useMemo(() => isSubmitting || !connected || !address, [address, connected, isSubmitting]);
+  const isDisabled = useMemo(
+    () => isSubmitting || !connected || !address,
+    [address, connected, isSubmitting],
+  );
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && !isSubmitting) {
@@ -215,7 +223,8 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
         </div>
 
         <p id={descriptionId} className="mt-4 text-sm leading-6 text-white/70">
-          Share what is wrong with this commitment and we will review it. The report is sent to the dispute route with your connected wallet address.
+          Share what is wrong with this commitment and we will review it. The report is sent to the
+          dispute route with your connected wallet address.
         </p>
 
         {!connected || !address ? (
@@ -226,7 +235,10 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
 
         <div className="mt-6 space-y-4">
           <div>
-            <label htmlFor="dispute-category" className="mb-2 block text-sm font-medium text-white/80">
+            <label
+              htmlFor="dispute-category"
+              className="mb-2 block text-sm font-medium text-white/80"
+            >
               Dispute category
             </label>
             <select
@@ -245,7 +257,10 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
           </div>
 
           <div>
-            <label htmlFor="dispute-reason" className="mb-2 block text-sm font-medium text-white/80">
+            <label
+              htmlFor="dispute-reason"
+              className="mb-2 block text-sm font-medium text-white/80"
+            >
               Reason for dispute
             </label>
             <textarea
@@ -258,11 +273,16 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
               className="w-full resize-none rounded-[14px] border border-white/10 bg-[#050505] px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A04] disabled:cursor-not-allowed disabled:opacity-50"
               autoComplete="off"
             />
-            <p className="mt-2 text-[12px] text-white/40">The reason must be at least 1 character and at most 500 characters.</p>
+            <p className="mt-2 text-[12px] text-white/40">
+              The reason must be at least 1 character and at most 500 characters.
+            </p>
           </div>
 
           <div>
-            <label htmlFor="dispute-evidence" className="mb-2 block text-sm font-medium text-white/80">
+            <label
+              htmlFor="dispute-evidence"
+              className="mb-2 block text-sm font-medium text-white/80"
+            >
               Evidence or notes
             </label>
             <textarea
@@ -278,12 +298,18 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
         </div>
 
         {status === 'success' ? (
-          <div role="status" className="mt-5 flex gap-3 rounded-[14px] border border-[#22C55E33] bg-[#22C55E12] px-4 py-3 text-sm leading-6 text-[#BBF7D0]">
+          <div
+            role="status"
+            className="mt-5 flex gap-3 rounded-[14px] border border-[#22C55E33] bg-[#22C55E12] px-4 py-3 text-sm leading-6 text-[#BBF7D0]"
+          >
             <AlertTriangle className="mt-0.5 shrink-0" size={18} />
             <span>Dispute submitted. The commitment is now under review.</span>
           </div>
         ) : errorMessage ? (
-          <div role="alert" className="mt-5 flex gap-3 rounded-[14px] border border-[#F9737333] bg-[#F9737312] px-4 py-3 text-sm leading-6 text-[#FECACA]">
+          <div
+            role="alert"
+            className="mt-5 flex gap-3 rounded-[14px] border border-[#F9737333] bg-[#F9737312] px-4 py-3 text-sm leading-6 text-[#FECACA]"
+          >
             <AlertTriangle className="mt-0.5 shrink-0" size={18} />
             <span>{errorMessage}</span>
           </div>
@@ -305,7 +331,11 @@ export default function DisputeModal({ isOpen, commitmentId, onClose, onSubmitte
               disabled={isDisabled}
               className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#FF8A0466] bg-[#FF8A041A] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(255,138,4,0.22)] transition-all hover:bg-[#FF8A0426] hover:shadow-[0_0_24px_rgba(255,138,4,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8A04] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <AlertTriangle size={18} />}
+              {isSubmitting ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <AlertTriangle size={18} />
+              )}
               {isSubmitting ? 'Submitting dispute' : 'Submit dispute'}
             </button>
           )}

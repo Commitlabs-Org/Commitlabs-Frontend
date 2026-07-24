@@ -8,16 +8,12 @@ describe('ComparisonPanel', () => {
   describe('Variant: negative', () => {
     it('renders the panel with negative variant and displays the correct icon', () => {
       render(
-        <ComparisonPanel
-          title="Negative Items"
-          items={['Item 1', 'Item 2']}
-          variant="negative"
-        />
+        <ComparisonPanel title="Negative Items" items={['Item 1', 'Item 2']} variant="negative" />,
       );
 
       const panel = screen.getByRole('heading', { name: 'Negative Items' }).parentElement;
       expect(panel).toBeInTheDocument();
-      
+
       // The negative variant uses the ✕ icon
       const icons = screen.getAllByText('✕');
       expect(icons).toHaveLength(2);
@@ -29,7 +25,7 @@ describe('ComparisonPanel', () => {
           title="Negative Items"
           items={['First Item', 'Second Item', 'Third Item']}
           variant="negative"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
@@ -43,11 +39,7 @@ describe('ComparisonPanel', () => {
 
     it('applies the negative variant class to the panel container', () => {
       const { container } = render(
-        <ComparisonPanel
-          title="Negative Items"
-          items={['Item 1']}
-          variant="negative"
-        />
+        <ComparisonPanel title="Negative Items" items={['Item 1']} variant="negative" />,
       );
 
       const panel = container.querySelector('div[class*="panel"]');
@@ -60,16 +52,12 @@ describe('ComparisonPanel', () => {
   describe('Variant: positive', () => {
     it('renders the panel with positive variant and displays the correct icon', () => {
       render(
-        <ComparisonPanel
-          title="Positive Items"
-          items={['Item 1', 'Item 2']}
-          variant="positive"
-        />
+        <ComparisonPanel title="Positive Items" items={['Item 1', 'Item 2']} variant="positive" />,
       );
 
       const panel = screen.getByRole('heading', { name: 'Positive Items' }).parentElement;
       expect(panel).toBeInTheDocument();
-      
+
       // The positive variant uses the ✓ icon
       const icons = screen.getAllByText('✓');
       expect(icons).toHaveLength(2);
@@ -81,7 +69,7 @@ describe('ComparisonPanel', () => {
           title="Positive Items"
           items={['First Item', 'Second Item', 'Third Item']}
           variant="positive"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
@@ -95,11 +83,7 @@ describe('ComparisonPanel', () => {
 
     it('applies the positive variant class to the panel container', () => {
       const { container } = render(
-        <ComparisonPanel
-          title="Positive Items"
-          items={['Item 1']}
-          variant="positive"
-        />
+        <ComparisonPanel title="Positive Items" items={['Item 1']} variant="positive" />,
       );
 
       const panel = container.querySelector('div[class*="panel"]');
@@ -112,16 +96,12 @@ describe('ComparisonPanel', () => {
   describe('Variant: result', () => {
     it('renders the panel with result variant and displays the correct icon', () => {
       render(
-        <ComparisonPanel
-          title="Result Items"
-          items={['Item 1', 'Item 2']}
-          variant="result"
-        />
+        <ComparisonPanel title="Result Items" items={['Item 1', 'Item 2']} variant="result" />,
       );
 
       const panel = screen.getByRole('heading', { name: 'Result Items' }).parentElement;
       expect(panel).toBeInTheDocument();
-      
+
       // The result variant uses the → icon
       const icons = screen.getAllByText('→');
       expect(icons).toHaveLength(2);
@@ -133,7 +113,7 @@ describe('ComparisonPanel', () => {
           title="Result Items"
           items={['First Item', 'Second Item', 'Third Item']}
           variant="result"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
@@ -147,11 +127,7 @@ describe('ComparisonPanel', () => {
 
     it('applies the result variant class to the panel container', () => {
       const { container } = render(
-        <ComparisonPanel
-          title="Result Items"
-          items={['Item 1']}
-          variant="result"
-        />
+        <ComparisonPanel title="Result Items" items={['Item 1']} variant="result" />,
       );
 
       const panel = container.querySelector('div[class*="panel"]');
@@ -163,13 +139,7 @@ describe('ComparisonPanel', () => {
 
   describe('Item rendering', () => {
     it('renders exactly one item row when provided with a single item', () => {
-      render(
-        <ComparisonPanel
-          title="Single Item"
-          items={['Only Item']}
-          variant="positive"
-        />
-      );
+      render(<ComparisonPanel title="Single Item" items={['Only Item']} variant="positive" />);
 
       const list = screen.getByRole('list');
       const items = within(list).getAllByRole('listitem');
@@ -183,7 +153,7 @@ describe('ComparisonPanel', () => {
           title="Multiple Items"
           items={['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']}
           variant="negative"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
@@ -198,20 +168,14 @@ describe('ComparisonPanel', () => {
     });
 
     it('renders the panel shell when items array is empty', () => {
-      render(
-        <ComparisonPanel
-          title="Empty Panel"
-          items={[]}
-          variant="positive"
-        />
-      );
+      render(<ComparisonPanel title="Empty Panel" items={[]} variant="positive" />);
 
       const title = screen.getByRole('heading', { name: 'Empty Panel' });
       expect(title).toBeInTheDocument();
 
       const list = screen.getByRole('list');
       expect(list).toBeInTheDocument();
-      
+
       const items = within(list).queryAllByRole('listitem');
       expect(items).toHaveLength(0);
     });
@@ -222,12 +186,12 @@ describe('ComparisonPanel', () => {
           title="Ordered Items"
           items={['Zebra', 'Apple', 'Mango', 'Banana']}
           variant="result"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
       const items = within(list).getAllByRole('listitem');
-      
+
       expect(items[0]).toHaveTextContent('Zebra');
       expect(items[1]).toHaveTextContent('Apple');
       expect(items[2]).toHaveTextContent('Mango');
@@ -242,7 +206,7 @@ describe('ComparisonPanel', () => {
           title="Accessible Panel"
           items={['Item 1', 'Item 2']}
           variant="positive"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
@@ -255,7 +219,7 @@ describe('ComparisonPanel', () => {
           title="Accessible Panel"
           items={['Item 1', 'Item 2', 'Item 3']}
           variant="negative"
-        />
+        />,
       );
 
       const list = screen.getByRole('list');
@@ -264,26 +228,14 @@ describe('ComparisonPanel', () => {
     });
 
     it('renders the title as a heading for screen readers', () => {
-      render(
-        <ComparisonPanel
-          title="Panel Title"
-          items={['Item 1']}
-          variant="result"
-        />
-      );
+      render(<ComparisonPanel title="Panel Title" items={['Item 1']} variant="result" />);
 
       const heading = screen.getByRole('heading', { name: 'Panel Title' });
       expect(heading).toBeInTheDocument();
     });
 
     it('displays icons as visible text content for accessibility', () => {
-      render(
-        <ComparisonPanel
-          title="Icon Panel"
-          items={['Item 1']}
-          variant="positive"
-        />
-      );
+      render(<ComparisonPanel title="Icon Panel" items={['Item 1']} variant="positive" />);
 
       // Icons are rendered as text characters (✕, ✓, →) which are screen reader accessible
       const icon = screen.getByText('✓');

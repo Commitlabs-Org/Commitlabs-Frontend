@@ -18,10 +18,9 @@ const DEFAULT_DAYS_THRESHOLD = 7;
 export function classifyAtRiskCommitments(
   commitments: Commitment[],
   constants: ProtocolConstants | null,
-  thresholds?: ClassificationThresholds
+  thresholds?: ClassificationThresholds,
 ): AtRiskCommitment[] {
-  const complianceThreshold =
-    thresholds?.complianceScoreThreshold ?? DEFAULT_COMPLIANCE_THRESHOLD;
+  const complianceThreshold = thresholds?.complianceScoreThreshold ?? DEFAULT_COMPLIANCE_THRESHOLD;
   const daysThreshold = thresholds?.daysRemainingThreshold ?? DEFAULT_DAYS_THRESHOLD;
 
   return commitments

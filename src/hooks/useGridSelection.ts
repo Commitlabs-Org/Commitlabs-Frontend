@@ -28,14 +28,14 @@ interface UseGridSelectionReturn {
 
 /**
  * Hook for managing multi-select state in a grid component.
- * 
+ *
  * Features:
  * - Per-item selection toggle
  * - Select all visible items
  * - Clear all selections
  * - Selection survives filtering (persists across visible ID changes)
  * - Indeterminate state for partial selection
- * 
+ *
  * @example
  * ```tsx
  * const { selectedIds, toggleSelection, selectAll, clearSelection, isAllSelected } = useGridSelection({
@@ -51,21 +51,21 @@ export function useGridSelection({
 
   // Memoize selection state calculations
   const selectedCount = selectedIds.size;
-  
+
   const isAllSelected = useMemo(() => {
     if (visibleIds.length === 0) return false;
-    return visibleIds.every(id => selectedIds.has(id));
+    return visibleIds.every((id) => selectedIds.has(id));
   }, [visibleIds, selectedIds]);
 
   const isIndeterminate = useMemo(() => {
     if (visibleIds.length === 0) return false;
-    const visibleSelectedCount = visibleIds.filter(id => selectedIds.has(id)).length;
+    const visibleSelectedCount = visibleIds.filter((id) => selectedIds.has(id)).length;
     return visibleSelectedCount > 0 && visibleSelectedCount < visibleIds.length;
   }, [visibleIds, selectedIds]);
 
   // Toggle selection of a single item
   const toggleSelection = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);

@@ -53,12 +53,12 @@ test.describe('Create Commitment Wizard E2E', () => {
   test('happy path: complete wizard successfully and navigate to detail page', async ({ page }) => {
     // 1. Step 1: Choose Your Commitment Type
     await expect(page.getByRole('heading', { name: 'Choose Your Commitment Type' })).toBeVisible();
-    
+
     // Select "Balanced Commitment" card
     const balancedCard = page.getByRole('radio', { name: /Balanced Commitment/ });
     await expect(balancedCard).toBeVisible();
     await balancedCard.click();
-    
+
     // Continue button should be enabled
     const step1Continue = page.getByTestId('select-type-continue');
     await expect(step1Continue).toBeEnabled();
@@ -71,11 +71,11 @@ test.describe('Create Commitment Wizard E2E', () => {
     const amountInput = page.locator('#amount');
     await expect(amountInput).toBeVisible();
     await amountInput.fill('15000');
-    
+
     // Wait for debounce and validation error
     await page.waitForTimeout(600);
     await expect(page.getByText('Amount exceeds available balance')).toBeVisible();
-    
+
     // Continue button should be disabled
     const step2Continue = page.getByTestId('configure-continue');
     await expect(step2Continue).toBeDisabled();
@@ -85,17 +85,17 @@ test.describe('Create Commitment Wizard E2E', () => {
     await page.waitForTimeout(600);
     await expect(page.getByText('Amount exceeds available balance')).not.toBeVisible();
     await expect(step2Continue).toBeEnabled();
-    
+
     // Proceed to Step 3
     await step2Continue.click();
 
     // 3. Step 3: Review
     await expect(page.getByRole('heading', { name: 'Review Parameters' })).toBeVisible();
-    
+
     // Assert review details
     await expect(page.getByText('Balanced Commitment', { exact: true })).toBeVisible();
     await expect(page.getByText('1000 XLM')).toBeVisible();
-    
+
     // Submit the wizard
     const submitBtn = page.getByRole('button', { name: 'Submit Commitment' });
     await expect(submitBtn).toBeEnabled();
@@ -106,20 +106,20 @@ test.describe('Create Commitment Wizard E2E', () => {
     const successModal = page.locator('role=dialog');
     await expect(successModal).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole('heading', { name: 'Commitment Created' })).toBeVisible();
-    
+
     // Click "Fund Now" inside the modal
     const fundNowBtn = page.getByRole('button', { name: 'Fund Now' });
     await expect(fundNowBtn).toBeVisible();
     await fundNowBtn.click();
-    
+
     // Verify Escrow Funded success state inside modal
     await expect(page.getByText('Escrow Funded')).toBeVisible();
-    
+
     // Click "View Commitment" to navigate
     const viewCommitmentBtn = page.getByRole('button', { name: 'View Commitment' });
     await expect(viewCommitmentBtn).toBeVisible();
     await viewCommitmentBtn.click();
-    
+
     // Assert navigation happened
     await expect(page).toHaveURL(/\/commitments\/.+/);
   });

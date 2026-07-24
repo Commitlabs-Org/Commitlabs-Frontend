@@ -10,6 +10,7 @@ next-themes (0.4.6)
 ```
 
 Three layers:
+
 - **Provider** — `next-themes` `<ThemeProvider>` wrapping the app root. Configured with `attribute="data-theme"`, `defaultTheme="system"`, `disableTransitionOnChange`.
 - **Toggle** — `'use client'` button cycling through `light → dark → system`. Reads `theme`/`setTheme` from `useTheme()`.
 - **Tokens** — CSS custom properties in `:root` (dark) and `[data-theme="light"]` (overrides). Tailwind v4 `@theme` block maps variables to `bg-surface`, `text-text-primary`, etc.

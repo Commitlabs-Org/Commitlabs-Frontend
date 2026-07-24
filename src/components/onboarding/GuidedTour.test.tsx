@@ -140,7 +140,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: false } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -163,7 +163,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: false } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -181,7 +181,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: true } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -203,7 +203,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: true } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -293,7 +293,7 @@ describe('Guided Tour Feature', () => {
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ seenWizardTour: true }),
-      })
+      }),
     );
   });
 
@@ -305,7 +305,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: false } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -321,7 +321,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: false } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -349,7 +349,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: false } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -380,7 +380,7 @@ describe('Guided Tour Feature', () => {
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ data: { preferences: { seenWizardTour: false } } }),
-      })
+      }),
     );
     global.fetch = fetchSpy;
 
@@ -414,7 +414,7 @@ describe('Guided Tour Feature', () => {
           <div data-testid="review-sections" />
           <div data-testid="review-checkboxes" />
           <button data-testid="create-commitment-submit" />
-          
+
           <GuidedTour
             isActive={isActive}
             currentStepIndex={currentStepIndex}
@@ -489,7 +489,7 @@ describe('Guided Tour Feature', () => {
         onNext={onNext}
         onBack={onBack}
         onSkip={onSkip}
-      />
+      />,
     );
 
     // Hover over elements to trigger onMouseEnter/onMouseLeave
@@ -517,7 +517,7 @@ describe('Guided Tour Feature', () => {
         onNext={onNext}
         onBack={onBack}
         onSkip={onSkip}
-      />
+      />,
     );
 
     expect(screen.getByText('Position Left')).toBeInTheDocument();

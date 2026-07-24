@@ -26,10 +26,7 @@ describe('useCompareListings', () => {
   });
 
   it('starts empty and restores from session storage', async () => {
-    sessionStorage.setItem(
-      'marketplace-compare-listings',
-      JSON.stringify([makeListing('007')]),
-    );
+    sessionStorage.setItem('marketplace-compare-listings', JSON.stringify([makeListing('007')]));
 
     const { result } = renderHook(() => useCompareListings());
 

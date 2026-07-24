@@ -74,19 +74,19 @@ const DEFAULT_EARLY_EXIT_GRACE_PERIOD_DAYS = 7;
 
 const DEFAULT_PENALTY_TIERS: PenaltyTier[] = [
   {
-    type: "safe",
+    type: 'safe',
     earlyExitPenaltyPercent: 2,
-    description: "Low-risk commitment with a 2% early-exit penalty.",
+    description: 'Low-risk commitment with a 2% early-exit penalty.',
   },
   {
-    type: "balanced",
+    type: 'balanced',
     earlyExitPenaltyPercent: 3,
-    description: "Moderate-risk commitment with a 3% early-exit penalty.",
+    description: 'Moderate-risk commitment with a 3% early-exit penalty.',
   },
   {
-    type: "aggressive",
+    type: 'aggressive',
     earlyExitPenaltyPercent: 5,
-    description: "High-risk commitment with a 5% early-exit penalty.",
+    description: 'High-risk commitment with a 5% early-exit penalty.',
   },
 ];
 
@@ -117,21 +117,23 @@ function parsePenaltyTiersFromEnv(): PenaltyTier[] | null {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
-      throw new Error("COMMITLABS_PENALTY_TIERS_JSON must be a JSON array");
+      throw new Error('COMMITLABS_PENALTY_TIERS_JSON must be a JSON array');
     }
 
     return parsed.map((tier: Record<string, unknown>, i: number) => {
-      if (typeof tier.type !== "string" || !tier.type) {
+      if (typeof tier.type !== 'string' || !tier.type) {
         throw new Error(`Penalty tier at index ${i} is missing a valid "type".`);
       }
-      if (typeof tier.earlyExitPenaltyPercent !== "number") {
-        throw new Error(`Penalty tier "${tier.type}" is missing a numeric "earlyExitPenaltyPercent".`);
+      if (typeof tier.earlyExitPenaltyPercent !== 'number') {
+        throw new Error(
+          `Penalty tier "${tier.type}" is missing a numeric "earlyExitPenaltyPercent".`,
+        );
       }
       return {
         type: tier.type,
         earlyExitPenaltyPercent: tier.earlyExitPenaltyPercent,
         description:
-          typeof tier.description === "string"
+          typeof tier.description === 'string'
             ? tier.description
             : `${tier.type} commitment with a ${tier.earlyExitPenaltyPercent}% early-exit penalty.`,
       };
@@ -150,24 +152,39 @@ export function invalidateProtocolConstantsCache(): void {
 export function getProtocolConstants(): ProtocolConstants {
   if (cached) return cached;
 
-  const protocolVersion = envString("NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION", envString("ACTIVE_CONTRACT_VERSION", "v1"));
-  const network = envString("SOROBAN_NETWORK_PASSPHRASE", envString("NEXT_PUBLIC_NETWORK_PASSPHRASE", "Test SDF Network ; September 2015"));
+  const protocolVersion = envString(
+    'NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION',
+    envString('ACTIVE_CONTRACT_VERSION', 'v1'),
+  );
+  const network = envString(
+    'SOROBAN_NETWORK_PASSPHRASE',
+    envString('NEXT_PUBLIC_NETWORK_PASSPHRASE', 'Test SDF Network ; September 2015'),
+  );
 
   cached = {
     protocolVersion,
     network,
     fees: {
-      networkBaseFeeStroops: envInt("COMMITLABS_NETWORK_BASE_FEE_STROOPS", DEFAULT_NETWORK_BASE_FEE_STROOPS),
-      platformFeePercent: envFloat("COMMITLABS_PLATFORM_FEE_PERCENT", DEFAULT_PLATFORM_FEE_PERCENT),
+      networkBaseFeeStroops: envInt(
+        'COMMITLABS_NETWORK_BASE_FEE_STROOPS',
+        DEFAULT_NETWORK_BASE_FEE_STROOPS,
+      ),
+      platformFeePercent: envFloat('COMMITLABS_PLATFORM_FEE_PERCENT', DEFAULT_PLATFORM_FEE_PERCENT),
     },
     penalties: parsePenaltyTiersFromEnv() ?? DEFAULT_PENALTY_TIERS,
     commitmentLimits: {
-      minAmountXlm: envInt("COMMITLABS_MIN_AMOUNT_XLM", DEFAULT_MIN_AMOUNT_XLM),
-      maxAmountXlm: envInt("COMMITLABS_MAX_AMOUNT_XLM", DEFAULT_MAX_AMOUNT_XLM),
-      minDurationDays: envInt("COMMITLABS_MIN_DURATION_DAYS", DEFAULT_MIN_DURATION_DAYS),
-      maxDurationDays: envInt("COMMITLABS_MAX_DURATION_DAYS", DEFAULT_MAX_DURATION_DAYS),
-      maxLossPercentCeiling: envInt("COMMITLABS_MAX_LOSS_PERCENT_CEILING", DEFAULT_MAX_LOSS_PERCENT_CEILING),
-      earlyExitGracePeriodDays: envInt("COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS", DEFAULT_EARLY_EXIT_GRACE_PERIOD_DAYS),
+      minAmountXlm: envInt('COMMITLABS_MIN_AMOUNT_XLM', DEFAULT_MIN_AMOUNT_XLM),
+      maxAmountXlm: envInt('COMMITLABS_MAX_AMOUNT_XLM', DEFAULT_MAX_AMOUNT_XLM),
+      minDurationDays: envInt('COMMITLABS_MIN_DURATION_DAYS', DEFAULT_MIN_DURATION_DAYS),
+      maxDurationDays: envInt('COMMITLABS_MAX_DURATION_DAYS', DEFAULT_MAX_DURATION_DAYS),
+      maxLossPercentCeiling: envInt(
+        'COMMITLABS_MAX_LOSS_PERCENT_CEILING',
+        DEFAULT_MAX_LOSS_PERCENT_CEILING,
+      ),
+      earlyExitGracePeriodDays: envInt(
+        'COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS',
+        DEFAULT_EARLY_EXIT_GRACE_PERIOD_DAYS,
+      ),
     },
     cachedAt: new Date().toISOString(),
   };

@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { apiGet } from '@/lib/apiClient';
-import { CommitmentDetailOverview } from "@/components/CommitmentDetailOverview";
-import { AtRiskCommitments } from "@/components/dashboard/AtRiskCommitments";
-import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
-import { Commitment } from "@/lib/types/domain";
-import OverviewTimeRangeSelector from "@/components/overview/OverviewTimeRangeSelector";
-import { useOverviewTimeRange } from "@/hooks/useOverviewTimeRange";
+import { CommitmentDetailOverview } from '@/components/CommitmentDetailOverview';
+import { AtRiskCommitments } from '@/components/dashboard/AtRiskCommitments';
+import { RecentActivityFeed } from '@/components/dashboard/RecentActivityFeed';
+import { Commitment } from '@/lib/types/domain';
+import OverviewTimeRangeSelector from '@/components/overview/OverviewTimeRangeSelector';
+import { useOverviewTimeRange } from '@/hooks/useOverviewTimeRange';
 
 const PortfolioAllocationChart = dynamic(
   () =>
-    import(
-      "@/components/dashboard/PortfolioAllocationChart"
-    ).then((mod) => mod.PortfolioAllocationChartInner),
+    import('@/components/dashboard/PortfolioAllocationChart').then(
+      (mod) => mod.PortfolioAllocationChartInner,
+    ),
   {
     ssr: false,
     loading: () => (
@@ -36,13 +36,13 @@ export default function CommitmentOverviewPage() {
       try {
         const data = await apiGet<{ data: Commitment[] }>('/api/commitments');
         setCommitments(data.data);
-          if (data && Array.isArray(data.data)) {
-            setCommitments(data.data);
-          } else if (Array.isArray(data)) {
-            setCommitments(data);
-          }
+        if (data && Array.isArray(data.data)) {
+          setCommitments(data.data);
+        } else if (Array.isArray(data)) {
+          setCommitments(data);
+        }
       } catch (err) {
-        console.error("Failed to load commitments", err);
+        console.error('Failed to load commitments', err);
       } finally {
         setLoading(false);
       }
@@ -52,9 +52,9 @@ export default function CommitmentOverviewPage() {
 
   const renderWidget = (id: string) => {
     switch (id) {
-      case "at-risk":
+      case 'at-risk':
         return <AtRiskCommitments commitments={commitments} />;
-      case "commitment-detail":
+      case 'commitment-detail':
         return (
           <CommitmentDetailOverview
             commitmentTypeLabel="Safe Commitment"
@@ -82,7 +82,7 @@ export default function CommitmentOverviewPage() {
 
   const filteredCommitments = filterByRange(
     commitments,
-    (c) => (c as Commitment & { createdAt?: string }).createdAt ?? new Date(0).toISOString()
+    (c) => (c as Commitment & { createdAt?: string }).createdAt ?? new Date(0).toISOString(),
   );
 
   return (

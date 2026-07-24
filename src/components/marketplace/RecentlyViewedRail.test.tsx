@@ -71,7 +71,7 @@ describe('RecentlyViewedRail', () => {
         listings: mockListings,
         onClear: vi.fn(),
         onViewListing: vi.fn(),
-      })
+      }),
     );
     expect(container.firstChild).toBeNull();
   });
@@ -83,7 +83,7 @@ describe('RecentlyViewedRail', () => {
         listings: mockListings,
         onClear: vi.fn(),
         onViewListing: vi.fn(),
-      })
+      }),
     );
 
     expect(screen.getByText('Recently Viewed')).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('RecentlyViewedRail', () => {
         listings: mockListings,
         onClear: onClear,
         onViewListing: vi.fn(),
-      })
+      }),
     );
 
     const clearButton = screen.getByRole('button', { name: /clear/i });
@@ -117,11 +117,11 @@ describe('RecentlyViewedRail', () => {
         listings: mockListings,
         onClear: vi.fn(),
         onViewListing: onViewListing,
-      })
+      }),
     );
 
     const cardButton = screen.getByRole('button', { name: /recently viewed commitment 001/i });
-    
+
     // Dialog should not be open initially
     expect(screen.queryByTestId('commitment-modal')).not.toBeInTheDocument();
 
@@ -149,11 +149,11 @@ describe('RecentlyViewedRail', () => {
         listings: mockListings,
         onClear: vi.fn(),
         onViewListing: vi.fn(),
-      })
+      }),
     );
 
     const scrollContainer = screen.getByLabelText('Recently viewed listings rail');
-    
+
     // Mock scrollBy on the container
     const scrollByMock = vi.fn();
     scrollContainer.scrollBy = scrollByMock;

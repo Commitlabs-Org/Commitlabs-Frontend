@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CircleHelp, Search, X } from "lucide-react";
-import { Dialog } from "@/components/ui/Dialog";
-import { faqEntries, searchFaqEntries } from "@/lib/faq";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { CircleHelp, Search, X } from 'lucide-react';
+import { Dialog } from '@/components/ui/Dialog';
+import { faqEntries, searchFaqEntries } from '@/lib/faq';
 
 export const HelpDrawer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -41,7 +41,10 @@ export const HelpDrawer: React.FC = () => {
         <div className="flex h-full flex-col">
           <div className="flex items-start justify-between border-b border-white/10 px-6 py-5">
             <div>
-              <p id="help-drawer-description" className="text-[12px] uppercase tracking-[0.3em] text-cyan-300/80">
+              <p
+                id="help-drawer-description"
+                className="text-[12px] uppercase tracking-[0.3em] text-cyan-300/80"
+              >
                 Help center
               </p>
               <h2 id="help-drawer-title" className="mt-1 text-[1.15rem] font-semibold text-white">
@@ -63,7 +66,10 @@ export const HelpDrawer: React.FC = () => {
               Search help articles
             </label>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" aria-hidden="true" />
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40"
+                aria-hidden="true"
+              />
               <input
                 ref={searchInputRef}
                 id="help-search"
@@ -82,7 +88,10 @@ export const HelpDrawer: React.FC = () => {
                 </div>
               ) : (
                 filteredEntries.map((entry) => (
-                  <article key={entry.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <article
+                    key={entry.id}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
                     <h3 className="text-sm font-semibold text-white">{entry.question}</h3>
                     <p className="mt-2 text-sm leading-6 text-white/70">{entry.answer}</p>
                   </article>

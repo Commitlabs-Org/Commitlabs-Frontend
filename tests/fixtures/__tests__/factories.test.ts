@@ -70,7 +70,11 @@ describe('makeCommitmentDto', () => {
   });
 
   it('applies partial overrides', () => {
-    const dto = makeCommitmentDto({ commitmentId: 'CMT-XYZ', commitmentType: 'aggressive', status: 'settled' });
+    const dto = makeCommitmentDto({
+      commitmentId: 'CMT-XYZ',
+      commitmentType: 'aggressive',
+      status: 'settled',
+    });
     expect(dto.commitmentId).toBe('CMT-XYZ');
     expect(dto.commitmentType).toBe('aggressive');
     expect(dto.status).toBe('settled');
@@ -157,7 +161,11 @@ describe('makeAttestationDto', () => {
   });
 
   it('applies partial overrides', () => {
-    const dto = makeAttestationDto({ attestationId: 'ATT-999', verdict: 'fail', kind: 'violation' });
+    const dto = makeAttestationDto({
+      attestationId: 'ATT-999',
+      verdict: 'fail',
+      kind: 'violation',
+    });
     expect(dto.attestationId).toBe('ATT-999');
     expect(dto.verdict).toBe('fail');
     expect(dto.kind).toBe('violation');
@@ -187,7 +195,11 @@ describe('makeMarketplaceCard', () => {
   });
 
   it('accepts optional fields', () => {
-    const card = makeMarketplaceCard({ totalCommitments: 5, successRate: 98, trustLevel: 'verified' });
+    const card = makeMarketplaceCard({
+      totalCommitments: 5,
+      successRate: 98,
+      trustLevel: 'verified',
+    });
     expect(card.totalCommitments).toBe(5);
     expect(card.successRate).toBe(98);
     expect(card.trustLevel).toBe('verified');

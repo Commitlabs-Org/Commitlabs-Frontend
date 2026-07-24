@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 
 const concepts = [
   {
-    title: "Liquidity Commitments",
+    title: 'Liquidity Commitments',
     description:
-      "Users commit liquidity under explicit rules instead of deposits without guarantees",
+      'Users commit liquidity under explicit rules instead of deposits without guarantees',
     bullets: [
-      "Duration (30/60/90 days)",
-      "Risk tolerance limits",
-      "Early exit penalties",
-      "Allocation constraints",
+      'Duration (30/60/90 days)',
+      'Risk tolerance limits',
+      'Early exit penalties',
+      'Allocation constraints',
     ],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="h-[30px] w-[30px]">
@@ -21,38 +21,22 @@ const concepts = [
           strokeWidth="2.67"
           strokeLinecap="round"
         />
-        <rect
-          x="4"
-          y="11"
-          width="16"
-          height="10"
-          rx="2.5"
-          stroke="#0FF0FC"
-          strokeWidth="2.67"
-        />
+        <rect x="4" y="11" width="16" height="10" rx="2.5" stroke="#0FF0FC" strokeWidth="2.67" />
       </svg>
     ),
   },
   {
-    title: "Commitment NFTs",
-    description: "Each commitment is minted as a transferable, composable NFT",
+    title: 'Commitment NFTs',
+    description: 'Each commitment is minted as a transferable, composable NFT',
     bullets: [
-      "Locked capital proof",
-      "Commitment parameters",
-      "Historical performance",
-      "Attestation records",
+      'Locked capital proof',
+      'Commitment parameters',
+      'Historical performance',
+      'Attestation records',
     ],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="h-[30px] w-[30px]">
-        <rect
-          x="3.5"
-          y="4.5"
-          width="17"
-          height="15"
-          rx="2.5"
-          stroke="#0FF0FC"
-          strokeWidth="2.67"
-        />
+        <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke="#0FF0FC" strokeWidth="2.67" />
         <path
           d="M7 14l3.2-3.2a1.2 1.2 0 0 1 1.7 0L16 15"
           stroke="#0FF0FC"
@@ -65,23 +49,17 @@ const concepts = [
     ),
   },
   {
-    title: "On-Chain Attestations",
-    description:
-      "Continuous verification creates an immutable reliability record",
+    title: 'On-Chain Attestations',
+    description: 'Continuous verification creates an immutable reliability record',
     bullets: [
-      "Volatility exposure tracking",
-      "Fee generation metrics",
-      "Drawdown event monitoring",
-      "Rule compliance checks",
+      'Volatility exposure tracking',
+      'Fee generation metrics',
+      'Drawdown event monitoring',
+      'Rule compliance checks',
     ],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="h-[30px] w-[30px]">
-        <path
-          d="M12 3a9 9 0 1 1-9 9"
-          stroke="#0FF0FC"
-          strokeWidth="2.67"
-          strokeLinecap="round"
-        />
+        <path d="M12 3a9 9 0 1 1-9 9" stroke="#0FF0FC" strokeWidth="2.67" strokeLinecap="round" />
         <path
           d="m9.5 12.5 2.2 2.2 4.8-4.8"
           stroke="#0FF0FC"
@@ -93,13 +71,13 @@ const concepts = [
     ),
   },
   {
-    title: "Commitment Transformation",
-    description: "Reuse liquidity across protocols without withdrawal",
+    title: 'Commitment Transformation',
+    description: 'Reuse liquidity across protocols without withdrawal',
     bullets: [
-      "Risk tranches",
-      "Collateralized assets",
-      "Secondary instruments",
-      "Protocol guarantees",
+      'Risk tranches',
+      'Collateralized assets',
+      'Secondary instruments',
+      'Protocol guarantees',
     ],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="h-[30px] w-[30px]">
@@ -148,11 +126,7 @@ export const CoreConceptsSection: React.FC = () => {
   }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      aria-label="Core concepts"
-      className="w-full bg-[#0a0a0a] py-30"
-    >
+    <section ref={sectionRef} aria-label="Core concepts" className="w-full bg-[#0a0a0a] py-30">
       <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center px-6">
         <span className="rounded-full border-[0.56px] border-t-[0.56px]  bg-[#0A0A0A80] px-4 py-1 mt-4 text-[14px] leading-5 font-normal text-[#0FF0FC] font-roboto text-center">
           CORE CONCEPTS
@@ -163,7 +137,7 @@ export const CoreConceptsSection: React.FC = () => {
 
         <div
           className={`mt-12 grid w-full grid-cols-1 gap-6 transition-all duration-700 ease-out sm:grid-cols-2 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
         >
           {concepts.map((concept) => (

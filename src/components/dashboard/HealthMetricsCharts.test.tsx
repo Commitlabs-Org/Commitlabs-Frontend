@@ -24,13 +24,7 @@ vi.mock('recharts', () => {
     CartesianGrid: () => null,
     Tooltip: () => null,
     Legend: () => null,
-    ReferenceLine: ({
-      x,
-      label,
-    }: {
-      x?: string;
-      label?: { value?: string };
-    }) => (
+    ReferenceLine: ({ x, label }: { x?: string; label?: { value?: string } }) => (
       <div data-testid={`ref-line-${x}`} aria-label={label?.value} />
     ),
     ResponsiveContainer: Passthrough,
@@ -60,9 +54,7 @@ const DRAWDOWN_DATA = [
 
 describe('HealthMetricsValueHistoryChart', () => {
   it('renders without crashing with empty data', () => {
-    const { container } = render(
-      <HealthMetricsValueHistoryChart data={[]} />,
-    );
+    const { container } = render(<HealthMetricsValueHistoryChart data={[]} />);
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -97,9 +89,7 @@ describe('HealthMetricsValueHistoryChart', () => {
   });
 
   it('renders VolatilityExposureMeter when volatilityPercent is provided', () => {
-    render(
-      <HealthMetricsValueHistoryChart data={VALUE_DATA} volatilityPercent={45} />,
-    );
+    render(<HealthMetricsValueHistoryChart data={VALUE_DATA} volatilityPercent={45} />);
     expect(screen.getByRole('meter')).toBeInTheDocument();
   });
 

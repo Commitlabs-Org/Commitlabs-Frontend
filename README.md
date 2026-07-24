@@ -19,7 +19,6 @@ The frontend application for the CommitLabs protocol, a decentralized platform f
 - [API Reference](#api-reference)
 - [License](#license)
 
-
 ## 🔭 Overview
 
 CommitLabs allows users to create, manage, and trade liquidity commitments. These commitments are on-chain contracts that lock assets for a specified duration in exchange for yield, with specific compliance and risk parameters.
@@ -75,6 +74,7 @@ pnpm run test:coverage
 **Coverage Requirements**: The project enforces a **95% threshold** on statements, branches, functions, and lines.
 
 **For detailed testing conventions, patterns, and best practices**, see **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)**, which covers:
+
 - Mocking fetch and external APIs
 - Mocking the Freighter wallet API
 - Using fake timers for async testing
@@ -185,17 +185,17 @@ This project includes a reusable helper to attach standard security headers to H
 1. Import the helper:
 
    ```typescript
-   import { attachSecurityHeaders } from "@/utils/response";
+   import { attachSecurityHeaders } from '@/utils/response';
    ```
 
 2. Wrap your response object before returning it in a route handler:
 
    ```typescript
-   import { NextResponse } from "next/server";
-   import { attachSecurityHeaders } from "@/utils/response";
+   import { NextResponse } from 'next/server';
+   import { attachSecurityHeaders } from '@/utils/response';
 
    export async function GET() {
-     const response = NextResponse.json({ data: "secure content" });
+     const response = NextResponse.json({ data: 'secure content' });
      return attachSecurityHeaders(response);
    }
    ```
@@ -214,6 +214,7 @@ This project includes a reusable helper to attach standard security headers to H
 ## 📡 API Reference
 
 A description of the backend endpoints exposed under `/api` can be found in:
+
 - [docs/backend-api-reference.md](./docs/backend-api-reference.md)
 - [docs/backend-cors-policy.md](./docs/backend-cors-policy.md)
 - [docs/backend-storage.md](./docs/backend-storage.md)
@@ -225,12 +226,14 @@ This document includes available routes, required parameters, and example reques
 We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) and check out the **[Documentation Index (docs/README.md)](docs/README.md)** for details on all available documentation, coding standards, naming conventions, and testing guidelines.
 
 To standardize submissions and streamline reviews, we use structured templates:
+
 - **Bug Reports**: Use the [Bug Report Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-bug&projects=&template=bug_report.yml) to report issues.
 - **Feature Requests**: Use the [Feature Request Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-feature&projects=&template=feature_request.yml) to suggest enhancements.
 - **Pull Requests**: Every pull request must follow the checklist in our [Pull Request Template](https://github.com/Commitlabs-Org/Commitlabs-Frontend/blob/master/.github/PULL_REQUEST_TEMPLATE.md) (verifying 95% test coverage, the 96-hour campaign timeframe, lint checks, etc.).
 - **Discussions**: Have questions or need support? Join our [CommitLabs Discord](https://discord.gg/WV7tdYkJk) server.
 
 ### Steps to Contribute
+
 1. **Fork** the repository and clone it to your local machine.
 2. **Create a branch** for your changes:
    ```bash
@@ -258,6 +261,7 @@ We welcome contributions! Please review our community guidelines before getting 
 - **[Developer Guide](./DEVELOPER_GUIDE.md)**: Instructions on local setup, testing, and architecture.
 
 ### Quick Start
+
 1. Fork the repository and clone it to your local machine.
 2. Create a new branch for your changes.
 3. Make and test your updates following the project guidelines.

@@ -7,10 +7,10 @@
  */
 
 // Ensure guards pass when running from the CLI
-process.env.NODE_ENV = process.env.NODE_ENV ?? "development";
-process.env.SEED_ROUTE_ENABLED = process.env.SEED_ROUTE_ENABLED ?? "true";
+process.env.NODE_ENV = process.env.NODE_ENV ?? 'development';
+process.env.SEED_ROUTE_ENABLED = process.env.SEED_ROUTE_ENABLED ?? 'true';
 
-import { seedMockData } from "../src/lib/backend/seed";
+import { seedMockData } from '../src/lib/backend/seed';
 
 const result = await seedMockData(process.env.SEED_SECRET ?? null);
 if (result.seeded) {

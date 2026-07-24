@@ -18,7 +18,10 @@ const MOCK_DISPUTED_COMMITMENT = {
 const MOCK_ACTIVE_COMMITMENT = { ...MOCK_DISPUTED_COMMITMENT, status: 'ACTIVE' as const };
 const MOCK_ADMIN_ADDRESS = 'GADMIN1234567890';
 
-function mockDeps(commitment: typeof MOCK_DISPUTED_COMMITMENT | null, resolution: string = 'resolved_in_favor_of_owner') {
+function mockDeps(
+  commitment: typeof MOCK_DISPUTED_COMMITMENT | null,
+  resolution: string = 'resolved_in_favor_of_owner',
+) {
   const resolveResult = {
     commitmentId: 'CMT-001',
     disputeId: 'DSP-001',
@@ -79,10 +82,10 @@ function mockDeps(commitment: typeof MOCK_DISPUTED_COMMITMENT | null, resolution
 }
 
 function makeRequest(id: string, body?: Record<string, unknown>) {
-  return createMockRequest(
-    `http://localhost:3000/api/commitments/${id}/resolve`,
-    { method: 'POST', body },
-  );
+  return createMockRequest(`http://localhost:3000/api/commitments/${id}/resolve`, {
+    method: 'POST',
+    body,
+  });
 }
 
 async function callRoute(id: string, body: Record<string, unknown>) {
@@ -93,8 +96,12 @@ async function callRoute(id: string, body: Record<string, unknown>) {
 }
 
 describe('POST /api/commitments/[id]/resolve', () => {
-  beforeEach(() => { vi.resetModules(); });
-  afterEach(() => { vi.resetModules(); });
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.resetModules();
+  });
 
   it('returns 200 on successful resolution', async () => {
     mockDeps(MOCK_DISPUTED_COMMITMENT, 'resolved_in_favor_of_owner');

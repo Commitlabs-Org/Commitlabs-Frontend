@@ -56,13 +56,13 @@ export function usePaginatedListings(
         if (!active) return;
 
         const newCards: MarketplaceCardProps[] = data.cards ?? [];
-        setListings(prev => {
+        setListings((prev) => {
           if (page === 1) {
             return newCards;
           }
           // Avoid duplicate items by checking IDs
-          const existingIds = new Set(prev.map(item => item.id));
-          const filteredNewCards = newCards.filter(item => !existingIds.has(item.id));
+          const existingIds = new Set(prev.map((item) => item.id));
+          const filteredNewCards = newCards.filter((item) => !existingIds.has(item.id));
           return [...prev, ...filteredNewCards];
         });
         setHasMore(newCards.length === pageSize);
@@ -87,7 +87,7 @@ export function usePaginatedListings(
 
   const loadMore = useCallback(() => {
     if (!disabled && !isLoading && hasMore) {
-      setPage(prev => prev + 1);
+      setPage((prev) => prev + 1);
     }
   }, [isLoading, hasMore, disabled]);
 

@@ -22,11 +22,11 @@ npm run analyze   # run build with @next/bundle-analyzer to inspect bundle compo
 
 Configured in [`.size-limit.json`](../../.size-limit.json) (sizes are **gzipped**):
 
-| Entry | Glob | Budget |
-| ----- | ---- | ------ |
-| All client JS chunks | `.next/static/chunks/**/*.js` | 1500 kB |
-| Framework + main + webpack runtime | `framework-*`, `main-*`, `webpack-*` | 120 kB |
-| Heavy shared vendor | numbered shared chunks | 600 kB |
+| Entry                              | Glob                                 | Budget  |
+| ---------------------------------- | ------------------------------------ | ------- |
+| All client JS chunks               | `.next/static/chunks/**/*.js`        | 1500 kB |
+| Framework + main + webpack runtime | `framework-*`, `main-*`, `webpack-*` | 120 kB  |
+| Heavy shared vendor                | numbered shared chunks               | 600 kB  |
 
 > **These are initial ceilings, not measured baselines.** They must be
 > **calibrated** against the first successful production build (set each limit a
@@ -46,7 +46,7 @@ build + check.
 > **broken** by pre-existing parse/export errors (e.g.
 > `src/app/commitments/overview/page.tsx`, `src/lib/backend/validation.ts`,
 > `src/components/MarketplaceHeader/MarketplaceHeader.tsx`) — note that
-> `next.config.js` `ignoreBuildErrors` suppresses *type* errors but **not** these
+> `next.config.js` `ignoreBuildErrors` suppresses _type_ errors but **not** these
 > syntax/parse errors. The budget gate becomes effective once the build is fixed;
 > the budgets should be calibrated at that point.
 
@@ -71,6 +71,7 @@ build + check.
 ## Top Offenders & Split Candidates
 
 The following heavy dependencies are currently impacting the bundle and are prime candidates for dynamic imports (`next/dynamic`) or code splitting in follow-up PRs:
+
 - `recharts` (Charts and graphs)
 - `framer-motion` (Animations)
 - `@stellar/stellar-sdk` (Heavy cryptography/blockchain utilities)

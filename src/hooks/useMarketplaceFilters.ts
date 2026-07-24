@@ -45,7 +45,7 @@ function deserializeFilters(params: URLSearchParams): Filters {
     if (commitmentType) {
       const types = commitmentType.split(',') as CommitmentType[];
       const validTypes: CommitmentType[] = types.filter((t) =>
-        ['balanced', 'aggressive', 'conservative'].includes(t)
+        ['balanced', 'aggressive', 'conservative'].includes(t),
       );
       if (validTypes.length > 0) filters.commitmentType = validTypes;
     }
@@ -83,9 +83,7 @@ export function useMarketplaceFilters() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [filters, setFilters] = useState<Filters>(() =>
-    deserializeFilters(searchParams)
-  );
+  const [filters, setFilters] = useState<Filters>(() => deserializeFilters(searchParams));
 
   // Update URL when filters change
   const updateFilters = useCallback(
@@ -98,7 +96,7 @@ export function useMarketplaceFilters() {
       });
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
-    [router, pathname, searchParams]
+    [router, pathname, searchParams],
   );
 
   // Hydrate from URL on initial load

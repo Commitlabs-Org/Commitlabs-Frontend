@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from './route';
-import { ValidationError, NotFoundError, ConflictError, TooManyRequestsError } from '@/lib/backend/errors';
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+  TooManyRequestsError,
+} from '@/lib/backend/errors';
 
 vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn(),
@@ -149,7 +154,9 @@ describe('POST /api/commitments/[id]/dispute', () => {
     });
 
     it('rejects missing request body', async () => {
-      const req = new NextRequest('http://localhost/api/commitments/cmt-123/dispute', { method: 'POST' });
+      const req = new NextRequest('http://localhost/api/commitments/cmt-123/dispute', {
+        method: 'POST',
+      });
       await expectError(req, { params: { id: 'cmt-123' } }, 400, 'VALIDATION_ERROR');
     });
 

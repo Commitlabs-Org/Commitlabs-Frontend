@@ -19,7 +19,7 @@ interface BulkActionBarProps {
 /**
  * Bulk action bar that appears when items are selected in a grid.
  * Shows selection count and provides bulk actions like export.
- * 
+ *
  * Accessibility:
  * - Uses role="status" for live region announcements
  * - Proper ARIA labels on all interactive elements

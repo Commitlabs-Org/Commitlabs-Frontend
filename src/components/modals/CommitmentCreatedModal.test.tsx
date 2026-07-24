@@ -2,13 +2,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import CommitmentCreatedModal from '@/components/modals/CommitmentCreatedModal';
 
 // ── Shared default props ─────────────────────────────────────────────────────
@@ -57,7 +51,9 @@ describe('CommitmentCreatedModal', () => {
     expect(screen.getByRole('button', { name: /skip funding/i })).toBeTruthy();
 
     // Success-only elements must NOT be visible yet
-    expect(screen.queryByText('Your commitment is now active and available in your dashboard.')).toBeNull();
+    expect(
+      screen.queryByText('Your commitment is now active and available in your dashboard.'),
+    ).toBeNull();
     expect(screen.queryByText('Escrow Funded')).toBeNull();
   });
 
@@ -94,7 +90,7 @@ describe('CommitmentCreatedModal', () => {
         ok: true,
         status: 200,
         json: async () => ({ data: { txHash: '0xdeadbeef', fundedAt: '2026-01-01T00:00:00Z' } }),
-      })
+      }),
     );
 
     renderModal({ callerAddress: 'GABC123' });
@@ -106,7 +102,7 @@ describe('CommitmentCreatedModal', () => {
 
     // Description switches to "active"
     expect(
-      screen.getByText('Your commitment is now active and available in your dashboard.')
+      screen.getByText('Your commitment is now active and available in your dashboard.'),
     ).toBeTruthy();
 
     // "Next Steps" list is shown
@@ -121,7 +117,7 @@ describe('CommitmentCreatedModal', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ callerAddress: 'GABC123' }),
-      })
+      }),
     );
   });
 
@@ -134,7 +130,7 @@ describe('CommitmentCreatedModal', () => {
         ok: false,
         status: 409,
         json: async () => ({ error: { message: 'Only created commitments can be funded' } }),
-      })
+      }),
     );
 
     renderModal();
@@ -165,16 +161,14 @@ describe('CommitmentCreatedModal', () => {
         ok: false,
         status: 403,
         json: async () => ({}),
-      })
+      }),
     );
 
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: 'Fund escrow now' }));
 
     expect(await screen.findByRole('alert', { name: /funding failed/i })).toBeTruthy();
-    expect(
-      screen.getByText('Only the commitment owner may fund this escrow.')
-    ).toBeTruthy();
+    expect(screen.getByText('Only the commitment owner may fund this escrow.')).toBeTruthy();
   });
 
   // ── 8. Skip / Fund Later ──────────────────────────────────────────────────
@@ -188,7 +182,7 @@ describe('CommitmentCreatedModal', () => {
     expect(onFundLater).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('status', { name: /funding skipped/i })).toBeTruthy();
     expect(
-      screen.getByText(/fund the escrow anytime from the commitment detail page/i)
+      screen.getByText(/fund the escrow anytime from the commitment detail page/i),
     ).toBeTruthy();
 
     // "View Commitment" CTA appears after skipping
@@ -218,7 +212,7 @@ describe('CommitmentCreatedModal', () => {
           status: 200,
           json: async () => ({ data: { txHash: '0xretried' } }),
         });
-      })
+      }),
     );
 
     renderModal();
@@ -249,7 +243,7 @@ describe('CommitmentCreatedModal', () => {
         ok: true,
         status: 200,
         json: async () => ({ data: {} }),
-      })
+      }),
     );
 
     renderModal({ onViewCommitment });
@@ -294,11 +288,14 @@ describe('CommitmentCreatedModal', () => {
   // ── 15. Accessibility: aria-live region present ───────────────────────────
 
   it('contains an aria-live region for status announcements after fund click', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ data: {} }),
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: {} }),
+      }),
+    );
 
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: 'Fund escrow now' }));
@@ -328,9 +325,7 @@ describe('CommitmentCreatedModal', () => {
     const { rerender } = renderModal({ onViewOnExplorer: vi.fn() });
     expect(screen.getByRole('button', { name: 'View on Stellar Explorer' })).toBeTruthy();
 
-    rerender(
-      <CommitmentCreatedModal {...defaultProps} onViewOnExplorer={undefined} />
-    );
+    rerender(<CommitmentCreatedModal {...defaultProps} onViewOnExplorer={undefined} />);
     expect(screen.queryByRole('button', { name: 'View on Stellar Explorer' })).toBeNull();
   });
 
@@ -343,7 +338,7 @@ describe('CommitmentCreatedModal', () => {
         ok: true,
         status: 200,
         json: async () => ({ data: {} }),
-      })
+      }),
     );
 
     const { rerender } = renderModal({ commitmentId: 'CMT-FIRST' });
@@ -353,13 +348,7 @@ describe('CommitmentCreatedModal', () => {
     await screen.findByRole('status', { name: /escrow funded successfully/i });
 
     // Simulate a new commitment being created (modal re-opens with new id)
-    rerender(
-      <CommitmentCreatedModal
-        {...defaultProps}
-        isOpen={true}
-        commitmentId="CMT-SECOND"
-      />
-    );
+    rerender(<CommitmentCreatedModal {...defaultProps} isOpen={true} commitmentId="CMT-SECOND" />);
 
     await waitFor(() => {
       expect(screen.queryByRole('status', { name: /escrow funded successfully/i })).toBeNull();

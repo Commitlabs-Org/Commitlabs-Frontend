@@ -32,7 +32,7 @@ function createAuthorizedRequest(requestOwnerAddress = ownerAddress, token = 'va
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    }
+    },
   );
 }
 
@@ -46,7 +46,9 @@ describe('GET /api/commitments/export', () => {
 
   it('returns 401 when no Authorization header is provided', async () => {
     const response = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/export?ownerAddress=${ownerAddress}`)
+      createMockRequest(
+        `http://localhost:3000/api/commitments/export?ownerAddress=${ownerAddress}`,
+      ),
     );
     const result = await parseResponse(response);
 
@@ -71,7 +73,7 @@ describe('GET /api/commitments/export', () => {
         headers: {
           Authorization: 'Bearer valid-token',
         },
-      })
+      }),
     );
     const result = await parseResponse(response);
 
@@ -93,7 +95,9 @@ describe('GET /api/commitments/export', () => {
 
     expect(result.status).toBe(200);
     expect(result.headers.get('content-type')).toBe('text/csv; charset=utf-8');
-    expect(result.headers.get('content-disposition')).toBe('attachment; filename="commitments.csv"');
+    expect(result.headers.get('content-disposition')).toBe(
+      'attachment; filename="commitments.csv"',
+    );
   });
 
   it('returns valid CSV with the correct headers', async () => {
@@ -101,7 +105,7 @@ describe('GET /api/commitments/export', () => {
     const result = await parseResponse(response);
 
     expect(result.data).toBe(
-      'Commitment ID,Owner,Asset,Amount,Status,Compliance Score,Current Value,Fee Earned,Violation Count,Created At,Expires At\r\n'
+      'Commitment ID,Owner,Asset,Amount,Status,Compliance Score,Current Value,Fee Earned,Violation Count,Created At,Expires At\r\n',
     );
   });
 
@@ -129,7 +133,7 @@ describe('GET /api/commitments/export', () => {
     expect(mockedGetUserCommitmentsFromChain).toHaveBeenCalledWith(ownerAddress);
     expect(result.data).toBe(
       'Commitment ID,Owner,Asset,Amount,Status,Compliance Score,Current Value,Fee Earned,Violation Count,Created At,Expires At\r\n' +
-        `commitment-1,${ownerAddress},USDC,1000,ACTIVE,91,1025,10,0,2026-04-01T00:00:00.000Z,2026-05-01T00:00:00.000Z\r\n`
+        `commitment-1,${ownerAddress},USDC,1000,ACTIVE,91,1025,10,0,2026-04-01T00:00:00.000Z,2026-05-01T00:00:00.000Z\r\n`,
     );
   });
 
@@ -141,7 +145,7 @@ describe('GET /api/commitments/export', () => {
 
     expect(result.status).toBe(200);
     expect(result.data).toBe(
-      'Commitment ID,Owner,Asset,Amount,Status,Compliance Score,Current Value,Fee Earned,Violation Count,Created At,Expires At\r\n'
+      'Commitment ID,Owner,Asset,Amount,Status,Compliance Score,Current Value,Fee Earned,Violation Count,Created At,Expires At\r\n',
     );
   });
 
@@ -168,7 +172,7 @@ describe('GET /api/commitments/export', () => {
 
     expect(result.data).toBe(
       'Commitment ID,Owner,Asset,Amount,Status,Compliance Score,Current Value,Fee Earned,Violation Count,Created At,Expires At\r\n' +
-        `commitment-1,${ownerAddress},"""Yield"", Fund\nSeries A",1000,ACTIVE,88,1005,5,1," 2026-04-01T00:00:00.000Z ",\r\n`
+        `commitment-1,${ownerAddress},"""Yield"", Fund\nSeries A",1000,ACTIVE,88,1005,5,1," 2026-04-01T00:00:00.000Z ",\r\n`,
     );
   });
 

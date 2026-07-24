@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useRef, useEffect } from "react";
-import { AlertTriangle, ArrowRight } from "lucide-react";
-import styles from "./ValidationSummary.module.css";
+import React, { useRef, useEffect } from 'react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import styles from './ValidationSummary.module.css';
 
 export interface ValidationErrorItem {
   id: string;
@@ -16,10 +16,7 @@ interface ValidationSummaryProps {
   onJumpToError: (step: 1 | 2 | 3, field: string) => void;
 }
 
-export default function ValidationSummary({
-  errors,
-  onJumpToError,
-}: ValidationSummaryProps) {
+export default function ValidationSummary({ errors, onJumpToError }: ValidationSummaryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Focus the summary container when errors are present for screen readers / accessibility
@@ -43,7 +40,7 @@ export default function ValidationSummary({
       <div className={styles.header}>
         <AlertTriangle className={styles.warningIcon} size={20} />
         <h3 id="validation-summary-title" className={styles.title}>
-          Review Validation Summary ({errors.length} error{errors.length > 1 ? "s" : ""})
+          Review Validation Summary ({errors.length} error{errors.length > 1 ? 's' : ''})
         </h3>
       </div>
       <p className={styles.subtitle}>

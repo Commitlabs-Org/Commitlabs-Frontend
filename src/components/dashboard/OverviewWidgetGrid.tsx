@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useCallback, useRef } from "react";
-import { GripVertical, Eye, EyeOff } from "lucide-react";
+import React, { useCallback, useRef } from 'react';
+import { GripVertical, Eye, EyeOff } from 'lucide-react';
 
 export interface WidgetConfig {
   id: string;
@@ -39,20 +39,20 @@ export function OverviewWidgetGrid({
       }
       dragIndex.current = null;
     },
-    [onReorder]
+    [onReorder],
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, index: number) => {
-      if (e.key === "ArrowUp" && index > 0) {
+      if (e.key === 'ArrowUp' && index > 0) {
         e.preventDefault();
         onReorder(index, index - 1);
-      } else if (e.key === "ArrowDown" && index < sorted.length - 1) {
+      } else if (e.key === 'ArrowDown' && index < sorted.length - 1) {
         e.preventDefault();
         onReorder(index, index + 1);
       }
     },
-    [onReorder, sorted.length]
+    [onReorder, sorted.length],
   );
 
   return (
@@ -98,21 +98,19 @@ export function OverviewWidgetGrid({
               >
                 <GripVertical size={16} />
               </button>
-              <span className="text-xs font-medium text-zinc-500 flex-1">
-                {widget.label}
-              </span>
+              <span className="text-xs font-medium text-zinc-500 flex-1">{widget.label}</span>
               <button
                 onClick={() => onToggleVisibility(widget.id)}
-                aria-label={widget.visible ? `Hide ${widget.label} widget` : `Show ${widget.label} widget`}
+                aria-label={
+                  widget.visible ? `Hide ${widget.label} widget` : `Show ${widget.label} widget`
+                }
                 aria-pressed={widget.visible}
                 className="text-zinc-600 hover:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-500 rounded p-1 transition-colors"
               >
                 {widget.visible ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
             </div>
-            {widget.visible && (
-              <div className="w-full">{children(widget.id)}</div>
-            )}
+            {widget.visible && <div className="w-full">{children(widget.id)}</div>}
           </div>
         ))}
       </div>

@@ -64,7 +64,7 @@ describe('Fetch Mocking Patterns', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(requestBody),
-      })
+      }),
     );
     expect(await response.json()).toEqual(responseData);
   });
@@ -116,7 +116,7 @@ describe('Fetch Mocking Patterns', () => {
           Authorization: 'Bearer token-123',
           'X-Custom-Header': 'custom-value',
         }),
-      })
+      }),
     );
   });
 });
@@ -177,18 +177,14 @@ describe('Freighter Wallet API Mocking', () => {
     const error = new Error('Freighter is not installed');
     freighterApi.isConnected.mockRejectedValue(error);
 
-    await expect(freighterApi.isConnected()).rejects.toThrow(
-      'Freighter is not installed'
-    );
+    await expect(freighterApi.isConnected()).rejects.toThrow('Freighter is not installed');
   });
 
   it('mocks user rejection of transaction', async () => {
     const error = new Error('User rejected signing');
     freighterApi.signTransaction.mockRejectedValue(error);
 
-    await expect(freighterApi.signTransaction('xdr')).rejects.toThrow(
-      'User rejected signing'
-    );
+    await expect(freighterApi.signTransaction('xdr')).rejects.toThrow('User rejected signing');
   });
 
   it('mocks checking if domain is allowed', async () => {
@@ -396,9 +392,7 @@ describe('Module Import Mocking', () => {
     const error = new Error('Commitment not found');
     mockService.getCommitment.mockRejectedValue(error);
 
-    await expect(mockService.getCommitment('invalid')).rejects.toThrow(
-      'Commitment not found'
-    );
+    await expect(mockService.getCommitment('invalid')).rejects.toThrow('Commitment not found');
   });
 });
 

@@ -8,11 +8,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     const { container } = render(
-      <BulkActionBar
-        selectedCount={0}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={0} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     expect(container.firstChild).toBeNull();
@@ -23,11 +19,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     render(
-      <BulkActionBar
-        selectedCount={3}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={3} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     expect(screen.getByText('3 commitments selected')).toBeInTheDocument();
@@ -40,11 +32,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     render(
-      <BulkActionBar
-        selectedCount={1}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={1} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     expect(screen.getByText('1 commitment selected')).toBeInTheDocument();
@@ -55,11 +43,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     render(
-      <BulkActionBar
-        selectedCount={2}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={2} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     const exportButton = screen.getByText('Export selected');
@@ -73,11 +57,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     render(
-      <BulkActionBar
-        selectedCount={2}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={2} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     const clearButton = screen.getByText('Clear');
@@ -96,7 +76,7 @@ describe('BulkActionBar', () => {
         onClear={onClear}
         onExportSelected={onExportSelected}
         isExporting={true}
-      />
+      />,
     );
 
     const exportButton = screen.getByText('Exporting...');
@@ -114,7 +94,7 @@ describe('BulkActionBar', () => {
         onClear={onClear}
         onExportSelected={onExportSelected}
         exportLabel="Download CSV"
-      />
+      />,
     );
 
     expect(screen.getByText('Download CSV')).toBeInTheDocument();
@@ -126,11 +106,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     render(
-      <BulkActionBar
-        selectedCount={2}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={2} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     const exportButton = screen.getByLabelText('Export 2 selected commitments');
@@ -145,11 +121,7 @@ describe('BulkActionBar', () => {
     const onExportSelected = vi.fn();
 
     const { container } = render(
-      <BulkActionBar
-        selectedCount={2}
-        onClear={onClear}
-        onExportSelected={onExportSelected}
-      />
+      <BulkActionBar selectedCount={2} onClear={onClear} onExportSelected={onExportSelected} />,
     );
 
     const statusElement = container.querySelector('[role="status"]');

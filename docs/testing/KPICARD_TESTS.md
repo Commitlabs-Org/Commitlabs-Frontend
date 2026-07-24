@@ -10,14 +10,14 @@
 
 `src/components/KPICard/KPICard.tsx` — exports:
 
-| Export | Kind | Description |
-|---|---|---|
-| `KPICard` | Component | Main metric display card |
-| `formatNumber` | Utility | Locale-formatted integer/decimal |
-| `formatCurrency` | Utility | USD (or custom) currency string |
-| `formatPercentage` | Utility | Percentage with optional sign |
-| `formatCompact` | Utility | K/M/B compact notation |
-| `calculateDelta` | Utility | Computes direction + value from two numbers |
+| Export             | Kind      | Description                                 |
+| ------------------ | --------- | ------------------------------------------- |
+| `KPICard`          | Component | Main metric display card                    |
+| `formatNumber`     | Utility   | Locale-formatted integer/decimal            |
+| `formatCurrency`   | Utility   | USD (or custom) currency string             |
+| `formatPercentage` | Utility   | Percentage with optional sign               |
+| `formatCompact`    | Utility   | K/M/B compact notation                      |
+| `calculateDelta`   | Utility   | Computes direction + value from two numbers |
 
 ---
 
@@ -27,13 +27,13 @@
 
 All formatters are pure functions and are tested in isolation without any DOM rendering.
 
-| Group | Tests |
-|---|---|
-| `formatNumber` | Locale separators, custom decimals, string input, NaN → `--`, zero, negative |
-| `formatCurrency` | USD prefix, custom currency code, decimals param, string input, NaN → `--` |
+| Group              | Tests                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| `formatNumber`     | Locale separators, custom decimals, string input, NaN → `--`, zero, negative               |
+| `formatCurrency`   | USD prefix, custom currency code, decimals param, string input, NaN → `--`                 |
 | `formatPercentage` | One decimal default, custom decimals, `showSign=true` (positive/negative/zero), NaN → `--` |
-| `formatCompact` | B / M / K thresholds, below-1000 passthrough, NaN → `--` |
-| `calculateDelta` | Up/down/neutral direction, division-by-zero guard, string inputs, NaN inputs |
+| `formatCompact`    | B / M / K thresholds, below-1000 passthrough, NaN → `--`                                   |
+| `calculateDelta`   | Up/down/neutral direction, division-by-zero guard, string inputs, NaN inputs               |
 
 ### Default state (6 tests)
 
@@ -45,15 +45,15 @@ All formatters are pure functions and are tested in isolation without any DOM re
 
 ### Format types (7 tests)
 
-| Format | Test assertion |
-|---|---|
-| `currency` | `$1,250.00` with `decimals=2` |
-| `currency` + custom `unit` | Custom currency code applied |
-| `currency` + `decimals=0` | `$1,250` with no fractional part |
-| `percentage` | `85.2%` with `decimals=1` |
-| `count` | `1.5M` for `1_500_000` |
-| `score` | `94.2` for `94.2` |
-| `value` (default) | `9,876` locale formatting |
+| Format                     | Test assertion                   |
+| -------------------------- | -------------------------------- |
+| `currency`                 | `$1,250.00` with `decimals=2`    |
+| `currency` + custom `unit` | Custom currency code applied     |
+| `currency` + `decimals=0`  | `$1,250` with no fractional part |
+| `percentage`               | `85.2%` with `decimals=1`        |
+| `count`                    | `1.5M` for `1_500_000`           |
+| `score`                    | `94.2` for `94.2`                |
+| `value` (default)          | `9,876` locale formatting        |
 
 ### Delta indicators (14 tests)
 
@@ -118,15 +118,15 @@ Default size (`medium`) verified when `size` prop is omitted.
 
 ### Edge cases (7 tests)
 
-| Case | Assertion |
-|---|---|
-| `value=0` | Renders `"0"`, not `"--"` |
-| Negative value | `-500` renders correctly |
-| Very long label (200 chars) | No crash |
-| String `value="42"` | Rendered verbatim via format pipeline |
-| Non-numeric string `"n/a"` | Renders `"--"` |
-| All optional props omitted | Renders without crash |
-| `delta.value=0, direction="neutral"` | Renders `"0.0%"` |
+| Case                                 | Assertion                             |
+| ------------------------------------ | ------------------------------------- |
+| `value=0`                            | Renders `"0"`, not `"--"`             |
+| Negative value                       | `-500` renders correctly              |
+| Very long label (200 chars)          | No crash                              |
+| String `value="42"`                  | Rendered verbatim via format pipeline |
+| Non-numeric string `"n/a"`           | Renders `"--"`                        |
+| All optional props omitted           | Renders without crash                 |
+| `delta.value=0, direction="neutral"` | Renders `"0.0%"`                      |
 
 ---
 

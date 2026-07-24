@@ -59,17 +59,13 @@ function buildAttestationEvents(
             ? (a.details.complianceScore as number)
             : undefined,
         violation:
-          typeof a.details?.violation === 'boolean'
-            ? (a.details.violation as boolean)
-            : undefined,
+          typeof a.details?.violation === 'boolean' ? (a.details.violation as boolean) : undefined,
         severity: a.severity,
       },
     }));
 }
 
-function buildTerminalEvent(
-  commitment: ChainCommitment,
-): EarlyExitEvent | SettlementEvent | null {
+function buildTerminalEvent(commitment: ChainCommitment): EarlyExitEvent | SettlementEvent | null {
   if (commitment.status === 'EARLY_EXIT') {
     const event: EarlyExitEvent = {
       eventId: `early_exit:${commitment.id}`,
@@ -129,10 +125,7 @@ export async function getCommitmentHistory(
   if (terminal) events.push(terminal);
 
   // Sort chronologically (oldest first)
-  events.sort(
-    (a, b) =>
-      new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
-  );
+  events.sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
 
   return { events, total: events.length };
 }

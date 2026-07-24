@@ -44,14 +44,10 @@ src/components/shell/
 The sidebar is integrated through the `AppShellLayout` wrapper component, which can be applied to individual page components:
 
 ```tsx
-import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
 
 export default function MyPage() {
-  return (
-    <AppShellLayout>
-      {/* Your page content */}
-    </AppShellLayout>
-  )
+  return <AppShellLayout>{/* Your page content */}</AppShellLayout>;
 }
 ```
 
@@ -61,7 +57,7 @@ export default function MyPage() {
 
 ```typescript
 interface AppSidebarProps {
-  className?: string  // Optional additional CSS classes
+  className?: string; // Optional additional CSS classes
 }
 ```
 
@@ -69,7 +65,7 @@ interface AppSidebarProps {
 
 ```typescript
 interface AppShellLayoutProps {
-  children: React.ReactNode  // Page content to render
+  children: React.ReactNode; // Page content to render
 }
 ```
 
@@ -79,10 +75,10 @@ interface AppShellLayoutProps {
 
 ```tsx
 // src/app/marketplace/page.tsx
-'use client'
+'use client';
 
-import { AppShellLayout } from '@/components/shell/AppShellLayout'
-import { MarketplaceContent } from '@/components/MarketplaceContent'
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
+import { MarketplaceContent } from '@/components/MarketplaceContent';
 
 export default function MarketplacePage() {
   return (
@@ -91,24 +87,22 @@ export default function MarketplacePage() {
         <MarketplaceContent />
       </div>
     </AppShellLayout>
-  )
+  );
 }
 ```
 
 ### Custom Styling
 
 ```tsx
-import { AppSidebar } from '@/components/shell/AppSidebar'
+import { AppSidebar } from '@/components/shell/AppSidebar';
 
 export function CustomLayout() {
   return (
     <div className="flex">
       <AppSidebar className="custom-sidebar-styles" />
-      <main className="flex-1">
-        {/* Content */}
-      </main>
+      <main className="flex-1">{/* Content */}</main>
     </div>
-  )
+  );
 }
 ```
 
@@ -172,20 +166,20 @@ The sidebar follows the CommitLabs design system:
 The sidebar collapse state is managed using React state and persisted to `sessionStorage`:
 
 ```typescript
-const [isCollapsed, setIsCollapsed] = useState(false)
+const [isCollapsed, setIsCollapsed] = useState(false);
 
 // Load from sessionStorage on mount
 useEffect(() => {
-  const stored = sessionStorage.getItem('sidebar-collapsed')
+  const stored = sessionStorage.getItem('sidebar-collapsed');
   if (stored !== null) {
-    setIsCollapsed(stored === 'true')
+    setIsCollapsed(stored === 'true');
   }
-}, [])
+}, []);
 
 // Save to sessionStorage on change
 useEffect(() => {
-  sessionStorage.setItem('sidebar-collapsed', String(isCollapsed))
-}, [isCollapsed])
+  sessionStorage.setItem('sidebar-collapsed', String(isCollapsed));
+}, [isCollapsed]);
 ```
 
 ### Route Detection
@@ -193,15 +187,15 @@ useEffect(() => {
 Active route is detected using Next.js `usePathname()`:
 
 ```typescript
-const pathname = usePathname()
+const pathname = usePathname();
 
 const isActive = (item: NavItem): boolean => {
-  if (!item.matchPaths) return pathname === item.href
-  return item.matchPaths.some(path => {
-    if (path === '/') return pathname === '/'
-    return pathname.startsWith(path)
-  })
-}
+  if (!item.matchPaths) return pathname === item.href;
+  return item.matchPaths.some((path) => {
+    if (path === '/') return pathname === '/';
+    return pathname.startsWith(path);
+  });
+};
 ```
 
 ## Testing
@@ -257,8 +251,9 @@ Minimum 95% test coverage on all new/changed lines.
 If you have pages currently using the landing `Navigation` component:
 
 **Before:**
+
 ```tsx
-import { Navigation } from '@/components/landing-page/Navigation'
+import { Navigation } from '@/components/landing-page/Navigation';
 
 export default function MyPage() {
   return (
@@ -266,20 +261,17 @@ export default function MyPage() {
       <Navigation />
       {/* Page content */}
     </>
-  )
+  );
 }
 ```
 
 **After:**
+
 ```tsx
-import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
 
 export default function MyPage() {
-  return (
-    <AppShellLayout>
-      {/* Page content */}
-    </AppShellLayout>
-  )
+  return <AppShellLayout>{/* Page content */}</AppShellLayout>;
 }
 ```
 

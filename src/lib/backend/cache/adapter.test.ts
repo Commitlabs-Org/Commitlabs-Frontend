@@ -139,14 +139,11 @@ describe('CacheKey', () => {
   });
 
   it('userCommitments returns a namespaced key', () => {
-    expect(CacheKey.userCommitments('GOWNER')).toBe(
-      'commitlabs:user-commitments:GOWNER',
-    );
+    expect(CacheKey.userCommitments('GOWNER')).toBe('commitlabs:user-commitments:GOWNER');
   });
 
   it('marketplaceListings returns a namespaced key', () => {
-    expect(CacheKey.marketplaceListings('{}'))
-      .toBe('commitlabs:marketplace:listings:{}');
+    expect(CacheKey.marketplaceListings('{}')).toBe('commitlabs:marketplace:listings:{}');
   });
 
   it('different ids produce different keys', () => {

@@ -49,7 +49,13 @@ function getEventIcon(kind: HistoryEventKind) {
       return (
         <svg className="w-5 h-5 text-green-400" viewBox="0 0 20 20" fill="none">
           <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" />
-          <path d="M7 10l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M7 10l2 2 4-4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case 'early_exit':
@@ -63,7 +69,13 @@ function getEventIcon(kind: HistoryEventKind) {
       return (
         <svg className="w-5 h-5 text-purple-400" viewBox="0 0 20 20" fill="none">
           <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" />
-          <path d="M7 10l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M7 10l2 2 4-4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     default:
@@ -93,9 +105,13 @@ function getEventDescription(event: FeedEvent): string {
     case 'attestation':
       return event.payload.attestationType || 'Health check';
     case 'early_exit':
-      return event.payload.exitedBy ? `Exited by ${event.payload.exitedBy.slice(0, 8)}...` : 'Early exit executed';
+      return event.payload.exitedBy
+        ? `Exited by ${event.payload.exitedBy.slice(0, 8)}...`
+        : 'Early exit executed';
     case 'settlement':
-      return event.payload.settlementAmount ? `Settled: ${event.payload.settlementAmount}` : 'Commitment settled';
+      return event.payload.settlementAmount
+        ? `Settled: ${event.payload.settlementAmount}`
+        : 'Commitment settled';
     default:
       return '';
   }
@@ -111,15 +127,15 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
         setLoading(false);
         return;
       }
-      
+
       const allEvents: FeedEvent[] = [];
 
       for (const commitment of commitments) {
         try {
           const response = await apiGet<{ success: boolean; data: { events: HistoryEvent[] } }>(
-            `/api/commitments/${commitment.id}/history`
+            `/api/commitments/${commitment.id}/history`,
           );
-          
+
           if (response.success && response.data?.events) {
             response.data.events.forEach((event) => {
               allEvents.push({
@@ -133,9 +149,7 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
         }
       }
 
-      allEvents.sort(
-        (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-      );
+      allEvents.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
       setEvents(allEvents);
       setLoading(false);
@@ -173,9 +187,7 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
     return (
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 text-center">
         <h3 className="text-lg font-medium text-white mb-2">No Recent Activity</h3>
-        <p className="text-zinc-400 text-sm">
-          Activity from your commitments will appear here.
-        </p>
+        <p className="text-zinc-400 text-sm">Activity from your commitments will appear here.</p>
       </div>
     );
   }
@@ -188,7 +200,7 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
           {events.length} events
         </span>
       </div>
-      
+
       <ul className="divide-y divide-zinc-800/50" role="list" aria-label="Recent activity">
         {displayEvents.map((event) => (
           <li key={event.eventId} className="p-4 hover:bg-zinc-800/50 transition-colors">
@@ -197,7 +209,7 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
                 {getEventIcon(event.kind)}
               </div>
               <div className="flex-1 min-w-0">
-                <Link 
+                <Link
                   href={`/commitments/${event.commitmentId}`}
                   className="text-white font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-zinc-500 rounded"
                 >
@@ -207,10 +219,7 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
                   {getEventDescription(event)} · Commitment {event.commitmentId.substring(0, 8)}
                 </p>
               </div>
-              <time 
-                dateTime={event.occurredAt}
-                className="text-zinc-500 text-xs whitespace-nowrap"
-              >
+              <time dateTime={event.occurredAt} className="text-zinc-500 text-xs whitespace-nowrap">
                 {formatRelativeTime(event.occurredAt)}
               </time>
             </div>
@@ -220,13 +229,19 @@ export function RecentActivityFeed({ commitments, maxItems = 5 }: RecentActivity
 
       {hasMore && (
         <div className="p-4 border-t border-zinc-800">
-          <Link 
+          <Link
             href="/commitments"
             className="text-sm text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1"
           >
             View All Activity
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M6 12l4-4-4-4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </Link>
         </div>

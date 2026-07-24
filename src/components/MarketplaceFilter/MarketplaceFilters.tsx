@@ -1,15 +1,11 @@
-"use client";
-import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
+'use client';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 
-type CommitmentType = "balanced" | "aggressive" | "conservative";
+type CommitmentType = 'balanced' | 'aggressive' | 'conservative';
 
-const commitmentTypes: CommitmentType[] = [
-  "balanced",
-  "aggressive",
-  "conservative",
-];
+const commitmentTypes: CommitmentType[] = ['balanced', 'aggressive', 'conservative'];
 
 interface Filters {
   sortBy: string;
@@ -28,18 +24,15 @@ interface MarketplaceFiltersProps {
 }
 
 const DEFAULTS: Filters = {
-  sortBy: "price",
-  commitmentType: ["balanced"],
+  sortBy: 'price',
+  commitmentType: ['balanced'],
   priceRange: [0, 1000000],
   durationRange: [0, 90],
   minCompliance: 0,
   maxLoss: 100,
 };
 
-const MarketplaceFilters = ({
-  filters = DEFAULTS,
-  onFilterChange,
-}: MarketplaceFiltersProps) => {
+const MarketplaceFilters = ({ filters = DEFAULTS, onFilterChange }: MarketplaceFiltersProps) => {
   const [localFilters, setLocalFilters] = useState<Filters>(filters);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     sort: true,
@@ -50,12 +43,12 @@ const MarketplaceFilters = ({
     loss: true,
   });
 
-  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [sidebarSearch, setSidebarSearch] = useState('');
 
   // Separate debounced state for continuous (range/text) inputs only.
   // Discrete toggles (commitmentType, sortBy) bypass debounce for instant feedback.
   const [continuousFilters, setContinuousFilters] = useState<
-    Pick<Filters, "priceRange" | "durationRange" | "minCompliance" | "maxLoss">
+    Pick<Filters, 'priceRange' | 'durationRange' | 'minCompliance' | 'maxLoss'>
   >({
     priceRange: filters.priceRange,
     durationRange: filters.durationRange,
@@ -125,14 +118,14 @@ const MarketplaceFilters = ({
     <button
       type="button"
       className={`focus-ring flex w-full items-center justify-between cursor-pointer py-1.5 bg-transparent border-0 text-left text-white ${
-        options?.headingClassName ?? "text-sm font-medium"
+        options?.headingClassName ?? 'text-sm font-medium'
       }`}
       onClick={() => toggleSection(section)}
       aria-expanded={expandedSections[section]}
       aria-controls={panelId}
     >
       <span>{label}</span>
-      {section !== "sort" &&
+      {section !== 'sort' &&
         (expandedSections[section] ? (
           <ChevronUp size={18} aria-hidden="true" />
         ) : (
@@ -151,16 +144,16 @@ const MarketplaceFilters = ({
 
       {/* Sort By */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        {renderSectionToggle("sort", "Sort By", "marketplace-filter-sort", {
-          headingClassName: "text-lg font-semibold",
+        {renderSectionToggle('sort', 'Sort By', 'marketplace-filter-sort', {
+          headingClassName: 'text-lg font-semibold',
         })}
-        <div
-          id="marketplace-filter-sort"
-          className="mt-2"
-          hidden={!expandedSections.sort}
-        >
+        <div id="marketplace-filter-sort" className="mt-2" hidden={!expandedSections.sort}>
           <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} aria-hidden="true" />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+              size={16}
+              aria-hidden="true"
+            />
             <input
               type="text"
               placeholder="Search filters..."
@@ -174,7 +167,7 @@ const MarketplaceFilters = ({
 
       {/* Commitment Type - discrete toggle, immediate */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        {renderSectionToggle("type", "Commitment Type", "marketplace-filter-type")}
+        {renderSectionToggle('type', 'Commitment Type', 'marketplace-filter-type')}
         {expandedSections.type && (
           <div id="marketplace-filter-type" className="mt-2 flex flex-col gap-3">
             {commitmentTypes.map((type) => {
@@ -184,20 +177,18 @@ const MarketplaceFilters = ({
                   type="button"
                   key={type}
                   className={`focus-ring flex items-center gap-2 cursor-pointer select-none bg-transparent border-0 text-left ${
-                    isActive ? "text-white" : "text-white/70"
+                    isActive ? 'text-white' : 'text-white/70'
                   } rounded-md px-1 py-0.5`}
                   onClick={() => {
                     const current = localFilters.commitmentType;
-                    const next = isActive
-                      ? current.filter((t) => t !== type)
-                      : [...current, type];
-                    handleDiscreteUpdate("commitmentType", next);
+                    const next = isActive ? current.filter((t) => t !== type) : [...current, type];
+                    handleDiscreteUpdate('commitmentType', next);
                   }}
                   aria-pressed={isActive}
                 >
                   <div
                     className={`w-5 h-5 rounded-sm border border-white/30 flex items-center justify-center transition-colors ${
-                      isActive ? "bg-[#51A2FF] border-[#51A2FF]" : "bg-white/5"
+                      isActive ? 'bg-[#51A2FF] border-[#51A2FF]' : 'bg-white/5'
                     }`}
                   >
                     {isActive && (
@@ -213,7 +204,11 @@ const MarketplaceFilters = ({
                     )}
                   </div>
                   <span className="text-sm font-medium">
-                    {type === "balanced" ? "Balanced" : type === "aggressive" ? "Aggressive" : "Safe"}
+                    {type === 'balanced'
+                      ? 'Balanced'
+                      : type === 'aggressive'
+                        ? 'Aggressive'
+                        : 'Safe'}
                   </span>
                 </button>
               );
@@ -224,14 +219,14 @@ const MarketplaceFilters = ({
 
       {/* Price Range - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        {renderSectionToggle("price", "Price Range", "marketplace-filter-price")}
+        {renderSectionToggle('price', 'Price Range', 'marketplace-filter-price')}
         {expandedSections.price && (
           <div id="marketplace-filter-price" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div
                 className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
                 style={{
-                  left: "0%",
+                  left: '0%',
                   width: `${(localFilters.priceRange[1] / 1000000) * 100}%`,
                 }}
               />
@@ -242,9 +237,7 @@ const MarketplaceFilters = ({
                 max="1000000"
                 step="10000"
                 value={localFilters.priceRange[1]}
-                onChange={(e) =>
-                  handleContinuousUpdate("priceRange", [0, Number(e.target.value)])
-                }
+                onChange={(e) => handleContinuousUpdate('priceRange', [0, Number(e.target.value)])}
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
@@ -258,18 +251,14 @@ const MarketplaceFilters = ({
 
       {/* Duration - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        {renderSectionToggle(
-          "duration",
-          "Duration Remaining",
-          "marketplace-filter-duration",
-        )}
+        {renderSectionToggle('duration', 'Duration Remaining', 'marketplace-filter-duration')}
         {expandedSections.duration && (
           <div id="marketplace-filter-duration" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div
                 className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
                 style={{
-                  left: "0%",
+                  left: '0%',
                   width: `${(localFilters.durationRange[1] / 90) * 100}%`,
                 }}
               />
@@ -281,7 +270,7 @@ const MarketplaceFilters = ({
                 step="1"
                 value={localFilters.durationRange[1]}
                 onChange={(e) =>
-                  handleContinuousUpdate("durationRange", [0, Number(e.target.value)])
+                  handleContinuousUpdate('durationRange', [0, Number(e.target.value)])
                 }
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
@@ -296,22 +285,21 @@ const MarketplaceFilters = ({
 
       {/* Compliance - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        {renderSectionToggle(
-          "compliance",
-          "Min Compliance Score",
-          "marketplace-filter-compliance",
-        )}
+        {renderSectionToggle('compliance', 'Min Compliance Score', 'marketplace-filter-compliance')}
         {expandedSections.compliance && (
           <div id="marketplace-filter-compliance" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
-              <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.minCompliance}%` }} />
+              <div
+                className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
+                style={{ width: `${localFilters.minCompliance}%` }}
+              />
               <input
                 aria-label="Minimum compliance score"
                 type="range"
                 min="0"
                 max="100"
                 value={localFilters.minCompliance}
-                onChange={(e) => handleContinuousUpdate("minCompliance", Number(e.target.value))}
+                onChange={(e) => handleContinuousUpdate('minCompliance', Number(e.target.value))}
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
@@ -325,22 +313,21 @@ const MarketplaceFilters = ({
 
       {/* Max Loss - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        {renderSectionToggle(
-          "loss",
-          "Max Loss Threshold",
-          "marketplace-filter-loss",
-        )}
+        {renderSectionToggle('loss', 'Max Loss Threshold', 'marketplace-filter-loss')}
         {expandedSections.loss && (
           <div id="marketplace-filter-loss" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
-              <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.maxLoss}%` }} />
+              <div
+                className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
+                style={{ width: `${localFilters.maxLoss}%` }}
+              />
               <input
                 aria-label="Maximum loss threshold"
                 type="range"
                 min="0"
                 max="100"
                 value={localFilters.maxLoss}
-                onChange={(e) => handleContinuousUpdate("maxLoss", Number(e.target.value))}
+                onChange={(e) => handleContinuousUpdate('maxLoss', Number(e.target.value))}
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>

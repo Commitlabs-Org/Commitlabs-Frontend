@@ -67,7 +67,7 @@ describe('NotificationList', () => {
         notifications={mockNotifications}
         onMarkRead={onMarkRead}
         onMarkUnread={onMarkUnread}
-      />
+      />,
     );
 
     expect(screen.getByText('Notifications')).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe('NotificationList', () => {
 
     expect(screen.getByText('No notifications')).toBeInTheDocument();
     expect(
-      screen.getByText("You're all caught up! Check back later for updates.")
+      screen.getByText("You're all caught up! Check back later for updates."),
     ).toBeInTheDocument();
   });
 
@@ -139,11 +139,11 @@ describe('NotificationList', () => {
 
     // Check counts (badge numbers)
     const badges = screen.getAllByText(/\d+/);
-    expect(badges.some(b => b.textContent === '4')).toBe(true); // All
-    expect(badges.some(b => b.textContent === '1')).toBe(true); // Expiry
-    expect(badges.some(b => b.textContent === '1')).toBe(true); // Violations
-    expect(badges.some(b => b.textContent === '1')).toBe(true); // Health
-    expect(badges.some(b => b.textContent === '1')).toBe(true); // Marketplace
+    expect(badges.some((b) => b.textContent === '4')).toBe(true); // All
+    expect(badges.some((b) => b.textContent === '1')).toBe(true); // Expiry
+    expect(badges.some((b) => b.textContent === '1')).toBe(true); // Violations
+    expect(badges.some((b) => b.textContent === '1')).toBe(true); // Health
+    expect(badges.some((b) => b.textContent === '1')).toBe(true); // Marketplace
   });
 
   it('calls onMarkRead when mark read button is clicked', () => {
@@ -155,7 +155,7 @@ describe('NotificationList', () => {
         notifications={mockNotifications}
         onMarkRead={onMarkRead}
         onMarkUnread={onMarkUnread}
-      />
+      />,
     );
 
     const markReadButtons = screen.getAllByText('Mark read');
@@ -173,7 +173,7 @@ describe('NotificationList', () => {
         notifications={mockNotifications}
         onMarkRead={onMarkRead}
         onMarkUnread={onMarkUnread}
-      />
+      />,
     );
 
     const markUnreadButtons = screen.getAllByText('Mark unread');
@@ -194,12 +194,14 @@ describe('NotificationList', () => {
     render(<NotificationList notifications={mockNotifications} />);
 
     // Critical should have red styling
-    const criticalNotification = screen.getByText('Commitment Violated').closest('.border-\\[\\#0FF0FC\\]/30');
+    const criticalNotification = screen
+      .getByText('Commitment Violated')
+      .closest('.border-\\[\\#0FF0FC\\]/30');
     expect(criticalNotification).toBeInTheDocument();
   });
 
   it('shows "All caught up" when all notifications are read', () => {
-    const allRead = mockNotifications.map(n => ({ ...n, read: true }));
+    const allRead = mockNotifications.map((n) => ({ ...n, read: true }));
 
     render(<NotificationList notifications={allRead} />);
 
@@ -230,7 +232,7 @@ describe('NotificationList', () => {
         notifications={mockNotifications}
         onMarkRead={onMarkRead}
         onMarkUnread={onMarkUnread}
-      />
+      />,
     );
 
     const firstCard = screen.getByText('Commitment Nearing Expiry').closest('[role="button"]');

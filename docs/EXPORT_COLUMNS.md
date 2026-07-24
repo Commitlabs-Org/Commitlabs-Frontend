@@ -10,19 +10,19 @@ Users can now choose exactly which columns appear in the downloaded CSV and opti
 
 ### Available columns
 
-| Column | Description |
-|---|---|
-| Commitment ID | On-chain commitment identifier |
-| Owner | Wallet address of the commitment owner |
-| Asset | Asset symbol (e.g. XLM) |
-| Amount | Committed amount |
-| Status | Current commitment status |
-| Compliance Score | Computed compliance score |
-| Current Value | Present market value |
-| Fee Earned | Accumulated protocol fee |
-| Violation Count | Number of rule violations |
-| Created At | ISO timestamp of creation |
-| Expires At | ISO timestamp of expiry |
+| Column           | Description                            |
+| ---------------- | -------------------------------------- |
+| Commitment ID    | On-chain commitment identifier         |
+| Owner            | Wallet address of the commitment owner |
+| Asset            | Asset symbol (e.g. XLM)                |
+| Amount           | Committed amount                       |
+| Status           | Current commitment status              |
+| Compliance Score | Computed compliance score              |
+| Current Value    | Present market value                   |
+| Fee Earned       | Accumulated protocol fee               |
+| Violation Count  | Number of rule violations              |
+| Created At       | ISO timestamp of creation              |
+| Expires At       | ISO timestamp of expiry                |
 
 ### Behavior
 
@@ -45,12 +45,12 @@ The route (`src/app/api/commitments/export/route.ts`) parses this parameter and 
 
 The schedule section lets users request a browser notification reminder to export again after a chosen interval.
 
-| Option | Delay |
-|---|---|
-| No reminder | — |
-| Daily | 24 hours |
-| Weekly | 7 days |
-| Monthly | 30 days |
+| Option      | Delay    |
+| ----------- | -------- |
+| No reminder | —        |
+| Daily       | 24 hours |
+| Weekly      | 7 days   |
+| Monthly     | 30 days  |
 
 > **Important:** This is a client-side `setTimeout` that fires a single `Notification` in the current browser session. It is **not** server-side automation — no data is sent or scheduled on the server. Users must grant browser notification permission for the reminder to appear.
 
@@ -64,8 +64,8 @@ The chosen interval is persisted alongside the column selection in `commitlabs.e
 <ExportCommitmentsModal
   isOpen={isOpen}
   onClose={handleClose}
-  ownerAddress={walletAddress}      // optional
-  sessionToken={token}              // optional; falls back to localStorage
+  ownerAddress={walletAddress} // optional
+  sessionToken={token} // optional; falls back to localStorage
   endpoint="/api/commitments/export" // optional; default shown
 />
 ```

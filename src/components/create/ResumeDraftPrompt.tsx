@@ -8,7 +8,11 @@ interface ResumeDraftPromptProps {
   onStartFresh: () => void;
 }
 
-export default function ResumeDraftPrompt({ draft, onResume, onStartFresh }: ResumeDraftPromptProps) {
+export default function ResumeDraftPrompt({
+  draft,
+  onResume,
+  onStartFresh,
+}: ResumeDraftPromptProps) {
   const typeLabelMap: Record<string, string> = {
     safe: 'Safe Commitment',
     balanced: 'Balanced Commitment',
@@ -55,7 +59,9 @@ export default function ResumeDraftPrompt({ draft, onResume, onStartFresh }: Res
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="text-gray-500">Amount</div>
-              <div className="text-gray-900">{draft.amount || 'Not set'} {draft.asset}</div>
+              <div className="text-gray-900">
+                {draft.amount || 'Not set'} {draft.asset}
+              </div>
               <div className="text-gray-500">Duration</div>
               <div className="text-gray-900">{draft.durationDays} days</div>
               <div className="text-gray-500">Max Loss</div>

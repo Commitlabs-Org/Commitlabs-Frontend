@@ -16,10 +16,10 @@ and assets on the commitments overview page.
 
 `src/utils/portfolioAllocation.ts`
 
-| Function | Description |
-|---|---|
-| `aggregateByRiskProfile` | Groups by `Commitment.type`, sums `amount`. |
-| `aggregateByAsset` | Groups by `Commitment.asset`, sums `amount`. |
+| Function                 | Description                                  |
+| ------------------------ | -------------------------------------------- |
+| `aggregateByRiskProfile` | Groups by `Commitment.type`, sums `amount`.  |
+| `aggregateByAsset`       | Groups by `Commitment.asset`, sums `amount`. |
 
 ## Empty State
 

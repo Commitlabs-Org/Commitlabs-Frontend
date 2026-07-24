@@ -59,18 +59,14 @@ export function MarketplaceEmptyState({
       >
         {type === 'empty' ? (
           <>
-            <p className="text-[1.1rem] font-semibold mb-2">
-              No commitments available
-            </p>
+            <p className="text-[1.1rem] font-semibold mb-2">No commitments available</p>
             <p className="text-[0.95rem] text-white/70">
               New offers will appear here once they are listed.
             </p>
           </>
         ) : (
           <>
-            <p className="text-[1.1rem] font-semibold mb-2">
-              No commitments match your filters
-            </p>
+            <p className="text-[1.1rem] font-semibold mb-2">No commitments match your filters</p>
             <p className="text-[0.95rem] text-white/70 mb-5">
               Try adjusting or clearing your filters to see more results.
             </p>

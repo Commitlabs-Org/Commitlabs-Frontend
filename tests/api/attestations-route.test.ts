@@ -5,10 +5,7 @@ import type { Attestation } from '@/lib/types/domain';
 import { createMockRequest, parseResponse } from './helpers';
 import { getMockData } from '@/lib/backend/mockDb';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
-import {
-  getCommitmentFromChain,
-  recordAttestationOnChain,
-} from '@/lib/backend/services/contracts';
+import { getCommitmentFromChain, recordAttestationOnChain } from '@/lib/backend/services/contracts';
 
 vi.mock('@/lib/backend/mockDb', () => ({
   getMockData: vi.fn(),
@@ -59,7 +56,7 @@ describe('GET /api/attestations', () => {
 
   it('filters by commitmentId and returns pagination meta', async () => {
     const req = createMockRequest(
-      'http://localhost:3000/api/attestations?commitmentId=commitment-1&page=2&pageSize=1'
+      'http://localhost:3000/api/attestations?commitmentId=commitment-1&page=2&pageSize=1',
     );
 
     const response = await GET(req, { params: {} });
@@ -82,7 +79,7 @@ describe('GET /api/attestations', () => {
 
   it('returns an empty list with pagination metadata when nothing matches', async () => {
     const req = createMockRequest(
-      'http://localhost:3000/api/attestations?commitmentId=missing&page=1&pageSize=10'
+      'http://localhost:3000/api/attestations?commitmentId=missing&page=1&pageSize=10',
     );
 
     const response = await GET(req, { params: {} });
@@ -102,9 +99,7 @@ describe('GET /api/attestations', () => {
   });
 
   it('returns 400 for invalid pagination params', async () => {
-    const req = createMockRequest(
-      'http://localhost:3000/api/attestations?page=0&pageSize=101'
-    );
+    const req = createMockRequest('http://localhost:3000/api/attestations?page=0&pageSize=101');
 
     const response = await GET(req, { params: {} });
     const { status, data } = await parseResponse(response);
@@ -177,7 +172,7 @@ describe('POST /api/attestations', () => {
           asset: 'XLM',
           complianceScore: 91,
         }),
-      })
+      }),
     );
   });
 

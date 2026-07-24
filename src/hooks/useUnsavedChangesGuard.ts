@@ -43,7 +43,9 @@ export function useUnsavedChangesGuard<T extends Record<string, any>>(currentSta
   useEffect(() => {
     const handle = (state: any) => {
       if (isDirty) {
-        const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+        const confirmLeave = window.confirm(
+          'You have unsaved changes. Are you sure you want to leave?',
+        );
         if (!confirmLeave) return false;
       }
       return true;

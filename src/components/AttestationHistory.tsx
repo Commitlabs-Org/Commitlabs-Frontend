@@ -1,86 +1,92 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import AttestationFilterBar, { type AttestationFilterBarProps } from './attestation/AttestationFilterBar'
-import { type Attestation, type AttestationSeverity, type AttestationType } from '@/lib/types/domain'
+import { useState, useEffect } from 'react';
+import AttestationFilterBar, {
+  type AttestationFilterBarProps,
+} from './attestation/AttestationFilterBar';
+import {
+  type Attestation,
+  type AttestationSeverity,
+  type AttestationType,
+} from '@/lib/types/domain';
 
 interface AttestationHistoryProps {
-  commitmentId: string
+  commitmentId: string;
 }
 
-type ObservedTimestamp = string | Date | null | undefined
+type ObservedTimestamp = string | Date | null | undefined;
 
 function parseTimestamp(timestamp: ObservedTimestamp): number | null {
   if (!timestamp) {
-    return null
+    return null;
   }
 
-  const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
-  const time = date.getTime()
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  const time = date.getTime();
 
-  return Number.isFinite(time) ? time : null
+  return Number.isFinite(time) ? time : null;
 }
 
 // Utility function to format relative time
 function formatRelativeTime(timestamp: ObservedTimestamp): string {
-  const timestampMs = parseTimestamp(timestamp)
+  const timestampMs = parseTimestamp(timestamp);
 
   if (timestampMs === null) {
-    return 'Timestamp unavailable'
+    return 'Timestamp unavailable';
   }
 
-  const now = new Date()
-  const diffMs = Math.max(0, now.getTime() - timestampMs)
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  const diffWeeks = Math.floor(diffDays / 7)
-  const diffMonths = Math.floor(diffDays / 30)
+  const now = new Date();
+  const diffMs = Math.max(0, now.getTime() - timestampMs);
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
 
   if (diffSeconds < 60) {
-    return 'just now'
+    return 'just now';
   } else if (diffMinutes < 60) {
-    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`
+    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
   } else if (diffHours < 24) {
-    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
   } else if (diffDays < 7) {
-    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
   } else if (diffWeeks < 4) {
-    return `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`
+    return `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`;
   } else if (diffMonths < 12) {
-    return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`
+    return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
   } else {
-    const diffYears = Math.floor(diffMonths / 12)
-    return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`
+    const diffYears = Math.floor(diffMonths / 12);
+    return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
   }
 }
 
 function compareAttestationsByObservedAtDesc(a: Attestation, b: Attestation): number {
-  const aTime = parseTimestamp(a.observedAt)
-  const bTime = parseTimestamp(b.observedAt)
+  const aTime = parseTimestamp(a.observedAt);
+  const bTime = parseTimestamp(b.observedAt);
 
   if (aTime !== null && bTime !== null && aTime !== bTime) {
-    return bTime - aTime
+    return bTime - aTime;
   }
 
   if (aTime !== null && bTime === null) {
-    return -1
+    return -1;
   }
 
   if (aTime === null && bTime !== null) {
-    return 1
+    return 1;
   }
 
-  return a.id.localeCompare(b.id)
+  return a.id.localeCompare(b.id);
 }
 
 // Utility function to truncate hash
 function truncateHash(hash: string, startChars: number = 6, endChars: number = 6): string {
   if (!hash || hash.length <= startChars + endChars) {
-    return hash
+    return hash;
   }
-  return `${hash.slice(0, startChars)}...${hash.slice(-endChars)}`
+  return `${hash.slice(0, startChars)}...${hash.slice(-endChars)}`;
 }
 
 // Icon components
@@ -96,7 +102,7 @@ function CheckIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function WarningIcon() {
@@ -119,7 +125,7 @@ function WarningIcon() {
       />
       <circle cx="10" cy="14" r="1" fill="#FF8A04" />
     </svg>
-  )
+  );
 }
 
 function ViolationIcon() {
@@ -134,53 +140,53 @@ function ViolationIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 export default function AttestationHistory({ commitmentId }: AttestationHistoryProps) {
-  const [attestations, setAttestations] = useState<Attestation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [attestations, setAttestations] = useState<Attestation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<{
-    severity: AttestationSeverity | 'all'
-    type: AttestationType | 'all'
+    severity: AttestationSeverity | 'all';
+    type: AttestationType | 'all';
   }>({
     severity: 'all',
     type: 'all',
-  })
+  });
 
   useEffect(() => {
     async function fetchAttestations() {
       try {
-        setLoading(true)
-        const response = await fetch('/api/attestations')
+        setLoading(true);
+        const response = await fetch('/api/attestations');
         if (!response.ok) {
-          throw new Error('Failed to fetch attestations')
+          throw new Error('Failed to fetch attestations');
         }
-        const data = await response.json()
+        const data = await response.json();
         // Filter attestations for this commitment
         const commitmentAttestations = (data.attestations || []).filter(
-          (a: Attestation) => a.commitmentId === commitmentId
-        )
-        setAttestations(commitmentAttestations)
+          (a: Attestation) => a.commitmentId === commitmentId,
+        );
+        setAttestations(commitmentAttestations);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error')
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchAttestations()
-  }, [commitmentId])
+    fetchAttestations();
+  }, [commitmentId]);
 
   // Apply filters
   const filteredAttestations = attestations
     .filter((attestation: Attestation) => {
-      const severityMatch = filters.severity === 'all' || attestation.severity === filters.severity
-      const typeMatch = filters.type === 'all' || attestation.kind === filters.type
-      return severityMatch && typeMatch
+      const severityMatch = filters.severity === 'all' || attestation.severity === filters.severity;
+      const typeMatch = filters.type === 'all' || attestation.kind === filters.type;
+      return severityMatch && typeMatch;
     })
-    .sort(compareAttestationsByObservedAtDesc)
+    .sort(compareAttestationsByObservedAtDesc);
 
   // Calculate compliance trend summary
   const complianceSummary = {
@@ -188,37 +194,37 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
     ok: attestations.filter((a: Attestation) => a.severity === 'ok').length,
     warning: attestations.filter((a: Attestation) => a.severity === 'warning').length,
     violation: attestations.filter((a: Attestation) => a.severity === 'violation').length,
-  }
+  };
 
   const getSeverityIcon = (severity?: AttestationSeverity) => {
     switch (severity) {
       case 'ok':
-        return <CheckIcon />
+        return <CheckIcon />;
       case 'warning':
-        return <WarningIcon />
+        return <WarningIcon />;
       case 'violation':
-        return <ViolationIcon />
+        return <ViolationIcon />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const getSeverityClass = (severity?: AttestationSeverity) => {
     switch (severity) {
       case 'ok':
-        return 'border-green-500 bg-green-50'
+        return 'border-green-500 bg-green-50';
       case 'warning':
-        return 'border-yellow-500 bg-yellow-50'
+        return 'border-yellow-500 bg-yellow-50';
       case 'violation':
-        return 'border-red-500 bg-red-50'
+        return 'border-red-500 bg-red-50';
       default:
-        return 'border-gray-300 bg-gray-50'
+        return 'border-gray-300 bg-gray-50';
     }
-  }
+  };
 
   const handleFilterChange: AttestationFilterBarProps['onFilterChange'] = (newFilters) => {
-    setFilters(newFilters)
-  }
+    setFilters(newFilters);
+  };
 
   if (loading) {
     return (
@@ -232,7 +238,7 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -240,7 +246,7 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
       <div className="p-6">
         <div className="text-red-600">Error loading attestations: {error}</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -318,7 +324,9 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
                   {attestation.details && Object.keys(attestation.details).length > 0 && (
                     <div className="mt-2 text-xs text-gray-500">
                       <details>
-                        <summary className="cursor-pointer hover:text-gray-700">View details</summary>
+                        <summary className="cursor-pointer hover:text-gray-700">
+                          View details
+                        </summary>
                         <pre className="mt-1 p-2 bg-gray-100 rounded overflow-x-auto">
                           {JSON.stringify(attestation.details, null, 2)}
                         </pre>
@@ -332,5 +340,5 @@ export default function AttestationHistory({ commitmentId }: AttestationHistoryP
         )}
       </div>
     </div>
-  )
+  );
 }

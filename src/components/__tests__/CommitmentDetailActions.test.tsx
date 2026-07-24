@@ -44,7 +44,10 @@ describe('CommitmentDetailActions', () => {
     fetchMock.mockReset();
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, data: { eligible: true, reason: null, estimatedSettlement: '1200' } }),
+      json: async () => ({
+        success: true,
+        data: { eligible: true, reason: null, estimatedSettlement: '1200' },
+      }),
     } as Response);
     vi.stubGlobal('fetch', fetchMock);
   });
@@ -58,27 +61,17 @@ describe('CommitmentDetailActions', () => {
     renderActions();
 
     expect(screen.getByRole('heading', { name: 'Actions' })).toBeTruthy();
-    expect(
-      screen.getByRole('heading', { name: 'Primary Actions' }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('heading', { name: 'Additional Actions' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Primary Actions' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Additional Actions' })).toBeTruthy();
 
     expect(
       screen.getByRole('button', {
         name: 'Early Exit - Exit before expiry (penalty applies)',
       }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'View Full Attestation History' }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Export Commitment Data' }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Report an Issue' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'View Full Attestation History' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export Commitment Data' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Report an Issue' })).toBeTruthy();
     expect(screen.getByText('Settlement preview')).toBeTruthy();
   });
 
@@ -97,9 +90,7 @@ describe('CommitmentDetailActions', () => {
   it('invokes onViewAttestations when View Full Attestation History is clicked', () => {
     const { props } = renderActions();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'View Full Attestation History' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'View Full Attestation History' }));
 
     expect(props.onViewAttestations).toHaveBeenCalledTimes(1);
   });
@@ -107,9 +98,7 @@ describe('CommitmentDetailActions', () => {
   it('invokes onExportData when Export Commitment Data is clicked', () => {
     const { props } = renderActions();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Export Commitment Data' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Export Commitment Data' }));
 
     expect(props.onExportData).toHaveBeenCalledTimes(1);
   });
@@ -165,10 +154,7 @@ describe('CommitmentDetailActions', () => {
       name: 'Early Exit - Exit before expiry (penalty applies)',
     });
 
-    expect(earlyExitButton).toHaveAttribute(
-      'title',
-      'Commitment has already matured',
-    );
+    expect(earlyExitButton).toHaveAttribute('title', 'Commitment has already matured');
   });
 
   it('has no tooltip on enabled Early Exit button', () => {
@@ -184,9 +170,7 @@ describe('CommitmentDetailActions', () => {
   it('does not fire callbacks for unrelated buttons when one is clicked', () => {
     const { props } = renderActions();
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Export Commitment Data' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Export Commitment Data' }));
 
     expect(props.onExportData).toHaveBeenCalledTimes(1);
     expect(props.onViewAttestations).not.toHaveBeenCalled();

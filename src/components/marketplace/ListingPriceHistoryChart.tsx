@@ -66,7 +66,7 @@ export function ListingPriceHistoryChart({
           <AreaChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#51A2FF" stopOpacity={0.4} />
+                <stop offset="5%" stopColor="#51A2FF" stopOpacity={0.4} />
                 <stop offset="95%" stopColor="#51A2FF" stopOpacity={0.0} />
               </linearGradient>
             </defs>

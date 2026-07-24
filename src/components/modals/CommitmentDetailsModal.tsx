@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { useRef } from "react";
-import Link from "next/link";
-import { X, Calendar, Activity, AlertTriangle, DollarSign } from "lucide-react";
-import { Dialog } from "@/components/ui/Dialog";
+import React, { useRef } from 'react';
+import Link from 'next/link';
+import { X, Calendar, Activity, AlertTriangle, DollarSign } from 'lucide-react';
+import { Dialog } from '@/components/ui/Dialog';
 
-type CommitmentTypeVariant = "safe" | "balanced" | "aggressive";
-type CommitmentTypeCapitalized = "Safe" | "Balanced" | "Aggressive";
-type ComplianceStatusVariant = "ok" | "warning" | "error";
+type CommitmentTypeVariant = 'safe' | 'balanced' | 'aggressive';
+type CommitmentTypeCapitalized = 'Safe' | 'Balanced' | 'Aggressive';
+type ComplianceStatusVariant = 'ok' | 'warning' | 'error';
 
 interface ComplianceItem {
   id: string;
@@ -30,42 +30,33 @@ interface CommitmentDetailsModalProps {
   maxLoss: string;
   complianceItems: ComplianceItem[];
   onSelectComplianceItem?: (id: string) => void;
-  TypeIcon: React.ComponentType<{ type: "Safe" | "Balanced" | "Aggressive" }>;
+  TypeIcon: React.ComponentType<{ type: 'Safe' | 'Balanced' | 'Aggressive' }>;
   reputationScore?: number;
   totalCommitments?: number;
   successRate?: number;
 }
 
-function capitalizeType(
-  type: CommitmentTypeVariant,
-): CommitmentTypeCapitalized {
-  return (type.charAt(0).toUpperCase() +
-    type.slice(1)) as CommitmentTypeCapitalized;
+function capitalizeType(type: CommitmentTypeVariant): CommitmentTypeCapitalized {
+  return (type.charAt(0).toUpperCase() + type.slice(1)) as CommitmentTypeCapitalized;
 }
 
 function getStatusColor(variant?: ComplianceStatusVariant) {
   switch (variant) {
-    case "ok":
-      return "text-[#00C950]";
-    case "warning":
-      return "text-[#FF8904]";
-    case "error":
-      return "text-[#FF0000]";
+    case 'ok':
+      return 'text-[#00C950]';
+    case 'warning':
+      return 'text-[#FF8904]';
+    case 'error':
+      return 'text-[#FF0000]';
     default:
-      return "text-[#00C950]";
+      return 'text-[#00C950]';
   }
 }
 
 function getStatusIcon(variant?: ComplianceStatusVariant) {
   const color = getStatusColor(variant);
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      className={color}
-    >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={color}>
       <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="2" />
       <path
         d="M5 8L7 10L11 6"
@@ -147,14 +138,12 @@ export function CommitmentDetailsModal({
                   Quick view
                 </p>
                 <p className="text-[15px] sm:text-[16px] text-white/70 max-w-2xl">
-                  Prioritizing risk, status, value, and key commitment
-                  parameters in a compact quick-view.
+                  Prioritizing risk, status, value, and key commitment parameters in a compact
+                  quick-view.
                 </p>
               </div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-[13px] font-semibold text-white/80">
-                <span className="uppercase tracking-[0.3em] text-[#0FF0FC]/80">
-                  Risk
-                </span>
+                <span className="uppercase tracking-[0.3em] text-[#0FF0FC]/80">Risk</span>
                 <div className="flex items-center gap-2 text-white font-mono text-[13px]">
                   {firstComplianceItem ? (
                     <>
@@ -162,7 +151,7 @@ export function CommitmentDetailsModal({
                       {firstComplianceItem.statusLabel}
                     </>
                   ) : (
-                    "N/A"
+                    'N/A'
                   )}
                 </div>
               </div>
@@ -176,13 +165,11 @@ export function CommitmentDetailsModal({
                 <div className="text-[36px] sm:text-[44px] font-bold text-white leading-none">
                   {currentPrice}
                 </div>
-                <div className="text-[14px] font-mono text-[#0FF0FC] font-semibold">
-                  USD
-                </div>
+                <div className="text-[14px] font-mono text-[#0FF0FC] font-semibold">USD</div>
               </div>
               <p className="mt-4 text-[14px] leading-6 text-white/70">
-                This quick-view surfaces essential commitment details first,
-                while offering a clear path to the full details page.
+                This quick-view surfaces essential commitment details first, while offering a clear
+                path to the full details page.
               </p>
             </div>
           </section>
@@ -246,15 +233,13 @@ export function CommitmentDetailsModal({
                   onClick={() => onSelectComplianceItem?.(item.id)}
                   className={`focus-ring w-full flex items-center justify-between bg-[#FFFFFF03] rounded-[12px] p-4 border border-[#FFFFFF08] transition-colors ${
                     onSelectComplianceItem
-                      ? "hover:bg-[#FFFFFF08] cursor-pointer"
-                      : "cursor-default"
+                      ? 'hover:bg-[#FFFFFF08] cursor-pointer'
+                      : 'cursor-default'
                   }`}
                   disabled={!onSelectComplianceItem}
                   aria-label={`${item.label}: ${item.statusLabel}`}
                 >
-                  <span className="text-[#9CA3AF] text-[14px]">
-                    {item.label}
-                  </span>
+                  <span className="text-[#9CA3AF] text-[14px]">{item.label}</span>
                   <div className="flex items-center gap-2 text-white font-mono text-[13px]">
                     {getStatusIcon(item.statusVariant)}
                     {item.statusLabel}

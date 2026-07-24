@@ -55,11 +55,7 @@ export class ApiError extends Error {
  * @param init Optional {@link RequestInit} passed to `fetch`.
  * @param timeoutMs Timeout in milliseconds (default 5000 ms).
  */
-export async function apiFetch<T>(
-  url: string,
-  init?: RequestInit,
-  timeoutMs = 5000,
-): Promise<T> {
+export async function apiFetch<T>(url: string, init?: RequestInit, timeoutMs = 5000): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -108,20 +104,28 @@ export function apiGet<T>(url: string, timeoutMs?: number): Promise<T> {
 
 /** Convenience POST wrapper. */
 export function apiPost<T>(url: string, body: unknown, timeoutMs?: number): Promise<T> {
-  return apiFetch<T>(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  }, timeoutMs);
+  return apiFetch<T>(
+    url,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    timeoutMs,
+  );
 }
 
 /** Convenience PUT wrapper. */
 export function apiPut<T>(url: string, body: unknown, timeoutMs?: number): Promise<T> {
-  return apiFetch<T>(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  }, timeoutMs);
+  return apiFetch<T>(
+    url,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    timeoutMs,
+  );
 }
 
 /** Convenience DELETE wrapper. */

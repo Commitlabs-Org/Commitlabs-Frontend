@@ -114,7 +114,9 @@ describe('GET /api/notifications', () => {
   });
 
   it('should support pagination', async () => {
-    const request = createMockRequest('http://localhost:3000/api/notifications?ownerAddress=0x123&page=1&pageSize=2');
+    const request = createMockRequest(
+      'http://localhost:3000/api/notifications?ownerAddress=0x123&page=1&pageSize=2',
+    );
     const response = await GET(request);
     const result = await parseResponse(response);
 
@@ -126,7 +128,9 @@ describe('GET /api/notifications', () => {
   });
 
   it('should return 400 for invalid pagination params', async () => {
-    const request = createMockRequest('http://localhost:3000/api/notifications?ownerAddress=0x123&page=0');
+    const request = createMockRequest(
+      'http://localhost:3000/api/notifications?ownerAddress=0x123&page=0',
+    );
     const response = await GET(request);
     const result = await parseResponse(response);
 

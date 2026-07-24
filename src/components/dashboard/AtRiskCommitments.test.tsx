@@ -6,7 +6,7 @@ import { fetchProtocolConstants } from '@/utils/protocol';
 import { Commitment } from '@/lib/types/domain';
 
 jest.mock('@/utils/protocol', () => ({
-  fetchProtocolConstants: jest.fn()
+  fetchProtocolConstants: jest.fn(),
 }));
 
 const mockWarning = jest.fn();
@@ -119,7 +119,7 @@ describe('AtRiskCommitments', () => {
     fireEvent.click(screen.getByText('Apply'));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Compliance score must be between 0 and 100.'
+      'Compliance score must be between 0 and 100.',
     );
   });
 
@@ -133,7 +133,7 @@ describe('AtRiskCommitments', () => {
     fireEvent.click(screen.getByText('Apply'));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Days remaining must be between 0 and 365.'
+      'Days remaining must be between 0 and 365.',
     );
   });
 
@@ -144,7 +144,7 @@ describe('AtRiskCommitments', () => {
     });
 
     expect(mockWarning).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Commitment At Risk' })
+      expect.objectContaining({ title: 'Commitment At Risk' }),
     );
   });
 
@@ -163,10 +163,7 @@ describe('AtRiskCommitments', () => {
   it('calls onThresholdsChange when thresholds are applied', async () => {
     const onThresholdsChange = jest.fn();
     render(
-      <AtRiskCommitments
-        commitments={mockCommitments}
-        onThresholdsChange={onThresholdsChange}
-      />
+      <AtRiskCommitments commitments={mockCommitments} onThresholdsChange={onThresholdsChange} />,
     );
     await waitFor(() => screen.getByText('Configure Thresholds'));
 
@@ -177,7 +174,7 @@ describe('AtRiskCommitments', () => {
 
     await waitFor(() => {
       expect(onThresholdsChange).toHaveBeenCalledWith(
-        expect.objectContaining({ complianceScoreThreshold: 80 })
+        expect.objectContaining({ complianceScoreThreshold: 80 }),
       );
     });
   });

@@ -22,13 +22,13 @@ advances to the review step.
 }
 ```
 
-| Field | Type | Notes |
-|---|---|---|
-| `ownerAddress` | `string` | Stellar Ed25519 public key (`G…` format) |
-| `asset` | `string` | Asset code (e.g. `XLM`, `USDC`) |
-| `amount` | `number` | Positive number |
+| Field          | Type     | Notes                                         |
+| -------------- | -------- | --------------------------------------------- |
+| `ownerAddress` | `string` | Stellar Ed25519 public key (`G…` format)      |
+| `asset`        | `string` | Asset code (e.g. `XLM`, `USDC`)               |
+| `amount`       | `number` | Positive number                               |
 | `durationDays` | `number` | Integer, validated against `PARAMETER_BOUNDS` |
-| `maxLossBps` | `number` | Basis points (percent × 100). `50 %` → `5000` |
+| `maxLossBps`   | `number` | Basis points (percent × 100). `50 %` → `5000` |
 
 ### Success response – valid draft
 
@@ -72,11 +72,11 @@ HTTP 200 with `valid: false` and a non-empty `errors` array.
 
 Each error object has:
 
-| Property | Type | Description |
-|---|---|---|
-| `field` | `string` | Dot-path to the offending input (empty = root) |
-| `message` | `string` | User-safe message, safe to render in the UI |
-| `code` | `string` | Machine-readable error code |
+| Property  | Type     | Description                                    |
+| --------- | -------- | ---------------------------------------------- |
+| `field`   | `string` | Dot-path to the offending input (empty = root) |
+| `message` | `string` | User-safe message, safe to render in the UI    |
+| `code`    | `string` | Machine-readable error code                    |
 
 ---
 
@@ -103,13 +103,13 @@ POST /api/commitments/validate
 Errors are keyed by the `field` property and rendered directly below the
 matching input:
 
-| API `field` | UI input |
-|---|---|
-| `amount` | Commitment Amount |
-| `durationDays` | Duration |
-| `maxLossBps` | Maximum Acceptable Loss |
+| API `field`    | UI input                            |
+| -------------- | ----------------------------------- |
+| `amount`       | Commitment Amount                   |
+| `durationDays` | Duration                            |
+| `maxLossBps`   | Maximum Acceptable Loss             |
 | `ownerAddress` | (no visible input – wallet address) |
-| `asset` | Asset selector |
+| `asset`        | Asset selector                      |
 
 ### Advance guard
 
@@ -136,7 +136,7 @@ The UI stores max loss as a **percentage** (`maxLossPercent`). The component
 converts it to basis points before the request:
 
 ```ts
-maxLossBps: maxLossPercent * 100
+maxLossBps: maxLossPercent * 100;
 ```
 
 So `50 %` is sent as `5000 bps`.

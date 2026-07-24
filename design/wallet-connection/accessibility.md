@@ -38,9 +38,9 @@ signature before approving.
       where its copy changes.
 - [ ] Truncated addresses include a visually-hidden full address: e.g.,
       `<span aria-hidden="true">G…X4Y5</span><span class="sr-only">Stellar account
-      address GBQ7…X4Y5, ending X 4 Y 5</span>`.
+address GBQ7…X4Y5, ending X 4 Y 5</span>`.
 - [ ] The "Connected as" address has `aria-label="Connected as Stellar account ending
-      X 4 Y 5"` so the trailing characters are read individually.
+X 4 Y 5"` so the trailing characters are read individually.
 
 ---
 
@@ -110,7 +110,7 @@ state.
       help article rather than the desktop install page.
 - [ ] **Iframe contexts** (e.g., embedded preview): Freighter blocks injection; we detect
       the iframe and show a dedicated message in `S2`: `Open this page in a new tab to
-      connect Freighter.`
+connect Freighter.`
 - [ ] **Multiple browser profiles**: Freighter is per-profile; the modal does not assume a
       session from one profile carries to another. A user who switches profiles starts at
       `S1` again.
@@ -132,11 +132,11 @@ state.
 
 ## 8. Tools
 
-* **axe DevTools** for WCAG violations on each state.
-* **VoiceOver / NVDA** smoke test through `S1 → S4 → S5 → S7 → S8 → S9 → S10`.
-* **Keyboard-only walkthrough** through every error state's primary recovery action.
-* **Throttled network** for verifying timeouts (`E3`) and slow `S9` rendering.
-* **Two browsers**: Chrome with Freighter, Firefox without — the latter to catch mobile
+- **axe DevTools** for WCAG violations on each state.
+- **VoiceOver / NVDA** smoke test through `S1 → S4 → S5 → S7 → S8 → S9 → S10`.
+- **Keyboard-only walkthrough** through every error state's primary recovery action.
+- **Throttled network** for verifying timeouts (`E3`) and slow `S9` rendering.
+- **Two browsers**: Chrome with Freighter, Firefox without — the latter to catch mobile
   / no-extension fallback paths.
 
 ---
@@ -145,13 +145,13 @@ state.
 
 The flow ships only when **all** of these are true. If any is false, block the design.
 
-* [ ] All 15 states have Figma frames at `mobile (360 px)`, `tablet (768 px)`, and
+- [ ] All 15 states have Figma frames at `mobile (360 px)`, `tablet (768 px)`, and
       `desktop (1280 px)`.
-* [ ] Every state has been walked end-to-end with a screen reader.
-* [ ] No state can be reached where the user does not know what their next signature does.
-* [ ] No state can be reached without a primary recovery action.
-* [ ] `prefers-reduced-motion` disables every animation in this surface.
-* [ ] Network mismatch has no "continue anyway" path.
-* [ ] The signature preview in `S7` matches, byte-for-byte, the message the wallet will
+- [ ] Every state has been walked end-to-end with a screen reader.
+- [ ] No state can be reached where the user does not know what their next signature does.
+- [ ] No state can be reached without a primary recovery action.
+- [ ] `prefers-reduced-motion` disables every animation in this surface.
+- [ ] Network mismatch has no "continue anyway" path.
+- [ ] The signature preview in `S7` matches, byte-for-byte, the message the wallet will
       display.
-* [ ] All copy passes the rules in [`security-copy.md`](./security-copy.md).
+- [ ] All copy passes the rules in [`security-copy.md`](./security-copy.md).

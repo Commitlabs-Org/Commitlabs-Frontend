@@ -1,12 +1,6 @@
 'use client';
 
-import React, {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LayoutGrid,
@@ -96,9 +90,7 @@ function filterStaticActions(query: string): StaticAction[] {
   if (!query.trim()) return STATIC_ACTIONS;
   const q = query.toLowerCase();
   return STATIC_ACTIONS.filter(
-    (a) =>
-      a.label.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q),
+    (a) => a.label.toLowerCase().includes(q) || a.description.toLowerCase().includes(q),
   );
 }
 
@@ -181,12 +173,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       .then((json) => {
         if (cancelled) return;
         const items: CommitmentResult[] = (json?.data ?? []).map(
-          (c: {
-            commitmentId: string;
-            asset: string;
-            status: string;
-            amount: string;
-          }) => ({
+          (c: { commitmentId: string; asset: string; status: string; amount: string }) => ({
             kind: 'commitment' as const,
             commitmentId: c.commitmentId,
             asset: c.asset,
@@ -198,9 +185,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setSearchError(
-          err instanceof Error ? err.message : 'Search unavailable',
-        );
+        setSearchError(err instanceof Error ? err.message : 'Search unavailable');
         setCommitmentResults([]);
       })
       .finally(() => {
@@ -231,10 +216,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   const handleSelect = useCallback(
     (item: PaletteItem) => {
-      const href =
-        item.kind === 'action'
-          ? item.href
-          : `/commitments/${item.commitmentId}`;
+      const href = item.kind === 'action' ? item.href : `/commitments/${item.commitmentId}`;
       onClose();
       router.push(href);
     },
@@ -294,11 +276,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       <div className="rounded-2xl border border-[rgba(0,212,255,0.2)] bg-[#0d1117] shadow-[0_0_60px_rgba(0,212,255,0.15)] overflow-hidden">
         {/* ── Header / Search input ─────────────────────────────────── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(0,212,255,0.1)]">
-          <Search
-            size={18}
-            className="shrink-0 text-[rgba(0,212,255,0.6)]"
-            aria-hidden="true"
-          />
+          <Search size={18} className="shrink-0 text-[rgba(0,212,255,0.6)]" aria-hidden="true" />
           <label htmlFor={inputId} id={titleId} className="sr-only">
             Command palette – search routes and commitments
           </label>
@@ -309,9 +287,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             role="combobox"
             aria-expanded={items.length > 0}
             aria-controls={listboxId}
-            aria-activedescendant={
-              items.length > 0 ? `palette-item-${activeIndex}` : undefined
-            }
+            aria-activedescendant={items.length > 0 ? `palette-item-${activeIndex}` : undefined}
             aria-autocomplete="list"
             placeholder="Search routes or commitments…"
             value={query}
@@ -337,13 +313,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         </div>
 
         {/* ── Live region for screen-reader announcements ───────────── */}
-        <div
-          id={statusId}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          className="sr-only"
-        >
+        <div id={statusId} role="status" aria-live="polite" aria-atomic="true" className="sr-only">
           {statusMessage}
         </div>
 
@@ -403,30 +373,21 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
           {/* Error state */}
           {searchError && (
-            <li
-              role="presentation"
-              className="px-4 py-3 text-xs text-red-400/80"
-            >
+            <li role="presentation" className="px-4 py-3 text-xs text-red-400/80">
               {searchError}
             </li>
           )}
 
           {/* Empty state */}
           {!isSearching && items.length === 0 && query.trim() !== '' && (
-            <li
-              role="presentation"
-              className="px-4 py-8 text-center text-sm text-white/30"
-            >
+            <li role="presentation" className="px-4 py-8 text-center text-sm text-white/30">
               No results for &ldquo;{query}&rdquo;
             </li>
           )}
 
           {/* Wallet not connected hint for commitment search */}
           {debouncedQuery.trim() !== '' && !address && (
-            <li
-              role="presentation"
-              className="px-4 pb-3 text-xs text-white/30"
-            >
+            <li role="presentation" className="px-4 pb-3 text-xs text-white/30">
               Connect your wallet to search commitments
             </li>
           )}
@@ -466,13 +427,7 @@ interface PaletteRowProps {
   onHover: (index: number) => void;
 }
 
-function PaletteRow({
-  item,
-  index,
-  isActive,
-  onSelect,
-  onHover,
-}: PaletteRowProps) {
+function PaletteRow({ item, index, isActive, onSelect, onHover }: PaletteRowProps) {
   const isAction = item.kind === 'action';
 
   return (
@@ -510,12 +465,8 @@ function PaletteRow({
       <span className="flex-1 min-w-0">
         {isAction ? (
           <>
-            <span className="block text-sm font-medium leading-snug truncate">
-              {item.label}
-            </span>
-            <span className="block text-xs text-white/40 truncate">
-              {item.description}
-            </span>
+            <span className="block text-sm font-medium leading-snug truncate">{item.label}</span>
+            <span className="block text-xs text-white/40 truncate">{item.description}</span>
           </>
         ) : (
           <>
@@ -531,11 +482,7 @@ function PaletteRow({
 
       {/* Arrow indicator when active */}
       {isActive && (
-        <ArrowRight
-          size={14}
-          className="shrink-0 text-[rgba(0,212,255,0.7)]"
-          aria-hidden="true"
-        />
+        <ArrowRight size={14} className="shrink-0 text-[rgba(0,212,255,0.7)]" aria-hidden="true" />
       )}
     </li>
   );

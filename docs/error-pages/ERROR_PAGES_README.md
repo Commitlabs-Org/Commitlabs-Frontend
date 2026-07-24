@@ -5,6 +5,7 @@ This project includes comprehensive, user-friendly error pages for various error
 ## Available Error Pages
 
 ### 1. **404 Not Found Page** (`/not-found`)
+
 - **File**: `src/app/not-found.tsx`
 - **Styling**: `src/app/not-found.module.css`
 - **Purpose**: Displayed when users navigate to a non-existent page
@@ -16,13 +17,14 @@ This project includes comprehensive, user-friendly error pages for various error
   - SVG error icon
 
 **How it's triggered**:
+
 - Next.js automatically shows this page for non-existent routes
 - No additional configuration needed
 
 ---
 
-
 ### 2. **500 Server Error Page** (`/error`)
+
 - **File**: `src/app/error.tsx`
 - **Styling**: `src/app/error.module.css`
 - **Purpose**: Displayed when server-side errors occur
@@ -35,12 +37,14 @@ This project includes comprehensive, user-friendly error pages for various error
   - "Report Issue" link
 
 **How it's triggered**:
+
 - Next.js automatically catches errors and displays this page
 - Wrap components with error boundaries as needed
 
 ---
 
 ### 3. **Network Error Page** (`/network-error`)
+
 - **File**: `src/app/network-error/page.tsx`
 - **Styling**: `src/app/network-error/page.module.css`
 - **Purpose**: Manual route for network connectivity issues
@@ -57,22 +61,24 @@ This project includes comprehensive, user-friendly error pages for various error
   - "Go Home" button
 
 **How to use it**:
+
 ```tsx
 // Navigate users here when network errors occur
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
-const router = useRouter()
+const router = useRouter();
 
 try {
-  await fetchData()
+  await fetchData();
 } catch (error) {
-  router.push('/network-error')
+  router.push('/network-error');
 }
 ```
 
 ---
 
 ### 4. **Transaction Error Page** (`/transaction-error`)
+
 - **File**: `src/app/transaction-error/page.tsx`
 - **Styling**: `src/app/transaction-error/page.module.css`
 - **Purpose**: Display blockchain/transaction-specific errors
@@ -92,18 +98,20 @@ try {
   - "Contact Support" link
 
 **How to use it**:
+
 ```tsx
 // Navigate with transaction details
 router.push(
-  `/transaction-error?message=Transaction failed&hash=abc123def456&code=INSUFFICIENT_BALANCE`
-)
+  `/transaction-error?message=Transaction failed&hash=abc123def456&code=INSUFFICIENT_BALANCE`,
+);
 ```
 
 // URL Parameters:
 // - message: Error message to display
 // - hash: Transaction hash (optional)
 // - code: Error code (optional)
-```
+
+````
 
 ---
 
@@ -122,9 +130,10 @@ export default function MyErrorPage() {
     </ErrorLayout>
   )
 }
-```
+````
 
 ### ErrorButton (`src/components/ErrorButton.tsx`)
+
 Reusable button component for error pages with multiple variants.
 
 ```tsx
@@ -153,22 +162,26 @@ import ErrorButton from '@/components/ErrorButton'
 ## Design System
 
 ### Colors
+
 - **Background**: Purple gradient (`#667eea` to `#764ba2`)
 - **Text**: White
 - **Primary Button**: White with purple text
 - **Secondary Button**: Transparent white with border
 
 ### Typography
+
 - **Error Code**: 6rem, 900 weight (4rem on mobile)
 - **Title**: 2.5rem, 700 weight (2rem on mobile)
 - **Description**: 1.1rem, 0.85 opacity (1rem on mobile)
 
 ### Spacing
+
 - Container max-width: 600px
 - Padding: 2rem (1.5rem on mobile)
 - Gap between elements: 1-2rem
 
 ### Responsive Design
+
 - Full-width padding on mobile
 - Stacked buttons on screens < 640px
 - Touch-friendly tap targets (min 44px)
@@ -179,6 +192,7 @@ import ErrorButton from '@/components/ErrorButton'
 ## Animations
 
 All error pages include smooth entrance animations:
+
 ```css
 @keyframes slideIn {
   from {
@@ -199,43 +213,46 @@ Status indicators (like network connection) have pulsing animations for visual f
 ## Using Error Pages in Your Application
 
 ### 1. Redirect to Network Error
+
 ```tsx
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
 export default function MyComponent() {
-  const router = useRouter()
+  const router = useRouter();
 
   const fetchData = async () => {
     try {
-      const response = await fetch('/api/data')
-      if (!response.ok) throw new Error('Failed to fetch')
+      const response = await fetch('/api/data');
+      if (!response.ok) throw new Error('Failed to fetch');
     } catch (error) {
-      router.push('/network-error')
+      router.push('/network-error');
     }
-  }
+  };
 
-  return <button onClick={fetchData}>Load Data</button>
+  return <button onClick={fetchData}>Load Data</button>;
 }
 ```
 
 ### 2. Redirect to Transaction Error
+
 ```tsx
 const handleTransaction = async () => {
   try {
-    const result = await submitTransaction(data)
+    const result = await submitTransaction(data);
   } catch (error) {
-    const message = error.message || 'Transaction failed'
-    const hash = error.txHash || ''
-    const code = error.code || ''
-    
+    const message = error.message || 'Transaction failed';
+    const hash = error.txHash || '';
+    const code = error.code || '';
+
     router.push(
-      `/transaction-error?message=${encodeURIComponent(message)}&hash=${hash}&code=${code}`
-    )
+      `/transaction-error?message=${encodeURIComponent(message)}&hash=${hash}&code=${code}`,
+    );
   }
-}
+};
 ```
 
 ### 3. Auto-catch Errors in Layout
+
 The `error.tsx` file at the app level automatically catches and displays errors from any route.
 
 ---
@@ -251,7 +268,9 @@ The `error.tsx` file at the app level automatically catches and displays errors 
 ## Customization
 
 ### Change Colors
+
 Edit `src/app/globals.css`:
+
 ```css
 body {
   background: linear-gradient(135deg, YOUR_COLOR_1 0%, YOUR_COLOR_2 100%);
@@ -259,9 +278,11 @@ body {
 ```
 
 ### Change Error Messages
+
 Edit the `title` and `description` text in each error page component.
 
 ### Add More Error Types
+
 Create a new page directory (e.g., `/rate-limit-error/page.tsx`) and follow the same pattern as the existing error pages.
 
 ---

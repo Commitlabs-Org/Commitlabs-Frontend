@@ -6,57 +6,57 @@ The Active Sessions feature lets users see every authenticated session on their 
 
 The feature consists of:
 
-| Layer | Path |
-|---|---|
-| UI component | `src/components/settings/ActiveSessionsSection.tsx` |
-| Settings page integration | `src/app/settings/page.tsx` |
-| List sessions API | `src/app/api/auth/sessions/route.ts` |
-| Revoke others API | `src/app/api/auth/sessions/revoke-others/route.ts` |
-| Auth helpers | `src/lib/backend/auth.ts` — `listOtherSessions`, `revokeOtherSessions` |
-| Tests | `src/components/settings/ActiveSessions.test.tsx` |
+| Layer                     | Path                                                                   |
+| ------------------------- | ---------------------------------------------------------------------- |
+| UI component              | `src/components/settings/ActiveSessionsSection.tsx`                    |
+| Settings page integration | `src/app/settings/page.tsx`                                            |
+| List sessions API         | `src/app/api/auth/sessions/route.ts`                                   |
+| Revoke others API         | `src/app/api/auth/sessions/revoke-others/route.ts`                     |
+| Auth helpers              | `src/lib/backend/auth.ts` — `listOtherSessions`, `revokeOtherSessions` |
+| Tests                     | `src/components/settings/ActiveSessions.test.tsx`                      |
 
 ## Component: `ActiveSessionsSection`
 
 ```tsx
-import { ActiveSessionsSection } from '@/components/settings/ActiveSessionsSection'
-import type { ActiveSession } from '@/components/settings/ActiveSessionsSection'
+import { ActiveSessionsSection } from '@/components/settings/ActiveSessionsSection';
+import type { ActiveSession } from '@/components/settings/ActiveSessionsSection';
 ```
 
 ### Props
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `sessions` | `ActiveSession[]` | `[]` | Sessions to display. Current session must have `isCurrent: true`. |
-| `onRevokeOthers` | `() => Promise<void>` | Falls back to `POST /api/auth/sessions/revoke-others` | Called when the user confirms revocation. |
+| Prop             | Type                  | Default                                               | Description                                                       |
+| ---------------- | --------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
+| `sessions`       | `ActiveSession[]`     | `[]`                                                  | Sessions to display. Current session must have `isCurrent: true`. |
+| `onRevokeOthers` | `() => Promise<void>` | Falls back to `POST /api/auth/sessions/revoke-others` | Called when the user confirms revocation.                         |
 
 ### `ActiveSession` type
 
 ```ts
 interface ActiveSession {
-  id: string          // Opaque session identifier
-  userAgent: string   // Device/browser hint
-  ipAddress: string   // IP at sign-in time
-  createdAt: string   // ISO 8601 timestamp
-  isCurrent: boolean  // True for the calling session
+  id: string; // Opaque session identifier
+  userAgent: string; // Device/browser hint
+  ipAddress: string; // IP at sign-in time
+  createdAt: string; // ISO 8601 timestamp
+  isCurrent: boolean; // True for the calling session
 }
 ```
 
 ### Usage example
 
 ```tsx
-'use client'
-import { useState, useEffect } from 'react'
-import { ActiveSessionsSection } from '@/components/settings/ActiveSessionsSection'
-import type { ActiveSession } from '@/components/settings/ActiveSessionsSection'
+'use client';
+import { useState, useEffect } from 'react';
+import { ActiveSessionsSection } from '@/components/settings/ActiveSessionsSection';
+import type { ActiveSession } from '@/components/settings/ActiveSessionsSection';
 
 export default function MyPage() {
-  const [sessions, setSessions] = useState<ActiveSession[]>([])
+  const [sessions, setSessions] = useState<ActiveSession[]>([]);
 
   useEffect(() => {
     fetch('/api/auth/sessions', { credentials: 'same-origin' })
-      .then(r => r.json())
-      .then(d => setSessions(d.sessions ?? []))
-  }, [])
+      .then((r) => r.json())
+      .then((d) => setSessions(d.sessions ?? []));
+  }, []);
 
   return (
     <ActiveSessionsSection
@@ -65,11 +65,11 @@ export default function MyPage() {
         await fetch('/api/auth/sessions/revoke-others', {
           method: 'POST',
           credentials: 'same-origin',
-        })
-        setSessions(prev => prev.filter(s => s.isCurrent))
+        });
+        setSessions((prev) => prev.filter((s) => s.isCurrent));
       }}
     />
-  )
+  );
 }
 ```
 
@@ -126,13 +126,13 @@ Both endpoints return `401` if the request has no valid session cookie.
 
 ## Edge Cases
 
-| Case | Behaviour |
-|---|---|
-| Current session | Marked with a "Current" badge; never revocable from this UI |
-| No other sessions | Revoke button is hidden |
-| Revoke success | Status message shown in live region; other sessions removed from list |
-| Revoke error | Error shown with `role="alert"`; user can retry |
-| Unauthenticated request | API returns `401`; component shows generic error |
+| Case                    | Behaviour                                                             |
+| ----------------------- | --------------------------------------------------------------------- |
+| Current session         | Marked with a "Current" badge; never revocable from this UI           |
+| No other sessions       | Revoke button is hidden                                               |
+| Revoke success          | Status message shown in live region; other sessions removed from list |
+| Revoke error            | Error shown with `role="alert"`; user can retry                       |
+| Unauthenticated request | API returns `401`; component shows generic error                      |
 
 ## Related docs
 

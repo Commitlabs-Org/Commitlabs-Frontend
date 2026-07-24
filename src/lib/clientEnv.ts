@@ -3,7 +3,7 @@
 // This module validates at startup in development to fail fast on misconfiguration.
 // In production it validates eagerly to catch issues before runtime.
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * URL validation that works with Zod v4
@@ -17,7 +17,7 @@ const urlSchema = z.string().refine(
       return false;
     }
   },
-  { message: "Must be a valid URL (e.g. https://example.com)" },
+  { message: 'Must be a valid URL (e.g. https://example.com)' },
 );
 
 /**
@@ -58,20 +58,16 @@ export class ClientEnvValidationError extends Error {
   readonly issues: ReadonlyArray<{ path: string; message: string }>;
 
   constructor(issues: Array<{ path: string; message: string }>) {
-    const lines = issues
-      .map(({ path, message }) => `  - ${path}: ${message}`)
-      .join("\n");
+    const lines = issues.map(({ path, message }) => `  - ${path}: ${message}`).join('\n');
     super(`Client environment validation failed:\n${lines}`);
-    this.name = "ClientEnvValidationError";
+    this.name = 'ClientEnvValidationError';
     this.issues = issues;
   }
 }
 
-function formatZodIssues(
-  zodError: z.ZodError,
-): Array<{ path: string; message: string }> {
+function formatZodIssues(zodError: z.ZodError): Array<{ path: string; message: string }> {
   return zodError.issues.map((issue) => {
-    const path = issue.path.join(".") || "(root)";
+    const path = issue.path.join('.') || '(root)';
     return {
       path,
       message: issue.message,
@@ -95,7 +91,7 @@ export function validateClientEnv(
 ): ValidatedClientEnv {
   // Filter to only NEXT_PUBLIC_* variables to prevent accidental secret exposure
   const publicVars = Object.fromEntries(
-    Object.entries(source).filter(([key]) => key.startsWith("NEXT_PUBLIC_")),
+    Object.entries(source).filter(([key]) => key.startsWith('NEXT_PUBLIC_')),
   );
 
   const result = clientEnvSchema.safeParse(publicVars);
@@ -130,9 +126,9 @@ export function _resetClientEnvCache(): void {
 // Fail fast in development and production: validate at module load time so a
 // misconfigured deployment crashes immediately rather than at runtime.
 if (
-  process.env.NODE_ENV === "development" ||
-  process.env.NODE_ENV === "production" ||
-  process.env.VERCEL_ENV === "production"
+  process.env.NODE_ENV === 'development' ||
+  process.env.NODE_ENV === 'production' ||
+  process.env.VERCEL_ENV === 'production'
 ) {
   getValidatedClientEnv();
 }

@@ -29,15 +29,15 @@ This policy and its automated guards keep those closed.
 
 ## Allowed external hosts
 
-| Host | Used for |
-| ---- | -------- |
-| `stellar.expert` | Block explorer (accounts, contracts, transactions, assets) — via `explorerLinks.ts` |
-| `stellar.org` / `rpc-mainnet.stellar.org` | Stellar org pages and RPC |
-| `www.freighter.app` | Freighter wallet install/help |
-| `discord.gg` | Community / "Report issue" |
-| `github.com` | Source repository |
-| `twitter.com` | Social |
-| `commitlabs.com` | First-party canonical/OG URLs |
+| Host                                      | Used for                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `stellar.expert`                          | Block explorer (accounts, contracts, transactions, assets) — via `explorerLinks.ts` |
+| `stellar.org` / `rpc-mainnet.stellar.org` | Stellar org pages and RPC                                                           |
+| `www.freighter.app`                       | Freighter wallet install/help                                                       |
+| `discord.gg`                              | Community / "Report issue"                                                          |
+| `github.com`                              | Source repository                                                                   |
+| `twitter.com`                             | Social                                                                              |
+| `commitlabs.com`                          | First-party canonical/OG URLs                                                       |
 
 Adding a host here should be paired with the reason and the component that uses
 it.

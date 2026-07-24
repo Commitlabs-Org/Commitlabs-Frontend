@@ -90,9 +90,7 @@ describe('useShareLink', () => {
     });
 
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/commitments/99`);
-    expect(toast.success).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Link copied' }),
-    );
+    expect(toast.success).toHaveBeenCalledWith(expect.objectContaining({ title: 'Link copied' }));
   });
 
   it('announces failure without throwing when share and clipboard are unavailable', async () => {

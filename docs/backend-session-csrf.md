@@ -13,8 +13,8 @@ Scope: cookie-backed browser sessions and CSRF for state-changing API routes.
 
 ### Cookies
 
-| Name | Attributes | Purpose |
-|------|------------|---------|
+| Name         | Attributes                                                                    | Purpose                                                                                     |
+| ------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `cl_session` | `HttpOnly`, `SameSite=Lax`, `Secure` in production, `Path=/`, 7-day `Max-Age` | Opaque session id; server maps id → CSRF synchronizer token (and optional wallet metadata). |
 
 Session store is **in-memory** (`src/lib/backend/session.ts`) — replace with Redis/DB for production and horizontal scale.
@@ -34,18 +34,18 @@ Requests with `Authorization: Bearer <non-empty>` **skip** CSRF enforcement (int
 
 ### Endpoints
 
-| Route | Session issuance | CSRF enforced on mutations |
-|-------|-------------------|---------------------------|
-| `POST /api/auth` | Sets `cl_session`, returns `csrfToken` in JSON | N/A (creates session) |
-| `POST /api/auth/verify` | Sets `cl_session` after wallet verify, returns `csrfToken` | N/A |
-| `GET /api/auth/csrf` | Requires `cl_session`; returns current `csrfToken` | N/A |
-| `POST /api/commitments` | — | Yes, when cookie present |
-| `POST /api/commitments/[id]/settle` | — | Yes |
-| `POST /api/commitments/[id]/fund` | — | Yes |
-| `POST /api/commitments/[id]/early-exit` | — | Yes |
-| `POST /api/attestations` | — | Yes |
-| `POST /api/marketplace/listings` | — | Yes |
-| `DELETE /api/marketplace/listings/[id]` | — | Yes |
+| Route                                   | Session issuance                                           | CSRF enforced on mutations |
+| --------------------------------------- | ---------------------------------------------------------- | -------------------------- |
+| `POST /api/auth`                        | Sets `cl_session`, returns `csrfToken` in JSON             | N/A (creates session)      |
+| `POST /api/auth/verify`                 | Sets `cl_session` after wallet verify, returns `csrfToken` | N/A                        |
+| `GET /api/auth/csrf`                    | Requires `cl_session`; returns current `csrfToken`         | N/A                        |
+| `POST /api/commitments`                 | —                                                          | Yes, when cookie present   |
+| `POST /api/commitments/[id]/settle`     | —                                                          | Yes                        |
+| `POST /api/commitments/[id]/fund`       | —                                                          | Yes                        |
+| `POST /api/commitments/[id]/early-exit` | —                                                          | Yes                        |
+| `POST /api/attestations`                | —                                                          | Yes                        |
+| `POST /api/marketplace/listings`        | —                                                          | Yes                        |
+| `DELETE /api/marketplace/listings/[id]` | —                                                          | Yes                        |
 
 ### Error shape (403 CSRF)
 

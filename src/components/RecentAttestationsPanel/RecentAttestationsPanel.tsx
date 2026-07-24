@@ -1,75 +1,75 @@
-'use client'
+'use client';
 
-import { useCallback, useState } from 'react'
-import styles from './RecentAttestationsPanel.module.css'
-import { EmptyState } from '@/components/ui/EmptyState'
+import { useCallback, useState } from 'react';
+import styles from './RecentAttestationsPanel.module.css';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   buildAttestationCsvContent,
   buildAttestationExportFilename,
   downloadCsvContent,
-} from '@/utils/chartExport'
+} from '@/utils/chartExport';
 
 export interface Attestation {
-  id: string
-  title: string
-  description: string
-  txHash: string
-  timestamp: string | Date
-  severity: 'ok' | 'warning' | 'violation'
+  id: string;
+  title: string;
+  description: string;
+  txHash: string;
+  timestamp: string | Date;
+  severity: 'ok' | 'warning' | 'violation';
 }
 
 export interface RecentAttestationsPanelProps {
-  attestations: Attestation[]
-  commitmentId?: string
+  attestations: Attestation[];
+  commitmentId?: string;
   summary: {
-    complianceCount: number
-    warningCount: number
-    violationCount: number
-  }
-  onSelectAttestation: (id: string) => void
-  onViewAll: () => void
+    complianceCount: number;
+    warningCount: number;
+    violationCount: number;
+  };
+  onSelectAttestation: (id: string) => void;
+  onViewAll: () => void;
   /** Optional commitment ID to enable real-time SSE streaming of new attestations. */
-  commitmentId?: string | null
+  commitmentId?: string | null;
   /** Set to false to disable streaming even when commitmentId is provided. */
-  streamingEnabled?: boolean
+  streamingEnabled?: boolean;
 }
 
 // Utility function to format relative time
 function formatRelativeTime(timestamp: string | Date): string {
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  const diffWeeks = Math.floor(diffDays / 7)
-  const diffMonths = Math.floor(diffDays / 30)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
 
   if (diffSeconds < 60) {
-    return 'just now'
+    return 'just now';
   } else if (diffMinutes < 60) {
-    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`
+    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
   } else if (diffHours < 24) {
-    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
   } else if (diffDays < 7) {
-    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
   } else if (diffWeeks < 4) {
-    return `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`
+    return `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`;
   } else if (diffMonths < 12) {
-    return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`
+    return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
   } else {
-    const diffYears = Math.floor(diffMonths / 12)
-    return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`
+    const diffYears = Math.floor(diffMonths / 12);
+    return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
   }
 }
 
 // Utility function to truncate hash
 function truncateHash(hash: string, startChars: number = 6, endChars: number = 6): string {
   if (!hash || hash.length <= startChars + endChars) {
-    return hash
+    return hash;
   }
-  return `${hash.slice(0, startChars)}...${hash.slice(-endChars)}`
+  return `${hash.slice(0, startChars)}...${hash.slice(-endChars)}`;
 }
 
 // Icon components
@@ -85,7 +85,7 @@ function CheckIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function WarningIcon() {
@@ -108,7 +108,7 @@ function WarningIcon() {
       />
       <circle cx="10" cy="14" r="1" fill="#FF8A04" />
     </svg>
-  )
+  );
 }
 
 function ViolationIcon() {
@@ -123,7 +123,7 @@ function ViolationIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function ArrowRightIcon() {
@@ -137,12 +137,19 @@ function ArrowRightIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function DownloadIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
       <path
         d="M8 2v8M5 7l3 3 3-3"
         stroke="currentColor"
@@ -150,14 +157,9 @@ function DownloadIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path
-        d="M3 13h10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M3 13h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
-  )
+  );
 }
 
 export default function RecentAttestationsPanel({
@@ -169,55 +171,50 @@ export default function RecentAttestationsPanel({
   commitmentId = null,
   streamingEnabled = true,
 }: RecentAttestationsPanelProps) {
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleExportCsv = useCallback(async () => {
-    if (attestations.length === 0) return
-    setIsExporting(true)
+    if (attestations.length === 0) return;
+    setIsExporting(true);
     try {
-      const content = buildAttestationCsvContent(attestations)
-      const filename = buildAttestationExportFilename(commitmentId)
-      await downloadCsvContent(content, filename)
+      const content = buildAttestationCsvContent(attestations);
+      const filename = buildAttestationExportFilename(commitmentId);
+      await downloadCsvContent(content, filename);
     } finally {
-      setIsExporting(false)
+      setIsExporting(false);
     }
-  }, [attestations, commitmentId])
+  }, [attestations, commitmentId]);
 
   const getSeverityIcon = (severity: Attestation['severity']) => {
     switch (severity) {
       case 'ok':
-        return <CheckIcon />
+        return <CheckIcon />;
       case 'warning':
-        return <WarningIcon />
+        return <WarningIcon />;
       case 'violation':
-        return <ViolationIcon />
+        return <ViolationIcon />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const getSeverityClass = (severity: Attestation['severity']) => {
     switch (severity) {
       case 'ok':
-        return styles.ok
+        return styles.ok;
       case 'warning':
-        return styles.warning
+        return styles.warning;
       case 'violation':
-        return styles.violation
+        return styles.violation;
       default:
-        return ''
+        return '';
     }
-  }
+  };
 
   return (
     <section className={styles.panel} aria-label="Recent Attestations">
       {/* Accessible live region for new attestation announcements */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {liveAnnouncement}
       </div>
 
@@ -272,9 +269,7 @@ export default function RecentAttestationsPanel({
               <div className={styles.rowContent}>
                 <h3 className={styles.rowTitle}>{attestation.title}</h3>
                 <p className={styles.rowDescription}>{attestation.description}</p>
-                <p className={styles.rowTxHash}>
-                  TX: {truncateHash(attestation.txHash)}
-                </p>
+                <p className={styles.rowTxHash}>TX: {truncateHash(attestation.txHash)}</p>
               </div>
               <div className={styles.rowRight}>
                 <span className={styles.rowTimestamp}>
@@ -288,24 +283,33 @@ export default function RecentAttestationsPanel({
 
       <footer className={styles.footer}>
         <div className={`${styles.footerColumn} ${styles.footerCompliance}`}>
-          <div className={styles.footerValue} aria-label={`${summary.complianceCount} compliance attestations`}>
+          <div
+            className={styles.footerValue}
+            aria-label={`${summary.complianceCount} compliance attestations`}
+          >
             {summary.complianceCount}
           </div>
           <div className={styles.footerLabel}>Compliance</div>
         </div>
         <div className={`${styles.footerColumn} ${styles.footerWarning}`}>
-          <div className={styles.footerValue} aria-label={`${summary.warningCount} warning attestations`}>
+          <div
+            className={styles.footerValue}
+            aria-label={`${summary.warningCount} warning attestations`}
+          >
             {summary.warningCount}
           </div>
           <div className={styles.footerLabel}>Warnings</div>
         </div>
         <div className={`${styles.footerColumn} ${styles.footerViolation}`}>
-          <div className={styles.footerValue} aria-label={`${summary.violationCount} violation attestations`}>
+          <div
+            className={styles.footerValue}
+            aria-label={`${summary.violationCount} violation attestations`}
+          >
             {summary.violationCount}
           </div>
           <div className={styles.footerLabel}>Violations</div>
         </div>
       </footer>
     </section>
-  )
+  );
 }

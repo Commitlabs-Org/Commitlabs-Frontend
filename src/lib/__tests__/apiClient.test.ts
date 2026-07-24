@@ -9,7 +9,7 @@ function mockFetch(response: any, ok = true, status = 200) {
       ok,
       status,
       json: () => Promise.resolve(response),
-    })
+    }),
   );
 }
 

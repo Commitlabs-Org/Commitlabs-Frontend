@@ -1,6 +1,6 @@
-import { ConflictError, ValidationError } from "./errors";
-import { BackendConfig } from "./config";
-import { ChainCommitmentModel } from "./dto";
+import { ConflictError, ValidationError } from './errors';
+import { BackendConfig } from './config';
+import { ChainCommitmentModel } from './dto';
 
 /**
  * Input for creating a commitment on-chain.
@@ -57,7 +57,7 @@ export async function createCommitmentOnChain(
     durationDays: input.durationDays,
     maxLossPercent: input.maxLossPercent,
     commitmentType: input.commitmentType,
-    status: "active",
+    status: 'active',
     nftTokenId,
   };
 
@@ -66,16 +66,13 @@ export async function createCommitmentOnChain(
       commitment,
       commitmentId,
       nftTokenId,
-      reference: buildMockReference("create_commitment"),
+      reference: buildMockReference('create_commitment'),
     };
   }
 
-  if (
-    !config.contractAddresses.commitmentCore ||
-    !config.contractAddresses.commitmentNFT
-  ) {
+  if (!config.contractAddresses.commitmentCore || !config.contractAddresses.commitmentNFT) {
     throw new ValidationError(
-      "Missing COMMITMENT_CORE_CONTRACT or COMMITMENT_NFT_CONTRACT for on-chain create.",
+      'Missing COMMITMENT_CORE_CONTRACT or COMMITMENT_NFT_CONTRACT for on-chain create.',
     );
   }
 
@@ -84,7 +81,7 @@ export async function createCommitmentOnChain(
     commitment,
     commitmentId,
     nftTokenId,
-    reference: buildMockReference("create_commitment"),
+    reference: buildMockReference('create_commitment'),
   };
 }
 
@@ -94,32 +91,28 @@ export async function earlyExitCommitmentOnChain(
   input: EarlyExitInput,
 ): Promise<EarlyExitOnChainResult> {
   if (!commitmentId.trim()) {
-    throw new ValidationError("Commitment id is required.");
+    throw new ValidationError('Commitment id is required.');
   }
-  if (input.currentStatus !== undefined && input.currentStatus !== "active") {
-    throw new ConflictError(
-      "Commitment cannot be early-exited from its current state.",
-    );
+  if (input.currentStatus !== undefined && input.currentStatus !== 'active') {
+    throw new ConflictError('Commitment cannot be early-exited from its current state.');
   }
 
   if (!config.chainWritesEnabled) {
     return {
-      penaltyAmount: "0",
-      returnedAmount: "0",
-      reference: buildMockReference("early_exit"),
+      penaltyAmount: '0',
+      returnedAmount: '0',
+      reference: buildMockReference('early_exit'),
     };
   }
 
   if (!config.contractAddresses.commitmentCore) {
-    throw new ValidationError(
-      "Missing COMMITMENT_CORE_CONTRACT for on-chain early exit.",
-    );
+    throw new ValidationError('Missing COMMITMENT_CORE_CONTRACT for on-chain early exit.');
   }
 
   // TODO: Replace with real Soroban transaction submission once backend signing flow is available.
   return {
-    penaltyAmount: "0",
-    returnedAmount: "0",
-    reference: buildMockReference("early_exit"),
+    penaltyAmount: '0',
+    returnedAmount: '0',
+    reference: buildMockReference('early_exit'),
   };
 }

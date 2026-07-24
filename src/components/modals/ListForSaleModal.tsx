@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import React, { useCallback, useEffect, useId, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Tag, X } from "lucide-react";
-import { Dialog } from "@/components/ui/Dialog";
-import type { CreateListingRequest } from "@/types/marketplace";
+import React, { useCallback, useEffect, useId, useState } from 'react';
+import { AlertCircle, CheckCircle2, Loader2, Tag, X } from 'lucide-react';
+import { Dialog } from '@/components/ui/Dialog';
+import type { CreateListingRequest } from '@/types/marketplace';
 
-type ListingStatus = "idle" | "submitting" | "success" | "error";
+type ListingStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 interface ListForSaleModalProps {
   isOpen: boolean;
@@ -20,18 +20,16 @@ interface ListForSaleModalProps {
 }
 
 const STORED_TOKEN_KEYS = [
-  "commitlabs.sessionToken",
-  "commitlabs:sessionToken",
-  "sessionToken",
+  'commitlabs.sessionToken',
+  'commitlabs:sessionToken',
+  'sessionToken',
 ] as const;
 
 function getStoredSessionToken(): string | undefined {
-  if (typeof window === "undefined") return undefined;
+  if (typeof window === 'undefined') return undefined;
 
   for (const key of STORED_TOKEN_KEYS) {
-    const value =
-      window.sessionStorage.getItem(key) ??
-      window.localStorage.getItem(key);
+    const value = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
     if (value?.trim()) {
       return value.trim();
     }
@@ -44,7 +42,7 @@ function getStoredSessionToken(): string | undefined {
  * Returns null when the value is empty, non-numeric, or not strictly positive.
  */
 function parsePrice(value: string): number | null {
-  const normalized = value.replace(/[,\s]/g, "").trim();
+  const normalized = value.replace(/[,\s]/g, '').trim();
   if (!normalized) return null;
   const parsed = Number.parseFloat(normalized);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
@@ -53,18 +51,18 @@ function parsePrice(value: string): number | null {
 
 function getErrorMessageForStatus(status: number): string {
   if (status === 401) {
-    return "Sign in again before listing a commitment on the marketplace.";
+    return 'Sign in again before listing a commitment on the marketplace.';
   }
   if (status === 403) {
-    return "You can only list commitments owned by the connected wallet.";
+    return 'You can only list commitments owned by the connected wallet.';
   }
   if (status === 409) {
-    return "This commitment is already listed on the marketplace.";
+    return 'This commitment is already listed on the marketplace.';
   }
   if (status === 429) {
-    return "Too many listing attempts. Wait a moment and try again.";
+    return 'Too many listing attempts. Wait a moment and try again.';
   }
-  return "Listing failed. Try again in a moment.";
+  return 'Listing failed. Try again in a moment.';
 }
 
 export default function ListForSaleModal({
@@ -73,22 +71,22 @@ export default function ListForSaleModal({
   asset,
   sellerAddress,
   sessionToken,
-  endpoint = "/api/marketplace/listings",
+  endpoint = '/api/marketplace/listings',
   onClose,
   onSuccess,
 }: ListForSaleModalProps) {
   const titleId = useId();
   const descriptionId = useId();
-  const [status, setStatus] = useState<ListingStatus>("idle");
-  const [price, setPrice] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [status, setStatus] = useState<ListingStatus>('idle');
+  const [price, setPrice] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Reset transient state every time the modal opens.
   useEffect(() => {
     if (!isOpen) return;
-    setStatus("idle");
-    setErrorMessage("");
-    setPrice("");
+    setStatus('idle');
+    setErrorMessage('');
+    setPrice('');
   }, [isOpen]);
 
   const handleSubmit = useCallback(async () => {
@@ -96,28 +94,26 @@ export default function ListForSaleModal({
     const resolvedToken = sessionToken?.trim() || getStoredSessionToken();
 
     if (!normalizedAddress) {
-      setStatus("error");
-      setErrorMessage(
-        "Connect a wallet before listing a commitment on the marketplace.",
-      );
+      setStatus('error');
+      setErrorMessage('Connect a wallet before listing a commitment on the marketplace.');
       return;
     }
 
     if (!resolvedToken) {
-      setStatus("error");
-      setErrorMessage("Sign in again before listing a commitment on the marketplace.");
+      setStatus('error');
+      setErrorMessage('Sign in again before listing a commitment on the marketplace.');
       return;
     }
 
     const parsedPrice = parsePrice(price);
     if (parsedPrice === null) {
-      setStatus("error");
-      setErrorMessage("Enter a positive listing price.");
+      setStatus('error');
+      setErrorMessage('Enter a positive listing price.');
       return;
     }
 
-    setStatus("submitting");
-    setErrorMessage("");
+    setStatus('submitting');
+    setErrorMessage('');
 
     const body: CreateListingRequest = {
       commitmentId,
@@ -128,9 +124,9 @@ export default function ListForSaleModal({
 
     try {
       const response = await fetch(endpoint, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${resolvedToken}`,
         },
         body: JSON.stringify(body),
@@ -138,34 +134,32 @@ export default function ListForSaleModal({
 
       if (!response.ok) {
         // Try to surface the server-provided message for non-generic errors.
-        const data = await response.json().catch(() => ({} as Record<string, unknown>));
+        const data = await response.json().catch(() => ({}) as Record<string, unknown>);
         const serverMessage =
-          typeof (data as { message?: unknown }).message === "string"
+          typeof (data as { message?: unknown }).message === 'string'
             ? ((data as { message?: string }).message as string)
             : undefined;
-        setStatus("error");
+        setStatus('error');
         setErrorMessage(serverMessage ?? getErrorMessageForStatus(response.status));
         return;
       }
 
-      const data = await response
-        .json()
-        .catch(() => ({} as Record<string, unknown>));
+      const data = await response.json().catch(() => ({}) as Record<string, unknown>);
       const listingId =
-        typeof (data as { listing?: { id?: unknown } }).listing?.id === "string"
+        typeof (data as { listing?: { id?: unknown } }).listing?.id === 'string'
           ? ((data as { listing: { id: string } }).listing.id as string)
-          : "";
+          : '';
 
-      setStatus("success");
+      setStatus('success');
       onSuccess?.(listingId);
     } catch {
-      setStatus("error");
-      setErrorMessage("Network error. Check your connection and try again.");
+      setStatus('error');
+      setErrorMessage('Network error. Check your connection and try again.');
     }
   }, [asset, commitmentId, endpoint, onSuccess, price, sellerAddress, sessionToken]);
 
-  const isSubmitting = status === "submitting";
-  const isSuccess = status === "success";
+  const isSubmitting = status === 'submitting';
+  const isSuccess = status === 'success';
   const parsedPrice = parsePrice(price);
   const canSubmit = !isSubmitting && parsedPrice !== null;
 
@@ -207,9 +201,8 @@ export default function ListForSaleModal({
       </div>
 
       <p id={descriptionId} className="mt-4 text-sm leading-6 text-white/70">
-        List commitment{" "}
-        <span className="font-mono text-[#0FF0FC]">{commitmentId}</span> on the
-        marketplace. Buyers will pay you in{" "}
+        List commitment <span className="font-mono text-[#0FF0FC]">{commitmentId}</span> on the
+        marketplace. Buyers will pay you in{' '}
         <span className="font-semibold text-white">{asset}</span>.
       </p>
 
@@ -225,9 +218,7 @@ export default function ListForSaleModal({
         <label className="flex flex-col gap-2 text-sm text-white/70">
           <span className="flex items-center justify-between">
             <span>Listing price</span>
-            <span className="text-[12px] uppercase tracking-[0.16em] text-white/40">
-              {asset}
-            </span>
+            <span className="text-[12px] uppercase tracking-[0.16em] text-white/40">{asset}</span>
           </span>
           <input
             type="text"
@@ -236,20 +227,19 @@ export default function ListForSaleModal({
             value={price}
             onChange={(event) => {
               setPrice(event.target.value);
-              if (status === "error") {
-                setStatus("idle");
-                setErrorMessage("");
+              if (status === 'error') {
+                setStatus('idle');
+                setErrorMessage('');
               }
             }}
             placeholder="0.00"
             disabled={isSubmitting || isSuccess}
-            aria-invalid={status === "error" && !parsedPrice ? "true" : undefined}
+            aria-invalid={status === 'error' && !parsedPrice ? 'true' : undefined}
             aria-describedby={`${titleId}-help`}
             className="rounded-[12px] border border-white/10 bg-black px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] disabled:cursor-not-allowed disabled:opacity-50"
           />
           <p id={`${titleId}-help`} className="text-[12px] text-white/40">
-            Enter a positive number. The listing becomes visible to buyers as
-            soon as you confirm.
+            Enter a positive number. The listing becomes visible to buyers as soon as you confirm.
           </p>
         </label>
       </form>
@@ -261,8 +251,8 @@ export default function ListForSaleModal({
         >
           <CheckCircle2 className="mt-0.5 shrink-0" size={18} />
           <span>
-            {commitmentId} is now listed on the marketplace. Buyers will see it
-            in the listings grid.
+            {commitmentId} is now listed on the marketplace. Buyers will see it in the listings
+            grid.
           </span>
         </div>
       ) : errorMessage ? (
@@ -282,7 +272,7 @@ export default function ListForSaleModal({
           disabled={isSubmitting}
           className="rounded-[14px] border border-white/10 px-5 py-3 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSuccess ? "Close" : "Cancel"}
+          {isSuccess ? 'Close' : 'Cancel'}
         </button>
         {!isSuccess && (
           <button
@@ -291,12 +281,8 @@ export default function ListForSaleModal({
             disabled={!canSubmit}
             className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-[#0FF0FC66] bg-[#0FF0FC1A] px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(15,240,252,0.22)] transition-all hover:bg-[#0FF0FC26] hover:shadow-[0_0_24px_rgba(15,240,252,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <Tag size={18} />
-            )}
-            {isSubmitting ? "Submitting listing" : "List for sale"}
+            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Tag size={18} />}
+            {isSubmitting ? 'Submitting listing' : 'List for sale'}
           </button>
         )}
       </div>

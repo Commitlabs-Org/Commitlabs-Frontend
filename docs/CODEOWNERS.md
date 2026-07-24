@@ -13,13 +13,13 @@ area a pull request touches.
 
 ## Ownership map
 
-| Area            | Paths                                        | Owner                            |
-| --------------- | -------------------------------------------- | -------------------------------- |
-| Fallback        | everything                                   | `@Commitlabs-Org/maintainers`    |
-| Frontend        | `src/app/`, `src/components/`, `src/styles/` | `@Commitlabs-Org/frontend`       |
-| API / backend   | `src/app/api/`, `src/lib/backend/`           | `@Commitlabs-Org/backend`        |
-| Contracts       | `contracts/`                                 | `@Commitlabs-Org/contracts`      |
-| Documentation   | `docs/`, `*.md`                              | `@Commitlabs-Org/docs`           |
+| Area          | Paths                                        | Owner                         |
+| ------------- | -------------------------------------------- | ----------------------------- |
+| Fallback      | everything                                   | `@Commitlabs-Org/maintainers` |
+| Frontend      | `src/app/`, `src/components/`, `src/styles/` | `@Commitlabs-Org/frontend`    |
+| API / backend | `src/app/api/`, `src/lib/backend/`           | `@Commitlabs-Org/backend`     |
+| Contracts     | `contracts/`                                 | `@Commitlabs-Org/contracts`   |
+| Documentation | `docs/`, `*.md`                              | `@Commitlabs-Org/docs`        |
 
 ## Review expectations
 

@@ -9,7 +9,9 @@ vi.mock('@/lib/backend/env', async (importOriginal) => {
   return {
     ...actual,
     getValidatedEnv: vi.fn(() => mockEnv),
-    _setMockEnv: (env: any) => { mockEnv = env; },
+    _setMockEnv: (env: any) => {
+      mockEnv = env;
+    },
   };
 });
 
@@ -46,7 +48,7 @@ describe('Contract Versioning Configuration', () => {
         commitmentCore: { address: '0xv2core' },
         commitmentNFT: { address: '0xv2nft' },
         attestationEngine: { address: '0xv2attest' },
-      }
+      },
     });
 
     _setMockEnv({
@@ -65,7 +67,7 @@ describe('Contract Versioning Configuration', () => {
     const contractsJson = JSON.stringify({
       v1: {
         commitmentCore: { address: '0xv1core' },
-      }
+      },
     });
 
     _setMockEnv({

@@ -20,11 +20,13 @@ To improve user confidence in the notification settings, we added per-channel "S
 ## API Endpoint Reference
 
 The test triggers a `POST` request to `/api/notifications/test` with the following JSON body:
+
 ```json
 {
   "channel": "<channel_id>"
 }
 ```
+
 Currently, the test simulates the behavior for UI feedback purposes.
 
 ## Testing

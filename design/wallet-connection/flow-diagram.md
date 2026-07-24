@@ -11,12 +11,12 @@ per-error recovery actions live in [`errors-and-recovery.md`](./errors-and-recov
 The wallet flow is opened from any of these surfaces. They all converge on the same modal,
 in the same starting state.
 
-| Entry point | Location | CTA copy | Result on success |
-| :---------- | :------- | :------- | :---------------- |
-| Header "Connect wallet" | Top right of every page when signed-out | `Connect wallet` | Returns to current page, signed in |
-| Empty-state CTA | Dashboard onboarding empty state | `Connect wallet to start` | Lands on dashboard populated state |
-| Protected route gate | Any `/commitments`, `/create`, `/settings` route while unauthed | `Connect wallet to continue` | Resumes to the requested route |
-| Session expired | After 24-hour JWT expiry while user is active | `Reconnect wallet` | Resumes the user's last route |
+| Entry point             | Location                                                        | CTA copy                     | Result on success                  |
+| :---------------------- | :-------------------------------------------------------------- | :--------------------------- | :--------------------------------- |
+| Header "Connect wallet" | Top right of every page when signed-out                         | `Connect wallet`             | Returns to current page, signed in |
+| Empty-state CTA         | Dashboard onboarding empty state                                | `Connect wallet to start`    | Lands on dashboard populated state |
+| Protected route gate    | Any `/commitments`, `/create`, `/settings` route while unauthed | `Connect wallet to continue` | Resumes to the requested route     |
+| Session expired         | After 24-hour JWT expiry while user is active                   | `Reconnect wallet`           | Resumes the user's last route      |
 
 In all four cases, the post-success destination is held in URL state (`?next=`) and never
 defaults to the home page silently.
@@ -45,14 +45,14 @@ update in place — not a new modal.
 └────────────────────────────────────────────────────────────┘
 ```
 
-| Region | Allowed to change between states? | Notes |
-| :----- | :-------------------------------- | :---- |
-| Header title | Yes | But always names the **current step**, not the goal |
-| Subhead | Yes | One sentence; sets context for body |
-| Body | Yes | Largest area; visuals + copy per state |
-| Security strip | Yes | Only visible during connect + sign states; hidden in success |
-| Footer | Yes | Two buttons max. Primary action label changes per state. |
-| Close (×) | Always present | Returns user to entry point with a toast: "Wallet not connected" |
+| Region         | Allowed to change between states? | Notes                                                            |
+| :------------- | :-------------------------------- | :--------------------------------------------------------------- |
+| Header title   | Yes                               | But always names the **current step**, not the goal              |
+| Subhead        | Yes                               | One sentence; sets context for body                              |
+| Body           | Yes                               | Largest area; visuals + copy per state                           |
+| Security strip | Yes                               | Only visible during connect + sign states; hidden in success     |
+| Footer         | Yes                               | Two buttons max. Primary action label changes per state.         |
+| Close (×)      | Always present                    | Returns user to entry point with a toast: "Wallet not connected" |
 
 The security strip is the small, persistent line that explains what a signature does. It
 is **not** a tooltip; it is part of the modal layout. See [`security-copy.md`](./security-copy.md).
@@ -66,24 +66,24 @@ modal, **events** from the Freighter API, or **timeouts** we enforce.
 
 ### States
 
-| ID | Name | Type | Visible? |
-| :- | :--- | :--- | :------- |
-| `S0` | Idle (modal closed) | Terminal (start) | No |
-| `S1` | Detecting | Loading | Yes |
-| `S2` | Not installed | Recovery | Yes |
-| `S3` | Locked | Recovery | Yes |
-| `S4` | Connect prompt | Action required | Yes |
-| `S5` | Awaiting connect approval | In-flight (extension) | Yes |
-| `S6` | Network mismatch | Recovery | Yes |
-| `S7` | Sign prompt | Action required | Yes |
-| `S8` | Awaiting signature | In-flight (extension) | Yes |
-| `S9` | Verifying | In-flight (server) | Yes |
-| `S10` | Connected | Terminal (success) | Yes (1.5s, then closes) |
-| `E1` | Rejected (connect) | Recovery | Yes |
-| `E2` | Rejected (signature) | Recovery | Yes |
-| `E3` | Timeout | Recovery | Yes |
-| `E4` | Extension error | Recovery | Yes |
-| `E5` | Server error (verify) | Recovery | Yes |
+| ID    | Name                      | Type                  | Visible?                |
+| :---- | :------------------------ | :-------------------- | :---------------------- |
+| `S0`  | Idle (modal closed)       | Terminal (start)      | No                      |
+| `S1`  | Detecting                 | Loading               | Yes                     |
+| `S2`  | Not installed             | Recovery              | Yes                     |
+| `S3`  | Locked                    | Recovery              | Yes                     |
+| `S4`  | Connect prompt            | Action required       | Yes                     |
+| `S5`  | Awaiting connect approval | In-flight (extension) | Yes                     |
+| `S6`  | Network mismatch          | Recovery              | Yes                     |
+| `S7`  | Sign prompt               | Action required       | Yes                     |
+| `S8`  | Awaiting signature        | In-flight (extension) | Yes                     |
+| `S9`  | Verifying                 | In-flight (server)    | Yes                     |
+| `S10` | Connected                 | Terminal (success)    | Yes (1.5s, then closes) |
+| `E1`  | Rejected (connect)        | Recovery              | Yes                     |
+| `E2`  | Rejected (signature)      | Recovery              | Yes                     |
+| `E3`  | Timeout                   | Recovery              | Yes                     |
+| `E4`  | Extension error           | Recovery              | Yes                     |
+| `E5`  | Server error (verify)     | Recovery              | Yes                     |
 
 ### Transitions
 
@@ -127,15 +127,15 @@ E5  ──user clicks Try again────────────►    S9
 
 ### Hard rules in the machine
 
-* **No invisible retries.** A reject (`E1`/`E2`) does not auto-retry — the user must click
+- **No invisible retries.** A reject (`E1`/`E2`) does not auto-retry — the user must click
   `Try again`. This prevents trained-out muscle-memory approvals.
-* **Timeouts are 60 seconds.** Long enough to find a hardware wallet; short enough to
+- **Timeouts are 60 seconds.** Long enough to find a hardware wallet; short enough to
   recover from a swallowed extension event.
-* **Network mismatch (`S6`) blocks progress.** We do not present a "Continue anyway"
+- **Network mismatch (`S6`) blocks progress.** We do not present a "Continue anyway"
   affordance, even for testnet → mainnet drift.
-* **Detecting (`S1`) caps at 3 seconds.** If the API does not respond by then, we move to
-  `S2` ("Not installed") with a *"Still not detecting?"* hint, not a hung spinner.
-* **`S10` auto-closes after 1.5 seconds.** Long enough to read "Connected", short enough to
+- **Detecting (`S1`) caps at 3 seconds.** If the API does not respond by then, we move to
+  `S2` ("Not installed") with a _"Still not detecting?"_ hint, not a hung spinner.
+- **`S10` auto-closes after 1.5 seconds.** Long enough to read "Connected", short enough to
   not feel like padding.
 
 ---
@@ -169,8 +169,8 @@ CommitLabs runs against either **Testnet** or **Mainnet** depending on env confi
 [`src/utils/soroban.ts`](../../src/utils/soroban.ts) `networkPassphrase`). After the user
 approves connection in `S5`, we read the active network from Freighter:
 
-* Match → continue to `S7`.
-* Mismatch → `S6` with the explicit copy described in [`states.md`](./states.md).
+- Match → continue to `S7`.
+- Mismatch → `S6` with the explicit copy described in [`states.md`](./states.md).
 
 When the user switches networks in Freighter, the extension fires a network-change event.
 Our modal listens for it, returns to `S1`, and re-detects. We **never** ask the user to
@@ -180,11 +180,11 @@ manually retry after switching — the event is the trigger.
 
 ## Modal vs. Toasts vs. Pages
 
-* **Modal**: every state in this flow.
-* **Toast** (4-second snackbar): only after success-with-close, e.g.
-  *"Connected as G…X4Y5"* on entry-point return. Toasts are not used for failures — failures
+- **Modal**: every state in this flow.
+- **Toast** (4-second snackbar): only after success-with-close, e.g.
+  _"Connected as G…X4Y5"_ on entry-point return. Toasts are not used for failures — failures
   stay in the modal where the recovery action is.
-* **Full page**: never. Wallet connection is always modal-based; we do not navigate the user
+- **Full page**: never. Wallet connection is always modal-based; we do not navigate the user
   away from their entry point.
 
 ---

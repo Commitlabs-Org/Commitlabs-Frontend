@@ -1,8 +1,8 @@
-import { NextRequest } from "next/server";
-import { withApiHandler } from "@/lib/backend/withApiHandler";
-import { ok, attachSecurityHeaders } from "@/lib/backend/apiResponse";
-import { logInfo } from "@/lib/backend/logger";
-import { getProtocolConstants } from "@/lib/backend/services/protocolConstants";
+import { NextRequest } from 'next/server';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { ok, attachSecurityHeaders } from '@/lib/backend/apiResponse';
+import { logInfo } from '@/lib/backend/logger';
+import { getProtocolConstants } from '@/lib/backend/services/protocolConstants';
 
 /**
  * GET /api/protocol/constants
@@ -23,16 +23,13 @@ import { getProtocolConstants } from "@/lib/backend/services/protocolConstants";
  *    the process (see `getProtocolConstants()`).
  */
 export const GET = withApiHandler(async (req: NextRequest) => {
-  logInfo(req, "Protocol constants requested");
+  logInfo(req, 'Protocol constants requested');
 
   const constants = getProtocolConstants();
   const response = ok(constants);
 
   // Cache for 5 minutes, allow stale for 60 s while revalidating
-  response.headers.set(
-    "Cache-Control",
-    "public, max-age=300, stale-while-revalidate=60",
-  );
+  response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
 
   return attachSecurityHeaders(response);
 });

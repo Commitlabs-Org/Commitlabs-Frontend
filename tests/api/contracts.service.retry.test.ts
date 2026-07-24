@@ -13,41 +13,38 @@
  * timers are used and every test is deterministic.
  */
 
-
-import { describe, it, expect, vi } from "vitest";
-
-
+import { describe, it, expect, vi } from 'vitest';
 
 // The contracts service imports cache / counters / config / logger at module
 // load. None of that is exercised by these unit tests, so the modules are
 // stubbed to keep the test hermetic and free of I/O.
-vi.mock("ioredis", () => ({ default: class {} }));
-vi.mock("@/lib/backend/cache/factory", () => ({
+vi.mock('ioredis', () => ({ default: class {} }));
+vi.mock('@/lib/backend/cache/factory', () => ({
   cache: {
     get: vi.fn(async () => null),
     set: vi.fn(async () => {}),
     delete: vi.fn(async () => {}),
   },
 }));
-vi.mock("@/lib/backend/counters/provider", () => ({
+vi.mock('@/lib/backend/counters/provider', () => ({
   getCountersAdapter: () => ({
     incrementSuccessfulActions: vi.fn(),
     incrementChainFailures: vi.fn(),
   }),
 }));
-vi.mock("@/lib/backend/config", () => ({
+vi.mock('@/lib/backend/config', () => ({
   getBackendConfig: () => ({
-    sorobanRpcUrl: "https://example.invalid",
-    networkPassphrase: "TEST",
-    contractAddresses: { commitmentCore: "", attestationEngine: "" },
+    sorobanRpcUrl: 'https://example.invalid',
+    networkPassphrase: 'TEST',
+    contractAddresses: { commitmentCore: '', attestationEngine: '' },
   }),
 }));
-vi.mock("@/lib/backend/logger", () => ({
+vi.mock('@/lib/backend/logger', () => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   logError: vi.fn(),
 }));
-vi.mock("@/lib/backend/cache/index", () => ({
+vi.mock('@/lib/backend/cache/index', () => ({
   CacheKey: {
     commitment: (id: string) => `commitment:${id}`,
     userCommitments: (a: string) => `user-commitments:${a}`,
@@ -57,13 +54,13 @@ vi.mock("@/lib/backend/cache/index", () => ({
 
 // NOTE: @/lib/backend/errors is intentionally NOT mocked — the classifier
 // relies on `instanceof BackendError`, which requires the real class.
-import { BackendError } from "@/lib/backend/errors";
+import { BackendError } from '@/lib/backend/errors';
 import {
   retryWithBackoff,
   isRetryableContractError,
   assertRetrySafe,
   type RetryOptions,
-} from "@/lib/backend/services/contracts";
+} from '@/lib/backend/services/contracts';
 
 /** Deterministic defaults: minimum jitter, instant sleep, everything retryable. */
 function baseOptions(overrides: Partial<RetryOptions> = {}): RetryOptions {
@@ -80,34 +77,34 @@ function baseOptions(overrides: Partial<RetryOptions> = {}): RetryOptions {
   };
 }
 
-describe("retryWithBackoff", () => {
-  it("returns immediately on success without sleeping", async () => {
-    const op = vi.fn().mockResolvedValue("ok");
+describe('retryWithBackoff', () => {
+  it('returns immediately on success without sleeping', async () => {
+    const op = vi.fn().mockResolvedValue('ok');
     const sleep = vi.fn(async () => {});
 
     const result = await retryWithBackoff(op, baseOptions({ sleep }));
 
-    expect(result).toBe("ok");
+    expect(result).toBe('ok');
     expect(op).toHaveBeenCalledTimes(1);
     expect(sleep).not.toHaveBeenCalled();
   });
 
-  it("retries a retryable failure and then succeeds", async () => {
+  it('retries a retryable failure and then succeeds', async () => {
     const op = vi
       .fn()
-      .mockRejectedValueOnce(new Error("503 service unavailable"))
-      .mockResolvedValue("ok");
+      .mockRejectedValueOnce(new Error('503 service unavailable'))
+      .mockResolvedValue('ok');
     const sleep = vi.fn(async () => {});
 
     const result = await retryWithBackoff(op, baseOptions({ sleep }));
 
-    expect(result).toBe("ok");
+    expect(result).toBe('ok');
     expect(op).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
-  it("does not retry a non-retryable failure", async () => {
-    const err = new Error("deterministic failure");
+  it('does not retry a non-retryable failure', async () => {
+    const err = new Error('deterministic failure');
     const op = vi.fn().mockRejectedValue(err);
     const sleep = vi.fn(async () => {});
 
@@ -118,36 +115,32 @@ describe("retryWithBackoff", () => {
     expect(sleep).not.toHaveBeenCalled();
   });
 
-  it("stops after maxAttempts and rethrows the final error unchanged", async () => {
-    const last = new Error("attempt 3 failed");
+  it('stops after maxAttempts and rethrows the final error unchanged', async () => {
+    const last = new Error('attempt 3 failed');
     const op = vi
       .fn()
-      .mockRejectedValueOnce(new Error("attempt 1"))
-      .mockRejectedValueOnce(new Error("attempt 2"))
+      .mockRejectedValueOnce(new Error('attempt 1'))
+      .mockRejectedValueOnce(new Error('attempt 2'))
       .mockRejectedValueOnce(last);
     const sleep = vi.fn(async () => {});
 
-    await expect(
-      retryWithBackoff(op, baseOptions({ maxAttempts: 3, sleep })),
-    ).rejects.toBe(last);
+    await expect(retryWithBackoff(op, baseOptions({ maxAttempts: 3, sleep }))).rejects.toBe(last);
     expect(op).toHaveBeenCalledTimes(3);
     expect(sleep).toHaveBeenCalledTimes(2);
   });
 
-  it("never retries when maxAttempts is 1", async () => {
-    const err = new Error("503 retryable but capped");
+  it('never retries when maxAttempts is 1', async () => {
+    const err = new Error('503 retryable but capped');
     const op = vi.fn().mockRejectedValue(err);
     const sleep = vi.fn(async () => {});
 
-    await expect(
-      retryWithBackoff(op, baseOptions({ maxAttempts: 1, sleep })),
-    ).rejects.toBe(err);
+    await expect(retryWithBackoff(op, baseOptions({ maxAttempts: 1, sleep }))).rejects.toBe(err);
     expect(op).toHaveBeenCalledTimes(1);
     expect(sleep).not.toHaveBeenCalled();
   });
 
-  it("stops early when the total backoff budget would be exceeded", async () => {
-    const op = vi.fn().mockRejectedValue(new Error("flaky"));
+  it('stops early when the total backoff budget would be exceeded', async () => {
+    const op = vi.fn().mockRejectedValue(new Error('flaky'));
     const sleep = vi.fn(async () => {});
 
     // base 200, mult 2, random()=>0 -> delays are 100, 200, 400, ...
@@ -164,27 +157,24 @@ describe("retryWithBackoff", () => {
           sleep,
         }),
       ),
-    ).rejects.toThrow("flaky");
+    ).rejects.toThrow('flaky');
     expect(op).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
-  it("does not retry at all when the backoff budget is zero", async () => {
-    const op = vi.fn().mockRejectedValue(new Error("flaky"));
+  it('does not retry at all when the backoff budget is zero', async () => {
+    const op = vi.fn().mockRejectedValue(new Error('flaky'));
     const sleep = vi.fn(async () => {});
 
     await expect(
-      retryWithBackoff(
-        op,
-        baseOptions({ maxAttempts: 5, maxTotalBackoffMs: 0, sleep }),
-      ),
-    ).rejects.toThrow("flaky");
+      retryWithBackoff(op, baseOptions({ maxAttempts: 5, maxTotalBackoffMs: 0, sleep })),
+    ).rejects.toThrow('flaky');
     expect(op).toHaveBeenCalledTimes(1);
     expect(sleep).not.toHaveBeenCalled();
   });
 
-  it("applies exponential backoff with the configured multiplier", async () => {
-    const op = vi.fn().mockRejectedValue(new Error("flaky"));
+  it('applies exponential backoff with the configured multiplier', async () => {
+    const op = vi.fn().mockRejectedValue(new Error('flaky'));
     const delays: number[] = [];
     const sleep = vi.fn(async (ms: number) => {
       delays.push(ms);
@@ -208,8 +198,8 @@ describe("retryWithBackoff", () => {
     expect(delays).toEqual([50, 100, 200]);
   });
 
-  it("caps an individual backoff delay at maxDelayMs", async () => {
-    const op = vi.fn().mockRejectedValue(new Error("flaky"));
+  it('caps an individual backoff delay at maxDelayMs', async () => {
+    const op = vi.fn().mockRejectedValue(new Error('flaky'));
     const delays: number[] = [];
     const sleep = vi.fn(async (ms: number) => {
       delays.push(ms);
@@ -234,8 +224,8 @@ describe("retryWithBackoff", () => {
     expect(delays).toEqual([1_000, 1_500, 1_500, 1_500]);
   });
 
-  it("adds jitter between ceiling/2 and ceiling", async () => {
-    const op = vi.fn().mockRejectedValue(new Error("flaky"));
+  it('adds jitter between ceiling/2 and ceiling', async () => {
+    const op = vi.fn().mockRejectedValue(new Error('flaky'));
     const delays: number[] = [];
     const sleep = vi.fn(async (ms: number) => {
       delays.push(ms);
@@ -257,12 +247,12 @@ describe("retryWithBackoff", () => {
     expect(delays).toEqual([300]);
   });
 
-  it("re-evaluates retryability on every attempt", async () => {
+  it('re-evaluates retryability on every attempt', async () => {
     // First failure is retryable, second is not -> stop on the second.
     const op = vi
       .fn()
-      .mockRejectedValueOnce(new Error("RETRYABLE blip"))
-      .mockRejectedValueOnce(new Error("permanent failure"));
+      .mockRejectedValueOnce(new Error('RETRYABLE blip'))
+      .mockRejectedValueOnce(new Error('permanent failure'));
     const sleep = vi.fn(async () => {});
 
     await expect(
@@ -270,33 +260,28 @@ describe("retryWithBackoff", () => {
         op,
         baseOptions({
           maxAttempts: 5,
-          isRetryable: (e) => String((e as Error).message).includes("RETRYABLE"),
+          isRetryable: (e) => String((e as Error).message).includes('RETRYABLE'),
           sleep,
         }),
       ),
-    ).rejects.toThrow("permanent failure");
+    ).rejects.toThrow('permanent failure');
     expect(op).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
-  it("passes the 1-based attempt number to the operation", async () => {
+  it('passes the 1-based attempt number to the operation', async () => {
     const seen: number[] = [];
     const op = vi.fn(async (attempt: number) => {
       seen.push(attempt);
-      throw new Error("flaky");
+      throw new Error('flaky');
     });
 
-    await expect(
-      retryWithBackoff(op, baseOptions({ maxAttempts: 3 })),
-    ).rejects.toThrow();
+    await expect(retryWithBackoff(op, baseOptions({ maxAttempts: 3 }))).rejects.toThrow();
     expect(seen).toEqual([1, 2, 3]);
   });
 
-  it("invokes the onRetry hook before each backoff sleep", async () => {
-    const op = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("first"))
-      .mockResolvedValue("ok");
+  it('invokes the onRetry hook before each backoff sleep', async () => {
+    const op = vi.fn().mockRejectedValueOnce(new Error('first')).mockResolvedValue('ok');
     const onRetry = vi.fn();
 
     await retryWithBackoff(op, baseOptions({ onRetry, sleep: async () => {} }));
@@ -306,84 +291,72 @@ describe("retryWithBackoff", () => {
   });
 });
 
-describe("isRetryableContractError", () => {
-  it("treats timeouts as retryable", () => {
-    expect(isRetryableContractError(new Error("request timed out"))).toBe(true);
-    expect(
-      isRetryableContractError(new Error("operation deadline exceeded")),
-    ).toBe(true);
+describe('isRetryableContractError', () => {
+  it('treats timeouts as retryable', () => {
+    expect(isRetryableContractError(new Error('request timed out'))).toBe(true);
+    expect(isRetryableContractError(new Error('operation deadline exceeded'))).toBe(true);
   });
 
-  it("treats rate-limit / 429 errors as retryable", () => {
-    expect(isRetryableContractError(new Error("429 Too Many Requests"))).toBe(
-      true,
-    );
-    expect(isRetryableContractError(new Error("rate limit reached"))).toBe(
-      true,
-    );
+  it('treats rate-limit / 429 errors as retryable', () => {
+    expect(isRetryableContractError(new Error('429 Too Many Requests'))).toBe(true);
+    expect(isRetryableContractError(new Error('rate limit reached'))).toBe(true);
   });
 
-  it("treats a generic gateway failure as retryable for idempotent reads", () => {
+  it('treats a generic gateway failure as retryable for idempotent reads', () => {
     // No specific pattern match -> falls through to the 5xx default.
-    expect(isRetryableContractError(new Error("socket hang up"))).toBe(true);
+    expect(isRetryableContractError(new Error('socket hang up'))).toBe(true);
   });
 
-  it("does NOT retry not-found errors", () => {
-    expect(isRetryableContractError(new Error("commitment not found"))).toBe(
-      false,
-    );
+  it('does NOT retry not-found errors', () => {
+    expect(isRetryableContractError(new Error('commitment not found'))).toBe(false);
   });
 
-  it("does NOT retry validation errors", () => {
-    expect(isRetryableContractError(new Error("invalid parameters"))).toBe(
-      false,
-    );
-    expect(isRetryableContractError(new Error("malformed request"))).toBe(
-      false,
-    );
+  it('does NOT retry validation errors', () => {
+    expect(isRetryableContractError(new Error('invalid parameters'))).toBe(false);
+    expect(isRetryableContractError(new Error('malformed request'))).toBe(false);
   });
 
-  it("retries BackendErrors with retryable HTTP statuses", () => {
+  it('retries BackendErrors with retryable HTTP statuses', () => {
     for (const status of [429, 503, 504]) {
       const err = new BackendError({
-        code: "BLOCKCHAIN_CALL_FAILED",
-        message: "transient",
+        code: 'BLOCKCHAIN_CALL_FAILED',
+        message: 'transient',
         status,
       });
       expect(isRetryableContractError(err)).toBe(true);
     }
   });
 
-  it("does NOT retry configuration BackendErrors (e.g. missing config, 500)", () => {
+  it('does NOT retry configuration BackendErrors (e.g. missing config, 500)', () => {
     const err = new BackendError({
-      code: "BLOCKCHAIN_UNAVAILABLE",
-      message: "Missing Soroban contract configuration.",
+      code: 'BLOCKCHAIN_UNAVAILABLE',
+      message: 'Missing Soroban contract configuration.',
       status: 500,
     });
     expect(isRetryableContractError(err)).toBe(false);
   });
 });
 
-describe("assertRetrySafe (write-retry guard)", () => {
-  it("allows read calls on any attempt", () => {
-    expect(() => assertRetrySafe("read", 1)).not.toThrow();
-    expect(() => assertRetrySafe("read", 2)).not.toThrow();
-    expect(() => assertRetrySafe("read", 10)).not.toThrow();
+describe('assertRetrySafe (write-retry guard)', () => {
+  it('allows read calls on any attempt', () => {
+    expect(() => assertRetrySafe('read', 1)).not.toThrow();
+    expect(() => assertRetrySafe('read', 2)).not.toThrow();
+    expect(() => assertRetrySafe('read', 10)).not.toThrow();
   });
 
-  it("allows a write call on the first (and only) attempt", () => {
-    expect(() => assertRetrySafe("write", 1)).not.toThrow();
+  it('allows a write call on the first (and only) attempt', () => {
+    expect(() => assertRetrySafe('write', 1)).not.toThrow();
   });
 
-  it("rejects a write call on any retry attempt", () => {
-    expect(() => assertRetrySafe("write", 2)).toThrow(BackendError);
-    expect(() => assertRetrySafe("write", 3)).toThrow(BackendError);
+  it('rejects a write call on any retry attempt', () => {
+    expect(() => assertRetrySafe('write', 2)).toThrow(BackendError);
+    expect(() => assertRetrySafe('write', 3)).toThrow(BackendError);
   });
 
-  it("rejects write retries with a non-retryable 500 so the loop stops", () => {
+  it('rejects write retries with a non-retryable 500 so the loop stops', () => {
     let thrown: unknown;
     try {
-      assertRetrySafe("write", 2);
+      assertRetrySafe('write', 2);
     } catch (e) {
       thrown = e;
     }
@@ -394,14 +367,14 @@ describe("assertRetrySafe (write-retry guard)", () => {
     expect(isRetryableContractError(thrown)).toBe(false);
   });
 
-  it("blocks a write accidentally wrapped in retryWithBackoff after one submit", async () => {
+  it('blocks a write accidentally wrapped in retryWithBackoff after one submit', async () => {
     const submissions: number[] = [];
     // Simulates invokeContractMethod for a write: it records each submission,
     // runs the guard, and then 'fails transiently' on the first attempt.
     const writeOp = async (attempt: number) => {
-      assertRetrySafe("write", attempt); // guard throws on attempt 2
+      assertRetrySafe('write', attempt); // guard throws on attempt 2
       submissions.push(attempt);
-      throw new Error("503 transient after submit");
+      throw new Error('503 transient after submit');
     };
 
     await expect(

@@ -23,19 +23,30 @@ There are two record shapes. Both are single-line JSON written via `console.*`.
 Emitted by `logInfo` / `logWarn` / `logError` / `logDebug` (and the
 `logger.{info,warn,error,debug}` convenience wrappers).
 
-| Field | Type | Required | Notes |
-| ----- | ---- | :------: | ----- |
-| `level` | `"info" \| "warn" \| "error" \| "debug"` | yes | See [Levels](#levels). |
-| `message` | `string` | yes | Human-readable summary. API-handler logs are prefixed, e.g. `"[API] Unhandled exception"`. |
-| `timestamp` | `string` | yes | ISO‑8601 UTC (`new Date().toISOString()`). |
-| `requestId` | `string` | no | Correlation id; see [Request correlation](#request-correlation). Omitted when no request/id is supplied. |
-| `context` | `object` | no | Arbitrary structured key/values. Passed through [redaction](#redaction). |
-| `error` | `object` | no | Present on error logs: `{ name, message, stack? }`. Passed through redaction. |
+| Field       | Type                                     | Required | Notes                                                                                                    |
+| ----------- | ---------------------------------------- | :------: | -------------------------------------------------------------------------------------------------------- |
+| `level`     | `"info" \| "warn" \| "error" \| "debug"` |   yes    | See [Levels](#levels).                                                                                   |
+| `message`   | `string`                                 |   yes    | Human-readable summary. API-handler logs are prefixed, e.g. `"[API] Unhandled exception"`.               |
+| `timestamp` | `string`                                 |   yes    | ISO‑8601 UTC (`new Date().toISOString()`).                                                               |
+| `requestId` | `string`                                 |    no    | Correlation id; see [Request correlation](#request-correlation). Omitted when no request/id is supplied. |
+| `context`   | `object`                                 |    no    | Arbitrary structured key/values. Passed through [redaction](#redaction).                                 |
+| `error`     | `object`                                 |    no    | Present on error logs: `{ name, message, stack? }`. Passed through redaction.                            |
 
 **Example**
 
 ```json
-{"level":"error","message":"[API] Unhandled exception","timestamp":"2026-06-28T20:00:00.000Z","requestId":"7b1c…","context":{"route":"/api/commitments","method":"POST"},"error":{"name":"TypeError","message":"cannot read properties of undefined","stack":"TypeError: …"}}
+{
+  "level": "error",
+  "message": "[API] Unhandled exception",
+  "timestamp": "2026-06-28T20:00:00.000Z",
+  "requestId": "7b1c…",
+  "context": { "route": "/api/commitments", "method": "POST" },
+  "error": {
+    "name": "TypeError",
+    "message": "cannot read properties of undefined",
+    "stack": "TypeError: …"
+  }
+}
 ```
 
 ### 2. Analytics event
@@ -45,42 +56,46 @@ Emitted by the domain-event helpers (`logCommitmentCreated`,
 `logListingCancellationFailed`, `logDisputeOpened`, `logDisputeResolved`) via the
 internal `emit()`.
 
-| Field | Type | Required | Notes |
-| ----- | ---- | :------: | ----- |
-| `event` | `string` | yes | Event name, e.g. `"CommitmentCreated"`, `"AttestationReceived"`. |
-| `timestamp` | `string` | yes | ISO‑8601 UTC. |
-| `requestId` | `string` | no | Correlation id when available. |
-| `context` | `object` | no | Structured context; redacted. |
-| `payload` | `object` | no | Event-specific data; redacted. |
-| `error` | `object` | no | `{ name, message, stack? }`; redacted. |
+| Field       | Type     | Required | Notes                                                            |
+| ----------- | -------- | :------: | ---------------------------------------------------------------- |
+| `event`     | `string` |   yes    | Event name, e.g. `"CommitmentCreated"`, `"AttestationReceived"`. |
+| `timestamp` | `string` |   yes    | ISO‑8601 UTC.                                                    |
+| `requestId` | `string` |    no    | Correlation id when available.                                   |
+| `context`   | `object` |    no    | Structured context; redacted.                                    |
+| `payload`   | `object` |    no    | Event-specific data; redacted.                                   |
+| `error`     | `object` |    no    | `{ name, message, stack? }`; redacted.                           |
 
 **Example**
 
 ```json
-{"event":"CommitmentCreated","timestamp":"2026-06-28T20:00:00.000Z","payload":{"commitmentId":"00124","strategy":"Balanced"}}
+{
+  "event": "CommitmentCreated",
+  "timestamp": "2026-06-28T20:00:00.000Z",
+  "payload": { "commitmentId": "00124", "strategy": "Balanced" }
+}
 ```
 
 ### Defined event names
 
-| Event | Helper |
-| ----- | ------ |
-| `CommitmentCreated` | `logCommitmentCreated` |
-| `CommitmentSettled` | `logCommitmentSettled` |
-| `CommitmentEarlyExit` | `logEarlyExit` |
-| `AttestationReceived` | `logAttestation` |
-| `ListingCancelled` | `logListingCancelled` |
+| Event                       | Helper                         |
+| --------------------------- | ------------------------------ |
+| `CommitmentCreated`         | `logCommitmentCreated`         |
+| `CommitmentSettled`         | `logCommitmentSettled`         |
+| `CommitmentEarlyExit`       | `logEarlyExit`                 |
+| `AttestationReceived`       | `logAttestation`               |
+| `ListingCancelled`          | `logListingCancelled`          |
 | `ListingCancellationFailed` | `logListingCancellationFailed` |
-| `DisputeOpened` | `logDisputeOpened` |
-| `DisputeResolved` | `logDisputeResolved` |
+| `DisputeOpened`             | `logDisputeOpened`             |
+| `DisputeResolved`           | `logDisputeResolved`           |
 
 ## Levels
 
-| Level | Sink | When |
-| ----- | ---- | ---- |
-| `debug` | `console.debug` | **Development only** — suppressed unless `NODE_ENV === "development"`. |
-| `info` | `console.log` | Normal lifecycle events. |
-| `warn` | `console.warn` | Handled/recoverable problems (e.g. `withApiHandler` "[API] Handled error"). |
-| `error` | `console.error` | Unhandled exceptions and failures; carries the `error` object. |
+| Level   | Sink            | When                                                                        |
+| ------- | --------------- | --------------------------------------------------------------------------- |
+| `debug` | `console.debug` | **Development only** — suppressed unless `NODE_ENV === "development"`.      |
+| `info`  | `console.log`   | Normal lifecycle events.                                                    |
+| `warn`  | `console.warn`  | Handled/recoverable problems (e.g. `withApiHandler` "[API] Handled error"). |
+| `error` | `console.error` | Unhandled exceptions and failures; carries the `error` object.              |
 
 ## Request correlation
 

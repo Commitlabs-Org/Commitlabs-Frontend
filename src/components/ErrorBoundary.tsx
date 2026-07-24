@@ -57,8 +57,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // a no-op-ish console sink; operators can swap in Sentry/Datadog/etc. via
     // `setErrorTransport` without touching this component. See
     // docs/observability/ERROR_MONITORING.md.
-    const route =
-      typeof window !== 'undefined' ? window.location.pathname : '';
+    const route = typeof window !== 'undefined' ? window.location.pathname : '';
     reportError(error, route);
 
     // Call custom error handler if provided
@@ -108,14 +107,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="space-y-6">
             <h1 className="text-3xl font-bold mb-4">Something went wrong</h1>
             <p className="text-lg opacity-90 mb-6">
-              We encountered an unexpected error. This component failed to load, but the rest of the application is still working.
+              We encountered an unexpected error. This component failed to load, but the rest of the
+              application is still working.
             </p>
-            
+
             {this.state.error && (
               <div className="bg-white/10 rounded-lg p-4 text-left mb-6">
-                <p className="text-sm font-mono opacity-80">
-                  {this.state.error.message}
-                </p>
+                <p className="text-sm font-mono opacity-80">{this.state.error.message}</p>
               </div>
             )}
 
@@ -150,7 +148,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
  */
 export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<ErrorBoundaryProps, 'children'>
+  errorBoundaryProps?: Omit<ErrorBoundaryProps, 'children'>,
 ): React.ComponentType<P> {
   const WrappedComponent = (props: P) => (
     <ErrorBoundary {...errorBoundaryProps}>

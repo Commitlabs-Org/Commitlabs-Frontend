@@ -79,7 +79,7 @@ describe('MyCommitmentsStats', () => {
         <MyCommitmentsStats
           {...BASE_PROPS}
           trends={{ totalActive: { value: 20, direction: 'up', period: 'vs last month' } }}
-        />
+        />,
       );
       expect(screen.getByText('20.0%')).toBeTruthy();
       expect(screen.getByText('vs last month')).toBeTruthy();
@@ -90,7 +90,7 @@ describe('MyCommitmentsStats', () => {
         <MyCommitmentsStats
           {...BASE_PROPS}
           trends={{ totalFeesGenerated: { value: 12, direction: 'down' } }}
-        />
+        />,
       );
       expect(screen.getByText('12.0%')).toBeTruthy();
     });
@@ -100,7 +100,7 @@ describe('MyCommitmentsStats', () => {
         <MyCommitmentsStats
           {...BASE_PROPS}
           trends={{ avgComplianceScore: { value: 0, direction: 'neutral' } }}
-        />
+        />,
       );
       expect(screen.getByText('0.0%')).toBeTruthy();
     });
@@ -110,12 +110,12 @@ describe('MyCommitmentsStats', () => {
         <MyCommitmentsStats
           {...BASE_PROPS}
           trends={{
-            totalActive:         { value: 5,  direction: 'up'      },
-            totalCommittedValue: { value: 3,  direction: 'down'    },
-            avgComplianceScore:  { value: 1,  direction: 'neutral' },
-            totalFeesGenerated:  { value: 10, direction: 'up'      },
+            totalActive: { value: 5, direction: 'up' },
+            totalCommittedValue: { value: 3, direction: 'down' },
+            avgComplianceScore: { value: 1, direction: 'neutral' },
+            totalFeesGenerated: { value: 10, direction: 'up' },
           }}
-        />
+        />,
       );
       expect(screen.getByText('5.0%')).toBeTruthy();
       expect(screen.getByText('3.0%')).toBeTruthy();
@@ -134,12 +134,8 @@ describe('MyCommitmentsStats', () => {
     it('each KPICard has an aria-label containing its label and value', () => {
       render(<MyCommitmentsStats {...BASE_PROPS} />);
       // KPICard auto-generates aria-label="${label}: ${formattedValue}"
-      expect(
-        screen.getByLabelText(/Total Active Commitments: 12/)
-      ).toBeTruthy();
-      expect(
-        screen.getByLabelText(/Total Committed Value: \$150,000/)
-      ).toBeTruthy();
+      expect(screen.getByLabelText(/Total Active Commitments: 12/)).toBeTruthy();
+      expect(screen.getByLabelText(/Total Committed Value: \$150,000/)).toBeTruthy();
     });
   });
 
@@ -172,7 +168,7 @@ describe('MyCommitmentsStats', () => {
           totalCommittedValue="0"
           avgComplianceScore={0}
           totalFeesGenerated="0"
-        />
+        />,
       );
       expect(screen.getAllByText('$0').length).toBeGreaterThanOrEqual(1);
     });
@@ -184,7 +180,7 @@ describe('MyCommitmentsStats', () => {
           totalCommittedValue="9999999"
           avgComplianceScore={100}
           totalFeesGenerated="1000000"
-        />
+        />,
       );
       // formatCompact(1500000) → "1.5M"
       expect(screen.getByText('1.5M')).toBeTruthy();

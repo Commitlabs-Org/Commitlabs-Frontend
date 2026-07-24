@@ -74,7 +74,8 @@ describe('POST /api/commitments/[id]/fund', () => {
   });
 
   it('funds a created commitment when the owner submits the request', async () => {
-    const { getCommitmentFromChain, fundEscrowOnChain } = await import('@/lib/backend/services/contracts');
+    const { getCommitmentFromChain, fundEscrowOnChain } =
+      await import('@/lib/backend/services/contracts');
     vi.mocked(getCommitmentFromChain).mockResolvedValue({
       id: 'c-3',
       ownerAddress: 'GOWNER',

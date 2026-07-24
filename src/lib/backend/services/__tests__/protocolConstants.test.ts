@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  getProtocolConstants,
-  invalidateProtocolConstantsCache,
-} from '../protocolConstants';
+import { getProtocolConstants, invalidateProtocolConstantsCache } from '../protocolConstants';
 
 describe('protocolConstants service', () => {
   const originalEnv = { ...process.env };
@@ -11,7 +8,11 @@ describe('protocolConstants service', () => {
     invalidateProtocolConstantsCache();
     // Reset env to known state
     Object.keys(process.env).forEach((key) => {
-      if (key.startsWith('COMMITLABS_') || key.startsWith('SOROBAN_') || key.startsWith('NEXT_PUBLIC_')) {
+      if (
+        key.startsWith('COMMITLABS_') ||
+        key.startsWith('SOROBAN_') ||
+        key.startsWith('NEXT_PUBLIC_')
+      ) {
         delete process.env[key];
       }
     });
@@ -20,7 +21,11 @@ describe('protocolConstants service', () => {
   afterEach(() => {
     // Restore original env
     Object.keys(process.env).forEach((key) => {
-      if (key.startsWith('COMMITLABS_') || key.startsWith('SOROBAN_') || key.startsWith('NEXT_PUBLIC_')) {
+      if (
+        key.startsWith('COMMITLABS_') ||
+        key.startsWith('SOROBAN_') ||
+        key.startsWith('NEXT_PUBLIC_')
+      ) {
         delete process.env[key];
       }
     });
@@ -167,7 +172,9 @@ describe('protocolConstants service', () => {
 
     it('throws when COMMITLABS_PENALTY_TIERS_JSON is not a JSON array', () => {
       process.env.COMMITLABS_PENALTY_TIERS_JSON = JSON.stringify({ type: 'not-array' });
-      expect(() => getProtocolConstants()).toThrow('COMMITLABS_PENALTY_TIERS_JSON must be a JSON array');
+      expect(() => getProtocolConstants()).toThrow(
+        'COMMITLABS_PENALTY_TIERS_JSON must be a JSON array',
+      );
     });
 
     it('throws when a penalty tier is missing type', () => {

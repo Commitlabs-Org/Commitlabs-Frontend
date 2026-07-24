@@ -96,10 +96,7 @@ describe('checkRateLimit', () => {
   it('sets TTL on the first request (count === 1)', async () => {
     mockKv.incr.mockResolvedValue(1);
     await checkRateLimit('1.2.3.4', 'api/commitments/settle');
-    expect(mockKv.expire).toHaveBeenCalledWith(
-      'ratelimit:api/commitments/settle:1.2.3.4',
-      60,
-    );
+    expect(mockKv.expire).toHaveBeenCalledWith('ratelimit:api/commitments/settle:1.2.3.4', 60);
   });
 
   it('does not reset TTL on subsequent requests', async () => {
@@ -111,9 +108,7 @@ describe('checkRateLimit', () => {
   it('uses the correct KV key format', async () => {
     mockKv.incr.mockResolvedValue(1);
     await checkRateLimit('5.6.7.8', 'api/commitments/early-exit');
-    expect(mockKv.incr).toHaveBeenCalledWith(
-      'ratelimit:api/commitments/early-exit:5.6.7.8',
-    );
+    expect(mockKv.incr).toHaveBeenCalledWith('ratelimit:api/commitments/early-exit:5.6.7.8');
   });
 
   it('fails open (allows request) when KV throws', async () => {

@@ -8,10 +8,7 @@ import {
   UnauthorizedError,
 } from '@/lib/backend/errors';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
-import {
-  getUserCommitmentsFromChain,
-  type Commitment,
-} from '@/lib/backend/services/contracts';
+import { getUserCommitmentsFromChain, type Commitment } from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 
 const ALL_CSV_HEADERS = [
@@ -33,10 +30,10 @@ type CsvHeader = (typeof ALL_CSV_HEADERS)[number];
 /** Map each header label to the commitment field that supplies its value. */
 const HEADER_TO_FIELD: Record<CsvHeader, (c: Commitment) => unknown> = {
   'Commitment ID': (c) => c.id,
-  'Owner': (c) => c.ownerAddress,
-  'Asset': (c) => c.asset,
-  'Amount': (c) => c.amount,
-  'Status': (c) => c.status,
+  Owner: (c) => c.ownerAddress,
+  Asset: (c) => c.asset,
+  Amount: (c) => c.amount,
+  Status: (c) => c.status,
   'Compliance Score': (c) => c.complianceScore,
   'Current Value': (c) => c.currentValue,
   'Fee Earned': (c) => c.feeEarned,

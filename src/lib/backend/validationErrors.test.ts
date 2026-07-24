@@ -43,9 +43,7 @@ describe('mapZodErrorToFieldErrors', () => {
     if (result.success) return;
 
     const fieldErrors = mapZodErrorToFieldErrors(result.error);
-    expect(fieldErrors).toEqual<FieldError[]>([
-      { field: 'email', message: 'Email is required' },
-    ]);
+    expect(fieldErrors).toEqual<FieldError[]>([{ field: 'email', message: 'Email is required' }]);
   });
 
   it('maps nested object paths using dot notation', () => {
@@ -148,9 +146,7 @@ describe('validationErrorFromZod', () => {
 
     const err = validationErrorFromZod(result.error, 'Bad body');
     expect(err.message).toBe('Bad body');
-    expect(
-      (err.details as { fieldErrors: FieldError[] }).fieldErrors[0].field
-    ).toBe('a');
+    expect((err.details as { fieldErrors: FieldError[] }).fieldErrors[0].field).toBe('a');
   });
 
   it('does not leak the raw ZodError instance in details', () => {

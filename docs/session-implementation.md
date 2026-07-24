@@ -19,17 +19,20 @@ This document describes the secure cookie-based session management system implem
 ### Security Features
 
 #### JWT Session Tokens
+
 - **Algorithm**: HS256 with server-side secret
 - **Expiry**: 24 hours
 - **Payload**: User address, issued timestamp, expiry timestamp, CSRF token
 - **Revocation**: In-memory revocation list (TODO: Redis/database for production)
 
 #### Cookie Security
+
 - **Session Cookie**: HTTP-only, Secure (production), SameSite=Strict, 24-hour expiry
 - **CSRF Cookie**: Non-HttpOnly, Secure (production), SameSite=Strict, 24-hour expiry
 - **Path**: `/` (site-wide availability)
 
 #### CSRF Protection
+
 - **Synchronizer Token Pattern**: CSRF token embedded in JWT and mirrored in header
 - **Double-Submit Cookie Pattern**: CSRF token available in non-HttpOnly cookie
 - **Origin Validation**: Additional defense-in-depth with Origin/Referer header checks
@@ -39,6 +42,7 @@ This document describes the secure cookie-based session management system implem
 ### Core Functions
 
 #### `createSessionToken(address: string)`
+
 Creates JWT session token with embedded CSRF token for authenticated user.
 
 ```typescript
@@ -48,6 +52,7 @@ const { token, csrfToken } = createSessionToken(address);
 **Returns**: Object containing JWT token and CSRF token
 
 #### `verifySessionToken(token: string)`
+
 Validates JWT token and returns session information.
 
 ```typescript
@@ -58,6 +63,7 @@ const result = verifySessionToken(token);
 **Returns**: SessionVerificationResult with validity status and user data
 
 #### `revokeSessionToken(token: string)`
+
 Revokes a session token for logout functionality.
 
 ```typescript
@@ -69,6 +75,7 @@ const revoked = revokeSessionToken(token);
 ### Authentication Middleware
 
 #### `requireAuth(req: NextRequest)`
+
 Middleware function for protecting routes that extracts and validates session cookies.
 
 ```typescript
@@ -79,6 +86,7 @@ const authenticatedReq = requireAuth(req);
 **Throws**: UnauthorizedError for invalid/missing sessions
 
 #### `validateCsrfToken(req: NextRequest, expectedCsrfToken: string)`
+
 Validates CSRF token for state-changing requests (POST, PUT, PATCH, DELETE).
 
 ```typescript
@@ -88,6 +96,7 @@ validateCsrfToken(req, expectedCsrfToken);
 **Throws**: UnauthorizedError for missing/invalid CSRF tokens
 
 #### `validateOrigin(req: NextRequest)`
+
 Validates Origin/Referer headers for additional CSRF protection.
 
 ```typescript
@@ -99,9 +108,11 @@ validateOrigin(req);
 ## API Endpoints
 
 ### POST /api/auth/verify
+
 Authenticates user via Stellar signature and creates session.
 
 **Request Body**:
+
 ```json
 {
   "address": "G...",
@@ -111,6 +122,7 @@ Authenticates user via Stellar signature and creates session.
 ```
 
 **Response**:
+
 ```json
 {
   "verified": true,
@@ -121,15 +133,18 @@ Authenticates user via Stellar signature and creates session.
 ```
 
 **Cookies Set**:
+
 - `session`: HTTP-only JWT token (24 hours)
 - `csrf`: Non-HttpOnly CSRF token (24 hours)
 
 ### POST /api/auth/logout
+
 Terminates user session and clears cookies.
 
 **Headers**: Requires valid session cookie
 
 **Response**:
+
 ```json
 {
   "loggedOut": true,
@@ -150,16 +165,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export const POST = async (req: NextRequest) => {
   // Authenticate user
   const authenticatedReq = requireAuth(req);
-  
+
   // Validate CSRF for state-changing requests
   validateCsrfToken(req, authenticatedReq.user.csrfToken);
-  
+
   // Additional origin validation
   validateOrigin(req);
-  
+
   // Process authenticated request
   const userAddress = authenticatedReq.user.address;
-  
+
   return NextResponse.json({
     message: 'Action completed successfully',
     user: userAddress,
@@ -207,22 +222,26 @@ const protectedResponse = await fetch('/api/protected-route', {
 ### Threat Mitigations
 
 #### Session Hijacking
+
 - HTTP-only cookies prevent JavaScript access
 - SameSite=Strict prevents cross-site request forgery
 - Secure flag ensures HTTPS-only transmission
 - 24-hour expiry limits exposure window
 
 #### CSRF Attacks
+
 - Synchronizer token pattern requires server-generated token
 - Origin validation provides additional protection
 - Double-submit cookie pattern for client-side access
 
 #### Token Replay
+
 - JWT includes issued timestamp (iat) and expiry (exp)
 - Server-side revocation list for immediate logout
 - Nonce consumption prevents signature replay
 
 #### Cross-Origin Attacks
+
 - SameSite=Strict prevents cross-site cookie transmission
 - Origin/Referer header validation
 - Host header validation in production
@@ -309,6 +328,7 @@ NODE_ENV=production
 ### Debug Mode
 
 Enable debug logging by setting:
+
 ```bash
 DEBUG=session:* npm run dev
 ```

@@ -34,11 +34,7 @@ async function copyToClipboard(url: string): Promise<void> {
   await navigator.clipboard.writeText(url);
 }
 
-export function useShareLink({
-  commitmentId,
-  title,
-  text,
-}: UseShareLinkOptions) {
+export function useShareLink({ commitmentId, title, text }: UseShareLinkOptions) {
   const toast = useToast();
 
   const shareLink = useCallback(async (): Promise<ShareResult> => {

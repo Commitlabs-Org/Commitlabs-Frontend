@@ -1,4 +1,3 @@
-
 export interface IdempotencyRecord<T = any> {
   key: string;
   status: 'STARTED' | 'COMPLETED' | 'FAILED';
@@ -67,7 +66,8 @@ export class IdempotencyService {
   private store: KVStore;
   private ttlSeconds: number;
 
-  constructor(store: KVStore = globalStore, ttlSeconds: number = 86400) { // Default 24h TTL
+  constructor(store: KVStore = globalStore, ttlSeconds: number = 86400) {
+    // Default 24h TTL
     this.store = store;
     this.ttlSeconds = ttlSeconds;
   }

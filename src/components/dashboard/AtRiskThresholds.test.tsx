@@ -93,9 +93,7 @@ describe('classifyAtRiskCommitments with custom thresholds', () => {
 describe('AtRiskCommitments threshold controls', () => {
   it('renders configure thresholds button after load', async () => {
     render(<AtRiskCommitments commitments={[base]} />);
-    await waitFor(() =>
-      expect(screen.getByText('Configure Thresholds')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText('Configure Thresholds')).toBeInTheDocument());
   });
 
   it('settings panel is hidden by default', async () => {
@@ -132,7 +130,7 @@ describe('AtRiskCommitments threshold controls', () => {
     await waitFor(() => screen.getByText('Needs Attention'));
     expect(mockWarning).toHaveBeenCalledTimes(1);
     expect(mockWarning).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Commitment At Risk' })
+      expect.objectContaining({ title: 'Commitment At Risk' }),
     );
   });
 
@@ -147,7 +145,7 @@ describe('AtRiskCommitments threshold controls', () => {
     fireEvent.click(screen.getByText('Apply'));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Compliance score must be between 0 and 100.'
+      'Compliance score must be between 0 and 100.',
     );
   });
 
@@ -162,7 +160,7 @@ describe('AtRiskCommitments threshold controls', () => {
     fireEvent.click(screen.getByText('Apply'));
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Days remaining must be between 0 and 365.'
+      'Days remaining must be between 0 and 365.',
     );
   });
 
@@ -182,12 +180,7 @@ describe('AtRiskCommitments threshold controls', () => {
 
   it('calls onThresholdsChange callback with new thresholds', async () => {
     const onThresholdsChange = jest.fn();
-    render(
-      <AtRiskCommitments
-        commitments={[base]}
-        onThresholdsChange={onThresholdsChange}
-      />
-    );
+    render(<AtRiskCommitments commitments={[base]} onThresholdsChange={onThresholdsChange} />);
     await waitFor(() => screen.getByText('Configure Thresholds'));
     fireEvent.click(screen.getByText('Configure Thresholds'));
 
@@ -198,17 +191,14 @@ describe('AtRiskCommitments threshold controls', () => {
 
     await waitFor(() => {
       expect(onThresholdsChange).toHaveBeenCalledWith(
-        expect.objectContaining({ daysRemainingThreshold: 14 })
+        expect.objectContaining({ daysRemainingThreshold: 14 }),
       );
     });
   });
 
   it('accepts threshold props and uses them as initial values', async () => {
     render(
-      <AtRiskCommitments
-        commitments={[base]}
-        thresholds={{ complianceScoreThreshold: 85 }}
-      />
+      <AtRiskCommitments commitments={[base]} thresholds={{ complianceScoreThreshold: 85 }} />,
     );
     // base.complianceScore is 80, so with threshold 85 it should be at risk
     await waitFor(() => {

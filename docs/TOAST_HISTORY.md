@@ -75,8 +75,8 @@ const { history, clearHistory, markHistoryRead, markAllHistoryRead } = useToast(
 
 ### `<ToastHistory>` Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
+| Prop         | Type     | Default     | Description                               |
+| ------------ | -------- | ----------- | ----------------------------------------- |
 | `maxEntries` | `number` | all entries | Maximum number of history items rendered. |
 
 ### `useToastHistoryUnreadCount(): number`
@@ -85,12 +85,12 @@ Returns the count of unread toast-history entries from context.
 
 ### Context additions (`ToastContextValue`)
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `history` | `ToastHistoryEntry[]` | Ordered (newest first) array of dismissed toasts. |
-| `clearHistory` | `() => void` | Remove all history entries. |
-| `markHistoryRead` | `(id: string) => void` | Mark a single entry as read. |
-| `markAllHistoryRead` | `() => void` | Mark all entries as read. |
+| Property             | Type                   | Description                                       |
+| -------------------- | ---------------------- | ------------------------------------------------- |
+| `history`            | `ToastHistoryEntry[]`  | Ordered (newest first) array of dismissed toasts. |
+| `clearHistory`       | `() => void`           | Remove all history entries.                       |
+| `markHistoryRead`    | `(id: string) => void` | Mark a single entry as read.                      |
+| `markAllHistoryRead` | `() => void`           | Mark all entries as read.                         |
 
 ### `ToastHistoryEntry` shape
 
@@ -100,10 +100,10 @@ interface ToastHistoryEntry {
   severity: 'success' | 'error' | 'info' | 'warning';
   title: string;
   description?: string;
-  createdAt: number;   // ms since epoch — when the toast first appeared
+  createdAt: number; // ms since epoch — when the toast first appeared
   dismissedAt: number; // ms since epoch — when it left the visible queue
   read: boolean;
-  source: 'toast';     // always "toast" — never mixed with server notifications
+  source: 'toast'; // always "toast" — never mixed with server notifications
 }
 ```
 

@@ -16,6 +16,7 @@ The goal is to confirm completion clearly, suggest useful next steps without pre
 ## Flows Covered
 
 ### 1. Create Success
+
 - Trigger: commitment creation completes successfully
 - Default container: modal on top of the create flow
 - Escalate to full page only when the user entered from a dedicated transaction confirmation route or deep-linked wallet callback
@@ -26,6 +27,7 @@ The goal is to confirm completion clearly, suggest useful next steps without pre
 - Optional external link: `View on Explorer`
 
 ### 2. Settle Success
+
 - Trigger: settlement completes successfully
 - Default container: modal from commitment details or settlement flow
 - Use full page when the underlying commitment record is no longer actionable and the user benefits from a closed-loop summary
@@ -36,6 +38,7 @@ The goal is to confirm completion clearly, suggest useful next steps without pre
 - Optional external link: `View Settlement on Explorer`
 
 ### 3. Listing Success
+
 - Trigger: marketplace listing is published successfully
 - Default container: modal from listing flow
 - Use full page when listing includes promotional/share context or the listing route becomes canonical
@@ -50,6 +53,7 @@ The goal is to confirm completion clearly, suggest useful next steps without pre
 Use the success modal when the user should stay close to the original workflow context.
 
 ### Recommended Structure
+
 1. Success icon or illustrated confirmation
 2. Clear title with completed verb
 3. One-sentence description
@@ -61,6 +65,7 @@ Use the success modal when the user should stay close to the original workflow c
 9. Optional safe external link row
 
 ### Content Rules
+
 - Title examples: `Commitment Created`, `Commitment Settled`, `Listing Published`
 - Description should answer "what happened" and "what changed"
 - Metadata block should show one or two high-value identifiers only
@@ -72,6 +77,7 @@ Use the success modal when the user should stay close to the original workflow c
 Use the full success page when users need more breathing room, stronger orientation, or a durable destination after completion.
 
 ### Recommended Structure
+
 1. Success hero with title and summary
 2. Status card with key identifiers and timestamps
 3. Outcome summary section
@@ -81,6 +87,7 @@ Use the full success page when users need more breathing room, stronger orientat
 7. Safe external links section
 
 ### Full Page Advantages
+
 - Better for mobile when modals feel cramped
 - Better for settlement flows that end an active lifecycle
 - Better for canonical listing URLs that users may want to revisit or share
@@ -88,6 +95,7 @@ Use the full success page when users need more breathing room, stronger orientat
 ## Suggested Copy Patterns
 
 ### Create
+
 - Title: `Commitment Created`
 - Body: `Your commitment is active and ready to track from your dashboard.`
 - Next steps:
@@ -96,6 +104,7 @@ Use the full success page when users need more breathing room, stronger orientat
   - `Create another commitment later if needed`
 
 ### Settle
+
 - Title: `Commitment Settled`
 - Body: `Settlement is complete and this commitment is now closed.`
 - Next steps:
@@ -104,6 +113,7 @@ Use the full success page when users need more breathing room, stronger orientat
   - `Share a receipt link if you want a record outside the app`
 
 ### Listing
+
 - Title: `Listing Published`
 - Body: `Your commitment is now visible in the marketplace.`
 - Next steps:
@@ -116,16 +126,19 @@ Use the full success page when users need more breathing room, stronger orientat
 Share is optional and should never visually outrank the core product action.
 
 ### Share Entry Points
+
 - Inline secondary button in modals when the item now has a stable URL
 - Dedicated share card on full success pages
 - Overflow menu only if space is constrained on mobile
 
 ### Share Options
+
 - `Copy Link`
 - `Share Listing` or `Share Commitment`
 - Native share sheet on supported mobile browsers
 
 ### Share Rules
+
 - Do not auto-open native share sheets
 - Do not auto-copy links
 - Do not gate completion behind sharing
@@ -136,11 +149,13 @@ Share is optional and should never visually outrank the core product action.
 External links must be clearly optional and visually de-emphasized.
 
 ### Allowed External Link Use Cases
+
 - Blockchain explorer transaction details
 - Public listing link outside the authenticated app shell
 - Official documentation explaining the resulting state
 
 ### Requirements
+
 - Always use an external-link icon and label the destination
 - Open in a new tab
 - Use safe rel attributes for security
@@ -148,6 +163,7 @@ External links must be clearly optional and visually de-emphasized.
 - Never style external links like the primary confirmation action
 
 ### Recommended Labels
+
 - `View on Stellar Explorer`
 - `Open Public Listing`
 - `Read Settlement Reference`
@@ -155,11 +171,13 @@ External links must be clearly optional and visually de-emphasized.
 ## Layout Behavior
 
 ### Desktop
+
 - Modal max width: 520px to 640px
 - Keep action stack simple: one primary button, up to two secondary actions
 - Place share and external links in a quieter footer zone
 
 ### Mobile
+
 - Prefer bottom-sheet or full-height modal treatment when content exceeds two actions plus metadata
 - Keep the primary action pinned within thumb reach
 - Avoid more than three visible follow-up choices before truncation or stacking
@@ -175,11 +193,11 @@ External links must be clearly optional and visually de-emphasized.
 
 ## Variants Summary
 
-| Flow | Modal Primary | Modal Secondary | Full Page Add-on | Share Default | External Link |
-| --- | --- | --- | --- | --- | --- |
-| Create | View Commitment | Create Another / Dashboard | Activity summary | Optional | Optional |
-| Settle | View Settlement Details | Dashboard / Marketplace | Final outcome summary | Optional | Optional |
-| Listing | View Listing | Share / Marketplace | Promo-ready listing panel | Recommended | Optional |
+| Flow    | Modal Primary           | Modal Secondary            | Full Page Add-on          | Share Default | External Link |
+| ------- | ----------------------- | -------------------------- | ------------------------- | ------------- | ------------- |
+| Create  | View Commitment         | Create Another / Dashboard | Activity summary          | Optional      | Optional      |
+| Settle  | View Settlement Details | Dashboard / Marketplace    | Final outcome summary     | Optional      | Optional      |
+| Listing | View Listing            | Share / Marketplace        | Promo-ready listing panel | Recommended   | Optional      |
 
 ## QA Checklist
 

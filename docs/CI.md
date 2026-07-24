@@ -5,13 +5,13 @@ their checks locally.
 
 ## Workflows
 
-| Workflow | File | Purpose | Blocking? |
-| -------- | ---- | ------- | --------- |
-| Coverage Check | `coverage.yml` | Vitest with coverage thresholds | Yes |
-| Lighthouse | `lighthouse.yml` | Lab performance/a11y/SEO audits | Warn |
-| CodeQL | `codeql.yml` | Security static analysis | Yes |
-| Contracts | `contracts.yml` | Soroban contract checks | Yes |
-| **Typecheck** | `typecheck.yml` | `tsc --noEmit` type feedback | **Reporting (non-blocking) — see below** |
+| Workflow       | File             | Purpose                         | Blocking?                                |
+| -------------- | ---------------- | ------------------------------- | ---------------------------------------- |
+| Coverage Check | `coverage.yml`   | Vitest with coverage thresholds | Yes                                      |
+| Lighthouse     | `lighthouse.yml` | Lab performance/a11y/SEO audits | Warn                                     |
+| CodeQL         | `codeql.yml`     | Security static analysis        | Yes                                      |
+| Contracts      | `contracts.yml`  | Soroban contract checks         | Yes                                      |
+| **Typecheck**  | `typecheck.yml`  | `tsc --noEmit` type feedback    | **Reporting (non-blocking) — see below** |
 
 ## Typecheck gate
 

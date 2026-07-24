@@ -14,16 +14,16 @@ with shorter recovery paths.
 Every failure resolves to one of these five categories. The state ID is the modal state the
 user lands in; the cause is the underlying reason.
 
-| Cause | State | Source | Recovery primary action |
-| :---- | :---- | :----- | :---------------------- |
-| Wallet not detected | `S2` | Browser API returned no extension after 3 s | `Install Freighter →` |
-| Wallet locked | `S3` | Freighter API replied with locked status | `Open Freighter` |
-| Network mismatch | `S6` | Active network ≠ app network | `Open Freighter` (then switch) |
-| User rejected (connect) | `E1` | Freighter API rejected on connect | `Try again` |
-| User rejected (sign) | `E2` | Freighter API rejected on sign | `Try again` |
-| Timeout | `E3` | No response in 60 s | `Retry` |
-| Extension error | `E4` | Freighter API threw / context invalidated | `Reload page` |
-| Server error (verify) | `E5` | `/api/auth/verify` returned non-2xx | `Try again` (with cause-specific copy) |
+| Cause                   | State | Source                                      | Recovery primary action                |
+| :---------------------- | :---- | :------------------------------------------ | :------------------------------------- |
+| Wallet not detected     | `S2`  | Browser API returned no extension after 3 s | `Install Freighter →`                  |
+| Wallet locked           | `S3`  | Freighter API replied with locked status    | `Open Freighter`                       |
+| Network mismatch        | `S6`  | Active network ≠ app network                | `Open Freighter` (then switch)         |
+| User rejected (connect) | `E1`  | Freighter API rejected on connect           | `Try again`                            |
+| User rejected (sign)    | `E2`  | Freighter API rejected on sign              | `Try again`                            |
+| Timeout                 | `E3`  | No response in 60 s                         | `Retry`                                |
+| Extension error         | `E4`  | Freighter API threw / context invalidated   | `Reload page`                          |
+| Server error (verify)   | `E5`  | `/api/auth/verify` returned non-2xx         | `Try again` (with cause-specific copy) |
 
 ---
 
@@ -35,47 +35,47 @@ The flow uses these recovery patterns. Every error state composes one or more.
 
 Used by: `S2`, `S3`, `S6` (after network switch).
 
-* The modal polls Freighter every **1.5 s**.
-* When the underlying condition clears, the modal advances automatically.
-* No "Refresh" button is required; the polling is invisible.
-* After **30 s** of polling with no change, a `Need help?` link surfaces below the body
+- The modal polls Freighter every **1.5 s**.
+- When the underlying condition clears, the modal advances automatically.
+- No "Refresh" button is required; the polling is invisible.
+- After **30 s** of polling with no change, a `Need help?` link surfaces below the body
   copy.
 
 ### 2. Manual retry
 
 Used by: `E1`, `E2`, `E3`, `E5`.
 
-* The user clicks `Try again` or `Retry` (label per state, see
+- The user clicks `Try again` or `Retry` (label per state, see
   [`security-copy.md`](./security-copy.md)).
-* Returns to the in-flight state that failed (`S5` for connect retries; `S8` for sign
+- Returns to the in-flight state that failed (`S5` for connect retries; `S8` for sign
   retries; `S9` for verify retries).
-* No silent / automatic retries — see *Hard rules* below.
+- No silent / automatic retries — see _Hard rules_ below.
 
 ### 3. Hard reset
 
 Used by: `E4`.
 
-* Full page reload. The Freighter extension context can become invalidated when the
+- Full page reload. The Freighter extension context can become invalidated when the
   extension auto-updates mid-session; only a page reload reliably recovers from that.
-* The reload preserves the entry point via `?next=` so the user resumes where they were.
+- The reload preserves the entry point via `?next=` so the user resumes where they were.
 
 ### 4. Disconnect
 
 Used by: `E2`.
 
-* User opted out of signing. We release the connection state on our side so they're not
+- User opted out of signing. We release the connection state on our side so they're not
   stuck in a half-connected state.
-* This is **not** a generic recovery action — it appears only in `E2` because that's the
+- This is **not** a generic recovery action — it appears only in `E2` because that's the
   only state where the user has approved connect but explicitly refused to authenticate.
 
 ### 5. Cause-specific retry
 
 Used by: `E5`.
 
-* The server-error state inspects the failure cause and adjusts:
-  * `Network` → `Try again` repeats the verify call.
-  * `Server` → same, with a "Try again in a moment" hint.
-  * `Expired nonce` → restart at `S7` with a fresh challenge from the server.
+- The server-error state inspects the failure cause and adjusts:
+  - `Network` → `Try again` repeats the verify call.
+  - `Server` → same, with a "Try again in a moment" hint.
+  - `Expired nonce` → restart at `S7` with a fresh challenge from the server.
 
 ---
 
@@ -104,75 +104,75 @@ that have hurt users elsewhere.
 
 ### Wallet not detected (`S2`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | Detection (`S1`) timed out after 3 s OR `isConnected()` returned `false` |
-| Recovery primary | `Install Freighter →` opens `https://www.freighter.app` in a new tab |
+| Field               | Value                                                                     |
+| :------------------ | :------------------------------------------------------------------------ |
+| Trigger             | Detection (`S1`) timed out after 3 s OR `isConnected()` returned `false`  |
+| Recovery primary    | `Install Freighter →` opens `https://www.freighter.app` in a new tab      |
 | Below-body fallback | `Already installed? Refresh and we'll detect it.` (re-runs detection now) |
-| Auto-advance | Yes — re-detect every 1.5 s |
-| Help surface | After 30 s, `Need help?` link → "Trouble detecting Freighter?" article |
+| Auto-advance        | Yes — re-detect every 1.5 s                                               |
+| Help surface        | After 30 s, `Need help?` link → "Trouble detecting Freighter?" article    |
 
 ### Wallet locked (`S3`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | Freighter `isAllowed()` returned `false` OR `getAddress()` rejected with `LOCKED` |
-| Recovery primary | `Open Freighter` (focus extension if browser allows; otherwise hint copy) |
-| Auto-advance | Yes — re-detect every 1.5 s |
-| Help surface | After 30 s, `Need help?` link → "Freighter says locked but I unlocked it" article |
+| Field            | Value                                                                             |
+| :--------------- | :-------------------------------------------------------------------------------- |
+| Trigger          | Freighter `isAllowed()` returned `false` OR `getAddress()` rejected with `LOCKED` |
+| Recovery primary | `Open Freighter` (focus extension if browser allows; otherwise hint copy)         |
+| Auto-advance     | Yes — re-detect every 1.5 s                                                       |
+| Help surface     | After 30 s, `Need help?` link → "Freighter says locked but I unlocked it" article |
 
 ### Network mismatch (`S6`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | Freighter `getNetwork()` ≠ `process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE` |
-| Recovery primary | `Open Freighter`, with copy guiding the network switch |
-| Auto-advance | Yes — Freighter network-change event triggers re-detect |
-| Hard stop | Yes — no "continue anyway" affordance |
+| Field            | Value                                                                   |
+| :--------------- | :---------------------------------------------------------------------- |
+| Trigger          | Freighter `getNetwork()` ≠ `process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE` |
+| Recovery primary | `Open Freighter`, with copy guiding the network switch                  |
+| Auto-advance     | Yes — Freighter network-change event triggers re-detect                 |
+| Hard stop        | Yes — no "continue anyway" affordance                                   |
 
 ### Reject — connect (`E1`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | `getAddress()` rejected with `User rejected` |
-| Recovery primary | `Try again` → `S5` (re-fires `getAddress()`) |
-| Recovery secondary | `Cancel` |
-| Notes | Preserve any cached address from prior connect — but require fresh approval |
+| Field              | Value                                                                       |
+| :----------------- | :-------------------------------------------------------------------------- |
+| Trigger            | `getAddress()` rejected with `User rejected`                                |
+| Recovery primary   | `Try again` → `S5` (re-fires `getAddress()`)                                |
+| Recovery secondary | `Cancel`                                                                    |
+| Notes              | Preserve any cached address from prior connect — but require fresh approval |
 
 ### Reject — signature (`E2`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | `signMessage()` rejected with `User rejected` |
-| Recovery primary | `Try again` → `S8` (re-fires `signMessage()` with same nonce if not expired) |
-| Recovery secondary | `Disconnect wallet` (releases connection state, closes modal) |
-| Notes | If the original nonce expired between rejection and retry, fetch a fresh one and replay `S7` for verification |
+| Field              | Value                                                                                                         |
+| :----------------- | :------------------------------------------------------------------------------------------------------------ |
+| Trigger            | `signMessage()` rejected with `User rejected`                                                                 |
+| Recovery primary   | `Try again` → `S8` (re-fires `signMessage()` with same nonce if not expired)                                  |
+| Recovery secondary | `Disconnect wallet` (releases connection state, closes modal)                                                 |
+| Notes              | If the original nonce expired between rejection and retry, fetch a fresh one and replay `S7` for verification |
 
 ### Timeout (`E3`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | 60 s elapsed in `S5` or `S8` with no extension response |
-| Recovery primary | `Retry` → returns to whichever state timed out |
-| Recovery secondary | `Cancel` |
-| Notes | Do not increase timeout on retry. If the second `Retry` also times out, escalate to `E4`. |
+| Field              | Value                                                                                     |
+| :----------------- | :---------------------------------------------------------------------------------------- |
+| Trigger            | 60 s elapsed in `S5` or `S8` with no extension response                                   |
+| Recovery primary   | `Retry` → returns to whichever state timed out                                            |
+| Recovery secondary | `Cancel`                                                                                  |
+| Notes              | Do not increase timeout on retry. If the second `Retry` also times out, escalate to `E4`. |
 
 ### Extension error (`E4`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | Any unrecognized exception from the Freighter API; `chrome-extension` URL invalidated |
-| Recovery primary | `Reload page` (preserves `?next=`) |
-| Recovery secondary | `Cancel` |
-| Below-body | Collapsible `Show details` revealing the raw error message for support tickets |
+| Field              | Value                                                                                 |
+| :----------------- | :------------------------------------------------------------------------------------ |
+| Trigger            | Any unrecognized exception from the Freighter API; `chrome-extension` URL invalidated |
+| Recovery primary   | `Reload page` (preserves `?next=`)                                                    |
+| Recovery secondary | `Cancel`                                                                              |
+| Below-body         | Collapsible `Show details` revealing the raw error message for support tickets        |
 
 ### Server error — verify (`E5`)
 
-| Field | Value |
-| :---- | :---- |
-| Trigger | `/api/auth/verify` returned non-2xx |
-| Cause: Network | `Try again` repeats the verify call. If 3 consecutive network failures, switch primary action to `Contact support`. |
-| Cause: Server | Same as Network. Different copy ("Something went wrong on our side."). |
+| Field                | Value                                                                                                                                   |
+| :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger              | `/api/auth/verify` returned non-2xx                                                                                                     |
+| Cause: Network       | `Try again` repeats the verify call. If 3 consecutive network failures, switch primary action to `Contact support`.                     |
+| Cause: Server        | Same as Network. Different copy ("Something went wrong on our side.").                                                                  |
 | Cause: Expired nonce | `Try again` restarts at `S7` with a fresh challenge from the server. The user must re-sign — we cannot reuse the now-invalid signature. |
 
 ---
@@ -181,9 +181,9 @@ that have hurt users elsewhere.
 
 A `Full reset` discards all transient state and returns to `S1`. It runs when:
 
-* The user closes the modal (× / `Cancel`) and reopens it.
-* `E4` recovery (`Reload page`) completes.
-* The Freighter network-change event fires while we are in `S5`–`S9` (defensive — the
+- The user closes the modal (× / `Cancel`) and reopens it.
+- `E4` recovery (`Reload page`) completes.
+- The Freighter network-change event fires while we are in `S5`–`S9` (defensive — the
   network we approved against may differ from the one we're about to sign with).
 
 Full reset never preserves cached extension state on our side; the next iteration
@@ -196,11 +196,11 @@ re-detects from scratch.
 Some failures cannot be resolved inside the modal. The flow has three deliberate help
 surfaces, never more.
 
-| Surface | Trigger | Destination |
-| :------ | :------ | :---------- |
-| `Need help?` link | 30 s in `S2` / `S3` / `S6` with no progress | Article on installing / unlocking / network-switching Freighter |
-| `Show details` collapse | `E4` body | Reveals raw error message, in-place |
-| `Contact support` | `E5` after 3 retries | Help/contact page with the request id pre-filled |
+| Surface                 | Trigger                                     | Destination                                                     |
+| :---------------------- | :------------------------------------------ | :-------------------------------------------------------------- |
+| `Need help?` link       | 30 s in `S2` / `S3` / `S6` with no progress | Article on installing / unlocking / network-switching Freighter |
+| `Show details` collapse | `E4` body                                   | Reveals raw error message, in-place                             |
+| `Contact support`       | `E5` after 3 retries                        | Help/contact page with the request id pre-filled                |
 
 The flow does not link out to a "wallet help center" homepage. Vague help links erode
 trust; deep links to the specific topic the user is stuck on do not.
@@ -212,13 +212,13 @@ trust; deep links to the specific topic the user is stuck on do not.
 The design relies on the data layer to log specific events so we can refine recovery copy
 over time. The events the design assumes are:
 
-| Event | When |
-| :---- | :--- |
-| `wallet_modal_opened` | Modal entered `S1` |
-| `wallet_state_<id>` | Each state entered |
-| `wallet_recovery_clicked` (with state) | Primary action of an `E*` state clicked |
-| `wallet_modal_closed` (with last state) | Modal closed without success |
-| `wallet_connected` (with truncated address) | Reached `S10` |
+| Event                                       | When                                    |
+| :------------------------------------------ | :-------------------------------------- |
+| `wallet_modal_opened`                       | Modal entered `S1`                      |
+| `wallet_state_<id>`                         | Each state entered                      |
+| `wallet_recovery_clicked` (with state)      | Primary action of an `E*` state clicked |
+| `wallet_modal_closed` (with last state)     | Modal closed without success            |
+| `wallet_connected` (with truncated address) | Reached `S10`                           |
 
 These are events the **UX** depends on — instrumenting them is out of scope for this PR but
 must accompany the implementation that follows.

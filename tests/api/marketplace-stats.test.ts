@@ -56,9 +56,7 @@ describe('GET /api/marketplace/stats', () => {
     vi.mocked(checkRateLimit).mockResolvedValue(true);
     mockCache.get.mockResolvedValue(null);
     mockCache.set.mockResolvedValue(undefined);
-    vi.mocked(marketplaceService.getMarketplaceStats).mockResolvedValue(
-      marketplaceStats as any,
-    );
+    vi.mocked(marketplaceService.getMarketplaceStats).mockResolvedValue(marketplaceStats as any);
   });
 
   it('returns cached stats and marks the response as a cache hit', async () => {
@@ -71,9 +69,7 @@ describe('GET /api/marketplace/stats', () => {
     expect(data.success).toBe(true);
     expect(data.data).toEqual(marketplaceStats);
     expect(headers.get('X-Cache')).toBe('HIT');
-    expect(headers.get('Cache-Control')).toBe(
-      'public, s-maxage=60, stale-while-revalidate=30',
-    );
+    expect(headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=30');
     expect(mockCache.get).toHaveBeenCalledWith(MARKETPLACE_STATS_KEY);
     expect(marketplaceService.getMarketplaceStats).not.toHaveBeenCalled();
     expect(mockCache.set).not.toHaveBeenCalled();
@@ -105,9 +101,7 @@ describe('GET /api/marketplace/stats', () => {
         Aggressive: 0,
       },
     };
-    vi.mocked(marketplaceService.getMarketplaceStats).mockResolvedValue(
-      zeroStats as any,
-    );
+    vi.mocked(marketplaceService.getMarketplaceStats).mockResolvedValue(zeroStats as any);
 
     const res = await GET(makeRequest(), { params: {} }, 'corr-stats-zero');
     const { status, data, headers } = await parseResponse(res);

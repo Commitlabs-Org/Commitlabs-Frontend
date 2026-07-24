@@ -84,7 +84,10 @@ export function OnboardingChecklist({ className, onAllComplete }: OnboardingChec
 
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {milestones.map((m) => (
-          <li key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0' }}>
+          <li
+            key={m.id}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0' }}
+          >
             <input
               aria-label={m.label}
               checked={m.completed}

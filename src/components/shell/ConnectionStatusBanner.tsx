@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { WifiOff, Wifi } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -14,9 +14,7 @@ export function ConnectionStatusBanner({ isOnline }: ConnectionStatusBannerProps
   const prefersReducedMotion = useRef(false);
 
   useEffect(() => {
-    prefersReducedMotion.current = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
+    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
 
   // Track offline transitions and reset state

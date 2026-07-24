@@ -10,7 +10,7 @@
 
 ## Context
 
-CommitLabs is a Stellar/Soroban dApp: a user's identity *is* their Stellar
+CommitLabs is a Stellar/Soroban dApp: a user's identity _is_ their Stellar
 account, and every state-changing action ultimately maps to an on-chain
 transaction signed by that account. The product therefore has no separate
 username/password concept and no first-party credential store to protect.
@@ -23,7 +23,7 @@ handlers can authorize requests, and we need that identity to be:
 - safe to persist in the browser without ever exposing key material.
 
 The wallet (Freighter) holds the secret key and never reveals it; it will only
-return a *signature* over a message. Any auth design has to be built on that
+return a _signature_ over a message. Any auth design has to be built on that
 primitive.
 
 ## Decision
@@ -67,7 +67,7 @@ Two invariants are part of this decision:
 - **Pure client-side "is a wallet connected?" check, no server session.**
   Rejected: connection state is trivially spoofable and gives the backend no
   verifiable caller identity, so it cannot protect server route handlers. We keep
-  a client guard (`RequireWallet`) for UX, but it is explicitly *not* the
+  a client guard (`RequireWallet`) for UX, but it is explicitly _not_ the
   security boundary.
 - **Signature without a server nonce** (e.g. signing a static or client-chosen
   message). Rejected: a server-issued, single-use, expiring nonce is what makes

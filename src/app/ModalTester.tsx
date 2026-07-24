@@ -40,14 +40,25 @@ export default function ModalTester() {
     <>
       {/* Floating Action Buttons for Testing */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 bg-[#1a1a1a] p-4 rounded-xl border border-white/10 shadow-2xl">
-        <h3 className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">Modal Tester</h3>
-        <button onClick={runSuccessFlow} className="text-sm py-2 px-4 rounded-lg font-semibold text-white bg-[#00C950] hover:bg-[#00C950]/90 transition-colors">
+        <h3 className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">
+          Modal Tester
+        </h3>
+        <button
+          onClick={runSuccessFlow}
+          className="text-sm py-2 px-4 rounded-lg font-semibold text-white bg-[#00C950] hover:bg-[#00C950]/90 transition-colors"
+        >
           Play Success Flow
         </button>
-        <button onClick={runTimeoutFlow} className="text-sm py-2 px-4 rounded-lg font-semibold text-white bg-[#FF8904] hover:bg-[#FF8904]/90 transition-colors">
+        <button
+          onClick={runTimeoutFlow}
+          className="text-sm py-2 px-4 rounded-lg font-semibold text-white bg-[#FF8904] hover:bg-[#FF8904]/90 transition-colors"
+        >
           Play Timeout Flow
         </button>
-        <button onClick={runRejectFlow} className="text-sm py-2 px-4 rounded-lg font-semibold text-white bg-[#FF4757] hover:bg-[#FF4757]/90 transition-colors">
+        <button
+          onClick={runRejectFlow}
+          className="text-sm py-2 px-4 rounded-lg font-semibold text-white bg-[#FF4757] hover:bg-[#FF4757]/90 transition-colors"
+        >
           Play User Reject
         </button>
       </div>
@@ -57,7 +68,11 @@ export default function ModalTester() {
         state={txState}
         actionName="Creating Commitment"
         errorCode={errorCode}
-        txHash={(txState === 'PROCESSING' || txState === 'SUCCESS' || txState === 'ERROR') ? 'a1b2...c3d4' : undefined}
+        txHash={
+          txState === 'PROCESSING' || txState === 'SUCCESS' || txState === 'ERROR'
+            ? 'a1b2...c3d4'
+            : undefined
+        }
         onClose={() => {
           setIsOpen(false);
           setTimeout(() => setTxState('IDLE'), 300); // Reset after closing animation

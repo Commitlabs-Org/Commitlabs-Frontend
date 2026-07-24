@@ -1,57 +1,53 @@
-'use client'
+'use client';
 
-import {
-  EXPOSURE_ZONE_THRESHOLDS,
-  getExposureLevel,
-  type ExposureLevel,
-} from '@/utils/exposure'
-import styles from './VolatilityExposureMeter.module.css'
-import { useReducedMotion } from '@/lib/a11y/useReducedMotion'
+import { EXPOSURE_ZONE_THRESHOLDS, getExposureLevel, type ExposureLevel } from '@/utils/exposure';
+import styles from './VolatilityExposureMeter.module.css';
+import { useReducedMotion } from '@/lib/a11y/useReducedMotion';
 
 export interface VolatilityExposureMeterProps {
   /** Current exposure as a percentage (0–100). Clamped when rendering. */
-  valuePercent?: number
+  valuePercent?: number;
   /** When true, shows an explicit insufficient-data state instead of a numeric reading. */
-  insufficientData?: boolean
+  insufficientData?: boolean;
   /** Optional short description of what the exposure means. */
-  description?: string
+  description?: string;
   /**
    * Historical exposure values (0–100 each) shown as a mini sparkline trend.
    * Should be ordered oldest → newest; at least 2 values required to render.
    */
-  historyData?: number[]
+  historyData?: number[];
 }
 
 function clamp(value: number): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) return 0
-  return Math.max(0, Math.min(100, value))
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, value));
 }
 
 function exposureLevel(percent: number): 'low' | 'medium' | 'high' {
-  if (percent <= 33) return 'low'
-  if (percent <= 66) return 'medium'
-  return 'high'
+  if (percent <= 33) return 'low';
+  if (percent <= 66) return 'medium';
+  return 'high';
 }
 
 interface SparklineProps {
-  data: number[]
+  data: number[];
 }
 
 function TrendSparkline({ data }: SparklineProps) {
-  const W = 80
-  const H = 24
-  const min = Math.min(...data)
-  const max = Math.max(...data)
-  const range = max - min || 1
+  const W = 80;
+  const H = 24;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
   const pts = data
     .map((v, i) => {
-      const x = (i / (data.length - 1)) * W
-      const y = H - ((v - min) / range) * H
-      return `${x.toFixed(1)},${y.toFixed(1)}`
+      const x = (i / (data.length - 1)) * W;
+      const y = H - ((v - min) / range) * H;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
-    .join(' ')
-  const trend = data[data.length - 1] >= data[0]
-  const stroke = trend ? '#ef4444' : '#22c55e' // higher volatility = red; lower = green
+    .join(' ');
+  const trend = data[data.length - 1] >= data[0];
+  const stroke = trend ? '#ef4444' : '#22c55e'; // higher volatility = red; lower = green
   return (
     <svg
       width={W}
@@ -69,7 +65,7 @@ function TrendSparkline({ data }: SparklineProps) {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 export default function VolatilityExposureMeter({
@@ -78,28 +74,24 @@ export default function VolatilityExposureMeter({
   description,
   historyData,
 }: VolatilityExposureMeterProps) {
-  const percent = clamp(valuePercent)
-  const level = exposureLevel(percent)
-  const ariaLabel = `Volatility exposure: ${percent}%, ${level} range.`
-  const reducedMotion = useReducedMotion()
-  const hasHistory = historyData && historyData.length >= 2
+  const percent = clamp(valuePercent);
+  const level = exposureLevel(percent);
+  const ariaLabel = `Volatility exposure: ${percent}%, ${level} range.`;
+  const reducedMotion = useReducedMotion();
+  const hasHistory = historyData && historyData.length >= 2;
 
   return (
     <section
       className={styles.container}
       aria-labelledby="volatility-exposure-title"
-      aria-describedby={
-        description || insufficientData ? 'volatility-exposure-desc' : undefined
-      }
+      aria-describedby={description || insufficientData ? 'volatility-exposure-desc' : undefined}
     >
       <div className={styles.header}>
         <h2 id="volatility-exposure-title" className={styles.title}>
           Volatility Exposure
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {hasHistory && !reducedMotion && (
-            <TrendSparkline data={historyData!} />
-          )}
+          {hasHistory && !reducedMotion && <TrendSparkline data={historyData!} />}
           <span className={styles.percentLabel}>{Math.round(percent)}%</span>
         </div>
       </div>
@@ -142,5 +134,5 @@ export default function VolatilityExposureMeter({
         </p>
       )}
     </section>
-  )
+  );
 }

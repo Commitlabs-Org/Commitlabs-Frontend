@@ -13,14 +13,14 @@ function renderModal(props: Partial<React.ComponentProps<typeof ExportCommitment
       ownerAddress="GOWNERADDRESS"
       sessionToken="session-token"
       {...props}
-    />
+    />,
   );
 }
 
 function mockSuccessfulFetch(
   csvBody = 'Commitment ID,Owner\r\ncommitment-1,GOWNERADDRESS\r\n',
   filename = 'commitments.csv',
-  headers: Record<string, string> = {}
+  headers: Record<string, string> = {},
 ) {
   vi.mocked(fetch).mockResolvedValue(
     new Response(csvBody, {
@@ -30,7 +30,7 @@ function mockSuccessfulFetch(
         'content-type': 'text/csv; charset=utf-8',
         ...headers,
       },
-    })
+    }),
   );
 }
 
@@ -67,7 +67,7 @@ describe('ExportCommitmentsModal', () => {
           headers: {
             Authorization: 'Bearer session-token',
           },
-        }
+        },
       );
     });
 
@@ -88,7 +88,7 @@ describe('ExportCommitmentsModal', () => {
         expect.any(String),
         expect.objectContaining({
           headers: { Authorization: 'Bearer explicit-token' },
-        })
+        }),
       );
     });
   });
@@ -106,7 +106,7 @@ describe('ExportCommitmentsModal', () => {
         expect.any(String),
         expect.objectContaining({
           headers: { Authorization: 'Bearer session-stored-token' },
-        })
+        }),
       );
     });
   });
@@ -124,7 +124,7 @@ describe('ExportCommitmentsModal', () => {
         expect.any(String),
         expect.objectContaining({
           headers: { Authorization: 'Bearer local-stored-token' },
-        })
+        }),
       );
     });
   });
@@ -142,7 +142,7 @@ describe('ExportCommitmentsModal', () => {
         expect.any(String),
         expect.objectContaining({
           headers: { Authorization: 'Bearer colon-key-token' },
-        })
+        }),
       );
     });
   });
@@ -155,7 +155,7 @@ describe('ExportCommitmentsModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
 
     await screen.findByText(
-      'Export ready. No commitment rows found, so a header-only CSV was downloaded.'
+      'Export ready. No commitment rows found, so a header-only CSV was downloaded.',
     );
   });
 
@@ -199,7 +199,7 @@ describe('ExportCommitmentsModal', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain(
-      'This export is only available for the connected owner address.'
+      'This export is only available for the connected owner address.',
     );
   });
 
@@ -259,7 +259,7 @@ describe('ExportCommitmentsModal', () => {
           'content-disposition': 'attachment; filename="commitments.csv"',
           'content-type': 'text/csv; charset=utf-8',
         },
-      })
+      }),
     );
 
     await screen.findByText('Export ready. 1 commitment downloaded as CSV.');
@@ -319,7 +319,7 @@ describe('ExportCommitmentsModal', () => {
         onClose={vi.fn()}
         ownerAddress="GOWNERADDRESS"
         sessionToken="session-token"
-      />
+      />,
     );
 
     rerender(
@@ -328,7 +328,7 @@ describe('ExportCommitmentsModal', () => {
         onClose={vi.fn()}
         ownerAddress="GOWNERADDRESS"
         sessionToken="session-token"
-      />
+      />,
     );
 
     expect(screen.queryByRole('alert')).toBeNull();
@@ -357,9 +357,7 @@ describe('ExportCommitmentsModal', () => {
   });
 
   it('reports multiple commitments correctly', async () => {
-    mockSuccessfulFetch(
-      'Commitment ID,Owner\r\nc-1,ADDR\r\nc-2,ADDR\r\nc-3,ADDR\r\n'
-    );
+    mockSuccessfulFetch('Commitment ID,Owner\r\nc-1,ADDR\r\nc-2,ADDR\r\nc-3,ADDR\r\n');
 
     renderModal();
 
@@ -378,7 +376,7 @@ describe('ExportCommitmentsModal', () => {
             'content-disposition': 'attachment; filename="commitments.csv"',
             'content-type': 'text/csv; charset=utf-8',
           },
-        })
+        }),
       );
 
     renderModal();
@@ -402,7 +400,7 @@ describe('ExportCommitmentsModal', () => {
         'http://localhost:3000/api/commitments/export?ownerAddress=GOWNERADDRESS',
         expect.objectContaining({
           headers: { Authorization: 'Bearer token-with-space' },
-        })
+        }),
       );
     });
   });
@@ -422,7 +420,7 @@ describe('ExportCommitmentsModal', () => {
         expect.any(String),
         expect.objectContaining({
           headers: { Authorization: 'Bearer fallback-token' },
-        })
+        }),
       );
     });
   });

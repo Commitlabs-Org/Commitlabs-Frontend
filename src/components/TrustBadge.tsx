@@ -11,10 +11,10 @@ interface TrustBadgeProps {
   showTooltip?: boolean;
 }
 
-export const TrustBadge: React.FC<TrustBadgeProps> = ({ 
-  level, 
+export const TrustBadge: React.FC<TrustBadgeProps> = ({
+  level,
   className = '',
-  showTooltip = true 
+  showTooltip = true,
 }) => {
   const getBadgeConfig = () => {
     switch (level) {
@@ -23,14 +23,15 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
           icon: <CheckCircle className="w-3 h-3" />,
           label: 'Verified Seller',
           colorClass: 'text-[#00C950] bg-[#0f2a1d] border-[#00C95033]',
-          description: 'Identity and historical performance have been verified by Commitlabs.'
+          description: 'Identity and historical performance have been verified by Commitlabs.',
         };
       case 'reputable':
         return {
           icon: <CheckCircle className="w-3 h-3 opacity-70" />,
           label: 'Top Reputation',
           colorClass: 'text-[#51A2FF] bg-[#122238] border-[#51A2FF33]',
-          description: 'Seller has a high successful commitment rate and positive community feedback.'
+          description:
+            'Seller has a high successful commitment rate and positive community feedback.',
         };
       case 'unverified':
       default:
@@ -38,7 +39,8 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
           icon: <AlertCircle className="w-3 h-3" />,
           label: 'Self-Reported',
           colorClass: 'text-white/60 bg-white/5 border-white/10',
-          description: 'This seller has not yet completed the verification process. Exercise caution.'
+          description:
+            'This seller has not yet completed the verification process. Exercise caution.',
         };
     }
   };

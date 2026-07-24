@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Create Commitment — CommitLabs',
@@ -28,12 +28,8 @@ export const metadata: Metadata = {
       'Create a new on-chain liquidity commitment on CommitLabs with your preferred risk profile.',
     images: ['/og-image.jpg'],
   },
-}
+};
 
-export default function CreateLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return children
+export default function CreateLayout({ children }: { children: React.ReactNode }) {
+  return children;
 }

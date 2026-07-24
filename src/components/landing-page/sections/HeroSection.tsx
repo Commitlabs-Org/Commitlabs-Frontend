@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import React from "react";
-import { StarField } from "../ui/StarField";
-import { FaGithub, FaEnvelope } from "react-icons/fa";
-import { IoDocumentText } from "react-icons/io5";
-import { motion, Variants } from "framer-motion";
-import Link from "next/link";
-import { useTranslations } from "@/lib/i18n";
+import React from 'react';
+import { StarField } from '../ui/StarField';
+import { FaGithub, FaEnvelope } from 'react-icons/fa';
+import { IoDocumentText } from 'react-icons/io5';
+import { motion, Variants } from 'framer-motion';
+import Link from 'next/link';
+import { useTranslations } from '@/lib/i18n';
 
 const containerVariants: Variants = {
   hidden: {},
@@ -19,7 +19,7 @@ const containerVariants: Variants = {
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' as const } },
 };
 
 export const HeroSection: React.FC = () => {
@@ -51,29 +51,26 @@ export const HeroSection: React.FC = () => {
                 </div>
                 <div className="absolute inset-0 rounded-full shadow-[inset_0px_0px_15px_0px_rgba(245,245,247,0.3)]" />
                 <p className="relative font-roboto font-normal text-white text-lg sm:text-xl lg:text-2xl leading-8 text-center z-10">
-                  {t("landing.hero.brand_letter")}
+                  {t('landing.hero.brand_letter')}
                 </p>
               </div>
               <div className="flex items-center pt-2">
                 <h1 className="font-roboto font-medium text-[#f5f5f7] text-xl sm:text-3xl lg:text-[30px] leading-9">
-                  {t("landing.hero.brand_name")}
+                  {t('landing.hero.brand_name')}
                 </h1>
               </div>
             </motion.div>
 
             {/* Hero Heading */}
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col items-center mb-6"
-            >
+            <motion.div variants={itemVariants} className="flex flex-col items-center mb-6">
               <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl xl:text-[85px] leading-tight text-center bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
-                {t("landing.hero.heading_line1")}
+                {t('landing.hero.heading_line1')}
               </h2>
               <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl xl:text-[85px] leading-tight text-center bg-clip-text text-transparent bg-linear-to-b from-[#0ff0fc] to-[#0a7a82]">
-                {t("landing.hero.heading_line2")}
+                {t('landing.hero.heading_line2')}
               </h2>
               <h2 className="font-['Inter',sans-serif] font-bold text-4xl sm:text-5xl xl:text-[85px] leading-tight text-center bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
-                {t("landing.hero.heading_line3")}
+                {t('landing.hero.heading_line3')}
               </h2>
             </motion.div>
 
@@ -83,7 +80,7 @@ export const HeroSection: React.FC = () => {
               variants={itemVariants}
               className="font-['Inter',sans-serif] font-normal text-[#99a1af] text-base sm:text-lg lg:text-2xl leading-relaxed lg:leading-9.75 text-center max-w-176.25 mb-2 tracking-[0.0703px] px-4"
             >
-              {t("landing.hero.description")}
+              {t('landing.hero.description')}
             </motion.p>
 
             {/* CTA Button */}
@@ -93,12 +90,12 @@ export const HeroSection: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <Link href="/create" legacyBehavior>
                   <a className="bg-[#0ff0fc] text-black font-medium py-3 px-6 rounded-md hover:bg-[#0a7a82] transition-colors">
-                    {t("landing.hero.cta_create")}
+                    {t('landing.hero.cta_create')}
                   </a>
                 </Link>
                 <Link href="/marketplace" legacyBehavior>
                   <a className="bg-[#0a0a0a] border border-[#0ff0fc] text-[#0ff0fc] font-medium py-3 px-6 rounded-md hover:bg-[#0ff0fc] hover:text-black transition-colors">
-                    {t("landing.hero.cta_explore")}
+                    {t('landing.hero.cta_explore')}
                   </a>
                 </Link>
               </div>
@@ -109,35 +106,14 @@ export const HeroSection: React.FC = () => {
               variants={itemVariants}
               className="flex gap-8 items-center justify-center mt-10"
             >
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:opacity-80"
-              >
+              <a href="#" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
                 <FaGithub className="text-[#0a7a82] animate-bounce" size={30} />
               </a>
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:opacity-80"
-              >
-                <FaEnvelope
-                  className="text-[#0a7a82] animate-bounce"
-                  size={30}
-                />
+              <a href="#" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
+                <FaEnvelope className="text-[#0a7a82] animate-bounce" size={30} />
               </a>
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:opacity-80"
-              >
-                <IoDocumentText
-                  className="text-[#0a7a82] animate-bounce"
-                  size={30}
-                />
+              <a href="#" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
+                <IoDocumentText className="text-[#0a7a82] animate-bounce" size={30} />
               </a>
             </motion.div>
           </div>

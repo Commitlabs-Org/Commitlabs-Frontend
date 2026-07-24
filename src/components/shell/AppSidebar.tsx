@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { 
-  Home, 
-  Store, 
-  PlusCircle, 
-  Shield, 
-  Settings, 
-  ChevronLeft, 
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  Home,
+  Store,
+  PlusCircle,
+  Shield,
+  Settings,
+  ChevronLeft,
   ChevronRight,
   X,
-  Menu
-} from 'lucide-react'
-import { ThemeToggle } from '@/components/theme/ThemeToggle'
-import { motion, AnimatePresence } from 'framer-motion'
-import { SidebarSearch } from './SidebarSearch'
+  Menu,
+} from 'lucide-react';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SidebarSearch } from './SidebarSearch';
 
 interface NavItem {
-  href: string
-  label: string
-  icon: React.ReactNode
-  matchPaths?: string[]
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  matchPaths?: string[];
 }
 
 const navItems: NavItem[] = [
@@ -30,128 +30,128 @@ const navItems: NavItem[] = [
     href: '/',
     label: 'Home',
     icon: <Home size={20} />,
-    matchPaths: ['/']
+    matchPaths: ['/'],
   },
   {
     href: '/marketplace',
     label: 'Marketplace',
     icon: <Store size={20} />,
-    matchPaths: ['/marketplace']
+    matchPaths: ['/marketplace'],
   },
   {
     href: '/create',
     label: 'Create',
     icon: <PlusCircle size={20} />,
-    matchPaths: ['/create']
+    matchPaths: ['/create'],
   },
   {
     href: '/commitments',
     label: 'Commitments',
     icon: <Shield size={20} />,
-    matchPaths: ['/commitments']
+    matchPaths: ['/commitments'],
   },
   {
     href: '/settings',
     label: 'Settings',
     icon: <Settings size={20} />,
-    matchPaths: ['/settings']
-  }
-]
+    matchPaths: ['/settings'],
+  },
+];
 
 export interface AppSidebarProps {
-  className?: string
+  className?: string;
   /** Wallet/owner address used to scope the commitment search. */
-  ownerAddress?: string
+  ownerAddress?: string;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAddress }) => {
-  const pathname = usePathname()
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const sidebarRef = useRef<HTMLElement>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   // Load collapsed state from sessionStorage
   useEffect(() => {
-    const stored = sessionStorage.getItem('sidebar-collapsed')
+    const stored = sessionStorage.getItem('sidebar-collapsed');
     if (stored !== null) {
-      setIsCollapsed(stored === 'true')
+      setIsCollapsed(stored === 'true');
     }
-  }, [])
+  }, []);
 
   // Save collapsed state to sessionStorage
   useEffect(() => {
-    sessionStorage.setItem('sidebar-collapsed', String(isCollapsed))
-  }, [isCollapsed])
+    sessionStorage.setItem('sidebar-collapsed', String(isCollapsed));
+  }, [isCollapsed]);
 
   // Close mobile sidebar on route change
   useEffect(() => {
-    setIsMobileOpen(false)
-  }, [pathname])
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   // Focus trap for mobile drawer
   useEffect(() => {
-    if (!isMobileOpen) return
+    if (!isMobileOpen) return;
 
-    const sidebar = sidebarRef.current
-    if (!sidebar) return
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
 
     const focusableElements = sidebar.querySelectorAll<HTMLElement>(
-      'a, button, [tabindex]:not([tabindex="-1"])'
-    )
-    const firstElement = focusableElements[0] as HTMLElement | undefined
-    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined
+      'a, button, [tabindex]:not([tabindex="-1"])',
+    );
+    const firstElement = focusableElements[0] as HTMLElement | undefined;
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsMobileOpen(false)
-        return
+        setIsMobileOpen(false);
+        return;
       }
 
       if (e.key === 'Tab') {
         if (e.shiftKey) {
           if (document.activeElement === firstElement) {
-            e.preventDefault()
-            lastElement?.focus()
+            e.preventDefault();
+            lastElement?.focus();
           }
         } else {
           if (document.activeElement === lastElement) {
-            e.preventDefault()
-            firstElement?.focus()
+            e.preventDefault();
+            firstElement?.focus();
           }
         }
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleKeyDown)
-    firstElement?.focus()
+    document.addEventListener('keydown', handleKeyDown);
+    firstElement?.focus();
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isMobileOpen])
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileOpen]);
 
   const isActive = (item: NavItem): boolean => {
-    if (!item.matchPaths) return pathname === item.href
-    return item.matchPaths.some(path => {
-      if (path === '/') return pathname === '/'
-      return pathname.startsWith(path)
-    })
-  }
+    if (!item.matchPaths) return pathname === item.href;
+    return item.matchPaths.some((path) => {
+      if (path === '/') return pathname === '/';
+      return pathname.startsWith(path);
+    });
+  };
 
   const toggleCollapsed = () => {
-    setIsCollapsed(prev => !prev)
-  }
+    setIsCollapsed((prev) => !prev);
+  };
 
   const toggleMobileMenu = () => {
-    setIsMobileOpen(prev => !prev)
-  }
+    setIsMobileOpen((prev) => !prev);
+  };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) {
-      setIsMobileOpen(false)
+      setIsMobileOpen(false);
     }
-  }
+  };
 
   return (
     <>
@@ -188,7 +188,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
             initial={false}
             animate={{
               x: isMobileOpen ? 0 : undefined,
-              width: isCollapsed ? 80 : 240
+              width: isCollapsed ? 80 : 240,
             }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
@@ -217,7 +217,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
                     <span className="text-lg">CommitLabs</span>
                   </Link>
                 )}
-                
+
                 {isCollapsed && (
                   <div className="w-full flex justify-center">
                     <span className="grid h-8 w-8 place-items-center rounded-full border border-[rgba(0,212,255,0.85)] bg-[rgba(8,12,16,0.95)] shadow-[0_0_14px_rgba(0,212,255,0.35)] text-base text-white">
@@ -253,7 +253,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
             <nav className="flex-1 py-4 overflow-y-auto">
               <ul className="space-y-1 px-2">
                 {navItems.map((item) => {
-                  const active = isActive(item)
+                  const active = isActive(item);
                   return (
                     <li key={item.href}>
                       <Link
@@ -261,9 +261,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
                         onClick={() => setIsMobileOpen(false)}
                         className={`
                           flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
-                          ${active
-                            ? 'bg-[#0FF0FC]/10 text-[#0FF0FC] border border-[#0FF0FC]/20'
-                            : 'text-white/70 hover:text-white hover:bg-white/5'
+                          ${
+                            active
+                              ? 'bg-[#0FF0FC]/10 text-[#0FF0FC] border border-[#0FF0FC]/20'
+                              : 'text-white/70 hover:text-white hover:bg-white/5'
                           }
                           ${isCollapsed ? 'justify-center' : ''}
                         `}
@@ -271,12 +272,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
                         title={isCollapsed ? item.label : undefined}
                       >
                         <span className="flex-shrink-0">{item.icon}</span>
-                        {!isCollapsed && (
-                          <span className="font-medium">{item.label}</span>
-                        )}
+                        {!isCollapsed && <span className="font-medium">{item.label}</span>}
                       </Link>
                     </li>
-                  )
+                  );
                 })}
               </ul>
             </nav>
@@ -307,5 +306,5 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAdd
         )}
       </AnimatePresence>
     </>
-  )
-}
+  );
+};

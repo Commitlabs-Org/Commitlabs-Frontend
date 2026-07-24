@@ -18,40 +18,40 @@ matching captures. The captures are the durable record of "we verified the fix l
 
 ### Phase 1
 
-| File | What it shows |
-| :--- | :----- |
-| `phase1-landing-axe.png` | axe DevTools report on `/` after fixes |
-| `phase1-create-wizard-axe.png` | axe DevTools report on `/create` (steps 1, 2, 3) |
-| `phase1-marketplace-axe.png` | axe DevTools report on `/marketplace` (idle + filters open) |
-| `phase1-dashboard-axe.png` | axe DevTools report on `/commitments` |
-| `phase1-keyboard-trace.png` | Focus trace through the create wizard (numbered overlay) |
+| File                              | What it shows                                                      |
+| :-------------------------------- | :----------------------------------------------------------------- |
+| `phase1-landing-axe.png`          | axe DevTools report on `/` after fixes                             |
+| `phase1-create-wizard-axe.png`    | axe DevTools report on `/create` (steps 1, 2, 3)                   |
+| `phase1-marketplace-axe.png`      | axe DevTools report on `/marketplace` (idle + filters open)        |
+| `phase1-dashboard-axe.png`        | axe DevTools report on `/commitments`                              |
+| `phase1-keyboard-trace.png`       | Focus trace through the create wizard (numbered overlay)           |
 | `phase1-mobile-filter-toggle.png` | Voice-over rotor showing the filter button's `aria-expanded` state |
 
 ### Phase 2
 
-| File | What it shows |
-| :--- | :----- |
-| `phase2-chart-figure.png` | Each chart with its visible caption and a screenshot of the hidden table opened in DevTools |
-| `phase2-chart-cursor-trace.png` | Arrow-key cursor traversal of the value-history chart |
-| `phase2-tablist.png` | Health-metric tab control with `role="tablist"` highlighted in the accessibility tree |
-| `phase2-gauge-text.png` | Volatility / compliance gauges with adjacent value text and figcaption visible |
+| File                            | What it shows                                                                               |
+| :------------------------------ | :------------------------------------------------------------------------------------------ |
+| `phase2-chart-figure.png`       | Each chart with its visible caption and a screenshot of the hidden table opened in DevTools |
+| `phase2-chart-cursor-trace.png` | Arrow-key cursor traversal of the value-history chart                                       |
+| `phase2-tablist.png`            | Health-metric tab control with `role="tablist"` highlighted in the accessibility tree       |
+| `phase2-gauge-text.png`         | Volatility / compliance gauges with adjacent value text and figcaption visible              |
 
 ### Phase 3
 
-| File | What it shows |
-| :--- | :----- |
-| `phase3-dialog-focus-restore.gif` | Open / close cycle with focus highlight returning to trigger |
-| `phase3-stacked-dialogs.png` | Two dialogs stacked, scroll-lock counter visible in DevTools |
-| `phase3-acknowledgement.png` | Early-exit modal with checkbox checked / unchecked, button states |
+| File                              | What it shows                                                     |
+| :-------------------------------- | :---------------------------------------------------------------- |
+| `phase3-dialog-focus-restore.gif` | Open / close cycle with focus highlight returning to trigger      |
+| `phase3-stacked-dialogs.png`      | Two dialogs stacked, scroll-lock counter visible in DevTools      |
+| `phase3-acknowledgement.png`      | Early-exit modal with checkbox checked / unchecked, button states |
 
 ### Phase 4
 
-| File | What it shows |
-| :--- | :----- |
-| `phase4-focus-outline.png` | Real outline focus across nav links, buttons, form controls |
-| `phase4-tooltip.png` | Real `<Tooltip>` invoked by keyboard, persistent on focus, dismissible by Esc |
-| `phase4-card-name.png` | Card accessible-name resolution shown in the accessibility tree |
-| `phase4-zoom-200.png` | All five flows at 200% browser zoom, no content loss |
+| File                       | What it shows                                                                 |
+| :------------------------- | :---------------------------------------------------------------------------- |
+| `phase4-focus-outline.png` | Real outline focus across nav links, buttons, form controls                   |
+| `phase4-tooltip.png`       | Real `<Tooltip>` invoked by keyboard, persistent on focus, dismissible by Esc |
+| `phase4-card-name.png`     | Card accessible-name resolution shown in the accessibility tree               |
+| `phase4-zoom-200.png`      | All five flows at 200% browser zoom, no content loss                          |
 
 ---
 
@@ -104,7 +104,7 @@ and for any later "did we actually fix this?" review.
 - **VoiceOver + Safari** — rotor screenshots captured via macOS screenshot tool.
 - **Browser zoom** — built-in browser DevTools rendering panel.
 
-The audit does not endorse any specific tool over another; it requires that *some*
+The audit does not endorse any specific tool over another; it requires that _some_
 evidence is captured per phase.
 
 ---

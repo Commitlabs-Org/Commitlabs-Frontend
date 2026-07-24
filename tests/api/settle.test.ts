@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  createMockRequest,
-  parseResponse,
-  createMockRouteContext,
-} from './helpers';
+import { createMockRequest, parseResponse, createMockRouteContext } from './helpers';
 
 // Mock dependencies BEFORE importing the route
 vi.mock('@/lib/backend/rateLimit', () => ({
@@ -126,20 +122,22 @@ describe('POST /api/commitments/[id]/settle', () => {
     // We need to import ConflictError or whatever error is thrown.
     // Actually, let's use a generic error first and see what happens, or just mock it.
     // Since I know it's NOT_MATURED from the implementation of settleCommitmentOnChain.
-    
+
     // To mock a rejection with a specific error, we can do:
     // vi.mocked(settleCommitmentOnChain).mockRejectedValue(new BackendError({ code: 'NOT_MATURED', ... }));
     // But I need to import BackendError.
 
     // Wait, I can also just use the error that is thrown.
     // Let's import it.
-    
+
     const { BackendError } = await import('@/lib/backend/errors');
-    vi.mocked(settleCommitmentOnChain).mockRejectedValue(new BackendError({
-      code: 'NOT_MATURED',
-      message: 'Commitment has not matured yet and cannot be settled.',
-      status: 400,
-    }));
+    vi.mocked(settleCommitmentOnChain).mockRejectedValue(
+      new BackendError({
+        code: 'NOT_MATURED',
+        message: 'Commitment has not matured yet and cannot be settled.',
+        status: 400,
+      }),
+    );
 
     const req = createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/settle`, {
       method: 'POST',
@@ -162,11 +160,13 @@ describe('POST /api/commitments/[id]/settle', () => {
     } as any);
 
     const { BackendError } = await import('@/lib/backend/errors');
-    vi.mocked(settleCommitmentOnChain).mockRejectedValue(new BackendError({
-      code: 'NOT_MATURED',
-      message: 'Commitment maturity information is missing. Cannot settle.',
-      status: 400,
-    }));
+    vi.mocked(settleCommitmentOnChain).mockRejectedValue(
+      new BackendError({
+        code: 'NOT_MATURED',
+        message: 'Commitment maturity information is missing. Cannot settle.',
+        status: 400,
+      }),
+    );
 
     const req = createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/settle`, {
       method: 'POST',
@@ -261,12 +261,19 @@ describe('POST /api/commitments/[id]/settle', () => {
     // To send truly invalid JSON, we need to bypass JSON.stringify.
 
     // Let's try to manually create the request for this case.
-    const manualReq = new NextRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/settle`, {
-      method: 'POST',
-      body: 'invalid json',
-    });
+    const manualReq = new NextRequest(
+      `http://localhost:3000/api/commitments/${COMMITMENT_ID}/settle`,
+      {
+        method: 'POST',
+        body: 'invalid json',
+      },
+    );
 
-    const response = await POST(manualReq, createMockRouteContext({ id: COMMITMENT_ID }), 'corr-123');
+    const response = await POST(
+      manualReq,
+      createMockRouteContext({ id: COMMITMENT_ID }),
+      'corr-123',
+    );
     const result = await parseResponse(response);
 
     expect(response.status).toBe(400);

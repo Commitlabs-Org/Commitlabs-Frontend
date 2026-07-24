@@ -8,7 +8,9 @@ vi.mock('@/lib/backend/services/contracts', () => ({
   getCommitmentFromChain: vi.fn(),
 }));
 
-const mockedGetCommitment = vi.mocked(require('@/lib/backend/services/contracts').getCommitmentFromChain);
+const mockedGetCommitment = vi.mocked(
+  require('@/lib/backend/services/contracts').getCommitmentFromChain,
+);
 
 function makeRequest(id: string) {
   return createMockRequest(`http://localhost:3000/api/commitments/${id}`);
@@ -60,7 +62,9 @@ describe('GET /api/commitments/[id]', () => {
   });
 
   it('returns 404 when commitment does not exist', async () => {
-    mockedGetCommitment.mockRejectedValue(new NotFoundError('Commitment', { commitmentId: 'missing' }));
+    mockedGetCommitment.mockRejectedValue(
+      new NotFoundError('Commitment', { commitmentId: 'missing' }),
+    );
     const { GET } = await import('@/app/api/commitments/[id]/route');
     const res = await GET(makeRequest('missing'), { params: { id: 'missing' } });
     const result = await parseResponse(res);

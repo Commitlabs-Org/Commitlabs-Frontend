@@ -18,7 +18,9 @@ vi.mock('@/lib/backend/config', async (importOriginal) => {
       },
       activeVersion: mockVersion,
     })),
-    _setMockVersion: (v: string) => { mockVersion = v; },
+    _setMockVersion: (v: string) => {
+      mockVersion = v;
+    },
   };
 });
 
@@ -47,15 +49,15 @@ vi.mock('@/lib/backend/cache/factory', () => ({
 
 // Mock Stellar SDK and other dependencies used by contracts.ts
 vi.mock('@stellar/stellar-sdk', () => ({
-  Contract: vi.fn().mockImplementation(function() {
+  Contract: vi.fn().mockImplementation(function () {
     return {
       call: vi.fn().mockReturnValue({}),
     };
   }),
-  Account: vi.fn().mockImplementation(function() {
+  Account: vi.fn().mockImplementation(function () {
     return {};
   }),
-  TransactionBuilder: vi.fn().mockImplementation(function() {
+  TransactionBuilder: vi.fn().mockImplementation(function () {
     return {
       addOperation: vi.fn().mockReturnThis(),
       setTimeout: vi.fn().mockReturnThis(),
@@ -64,24 +66,24 @@ vi.mock('@stellar/stellar-sdk', () => ({
   }),
   nativeToScVal: vi.fn(),
   scValToNative: vi.fn(),
-  Address: vi.fn().mockImplementation(function() {
+  Address: vi.fn().mockImplementation(function () {
     return {
       toScVal: vi.fn(),
     };
   }),
   BASE_FEE: '100',
   SorobanRpc: {
-    Server: vi.fn().mockImplementation(function() {
+    Server: vi.fn().mockImplementation(function () {
       return {
         simulateTransaction: vi.fn().mockResolvedValue({
-          result: { retval: {} }
+          result: { retval: {} },
         }),
       };
     }),
     Api: {
       isSimulationError: vi.fn().mockReturnValue(false),
-    }
-  }
+    },
+  },
 }));
 
 // Mock scValToNative to return a mock commitment
@@ -95,7 +97,7 @@ describe('Contracts Service Versioning', () => {
 
   it('includes the active version in getCommitmentFromChain response', async () => {
     _setMockVersion('v2');
-    
+
     (scValToNative as any).mockReturnValue({
       id: 'c1',
       ownerAddress: 'addr1',

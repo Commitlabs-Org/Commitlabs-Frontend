@@ -5,7 +5,7 @@ possible, including people who rely on assistive technologies.
 
 This statement records the target we hold ourselves to, where we stand against
 it today, the gaps we know about, and how to report problems. The per-area
-accessibility notes elsewhere in `docs/accessibility/` describe *how* specific
+accessibility notes elsewhere in `docs/accessibility/` describe _how_ specific
 flows are made accessible; this document is the single place that states the
 overall posture.
 

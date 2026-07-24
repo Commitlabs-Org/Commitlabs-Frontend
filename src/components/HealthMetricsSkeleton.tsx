@@ -10,7 +10,7 @@ interface HealthMetricsSkeletonProps {
 
 /**
  * Skeleton loading component for health metrics charts
- * 
+ *
  * Features:
  * - Shows skeleton chart tabs (optional)
  * - Shows skeleton chart with grid lines and axes
@@ -22,28 +22,29 @@ export default function HealthMetricsSkeleton({
   chartCount = 1,
 }: HealthMetricsSkeletonProps) {
   return (
-    <div className="w-full bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]" aria-label="Loading health metrics" role="status">
+    <div
+      className="w-full bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]"
+      aria-label="Loading health metrics"
+      role="status"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="w-40 h-8 bg-[#1a1a1a] rounded" />
-        
+
         {showTabs && (
           <div className="flex flex-wrap gap-2 p-1 bg-[#111] rounded-lg border border-[#222]">
             {['value', 'drawdown', 'fee', 'compliance'].map((tab) => (
-              <div
-                key={tab}
-                className="w-24 h-10 bg-[#1a1a1a] rounded-md"
-              />
+              <div key={tab} className="w-24 h-10 bg-[#1a1a1a] rounded-md" />
             ))}
           </div>
         )}
       </div>
-      
+
       <div className="w-full space-y-8">
         {Array.from({ length: chartCount }).map((_, index) => (
           <HealthChartSkeleton key={index} />
         ))}
       </div>
-      
+
       {/* Additional metrics skeleton */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
         {Array.from({ length: 4 }).map((_, index) => (

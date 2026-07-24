@@ -23,11 +23,7 @@ export function MarketplaceGrid({
 }: MarketplaceGridProps) {
   // Use the pagination hook when no items are supplied.
   // We disable the hook when pre-loaded items are supplied.
-  const { listings, isLoading, hasMore, loadMore } = usePaginatedListings(
-    queryParams,
-    9,
-    !!items
-  );
+  const { listings, isLoading, hasMore, loadMore } = usePaginatedListings(queryParams, 9, !!items);
   const displayedItems = items ?? listings;
 
   // IntersectionObserver for infinite scroll (sentinel element)

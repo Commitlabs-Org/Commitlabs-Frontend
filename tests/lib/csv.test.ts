@@ -47,8 +47,8 @@ describe('buildCsv', () => {
         [
           ['Alice', '100'],
           ['Bob', '200'],
-        ]
-      )
+        ],
+      ),
     ).toBe('Name,Value\r\nAlice,100\r\nBob,200\r\n');
   });
 
@@ -127,7 +127,7 @@ describe('createCsvStream', () => {
       [
         ['Alice', '100'],
         ['Bob', '200'],
-      ]
+      ],
     );
 
     expect(await readStream(stream)).toBe('Name,Value\r\nAlice,100\r\nBob,200\r\n');
@@ -154,10 +154,7 @@ describe('createCsvStream', () => {
   });
 
   it('preserves the formula-injection guard for streamed rows', async () => {
-    const stream = createCsvStream(
-      ['value'],
-      [['=SUM(A1)'], ['+1'], ['-10'], ['@cmd']]
-    );
+    const stream = createCsvStream(['value'], [['=SUM(A1)'], ['+1'], ['-10'], ['@cmd']]);
 
     expect(await readStream(stream)).toBe("value\r\n'=SUM(A1)\r\n'+1\r\n'-10\r\n'@cmd\r\n");
   });

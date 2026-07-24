@@ -1,51 +1,51 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
-import { Wallet, Copy, ExternalLink, LogOut } from 'lucide-react'
-import { useWallet } from '@/hooks/useWallet'
-import { buildExplorerUrl } from '@/utils/explorerLinks'
-import { NotificationSection } from './NotificationSection'
-import { WalletConnectButton } from '../WalletConnectButton'
+import React, { useState } from 'react';
+import { Wallet, Copy, ExternalLink, LogOut } from 'lucide-react';
+import { useWallet } from '@/hooks/useWallet';
+import { buildExplorerUrl } from '@/utils/explorerLinks';
+import { NotificationSection } from './NotificationSection';
+import { WalletConnectButton } from '../WalletConnectButton';
 
 const truncateAddress = (address: string) =>
-  address ? `${address.slice(0, 4)}…${address.slice(-4)}` : ''
+  address ? `${address.slice(0, 4)}…${address.slice(-4)}` : '';
 
 export const AccountWalletSection: React.FC = () => {
-  const { connected, address, connect, disconnect } = useWallet()
-  const [copying, setCopying] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
+  const { connected, address, connect, disconnect } = useWallet();
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const handleCopy = async () => {
-    if (!address) return
-    setCopying(true)
+    if (!address) return;
+    setCopying(true);
     try {
-      await navigator.clipboard.writeText(address)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (e) {
-      console.error('Failed to copy address:', e)
+      console.error('Failed to copy address:', e);
     } finally {
-      setCopying(false)
+      setCopying(false);
     }
-  }
+  };
 
   const handleSignOut = async () => {
-    setSigningOut(true)
+    setSigningOut(true);
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'same-origin',
-      })
-      disconnect()
+      });
+      disconnect();
     } catch (e) {
-      console.error('Failed to sign out:', e)
+      console.error('Failed to sign out:', e);
     } finally {
-      setSigningOut(false)
+      setSigningOut(false);
     }
-  }
+  };
 
-  const explorerUrl = buildExplorerUrl('account', address, 'public')
+  const explorerUrl = buildExplorerUrl('account', address, 'public');
 
   return (
     <NotificationSection
@@ -94,9 +94,10 @@ export const AccountWalletSection: React.FC = () => {
               disabled={signingOut}
               className={`
                 w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all active:scale-[0.98]
-                ${signingOut
-                  ? 'bg-red-500/30 text-red-200 cursor-not-allowed'
-                  : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 border border-red-500/20'
+                ${
+                  signingOut
+                    ? 'bg-red-500/30 text-red-200 cursor-not-allowed'
+                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 border border-red-500/20'
                 }
               `}
             >
@@ -118,5 +119,5 @@ export const AccountWalletSection: React.FC = () => {
         </div>
       )}
     </NotificationSection>
-  )
-}
+  );
+};

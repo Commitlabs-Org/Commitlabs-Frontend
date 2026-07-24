@@ -6,7 +6,12 @@ import { describe, it, expect, vi } from 'vitest';
 import MyCommitmentsOverview from '../MyCommitmentsOverview/MyCommitmentsOverview';
 
 vi.mock('../MyCommitmentsStats/MyCommitmentsStats', () => ({
-  default: ({ totalActive, totalCommittedValue, averageComplianceScore, totalFeesGenerated }: {
+  default: ({
+    totalActive,
+    totalCommittedValue,
+    averageComplianceScore,
+    totalFeesGenerated,
+  }: {
     totalActive: number;
     totalCommittedValue: string;
     averageComplianceScore: string;
@@ -126,10 +131,7 @@ describe('MyCommitmentsOverview — grid wiring', () => {
   it('calls onSearchChange when the search input changes', () => {
     const onSearchChange = vi.fn();
     render(
-      <MyCommitmentsOverview
-        {...DEFAULT_PROPS}
-        search={{ searchQuery: '', onSearchChange }}
-      />,
+      <MyCommitmentsOverview {...DEFAULT_PROPS} search={{ searchQuery: '', onSearchChange }} />,
     );
     fireEvent.change(screen.getByTestId('search-input'), { target: { value: 'yield' } });
     expect(onSearchChange).toHaveBeenCalledWith('yield');

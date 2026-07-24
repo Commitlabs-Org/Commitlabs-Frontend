@@ -71,10 +71,10 @@ function mockDeps(commitment: typeof MOCK_COMMITMENT | null) {
 }
 
 function makeRequest(id: string, body?: Record<string, unknown>) {
-  return createMockRequest(
-    `http://localhost:3000/api/commitments/${id}/dispute`,
-    { method: 'POST', body },
-  );
+  return createMockRequest(`http://localhost:3000/api/commitments/${id}/dispute`, {
+    method: 'POST',
+    body,
+  });
 }
 
 async function callRoute(id: string, body: Record<string, unknown>) {
@@ -85,8 +85,12 @@ async function callRoute(id: string, body: Record<string, unknown>) {
 }
 
 describe('POST /api/commitments/[id]/dispute', () => {
-  beforeEach(() => { vi.resetModules(); });
-  afterEach(() => { vi.resetModules(); });
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.resetModules();
+  });
 
   it('returns 200 on successful dispute', async () => {
     mockDeps(MOCK_COMMITMENT);

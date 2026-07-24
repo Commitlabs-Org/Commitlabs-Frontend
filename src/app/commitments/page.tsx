@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { useToast } from '@/components/toast/ToastProvider'
-import MyCommitmentsHeader from '@/components/MyCommitmentsHeader'
-import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsStats'
-import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters'
-import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
-import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton'
-import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
-import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal'
-import ListForSaleModal from '@/components/modals/ListForSaleModal'
-import { useWallet } from '@/hooks/useWallet'
-import { Commitment, CommitmentStats } from '@/types/commitment'
-import { listCommitments } from '@/lib/backend/mocks/contracts'
-import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
-import { getValidatedClientEnv } from '@/lib/clientEnv'
-import { AppShellLayout } from '@/components/shell/AppShellLayout'
-import { sortCommitments, SortOption } from '@/utils/sortCommitments'
+import { useRouter } from 'next/navigation';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useToast } from '@/components/toast/ToastProvider';
+import MyCommitmentsHeader from '@/components/MyCommitmentsHeader';
+import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsStats';
+import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters';
+import MyCommitmentsGrid from '@/components/MyCommitmentsGrid';
+import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton';
+import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal';
+import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal';
+import ListForSaleModal from '@/components/modals/ListForSaleModal';
+import { useWallet } from '@/hooks/useWallet';
+import { Commitment, CommitmentStats } from '@/types/commitment';
+import { listCommitments } from '@/lib/backend/mocks/contracts';
+import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol';
+import { getValidatedClientEnv } from '@/lib/clientEnv';
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
+import { sortCommitments, SortOption } from '@/utils/sortCommitments';
 
 const mockCommitments: Commitment[] = [
   {
@@ -116,173 +116,177 @@ const mockCommitments: Commitment[] = [
     createdDate: 'Oct 15, 2025',
     expiryDate: 'Jan 13, 2026',
   },
-]
+];
 
 const mockStats: CommitmentStats = {
   totalActive: 3,
   totalCommittedValue: '$461,850',
   avgComplianceScore: 86,
   totalFeesGenerated: '$1,250',
-}
+};
 
 function getEarlyExitValues(originalAmount: string, asset: string, penaltyPercent: number) {
-  const amount = Number(originalAmount.replace(/,/g, ''))
-  const penaltyAmount = (amount * (penaltyPercent / 100)).toFixed(0)
-  const netReceive = (amount - Number(penaltyAmount)).toFixed(0)
+  const amount = Number(originalAmount.replace(/,/g, ''));
+  const penaltyAmount = (amount * (penaltyPercent / 100)).toFixed(0);
+  const netReceive = (amount - Number(penaltyAmount)).toFixed(0);
   return {
     penaltyPercent: `${penaltyPercent}%`,
     penaltyAmount: `${Number(penaltyAmount).toLocaleString()} ${asset}`,
     netReceiveAmount: `${Number(netReceive).toLocaleString()} ${asset}`,
-  }
+  };
 }
 
 export default function MyCommitments() {
-  const router = useRouter()
-  const toast = useToast()
-  const { address } = useWallet()
+  const router = useRouter();
+  const toast = useToast();
+  const { address } = useWallet();
 
   // State
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
-  const [typeFilter, setTypeFilter] = useState('All')
-  const [sortBy, setSortBy] = useState<SortOption>('Newest')
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [sortBy, setSortBy] = useState<SortOption>('Newest');
 
-  const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
-  const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null)
-  const [isExportOpen, setIsExportOpen] = useState(false)
-  const [selectedIdsForExport, setSelectedIdsForExport] = useState<string[]>([])
-  const [isExporting, setIsExporting] = useState(false)
-  const [hasAcknowledged, setHasAcknowledged] = useState(false)
-  const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
-  const [isLoading, setIsLoading] = useState(true)
-  const [protocolConstants, setProtocolConstants] = useState<ProtocolConstants | null>(null)
-  const [, setIsLoadingConstants] = useState(true)
+  const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null);
+  const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [selectedIdsForExport, setSelectedIdsForExport] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
+  const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments);
+  const [isLoading, setIsLoading] = useState(true);
+  const [protocolConstants, setProtocolConstants] = useState<ProtocolConstants | null>(null);
+  const [, setIsLoadingConstants] = useState(true);
 
   useEffect(() => {
     fetchProtocolConstants()
       .then(setProtocolConstants)
       .catch((err) => console.error('Failed to fetch protocol constants:', err))
-      .finally(() => setIsLoadingConstants(false))
-  }, [])
+      .finally(() => setIsLoadingConstants(false));
+  }, []);
 
   useEffect(() => {
-    const clientEnv = getValidatedClientEnv()
+    const clientEnv = getValidatedClientEnv();
     if (clientEnv.NEXT_PUBLIC_USE_MOCKS === 'true') {
-      setIsLoading(true)
+      setIsLoading(true);
       listCommitments()
         .then(setCommitmentsList)
-        .finally(() => setIsLoading(false))
+        .finally(() => setIsLoading(false));
     } else {
       // Simulate loading for demo purposes
       const timer = setTimeout(() => {
-        setIsLoading(false)
-      }, 1000)
-      return () => clearTimeout(timer)
+        setIsLoading(false);
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [])
+  }, []);
 
   // Derived State
   const filteredCommitments = useMemo(() => {
     const filtered = commitmentsList.filter((c) => {
-      const matchesSearch = c.id.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === 'All' || c.status.toLowerCase() === statusFilter.toLowerCase()
-      const matchesType = typeFilter === 'All' || c.type.toLowerCase() === typeFilter.toLowerCase()
-      return matchesSearch && matchesStatus && matchesType
-    })
+      const matchesSearch = c.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'All' || c.status.toLowerCase() === statusFilter.toLowerCase();
+      const matchesType = typeFilter === 'All' || c.type.toLowerCase() === typeFilter.toLowerCase();
+      return matchesSearch && matchesStatus && matchesType;
+    });
 
-    return sortCommitments(filtered, sortBy)
-  }, [commitmentsList, searchQuery, statusFilter, typeFilter, sortBy])
+    return sortCommitments(filtered, sortBy);
+  }, [commitmentsList, searchQuery, statusFilter, typeFilter, sortBy]);
 
-  const commitmentForEarlyExit = commitmentsList.find((c) => c.id === earlyExitCommitmentId)
+  const commitmentForEarlyExit = commitmentsList.find((c) => c.id === earlyExitCommitmentId);
   const commitmentForListing = listingCommitmentId
-    ? commitmentsList.find((c) => c.id === listingCommitmentId) ?? null
-    : null
+    ? (commitmentsList.find((c) => c.id === listingCommitmentId) ?? null)
+    : null;
   const earlyExitSummary = useMemo(() => {
-    if (!commitmentForEarlyExit) return null
+    if (!commitmentForEarlyExit) return null;
 
-    let penaltyPercent = 10
+    let penaltyPercent = 10;
     if (protocolConstants?.penalties) {
       const tier = protocolConstants.penalties.find(
-        (p) => p.type.toLowerCase() === commitmentForEarlyExit.type.toLowerCase()
-      )
+        (p) => p.type.toLowerCase() === commitmentForEarlyExit.type.toLowerCase(),
+      );
       if (tier) {
-        penaltyPercent = tier.earlyExitPenaltyPercent
+        penaltyPercent = tier.earlyExitPenaltyPercent;
       }
     } else {
       // Fallback local calculations in case loading or error
-      const lowerType = commitmentForEarlyExit.type.toLowerCase()
-      if (lowerType === 'safe') penaltyPercent = 2
-      else if (lowerType === 'balanced') penaltyPercent = 3
-      else if (lowerType === 'aggressive') penaltyPercent = 5
+      const lowerType = commitmentForEarlyExit.type.toLowerCase();
+      if (lowerType === 'safe') penaltyPercent = 2;
+      else if (lowerType === 'balanced') penaltyPercent = 3;
+      else if (lowerType === 'aggressive') penaltyPercent = 5;
     }
 
     return getEarlyExitValues(
       commitmentForEarlyExit.amount,
       commitmentForEarlyExit.asset,
-      penaltyPercent
-    )
-  }, [commitmentForEarlyExit, protocolConstants])
+      penaltyPercent,
+    );
+  }, [commitmentForEarlyExit, protocolConstants]);
 
   // Callbacks
   const openEarlyExitModal = useCallback((id: string) => {
-    setEarlyExitCommitmentId(id)
-    setHasAcknowledged(false)
-  }, [])
+    setEarlyExitCommitmentId(id);
+    setHasAcknowledged(false);
+  }, []);
 
   const openListForSaleModal = useCallback((id: string) => {
-    setListingCommitmentId(id)
-  }, [])
+    setListingCommitmentId(id);
+  }, []);
 
   const closeListForSaleModal = useCallback(() => {
-    setListingCommitmentId(null)
-  }, [])
+    setListingCommitmentId(null);
+  }, []);
 
-  const handleListForSaleSuccess = useCallback((listingId: string) => {
-    if (!listingCommitmentId) return
-    const committed = commitmentsList.find((c) => c.id === listingCommitmentId)
-    if (!committed) return
-    toast.success({
-      title: listingId
-        ? `${committed.id} is now listed on the marketplace as ${listingId}. Buyers will see it in the listings grid.`
-        : `${committed.id} is now listed on the marketplace. Buyers will see it in the listings grid.`
-    })
-  }, [commitmentsList, listingCommitmentId, toast])
+  const handleListForSaleSuccess = useCallback(
+    (listingId: string) => {
+      if (!listingCommitmentId) return;
+      const committed = commitmentsList.find((c) => c.id === listingCommitmentId);
+      if (!committed) return;
+      toast.success({
+        title: listingId
+          ? `${committed.id} is now listed on the marketplace as ${listingId}. Buyers will see it in the listings grid.`
+          : `${committed.id} is now listed on the marketplace. Buyers will see it in the listings grid.`,
+      });
+    },
+    [commitmentsList, listingCommitmentId, toast],
+  );
 
   const handleExportSelected = useCallback((ids: string[]) => {
-    setSelectedIdsForExport(ids)
-    setIsExportOpen(true)
-  }, [])
+    setSelectedIdsForExport(ids);
+    setIsExportOpen(true);
+  }, []);
 
   // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
   // own commitment changes, not on every filter/sort that re-runs this page.
   const handleViewDetails = useCallback(
     (id: string) => router.push(`/commitments/${id}`),
-    [router]
-  )
+    [router],
+  );
 
   const handleViewAttestations = useCallback(
     (id: string) => console.log('Attestations for', id),
-    []
-  )
+    [],
+  );
 
   const closeEarlyExitModal = useCallback(() => {
-    setEarlyExitCommitmentId(null)
-    setHasAcknowledged(false)
-  }, [])
+    setEarlyExitCommitmentId(null);
+    setHasAcknowledged(false);
+  }, []);
 
   const handleConfirmEarlyExit = useCallback(() => {
-    if (!earlyExitCommitmentId || !earlyExitSummary) return
+    if (!earlyExitCommitmentId || !earlyExitSummary) return;
 
-    const committed = commitmentsList.find((c) => c.id === earlyExitCommitmentId)
-    if (!committed) return
+    const committed = commitmentsList.find((c) => c.id === earlyExitCommitmentId);
+    if (!committed) return;
 
     setCommitmentsList((current) =>
       current.map((commitment) =>
         commitment.id === earlyExitCommitmentId
           ? { ...commitment, status: 'Early Exit' }
-          : commitment
-      )
-    )
+          : commitment,
+      ),
+    );
 
     toast.success({
       title: 'Early exit confirmed',
@@ -294,15 +298,15 @@ export default function MyCommitments() {
             current.map((commitment) =>
               commitment.id === committed.id
                 ? { ...commitment, status: committed.status }
-                : commitment
-            )
-          )
+                : commitment,
+            ),
+          );
         },
       },
-    })
+    });
 
-    closeEarlyExitModal()
-  }, [earlyExitCommitmentId, earlyExitSummary, commitmentsList, closeEarlyExitModal, toast])
+    closeEarlyExitModal();
+  }, [earlyExitCommitmentId, earlyExitSummary, commitmentsList, closeEarlyExitModal, toast]);
 
   return (
     <AppShellLayout>
@@ -313,83 +317,79 @@ export default function MyCommitments() {
           onExport={() => setIsExportOpen(true)}
         />
 
-      <div className="w-full flex-1 px-22 py-8 max-[1024px]:px-8 max-[640px]:px-4">
-        {isLoading ? (
-          <MyCommitmentsGridSkeleton
-            showStats={true}
-            showFilters={true}
-            cardCount={6}
+        <div className="w-full flex-1 px-22 py-8 max-[1024px]:px-8 max-[640px]:px-4">
+          {isLoading ? (
+            <MyCommitmentsGridSkeleton showStats={true} showFilters={true} cardCount={6} />
+          ) : (
+            <>
+              <MyCommitmentsStats
+                totalActive={mockStats.totalActive}
+                totalCommittedValue={mockStats.totalCommittedValue}
+                avgComplianceScore={mockStats.avgComplianceScore}
+                totalFeesGenerated={mockStats.totalFeesGenerated}
+              />
+
+              <MyCommitmentsFilters
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                status={statusFilter}
+                onStatusChange={setStatusFilter}
+                type={typeFilter}
+                onTypeChange={setTypeFilter}
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+              />
+
+              <MyCommitmentsGrid
+                commitments={filteredCommitments}
+                onDetails={handleViewDetails}
+                onAttestations={handleViewAttestations}
+                onEarlyExit={openEarlyExitModal}
+                onListForSale={openListForSaleModal}
+                onExportSelected={handleExportSelected}
+                isExporting={isExporting}
+              />
+            </>
+          )}
+        </div>
+
+        {commitmentForEarlyExit && earlyExitSummary && (
+          <CommitmentEarlyExitModal
+            isOpen={true}
+            commitmentId={commitmentForEarlyExit.id}
+            originalAmount={`${commitmentForEarlyExit.amount} ${commitmentForEarlyExit.asset}`}
+            penaltyPercent={earlyExitSummary.penaltyPercent}
+            penaltyAmount={earlyExitSummary.penaltyAmount}
+            netReceiveAmount={earlyExitSummary.netReceiveAmount}
+            hasAcknowledged={hasAcknowledged}
+            onChangeAcknowledged={setHasAcknowledged}
+            onCancel={closeEarlyExitModal}
+            onConfirm={handleConfirmEarlyExit}
+            onClose={closeEarlyExitModal}
           />
-        ) : (
-          <>
-            <MyCommitmentsStats
-              totalActive={mockStats.totalActive}
-              totalCommittedValue={mockStats.totalCommittedValue}
-              avgComplianceScore={mockStats.avgComplianceScore}
-              totalFeesGenerated={mockStats.totalFeesGenerated}
-            />
-
-            <MyCommitmentsFilters
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              status={statusFilter}
-              onStatusChange={setStatusFilter}
-              type={typeFilter}
-              onTypeChange={setTypeFilter}
-              sortBy={sortBy}
-              onSortByChange={setSortBy}
-            />
-
-            <MyCommitmentsGrid
-              commitments={filteredCommitments}
-              onDetails={handleViewDetails}
-              onAttestations={handleViewAttestations}
-              onEarlyExit={openEarlyExitModal}
-              onListForSale={openListForSaleModal}
-              onExportSelected={handleExportSelected}
-              isExporting={isExporting}
-            />
-          </>
         )}
-      </div>
 
-      {commitmentForEarlyExit && earlyExitSummary && (
-        <CommitmentEarlyExitModal
-          isOpen={true}
-          commitmentId={commitmentForEarlyExit.id}
-          originalAmount={`${commitmentForEarlyExit.amount} ${commitmentForEarlyExit.asset}`}
-          penaltyPercent={earlyExitSummary.penaltyPercent}
-          penaltyAmount={earlyExitSummary.penaltyAmount}
-          netReceiveAmount={earlyExitSummary.netReceiveAmount}
-          hasAcknowledged={hasAcknowledged}
-          onChangeAcknowledged={setHasAcknowledged}
-          onCancel={closeEarlyExitModal}
-          onConfirm={handleConfirmEarlyExit}
-          onClose={closeEarlyExitModal}
+        <ExportCommitmentsModal
+          isOpen={isExportOpen}
+          onClose={() => {
+            setIsExportOpen(false);
+            setSelectedIdsForExport([]);
+          }}
+          ownerAddress={address}
+          selectedIds={selectedIdsForExport}
         />
-      )}
 
-      <ExportCommitmentsModal
-        isOpen={isExportOpen}
-        onClose={() => {
-          setIsExportOpen(false)
-          setSelectedIdsForExport([])
-        }}
-        ownerAddress={address}
-        selectedIds={selectedIdsForExport}
-      />
-
-      {commitmentForListing && (
-        <ListForSaleModal
-          isOpen={true}
-          commitmentId={commitmentForListing.id}
-          asset={commitmentForListing.asset}
-          sellerAddress={address}
-          onClose={closeListForSaleModal}
-          onSuccess={handleListForSaleSuccess}
-        />
-      )}
-    </main>
+        {commitmentForListing && (
+          <ListForSaleModal
+            isOpen={true}
+            commitmentId={commitmentForListing.id}
+            asset={commitmentForListing.asset}
+            sellerAddress={address}
+            onClose={closeListForSaleModal}
+            onSuccess={handleListForSaleSuccess}
+          />
+        )}
+      </main>
     </AppShellLayout>
-  )
+  );
 }

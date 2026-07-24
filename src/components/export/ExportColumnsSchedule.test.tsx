@@ -181,9 +181,7 @@ describe('ExportCommitmentsModal – column selection', () => {
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: /deselect all/i }));
     fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/select at least one column/i)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/select at least one column/i)).toBeTruthy());
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -301,9 +299,7 @@ describe('ExportCommitmentsModal – export request', () => {
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('status')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('status')).toBeTruthy());
     expect(screen.getByText(/3 commitments downloaded/i)).toBeTruthy();
   });
 
@@ -312,9 +308,7 @@ describe('ExportCommitmentsModal – export request', () => {
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
     expect(screen.getByText(/sign in again/i)).toBeTruthy();
   });
 
@@ -322,9 +316,7 @@ describe('ExportCommitmentsModal – export request', () => {
     renderModal({ ownerAddress: undefined });
     fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
 
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
     expect(screen.getByText(/connect a wallet/i)).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });

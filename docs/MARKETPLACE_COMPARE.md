@@ -11,14 +11,14 @@ Buyers can pin up to three marketplace listings and open a side-by-side comparis
 
 ## Implementation
 
-| Piece | Location |
-|-------|----------|
-| Selection state + session persistence | `src/hooks/useCompareListings.ts` |
-| Bottom tray UI | `src/components/marketplace/CompareTray.tsx` |
-| Side-by-side table | `src/components/marketplace/CompareView.tsx` |
-| Card toggle | `src/components/MarketplaceCard.tsx` |
-| Grid wiring | `src/components/MarketplaceGrid.tsx` |
-| Page orchestration | `src/app/marketplace/page.tsx` |
+| Piece                                 | Location                                     |
+| ------------------------------------- | -------------------------------------------- |
+| Selection state + session persistence | `src/hooks/useCompareListings.ts`            |
+| Bottom tray UI                        | `src/components/marketplace/CompareTray.tsx` |
+| Side-by-side table                    | `src/components/marketplace/CompareView.tsx` |
+| Card toggle                           | `src/components/MarketplaceCard.tsx`         |
+| Grid wiring                           | `src/components/MarketplaceGrid.tsx`         |
+| Page orchestration                    | `src/app/marketplace/page.tsx`               |
 
 ## Persistence
 

@@ -9,7 +9,7 @@ The `ErrorBoundary` component provides a reusable way to catch JavaScript errors
 - **Error Containment**: Catches errors in child components and prevents them from crashing the entire application
 - **Error Logging**: Logs errors to console (client-side) following the existing logger pattern
 - **Friendly Fallback UI**: Uses `ErrorLayout` for consistent error presentation
-- **Recovery Actions**: 
+- **Recovery Actions**:
   - "Try Again" button to reset the error state and re-render the component
   - "Report Issue" button linking to Discord for support
 - **Accessibility**: Automatically focuses the "Try Again" button when an error occurs
@@ -117,12 +117,12 @@ The ErrorBoundary is currently wrapping the following risk-prone components:
 
 ### ErrorBoundary Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `children` | `ReactNode` | Yes | - | Child components to be wrapped |
-| `fallback` | `ReactNode` | No | - | Custom fallback UI to display on error |
-| `onError` | `(error: Error, errorInfo: ErrorInfo) => void` | No | - | Callback called when an error is caught |
-| `resetKeys` | `Array<string \| number>` | No | - | Keys that trigger error reset when changed |
+| Prop        | Type                                           | Required | Default | Description                                |
+| ----------- | ---------------------------------------------- | -------- | ------- | ------------------------------------------ |
+| `children`  | `ReactNode`                                    | Yes      | -       | Child components to be wrapped             |
+| `fallback`  | `ReactNode`                                    | No       | -       | Custom fallback UI to display on error     |
+| `onError`   | `(error: Error, errorInfo: ErrorInfo) => void` | No       | -       | Callback called when an error is caught    |
+| `resetKeys` | `Array<string \| number>`                      | No       | -       | Keys that trigger error reset when changed |
 
 ### withErrorBoundary
 

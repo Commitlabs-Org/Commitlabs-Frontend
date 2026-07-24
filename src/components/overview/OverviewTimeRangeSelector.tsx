@@ -12,11 +12,11 @@
  * • A visually-hidden live region announces the selected range to assistive tech.
  */
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type OverviewRangeKey = "7d" | "30d" | "90d" | "all";
+export type OverviewRangeKey = '7d' | '30d' | '90d' | 'all';
 
 export interface OverviewRangeOption {
   key: OverviewRangeKey;
@@ -26,10 +26,10 @@ export interface OverviewRangeOption {
 }
 
 export const OVERVIEW_RANGE_OPTIONS: OverviewRangeOption[] = [
-  { key: "7d",  label: "7 D",  days: 7   },
-  { key: "30d", label: "30 D", days: 30  },
-  { key: "90d", label: "90 D", days: 90  },
-  { key: "all", label: "All",  days: null },
+  { key: '7d', label: '7 D', days: 7 },
+  { key: '30d', label: '30 D', days: 30 },
+  { key: '90d', label: '90 D', days: 90 },
+  { key: 'all', label: 'All', days: null },
 ];
 
 export interface OverviewTimeRangeSelectorProps {
@@ -46,25 +46,25 @@ export interface OverviewTimeRangeSelectorProps {
 export const OverviewTimeRangeSelector: React.FC<OverviewTimeRangeSelectorProps> = ({
   selected,
   onChange,
-  className = "",
+  className = '',
 }) => {
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [announcement, setAnnouncement] = useState<string>("");
+  const [announcement, setAnnouncement] = useState<string>('');
 
   const handleSelect = useCallback(
     (option: OverviewRangeOption) => {
       onChange(option.key);
       setAnnouncement(`Time range changed to ${option.label}`);
     },
-    [onChange]
+    [onChange],
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
       let next = -1;
-      if (e.key === "ArrowRight") {
+      if (e.key === 'ArrowRight') {
         next = (index + 1) % OVERVIEW_RANGE_OPTIONS.length;
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === 'ArrowLeft') {
         next = (index - 1 + OVERVIEW_RANGE_OPTIONS.length) % OVERVIEW_RANGE_OPTIONS.length;
       }
       if (next >= 0) {
@@ -74,7 +74,7 @@ export const OverviewTimeRangeSelector: React.FC<OverviewTimeRangeSelectorProps>
         buttonRefs.current[next]?.focus();
       }
     },
-    [handleSelect]
+    [handleSelect],
   );
 
   return (
@@ -90,19 +90,21 @@ export const OverviewTimeRangeSelector: React.FC<OverviewTimeRangeSelectorProps>
           return (
             <button
               key={option.key}
-              ref={(el) => { buttonRefs.current[index] = el; }}
+              ref={(el) => {
+                buttonRefs.current[index] = el;
+              }}
               type="button"
               aria-pressed={isActive}
               data-testid={`overview-range-btn-${option.key}`}
               onClick={() => handleSelect(option)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={[
-                "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-1",
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-1',
                 isActive
-                  ? "bg-zinc-700 text-cyan-400 shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800",
-              ].join(" ")}
+                  ? 'bg-zinc-700 text-cyan-400 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800',
+              ].join(' ')}
             >
               {option.label}
             </button>

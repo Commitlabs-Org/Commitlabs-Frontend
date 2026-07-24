@@ -1,52 +1,52 @@
-'use client'
+'use client';
 
-import React, { useMemo, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
-import { ArrowRight, ShieldCheck, Wallet } from 'lucide-react'
-import Dialog from '@/components/ui/Dialog'
-import { useWallet } from '@/components/auth/WalletProvider'
+import React, { useMemo, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { ArrowRight, ShieldCheck, Wallet } from 'lucide-react';
+import Dialog from '@/components/ui/Dialog';
+import { useWallet } from '@/components/auth/WalletProvider';
 
 interface RequireWalletProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 function formatRouteLabel(pathname: string) {
   if (pathname === '/create') {
-    return 'create a commitment'
+    return 'create a commitment';
   }
 
   if (pathname === '/settings') {
-    return 'manage your settings'
+    return 'manage your settings';
   }
 
   if (pathname.startsWith('/commitments')) {
-    return 'view your commitments'
+    return 'view your commitments';
   }
 
-  return 'continue'
+  return 'continue';
 }
 
 export default function RequireWallet({ children }: RequireWalletProps) {
-  const pathname = usePathname()
-  const { connected, connect, error, status } = useWallet()
-  const [connectError, setConnectError] = useState<string | null>(null)
-  const connectButtonRef = useRef<HTMLButtonElement>(null)
+  const pathname = usePathname();
+  const { connected, connect, error, status } = useWallet();
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const connectButtonRef = useRef<HTMLButtonElement>(null);
 
-  const routeAction = useMemo(() => formatRouteLabel(pathname), [pathname])
+  const routeAction = useMemo(() => formatRouteLabel(pathname), [pathname]);
 
   if (connected) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   const handleConnect = async () => {
-    setConnectError(null)
+    setConnectError(null);
 
     try {
-      await connect()
+      await connect();
     } catch (nextError) {
-      setConnectError(nextError instanceof Error ? nextError.message : 'Unable to connect wallet.')
+      setConnectError(nextError instanceof Error ? nextError.message : 'Unable to connect wallet.');
     }
-  }
+  };
 
   return (
     <Dialog
@@ -62,20 +62,25 @@ export default function RequireWallet({ children }: RequireWalletProps) {
               <ShieldCheck className="h-6 w-6 text-[#0ff0fc]" />
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#0ff0fc]">Protected route</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#0ff0fc]">
+                Protected route
+              </p>
               <p className="text-sm leading-6 text-white/80">
-                CommitLabs uses your wallet connection to load your commitments, preserve drafts, and personalize secure actions on this route.
+                CommitLabs uses your wallet connection to load your commitments, preserve drafts,
+                and personalize secure actions on this route.
               </p>
             </div>
           </div>
         </div>
 
         <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Requested route</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+            Requested route
+          </p>
           <p className="mt-2 font-mono text-[15px] text-[#d9f9fb]">{pathname}</p>
         </div>
 
-        {(connectError || error) ? (
+        {connectError || error ? (
           <p className="rounded-2xl border border-[#ff7b7b3b] bg-[#ff7b7b14] px-4 py-3 text-sm leading-6 text-[#ffd7d7]">
             {connectError || error}
           </p>
@@ -99,5 +104,5 @@ export default function RequireWallet({ children }: RequireWalletProps) {
         </div>
       </div>
     </Dialog>
-  )
+  );
 }

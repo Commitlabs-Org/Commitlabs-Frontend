@@ -13,6 +13,8 @@
     "analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mjs,cjs}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mjs,cjs}\"",
     "typecheck": "tsc --noEmit",
     "deadcode": "knip",
     "circular": "madge --circular --extensions ts,tsx src",
@@ -27,8 +29,12 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "prettier --write",
       "eslint --fix"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
     ]
   },
   "dependencies": {
@@ -72,6 +78,7 @@
     "ioredis": "^5.11.0",
     "jsdom": "^29.1.1",
     "knip": "^6.23.0",
+    "prettier": "^3.9.6",
     "lint-staged": "^15.2.10",
     "madge": "^8.0.0",
     "node-fetch": "^3.3.2",

@@ -8,10 +8,10 @@ user's headline KPIs, contextual insights, and trend charts.
 
 The goal is to make the overview:
 
-* Scannable in **under 5 seconds** for the three numbers that matter most.
-* Honest about its state — empty, loading, error and partial-data are first-class.
-* Predictable across breakpoints, with **mobile-first** layout rules baked into every block.
-* Accessible without relying on color or animation as the only signal.
+- Scannable in **under 5 seconds** for the three numbers that matter most.
+- Honest about its state — empty, loading, error and partial-data are first-class.
+- Predictable across breakpoints, with **mobile-first** layout rules baked into every block.
+- Accessible without relying on color or animation as the only signal.
 
 ---
 
@@ -19,13 +19,13 @@ The goal is to make the overview:
 
 This deliverable covers the Dashboard Overview surface only:
 
-* KPI strip (hero + primary + secondary metrics)
-* Insights panel (narrative cards beside the data)
-* Chart region (trend / distribution / breakdown)
-* Empty, loading, error and populated states
-* Responsive behavior across mobile, tablet and desktop
-* Skeleton loading patterns aligned with existing app skeletons
-* Accessibility QA basics
+- KPI strip (hero + primary + secondary metrics)
+- Insights panel (narrative cards beside the data)
+- Chart region (trend / distribution / breakdown)
+- Empty, loading, error and populated states
+- Responsive behavior across mobile, tablet and desktop
+- Skeleton loading patterns aligned with existing app skeletons
+- Accessibility QA basics
 
 It **does not** cover: navigation chrome, settings flows, commitment detail, marketplace, or
 any backend contracts. Those are owned by their own design/spec folders.
@@ -34,22 +34,22 @@ any backend contracts. Those are owned by their own design/spec folders.
 
 ## What's Included
 
-| File | What it defines |
-| :--- | :-------------- |
-| [`README.md`](./README.md) | Overview, principles, scope (this file) |
-| [`kpi-cards.md`](./kpi-cards.md) | Hero / primary / secondary KPI specs and hierarchy rules |
-| [`insights.md`](./insights.md) | Insights panel: layout, copy rules, severity, dismiss behavior |
-| [`charts.md`](./charts.md) | Chart selection, axes, legends, tooltips, breakpoints |
-| [`states.md`](./states.md) | Empty / loading / error / partial / populated state specs |
-| [`responsive-layouts.md`](./responsive-layouts.md) | Mobile-first grid, breakpoints, density rules |
-| [`accessibility.md`](./accessibility.md) | A11y QA checklist for the overview |
-| [`screens/`](./screens/) | High-fidelity comps (Figma exports) for each state |
+| File                                               | What it defines                                                |
+| :------------------------------------------------- | :------------------------------------------------------------- |
+| [`README.md`](./README.md)                         | Overview, principles, scope (this file)                        |
+| [`kpi-cards.md`](./kpi-cards.md)                   | Hero / primary / secondary KPI specs and hierarchy rules       |
+| [`insights.md`](./insights.md)                     | Insights panel: layout, copy rules, severity, dismiss behavior |
+| [`charts.md`](./charts.md)                         | Chart selection, axes, legends, tooltips, breakpoints          |
+| [`states.md`](./states.md)                         | Empty / loading / error / partial / populated state specs      |
+| [`responsive-layouts.md`](./responsive-layouts.md) | Mobile-first grid, breakpoints, density rules                  |
+| [`accessibility.md`](./accessibility.md)           | A11y QA checklist for the overview                             |
+| [`screens/`](./screens/)                           | High-fidelity comps (Figma exports) for each state             |
 
 ---
 
 ## Design Principles
 
-1. **Hierarchy first.** A user lands on the overview to answer *"how am I doing?"* — the three
+1. **Hierarchy first.** A user lands on the overview to answer _"how am I doing?"_ — the three
    hero KPIs must dominate the visual weight. Everything else supports them.
 2. **One number, one job.** Each KPI tile communicates a single metric. Deltas and context
    live inside the tile, not in a separate card.
@@ -83,7 +83,7 @@ only the within-band layout reflows.
 └─────────────────────────────────────────────────────────┘
 ```
 
-Rationale: KPIs answer *"what?"*, insights answer *"why?"*, charts answer *"over what window?"*.
+Rationale: KPIs answer _"what?"_, insights answer _"why?"_, charts answer _"over what window?"_.
 Stacking them in that order matches the natural read of a finance dashboard.
 
 ---
@@ -98,18 +98,18 @@ Figma (CommitLabs design system, Dashboard Overview frame): see
 
 ## Cross-References
 
-* KPI Card component spec (existing): [`src/components/KPICard/KPICard.spec.md`](../../src/components/KPICard/KPICard.spec.md)
-* Skeleton loading patterns: [`docs/skeleton-loading-patterns.md`](../../docs/skeleton-loading-patterns.md)
-* Iconography & status system: [`design/iconography/README.md`](../iconography/README.md)
-* Accessibility (dense numeric UI): [`docs/accessibility-dense-ui.md`](../../docs/accessibility-dense-ui.md)
-* Export & reporting (entry point lives on this dashboard): [`design/export-reporting/README.md`](../export-reporting/README.md)
+- KPI Card component spec (existing): [`src/components/KPICard/KPICard.spec.md`](../../src/components/KPICard/KPICard.spec.md)
+- Skeleton loading patterns: [`docs/skeleton-loading-patterns.md`](../../docs/skeleton-loading-patterns.md)
+- Iconography & status system: [`design/iconography/README.md`](../iconography/README.md)
+- Accessibility (dense numeric UI): [`docs/accessibility-dense-ui.md`](../../docs/accessibility-dense-ui.md)
+- Export & reporting (entry point lives on this dashboard): [`design/export-reporting/README.md`](../export-reporting/README.md)
 
 ---
 
 ## Notes
 
-* This is a **UI/UX-only** deliverable. No component code is added or modified by this PR.
-* The KPI Card *component* already exists; this folder defines how it is **composed** on the
+- This is a **UI/UX-only** deliverable. No component code is added or modified by this PR.
+- The KPI Card _component_ already exists; this folder defines how it is **composed** on the
   Dashboard Overview, plus the surrounding insights and chart treatments.
-* Comps cover both empty (first-time user) and populated (typical user) states, because the
+- Comps cover both empty (first-time user) and populated (typical user) states, because the
   empty state is the most-common screen for new accounts and is often under-designed.

@@ -1,13 +1,13 @@
-import React from "react";
-import { TrustBadge, TrustLevel } from "./TrustBadge";
-import { ReputationDisplay } from "./ReputationDisplay";
+import React from 'react';
+import { TrustBadge, TrustLevel } from './TrustBadge';
+import { ReputationDisplay } from './ReputationDisplay';
 
 export interface CommitmentDetailOverviewProps {
   commitmentTypeLabel: string;
   currentValue: string;
   currentValueAsset: string;
   gainLossLabel: string;
-  gainLossVariant: "positive" | "negative" | "neutral";
+  gainLossVariant: 'positive' | 'negative' | 'neutral';
   initialAmount: string;
   initialAmountAsset: string;
   createdDate: string;
@@ -32,9 +32,9 @@ function clamp(value: number, min = 0, max = 100) {
 }
 
 function scoreColor(score: number) {
-  if (score >= 80) return "#22C55E";
-  if (score >= 60) return "#F59E0B";
-  return "#EF4444";
+  if (score >= 80) return '#22C55E';
+  if (score >= 60) return '#F59E0B';
+  return '#EF4444';
 }
 
 export function CommitmentDetailOverview({
@@ -50,7 +50,7 @@ export function CommitmentDetailOverview({
   daysRemaining,
   durationPercentComplete,
   complianceScore,
-  complianceScoreLabel = "Excellent compliance with commitment rules",
+  complianceScoreLabel = 'Excellent compliance with commitment rules',
   maxLossThreshold,
   currentDrawdown,
   feesGenerated,
@@ -62,11 +62,11 @@ export function CommitmentDetailOverview({
   const complianceFill = scoreColor(compliance);
 
   const gainLossStyles =
-    gainLossVariant === "positive"
-      ? "bg-[rgba(34,197,94,0.15)] text-[#22C55E] border-[rgba(34,197,94,0.35)]"
-      : gainLossVariant === "negative"
-      ? "bg-[rgba(239,68,68,0.15)] text-[#EF4444] border-[rgba(239,68,68,0.35)]"
-      : "bg-[rgba(148,163,184,0.12)] text-[#CBD5F5] border-[rgba(148,163,184,0.35)]";
+    gainLossVariant === 'positive'
+      ? 'bg-[rgba(34,197,94,0.15)] text-[#22C55E] border-[rgba(34,197,94,0.35)]'
+      : gainLossVariant === 'negative'
+        ? 'bg-[rgba(239,68,68,0.15)] text-[#EF4444] border-[rgba(239,68,68,0.35)]'
+        : 'bg-[rgba(148,163,184,0.12)] text-[#CBD5F5] border-[rgba(148,163,184,0.35)]';
 
   return (
     <section
@@ -77,12 +77,7 @@ export function CommitmentDetailOverview({
         <div className="flex-1 rounded-[20px]  p-6 ">
           <div className="mb-5 flex items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#00C95055] bg-[#0f2a1d] px-3 py-1 text-[12px] font-semibold text-[#00C950] font-roboto">
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="none"
-                aria-hidden="true"
-              >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path
                   d="M16.6667 10.8333C16.6667 14.9454 13.8875 17.125 10.4167 18.3333C10.1208 18.4375 9.79583 18.4375 9.5 18.3333C6.02917 17.125 3.25 14.9454 3.25 10.8333V5.08333C3.25 4.6231 3.6231 4.25 4.08333 4.25C6.25 4.25 8.79167 2.91667 9.92917 1.825C9.97083 1.78542 10.0292 1.78542 10.0708 1.825C11.2083 2.91667 13.75 4.25 15.9167 4.25C16.3769 4.25 16.75 4.6231 16.75 5.08333L16.6667 10.8333Z"
                   stroke="#00C950"
@@ -104,33 +99,22 @@ export function CommitmentDetailOverview({
               <span className="text-[32px] font-semibold text-white font-roboto">
                 {currentValue}
               </span>
-              <span className="text-[16px] text-white/60 font-roboto">
-                {currentValueAsset}
-              </span>
+              <span className="text-[16px] text-white/60 font-roboto">{currentValueAsset}</span>
             </div>
             <span
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12px] font-semibold font-roboto ${gainLossStyles}`}
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="none"
-                aria-hidden="true"
-              >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path
                   d="M4.16675 13.3335L9.16675 8.3335L12.5001 11.6668L17.5001 6.66683"
-                  stroke={
-                    gainLossVariant === "negative" ? "#EF4444" : "#22C55E"
-                  }
+                  stroke={gainLossVariant === 'negative' ? '#EF4444' : '#22C55E'}
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
                   d="M13.3333 6.66683H17.5V10.8335"
-                  stroke={
-                    gainLossVariant === "negative" ? "#EF4444" : "#22C55E"
-                  }
+                  stroke={gainLossVariant === 'negative' ? '#EF4444' : '#22C55E'}
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -142,9 +126,7 @@ export function CommitmentDetailOverview({
 
           <div className="mt-6 space-y-3 text-[13px] text-white/70">
             <div>
-              <span className="block text-white/50 font-['Inter',sans-serif]">
-                Initial Amount
-              </span>
+              <span className="block text-white/50 font-['Inter',sans-serif]">Initial Amount</span>
               <span className="text-white/80 font-roboto">
                 {initialAmount} {initialAmountAsset}
               </span>
@@ -171,21 +153,15 @@ export function CommitmentDetailOverview({
             <div className="grid grid-cols-3 items-center text-[12px] text-white/50 font-['Inter', sans-serif]">
               <span className="justify-self-start whitespace-nowrap">
                 Created
-                <span className="block text-white/80 font-roboto">
-                  {createdDate}
-                </span>
+                <span className="block text-white/80 font-roboto">{createdDate}</span>
               </span>
               <span className="justify-self-center text-center text-[#0FF0FC] whitespace-nowrap">
                 {daysRemaining} days left
-                <span className="block text-white/50 font-roboto">
-                  {percentComplete}% complete
-                </span>
+                <span className="block text-white/50 font-roboto">{percentComplete}% complete</span>
               </span>
               <span className="justify-self-end text-right whitespace-nowrap">
                 Expires
-                <span className="block text-white/80 font-roboto">
-                  {expiresDate}
-                </span>
+                <span className="block text-white/80 font-roboto">{expiresDate}</span>
               </span>
             </div>
           </div>
@@ -200,9 +176,7 @@ export function CommitmentDetailOverview({
               <span className="text-[60px] font-semibold text-[#0FF0FC] font-roboto">
                 {compliance}
               </span>
-              <span className="text-[30px] text-white/60 font-['Inter', sans-serif]">
-                / 100
-              </span>
+              <span className="text-[30px] text-white/60 font-['Inter', sans-serif]">/ 100</span>
             </div>
             <div
               className="mt-4 h-[8px] w-full rounded-full bg-white/10"

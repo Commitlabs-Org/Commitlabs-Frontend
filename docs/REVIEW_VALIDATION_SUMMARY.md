@@ -19,7 +19,9 @@ graph TD
 ```
 
 ### 1. Unified Validation Source
+
 Validation runs automatically inside `CreateCommitmentStepReview.tsx` using a React `useEffect` hook. It triggers when:
+
 - The wallet connection status changes.
 - Review checkboxes (terms, risks) toggle.
 - Primary parameters (`amount`, `asset`, `durationDays`, `maxLossPercent`) change.
@@ -27,11 +29,13 @@ Validation runs automatically inside `CreateCommitmentStepReview.tsx` using a Re
 ### 2. Validation Checks
 
 #### Client-side (Step 3 specific)
+
 - **Wallet Connection**: Verifies that the Freighter wallet is connected and has a valid address.
 - **Terms & Conditions**: Ensures the user checked the terms checkbox.
 - **Risks Acknowledgment**: Ensures the user acknowledged the DeFi risks checkbox.
 
 #### Server-side (from `/api/commitments/validate`)
+
 - Calls the validate API route with the draft commitment configuration.
 - Captures and maps Zod/business-rule failures for fields like `amount`, `durationDays`, and `maxLossBps`.
 
@@ -40,6 +44,7 @@ Validation runs automatically inside `CreateCommitmentStepReview.tsx` using a Re
 ## Component Details
 
 ### `ValidationSummary.tsx`
+
 - **Location**: `src/components/create/ValidationSummary.tsx`
 - **Props**:
   - `errors: ValidationErrorItem[]` (contains `id`, `message`, `step`, and `field`)

@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  DAY_MS,
-  getGracePeriodStartDate,
-  normalizeGracePeriodDays,
-} from './gracePeriod';
+import { DAY_MS, getGracePeriodStartDate, normalizeGracePeriodDays } from './gracePeriod';
 
 interface ExitTimingPreviewProps {
   commitmentId: string;
@@ -29,7 +25,7 @@ export function ExitTimingPreview({
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Base current penalty to interpolate from (fetched once or passed as prop).
   // The API doesn't take a future date, so we request once and interpolate.
   const [basePenaltyAmount, setBasePenaltyAmount] = useState<number | null>(null);
@@ -52,18 +48,22 @@ export function ExitTimingPreview({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/commitments/${encodeURIComponent(commitmentId)}/early-exit/preview`);
+        const res = await fetch(
+          `/api/commitments/${encodeURIComponent(commitmentId)}/early-exit/preview`,
+        );
         if (!res.ok) {
           throw new Error('Failed to fetch preview');
         }
         const data = await res.json();
         if (isMounted) {
-          setBasePenaltyAmount(data.data?.penaltyAmount ?? (originalAmount * currentPenaltyPercent / 100));
+          setBasePenaltyAmount(
+            data.data?.penaltyAmount ?? (originalAmount * currentPenaltyPercent) / 100,
+          );
         }
       } catch (_err) {
         if (isMounted) {
           // Fallback to calculation if API fails
-          setBasePenaltyAmount(originalAmount * currentPenaltyPercent / 100);
+          setBasePenaltyAmount((originalAmount * currentPenaltyPercent) / 100);
           setError('Failed to fetch live preview. Using estimates.');
         }
       } finally {
@@ -71,34 +71,29 @@ export function ExitTimingPreview({
       }
     };
     fetchBasePreview();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [commitmentId, originalAmount, currentPenaltyPercent]);
 
   // Calculate the projected preview whenever slider changes
   useEffect(() => {
     if (basePenaltyAmount === null) return;
-    
+
     const projectedExitDate = new Date(Date.now() + daysFromNow * DAY_MS);
     let interpolatedPenalty: number;
 
     if (normalizedGracePeriodDays > 0) {
-      const penaltyFreeDate = getGracePeriodStartDate(
-        maturityDate,
-        normalizedGracePeriodDays,
-      );
+      const penaltyFreeDate = getGracePeriodStartDate(maturityDate, normalizedGracePeriodDays);
       if (projectedExitDate.getTime() >= penaltyFreeDate.getTime()) {
         interpolatedPenalty = 0;
       } else {
-        const fullPenaltyWindowMs = Math.max(
-          DAY_MS,
-          penaltyFreeDate.getTime() - Date.now(),
-        );
+        const fullPenaltyWindowMs = Math.max(DAY_MS, penaltyFreeDate.getTime() - Date.now());
         const remainingPenaltyWindowMs = Math.max(
           0,
           penaltyFreeDate.getTime() - projectedExitDate.getTime(),
         );
-        interpolatedPenalty =
-          basePenaltyAmount * (remainingPenaltyWindowMs / fullPenaltyWindowMs);
+        interpolatedPenalty = basePenaltyAmount * (remainingPenaltyWindowMs / fullPenaltyWindowMs);
       }
     } else {
       // Existing behavior: linearly interpolate the penalty down to 0 at maturity.
@@ -107,7 +102,7 @@ export function ExitTimingPreview({
     }
 
     const netRefund = originalAmount - interpolatedPenalty;
-    
+
     // Simulate debounced API call feel for UI responsiveness
     const timeout = setTimeout(() => {
       setPreview({
@@ -115,7 +110,7 @@ export function ExitTimingPreview({
         netRefund: netRefund,
       });
     }, 300);
-    
+
     return () => clearTimeout(timeout);
   }, [
     daysFromNow,
@@ -137,13 +132,13 @@ export function ExitTimingPreview({
         </h3>
         {error && <span className="text-[12px] text-[#FF8A04]">{error}</span>}
       </div>
-      
+
       <div className="mb-6">
         <div className="flex justify-between text-[12px] text-white/50 mb-2">
           <span>Now</span>
           <span>{totalDays} Days (Maturity)</span>
         </div>
-        
+
         <input
           type="range"
           min={0}
@@ -153,13 +148,15 @@ export function ExitTimingPreview({
           className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#0FF0FC]"
           aria-label={`Exit timing slider. Selected: ${daysFromNow} days from now, Date: ${projectedDate.toLocaleDateString()}`}
         />
-        
+
         <div className="text-center mt-3 text-[13px] text-white/80 font-medium">
-          Projected Exit Date: <span className="text-white">{projectedDate.toLocaleDateString()}</span>
+          Projected Exit Date:{' '}
+          <span className="text-white">{projectedDate.toLocaleDateString()}</span>
         </div>
         {normalizedGracePeriodDays > 0 && (
           <p className="mt-2 text-center text-[12px] text-white/45">
-            Penalty projection reaches 0 in the final {normalizedGracePeriodDays} days before maturity.
+            Penalty projection reaches 0 in the final {normalizedGracePeriodDays} days before
+            maturity.
           </p>
         )}
       </div>
@@ -168,13 +165,20 @@ export function ExitTimingPreview({
         <div>
           <div className="text-[12px] text-[#FF8A04]/80 mb-1">Projected Penalty</div>
           <div className="text-[16px] text-[#FF8A04] font-bold">
-            {loading || !preview ? '---' : `-${preview.penaltyAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            {loading || !preview
+              ? '---'
+              : `-${preview.penaltyAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </div>
         <div className="text-right">
           <div className="text-[12px] text-white/50 mb-1">Net Refund</div>
           <div className="text-[18px] text-[#0FF0FC] font-extrabold">
-            {loading || !preview ? '---' : preview.netRefund.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {loading || !preview
+              ? '---'
+              : preview.netRefund.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
           </div>
         </div>
       </div>

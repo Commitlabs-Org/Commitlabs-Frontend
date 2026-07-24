@@ -9,11 +9,13 @@ import { NotificationToggle } from './NotificationToggle';
 // Mock framer-motion to avoid happy-dom layout animation issues
 vi.mock('framer-motion', () => ({
   motion: {
-    span: React.forwardRef<HTMLSpanElement, any>(({ children, className, layout, transition, ...props }, ref) => (
-      <span ref={ref} className={className} {...props}>
-        {children}
-      </span>
-    )),
+    span: React.forwardRef<HTMLSpanElement, any>(
+      ({ children, className, layout, transition, ...props }, ref) => (
+        <span ref={ref} className={className} {...props}>
+          {children}
+        </span>
+      ),
+    ),
   },
 }));
 
@@ -41,7 +43,9 @@ describe('NotificationToggle', () => {
 
     // Assert labels and description
     expect(screen.getByText('Email Notifications')).toBeInTheDocument();
-    expect(screen.getByText('Receive updates via email about your commitments.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Receive updates via email about your commitments.'),
+    ).toBeInTheDocument();
 
     // Assert the switch control and its state
     const switchControl = screen.getByRole('switch');

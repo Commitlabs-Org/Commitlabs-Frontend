@@ -14,11 +14,11 @@ Errors are turned into a redaction-safe, serialisable record:
 
 ```ts
 interface ClientErrorRecord {
-  message: string            // redacted (see Redaction below)
-  digest: string | undefined // Next.js error digest, when present
-  route: string              // pathname where the error occurred
-  timestamp: string          // ISO-8601 UTC
-  stack?: string             // present only when NODE_ENV !== 'production'
+  message: string; // redacted (see Redaction below)
+  digest: string | undefined; // Next.js error digest, when present
+  route: string; // pathname where the error occurred
+  timestamp: string; // ISO-8601 UTC
+  stack?: string; // present only when NODE_ENV !== 'production'
 }
 ```
 
@@ -26,9 +26,9 @@ interface ClientErrorRecord {
 
 Both client error surfaces already forward into the seam:
 
-| Source | What it catches | Route passed |
-| ------ | --------------- | ------------ |
-| [`src/app/error.tsx`](../../src/app/error.tsx) | Errors from the App Router route segment (the Next.js `error.tsx` boundary) | `window.location.pathname` |
+| Source                                                                       | What it catches                                                                         | Route passed                                        |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`src/app/error.tsx`](../../src/app/error.tsx)                               | Errors from the App Router route segment (the Next.js `error.tsx` boundary)             | `window.location.pathname`                          |
 | [`src/components/ErrorBoundary.tsx`](../../src/components/ErrorBoundary.tsx) | Render/lifecycle errors in any subtree wrapped by `ErrorBoundary` / `withErrorBoundary` | `window.location.pathname` (or `''` if unavailable) |
 
 Application code should not call `reportError` ad hoc; let these boundaries do
@@ -40,7 +40,7 @@ reporting.
 A monitoring adapter is just a transport function:
 
 ```ts
-type ErrorTransport = (record: ClientErrorRecord) => void
+type ErrorTransport = (record: ClientErrorRecord) => void;
 ```
 
 Register it **once**, before the app renders, with `setErrorTransport`. An
@@ -62,7 +62,7 @@ PII egress by default — reporting is opt-in.
 
 ```ts
 // e.g. in a top-level client provider, run once on mount
-import { setErrorTransport } from '@/lib/observability/reportError'
+import { setErrorTransport } from '@/lib/observability/reportError';
 
 setErrorTransport((record) => {
   try {
@@ -71,7 +71,7 @@ setErrorTransport((record) => {
   } catch {
     // never rethrow from the transport
   }
-})
+});
 ```
 
 ## Redaction

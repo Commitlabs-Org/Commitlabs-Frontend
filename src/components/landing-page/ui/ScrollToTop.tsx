@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useState, type JSX } from "react";
-import { ArrowUp } from "lucide-react";
+import { useEffect, useState, type JSX } from 'react';
+import { ArrowUp } from 'lucide-react';
 
 const VISIBILITY_THRESHOLD_PX = 300;
 
@@ -13,15 +13,15 @@ export default function ScrollToTopButton(): JSX.Element | null {
       setIsVisible(window.scrollY > VISIBILITY_THRESHOLD_PX);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
 
     return (): void => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
   const handleScrollToTop = (): void => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (!isVisible) {

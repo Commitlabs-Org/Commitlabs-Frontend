@@ -28,10 +28,7 @@ const TYPE_COLORS: Record<string, string> = {
   Safe: 'text-green-400',
 };
 
-export function RelatedCommitmentsRail({
-  commitments,
-  currentId,
-}: RelatedCommitmentsRailProps) {
+export function RelatedCommitmentsRail({ commitments, currentId }: RelatedCommitmentsRailProps) {
   const related = commitments.filter((c) => c.id !== currentId);
 
   if (related.length === 0) return null;
@@ -50,17 +47,13 @@ export function RelatedCommitmentsRail({
               <div>
                 <p className="text-white text-sm font-medium">
                   #{c.id.padStart(3, '0')} &nbsp;
-                  <span className={TYPE_COLORS[c.type] ?? 'text-white/70'}>
-                    {c.type}
-                  </span>
+                  <span className={TYPE_COLORS[c.type] ?? 'text-white/70'}>{c.type}</span>
                 </p>
                 <p className="text-[#99a1af] text-xs mt-0.5">{c.duration}</p>
               </div>
               <div className="text-right">
                 <p className="text-white text-sm font-medium">{c.complianceScore}%</p>
-                <p className={`text-xs capitalize mt-0.5 ${STATUS_COLORS[c.status]}`}>
-                  {c.status}
-                </p>
+                <p className={`text-xs capitalize mt-0.5 ${STATUS_COLORS[c.status]}`}>{c.status}</p>
               </div>
             </Link>
           </li>

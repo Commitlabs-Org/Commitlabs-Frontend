@@ -8,14 +8,14 @@
  * Default: 30d
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 import {
   OVERVIEW_RANGE_OPTIONS,
   type OverviewRangeKey,
-} from "@/components/overview/OverviewTimeRangeSelector";
+} from '@/components/overview/OverviewTimeRangeSelector';
 
-const SESSION_KEY = "overview.selectedRange";
-const DEFAULT_RANGE: OverviewRangeKey = "30d";
+const SESSION_KEY = 'overview.selectedRange';
+const DEFAULT_RANGE: OverviewRangeKey = '30d';
 
 const VALID_KEYS = new Set<string>(OVERVIEW_RANGE_OPTIONS.map((o) => o.key));
 
@@ -53,8 +53,7 @@ export interface UseOverviewTimeRangeReturn {
 }
 
 export function useOverviewTimeRange(): UseOverviewTimeRangeReturn {
-  const [selectedRange, setSelectedRange] =
-    useState<OverviewRangeKey>(readPersistedRange);
+  const [selectedRange, setSelectedRange] = useState<OverviewRangeKey>(readPersistedRange);
 
   const setRange = useCallback((range: OverviewRangeKey) => {
     setSelectedRange(range);
@@ -77,7 +76,7 @@ export function useOverviewTimeRange(): UseOverviewTimeRangeReturn {
         return date >= rangeStart;
       });
     },
-    [rangeStart]
+    [rangeStart],
   );
 
   return { selectedRange, setRange, filterByRange, rangeStart };

@@ -27,12 +27,16 @@ export default function WizardStepper({ currentStep }: WizardStepperProps) {
                 >
                   {isCompleted ? <Check size={14} strokeWidth={3} /> : stepNum}
                 </div>
-                <span className={`${styles.label} ${isActive ? styles.labelActive : ''} ${isCompleted ? styles.labelCompleted : ''}`}>
+                <span
+                  className={`${styles.label} ${isActive ? styles.labelActive : ''} ${isCompleted ? styles.labelCompleted : ''}`}
+                >
                   {label}
                 </span>
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={`${styles.connector} ${isCompleted ? styles.connectorCompleted : ''}`} />
+                <div
+                  className={`${styles.connector} ${isCompleted ? styles.connectorCompleted : ''}`}
+                />
               )}
             </div>
           );

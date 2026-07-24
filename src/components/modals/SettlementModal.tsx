@@ -7,7 +7,8 @@ import { Dialog } from '@/components/ui/Dialog';
 export type SettlementModalState = 'eligible' | 'processing' | 'error' | 'ineligible' | 'settled';
 export type SettlementProcessingStep = 'initiating' | 'confirming' | 'finalizing';
 
-type SettlementReasonCategory = 'not_matured' | 'already_settled' | 'disputed' | 'early_exit' | 'unknown';
+type SettlementReasonCategory =
+  'not_matured' | 'already_settled' | 'disputed' | 'early_exit' | 'unknown';
 
 export interface SettlementModalProps {
   isOpen: boolean;
@@ -43,7 +44,11 @@ const UNKNOWN_REASON_COPY: IneligibleReasonCopy = {
   ctaLabel: 'Review commitment details',
 };
 
-const SETTLEMENT_PROGRESS_STEPS: Array<{ key: SettlementProcessingStep; label: string; description: string }> = [
+const SETTLEMENT_PROGRESS_STEPS: Array<{
+  key: SettlementProcessingStep;
+  label: string;
+  description: string;
+}> = [
   {
     key: 'initiating',
     label: 'Initiating',
@@ -76,7 +81,10 @@ export function getSettlementIneligibleReasonCopy(reason?: string): IneligibleRe
     };
   }
 
-  if (normalizedReason.includes('already been settled') || normalizedReason.includes('already settled')) {
+  if (
+    normalizedReason.includes('already been settled') ||
+    normalizedReason.includes('already settled')
+  ) {
     return {
       category: 'already_settled',
       tone: 'terminal',
@@ -166,7 +174,9 @@ export default function SettlementModal({
   const ReasonIcon = toneClasses.icon;
   const titleId = `settlement-${state}-title`;
   const descriptionId = `settlement-${state}-description`;
-  const processingStepIndex = SETTLEMENT_PROGRESS_STEPS.findIndex((step) => step.key === processingStep);
+  const processingStepIndex = SETTLEMENT_PROGRESS_STEPS.findIndex(
+    (step) => step.key === processingStep,
+  );
   const activeProcessingIndex = processingStepIndex === -1 ? 0 : processingStepIndex;
   const headerTitle = {
     eligible: 'Ready to settle',
@@ -215,7 +225,9 @@ export default function SettlementModal({
             )}
           </div>
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-white/45">Settlement</p>
+            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-white/45">
+              Settlement
+            </p>
             <h2 id={titleId} className="text-2xl font-bold leading-tight text-white">
               {headerTitle}
             </h2>
@@ -243,7 +255,9 @@ export default function SettlementModal({
             data-reason-category={reasonCopy.category}
           >
             <div className="mb-4 flex flex-wrap items-center gap-3">
-              <span className={`rounded-full border px-3 py-1 text-xs font-bold ${toneClasses.border} ${toneClasses.text}`}>
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-bold ${toneClasses.border} ${toneClasses.text}`}
+              >
                 {reasonCopy.badge}
               </span>
               <span className="text-xs font-medium text-white/55">
@@ -288,15 +302,20 @@ export default function SettlementModal({
       ) : state === 'eligible' ? (
         <div className="space-y-6">
           <p id={descriptionId} className="text-sm leading-6 text-white/70">
-            This commitment is eligible for settlement. Review the previewed amount before starting the on-chain
-            settlement flow.
+            This commitment is eligible for settlement. Review the previewed amount before starting
+            the on-chain settlement flow.
           </p>
 
           <div className="rounded-2xl border border-[#0FF0FC]/20 bg-[#0FF0FC]/10 p-5">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/45">Previewed settlement amount</p>
-            <p className="mt-2 text-2xl font-bold text-[#0FF0FC]">{settlementAmount ?? 'Pending preview'}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/45">
+              Previewed settlement amount
+            </p>
+            <p className="mt-2 text-2xl font-bold text-[#0FF0FC]">
+              {settlementAmount ?? 'Pending preview'}
+            </p>
             <p className="mt-3 text-sm leading-6 text-white/65">
-              This value should come from the settlement preview route before the user confirms settlement.
+              This value should come from the settlement preview route before the user confirms
+              settlement.
             </p>
           </div>
 
@@ -322,7 +341,8 @@ export default function SettlementModal({
       ) : state === 'processing' ? (
         <div className="space-y-6">
           <p id={descriptionId} className="text-sm leading-6 text-white/70">
-            Settlement is moving through the on-chain flow. Keep this window open until the final state is recorded.
+            Settlement is moving through the on-chain flow. Keep this window open until the final
+            state is recorded.
           </p>
 
           <ol className="space-y-3" aria-label="Settlement progress">
@@ -344,7 +364,9 @@ export default function SettlementModal({
                   <div className="flex items-start gap-3">
                     <span
                       className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        isComplete || isActive ? 'bg-[#0FF0FC] text-black' : 'bg-white/10 text-white/45'
+                        isComplete || isActive
+                          ? 'bg-[#0FF0FC] text-black'
+                          : 'bg-white/10 text-white/45'
                       }`}
                       aria-hidden="true"
                     >
@@ -396,7 +418,9 @@ export default function SettlementModal({
           </p>
           {settlementAmount ? (
             <div className="rounded-2xl border border-[#0FF0FC]/20 bg-[#0FF0FC]/10 p-5">
-              <p className="text-xs font-bold uppercase tracking-widest text-white/45">Settlement amount</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-white/45">
+                Settlement amount
+              </p>
               <p className="mt-2 text-2xl font-bold text-[#0FF0FC]">{settlementAmount}</p>
             </div>
           ) : null}

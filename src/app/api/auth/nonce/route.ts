@@ -18,46 +18,51 @@ const AUTH_NONCE_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(AUTH_NONCE_CORS_POLICY);
 
-export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  const ip = getClientIp(req);
+export const POST = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    const ip = getClientIp(req);
 
-  if (!(await checkRateLimit(ip, 'api/auth/nonce'))) {
-    throw new TooManyRequestsError('Rate limit exceeded for your IP. Please try again later.');
-  }
+    if (!(await checkRateLimit(ip, 'api/auth/nonce'))) {
+      throw new TooManyRequestsError('Rate limit exceeded for your IP. Please try again later.');
+    }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    throw new ValidationError('Invalid JSON in request body');
-  }
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      throw new ValidationError('Invalid JSON in request body');
+    }
 
-  const validation = NonceRequestSchema.safeParse(body);
-  if (!validation.success) {
-    throw new ValidationError('Invalid request data', validation.error.issues);
-  }
+    const validation = NonceRequestSchema.safeParse(body);
+    if (!validation.success) {
+      throw new ValidationError('Invalid request data', validation.error.issues);
+    }
 
-  const { address } = validation.data;
+    const { address } = validation.data;
 
-  if (!(await checkRateLimit(address, 'auth:nonce:address'))) {
-    throw new TooManyRequestsError('Too many nonce requests for this address. Please try again later.');
-  }
+    if (!(await checkRateLimit(address, 'auth:nonce:address'))) {
+      throw new TooManyRequestsError(
+        'Too many nonce requests for this address. Please try again later.',
+      );
+    }
 
-  const nonce = generateNonce();
-  const nonceRecord = await storeNonce(address, nonce);
-  const challengeMessage = generateChallengeMessage(nonce);
+    const nonce = generateNonce();
+    const nonceRecord = await storeNonce(address, nonce);
+    const challengeMessage = generateChallengeMessage(nonce);
 
-  return ok(
-    {
-      nonce,
-      message: challengeMessage,
-      expiresAt: nonceRecord.expiresAt.toISOString(),
-    },
-    undefined,
-    200,
-    correlationId,
-  );
-}, { cors: AUTH_NONCE_CORS_POLICY });
+    return ok(
+      {
+        nonce,
+        message: challengeMessage,
+        expiresAt: nonceRecord.expiresAt.toISOString(),
+      },
+      undefined,
+      200,
+      correlationId,
+    );
+  },
+  { cors: AUTH_NONCE_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['POST']);
 export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

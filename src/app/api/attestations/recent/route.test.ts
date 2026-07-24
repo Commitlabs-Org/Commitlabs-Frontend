@@ -517,7 +517,7 @@ describe('GET /api/attestations/recent — rate limiting', () => {
 
     expect(rateLimit.checkRateLimit).toHaveBeenCalledWith(
       expect.any(String),
-      'api/attestations/recent'
+      'api/attestations/recent',
     );
   });
 });

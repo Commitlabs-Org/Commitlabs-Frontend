@@ -6,7 +6,7 @@ import { apiGet } from '@/lib/apiClient';
 import { Commitment } from '@/lib/types/domain';
 
 jest.mock('@/lib/apiClient', () => ({
-  apiGet: jest.fn()
+  apiGet: jest.fn(),
 }));
 
 const mockCommitments: Commitment[] = [
@@ -17,7 +17,7 @@ const mockCommitments: Commitment[] = [
     asset: 'XLM',
     amount: '50,000',
     createdDate: 'Jan 10, 2026',
-    expiryDate: 'Feb 9, 2026'
+    expiryDate: 'Feb 9, 2026',
   },
   {
     id: 'CMT-XYZ789',
@@ -26,8 +26,8 @@ const mockCommitments: Commitment[] = [
     asset: 'USDC',
     amount: '100,000',
     createdDate: 'Dec 15, 2025',
-    expiryDate: 'Feb 13, 2026'
-  }
+    expiryDate: 'Feb 13, 2026',
+  },
 ];
 
 describe('RecentActivityFeed', () => {
@@ -42,7 +42,7 @@ describe('RecentActivityFeed', () => {
 
   it('renders empty state when no commitments', async () => {
     render(<RecentActivityFeed commitments={[]} />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('No Recent Activity')).toBeInTheDocument();
     });
@@ -59,16 +59,16 @@ describe('RecentActivityFeed', () => {
                 eventId: 'created:CMT-ABC123',
                 kind: 'created',
                 occurredAt: new Date(Date.now() - 86400000).toISOString(),
-                payload: { asset: 'XLM', amount: '50,000' }
+                payload: { asset: 'XLM', amount: '50,000' },
               },
               {
                 eventId: 'attestation:ATTR-001',
                 kind: 'attestation',
                 occurredAt: new Date(Date.now() - 3600000).toISOString(),
-                payload: { attestationId: 'ATTR-001', attestationType: 'health_check' }
-              }
-            ]
-          }
+                payload: { attestationId: 'ATTR-001', attestationType: 'health_check' },
+              },
+            ],
+          },
         });
       }
       if (url.includes('CMT-XYZ789')) {
@@ -80,17 +80,17 @@ describe('RecentActivityFeed', () => {
                 eventId: 'settlement:CMT-XYZ789',
                 kind: 'settlement',
                 occurredAt: new Date(Date.now() - 7200000).toISOString(),
-                payload: { settlementAmount: '105,000' }
-              }
-            ]
-          }
+                payload: { settlementAmount: '105,000' },
+              },
+            ],
+          },
         });
       }
       return Promise.resolve({ success: true, data: { events: [] } });
     });
 
     render(<RecentActivityFeed commitments={mockCommitments} />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Recent Activity')).toBeInTheDocument();
       expect(screen.getByText('Commitment Created')).toBeInTheDocument();
@@ -104,16 +104,16 @@ describe('RecentActivityFeed', () => {
       eventId: `event-${i}`,
       kind: 'attestation' as const,
       occurredAt: new Date(Date.now() - i * 3600000).toISOString(),
-      payload: { attestationId: `ATTR-${i}`, attestationType: 'health_check' }
+      payload: { attestationId: `ATTR-${i}`, attestationType: 'health_check' },
     }));
 
     (apiGet as jest.Mock).mockResolvedValue({
       success: true,
-      data: { events: manyEvents }
+      data: { events: manyEvents },
     });
 
     render(<RecentActivityFeed commitments={mockCommitments} maxItems={5} />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('View All Activity')).toBeInTheDocument();
     });
@@ -125,17 +125,17 @@ describe('RecentActivityFeed', () => {
         eventId: 'event-1',
         kind: 'created' as const,
         occurredAt: new Date().toISOString(),
-        payload: { asset: 'XLM', amount: '50,000' }
-      }
+        payload: { asset: 'XLM', amount: '50,000' },
+      },
     ];
 
     (apiGet as jest.Mock).mockResolvedValue({
       success: true,
-      data: { events: fewEvents }
+      data: { events: fewEvents },
     });
 
     render(<RecentActivityFeed commitments={mockCommitments} maxItems={5} />);
-    
+
     await waitFor(() => {
       expect(screen.queryByText('View All Activity')).not.toBeInTheDocument();
     });

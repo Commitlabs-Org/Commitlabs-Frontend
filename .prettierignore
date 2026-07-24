@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+.pnpm-store
+.pnp
+.pnp.js
+
+# Build output
+.next
+build
+out
+dist
+
+# Coverage
+coverage
+
+# Rust / Contracts
+contracts/target
+**/target
+
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+
+# Environment files
+.env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Vercel
+.vercel
+
+# Misc
+.DS_Store
+*.pem

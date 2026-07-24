@@ -60,10 +60,7 @@ const MOCK_ATTESTATIONS = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockDeps(
-  commitment: typeof MOCK_COMMITMENT | null,
-  attestations = MOCK_ATTESTATIONS,
-) {
+function mockDeps(commitment: typeof MOCK_COMMITMENT | null, attestations = MOCK_ATTESTATIONS) {
   vi.doMock('@/lib/backend/services/contracts', () => ({
     getCommitmentFromChain: commitment
       ? vi.fn().mockResolvedValue(commitment)
@@ -80,9 +77,7 @@ function mockDeps(
 }
 
 function makeRequest(id: string, query = '') {
-  return createMockRequest(
-    `http://localhost:3000/api/commitments/${id}/history${query}`,
-  );
+  return createMockRequest(`http://localhost:3000/api/commitments/${id}/history${query}`);
 }
 
 async function callRoute(id: string, query = '') {

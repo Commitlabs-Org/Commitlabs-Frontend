@@ -60,14 +60,14 @@ export interface Attestation {
 }
 
 export interface HealthMetrics {
-   status: string;
-   uptime: number;
-   rate_limit_blocks: number;
-   auth_failures: number;
-   chain_failures: number;
-   successful_actions: number;
-   timestamp: string;
- }
+  status: string;
+  uptime: number;
+  rate_limit_blocks: number;
+  auth_failures: number;
+  chain_failures: number;
+  successful_actions: number;
+  timestamp: string;
+}
 
 export type ListingStatus = 'Active' | 'Sold' | 'Cancelled';
 
@@ -104,11 +104,7 @@ export interface CreateListingRequest {
  * | early_exit    | Owner triggered an early exit                |
  * | settlement    | Commitment reached maturity and was settled  |
  */
-export type HistoryEventKind =
-  | 'created'
-  | 'attestation'
-  | 'early_exit'
-  | 'settlement';
+export type HistoryEventKind = 'created' | 'attestation' | 'early_exit' | 'settlement';
 
 export interface BaseHistoryEvent {
   /** Stable, deterministic identifier for this event (kind + source id). */
@@ -156,11 +152,7 @@ export interface SettlementEvent extends BaseHistoryEvent {
   };
 }
 
-export type HistoryEvent =
-  | CreatedEvent
-  | AttestationEvent
-  | EarlyExitEvent
-  | SettlementEvent;
+export type HistoryEvent = CreatedEvent | AttestationEvent | EarlyExitEvent | SettlementEvent;
 
 // ---------------------------------------------------------------------------
 // Notifications

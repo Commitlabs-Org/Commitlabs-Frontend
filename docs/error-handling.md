@@ -1,4 +1,5 @@
 # Rate Limit (429) and Server (5xx) Error Handling
+
 **Reference:** [#133 - Define consistent behavior for rate limit and server errors](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/133)
 
 This document defines how the Commitlabs-Frontend backend responds to rate limiting (429) and server-side errors (5xx), and how developers should use the error helpers and `withApiHandler` wrapper.
@@ -27,14 +28,14 @@ Every error response follows this structure:
 }
 ```
 
-| Field | Type | Always Present | Description |
-|-------|------|----------------|-------------|
-| `success` | `boolean` | ✅ | Always `false` for errors |
-| `error.code` | `number` | ✅ | HTTP status code |
-| `error.type` | `string` | ✅ | Machine-readable error type |
-| `error.message` | `string` | ✅ | Human-readable message safe for UI display |
-| `error.retryAfter` | `number` | ❌ | Seconds to wait — only on 429 and 503 |
-| `error.details` | `string` | ❌ | Internal detail — development mode only, never in production |
+| Field              | Type      | Always Present | Description                                                  |
+| ------------------ | --------- | -------------- | ------------------------------------------------------------ |
+| `success`          | `boolean` | ✅             | Always `false` for errors                                    |
+| `error.code`       | `number`  | ✅             | HTTP status code                                             |
+| `error.type`       | `string`  | ✅             | Machine-readable error type                                  |
+| `error.message`    | `string`  | ✅             | Human-readable message safe for UI display                   |
+| `error.retryAfter` | `number`  | ❌             | Seconds to wait — only on 429 and 503                        |
+| `error.details`    | `string`  | ❌             | Internal detail — development mode only, never in production |
 
 ---
 
@@ -57,6 +58,7 @@ Every error response follows this structure:
 ```
 
 **HTTP Headers returned:**
+
 ```
 Content-Type: application/json
 Retry-After: 60
@@ -115,6 +117,7 @@ Retry-After: 60
 ```
 
 **HTTP Headers returned:**
+
 ```
 Content-Type: application/json
 Retry-After: 30
@@ -147,8 +150,8 @@ Wrap every API route handler with `withApiHandler`:
 
 ```ts
 // src/app/api/commitments/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { withApiHandler } from "@/utils/withApiHandler";
+import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/utils/withApiHandler';
 
 export const GET = withApiHandler(async (req: NextRequest) => {
   // your normal handler logic here
@@ -164,7 +167,7 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 Throw a `RateLimitError` anywhere inside your handler:
 
 ```ts
-import { withApiHandler, RateLimitError } from "@/utils/withApiHandler";
+import { withApiHandler, RateLimitError } from '@/utils/withApiHandler';
 
 export const POST = withApiHandler(async (req: NextRequest) => {
   const isRateLimited = await checkRateLimit(req);
@@ -184,7 +187,7 @@ export const POST = withApiHandler(async (req: NextRequest) => {
 Throw a `ServerError` with the appropriate status code:
 
 ```ts
-import { withApiHandler, ServerError } from "@/utils/withApiHandler";
+import { withApiHandler, ServerError } from '@/utils/withApiHandler';
 
 export const GET = withApiHandler(async (req: NextRequest) => {
   try {
@@ -192,7 +195,7 @@ export const GET = withApiHandler(async (req: NextRequest) => {
     return NextResponse.json({ success: true, data: result });
   } catch (err) {
     // RPC node unreachable — respond with 502
-    throw new ServerError(502, "Soroban RPC node did not respond");
+    throw new ServerError(502, 'Soroban RPC node did not respond');
   }
 });
 ```
@@ -204,8 +207,8 @@ export const GET = withApiHandler(async (req: NextRequest) => {
 If you need to build an error response manually without the wrapper:
 
 ```ts
-import { rateLimitError, resolveServerError, getErrorHeaders } from "@/utils/errorHelpers";
-import { NextResponse } from "next/server";
+import { rateLimitError, resolveServerError, getErrorHeaders } from '@/utils/errorHelpers';
+import { NextResponse } from 'next/server';
 
 // Manual 429
 const body = rateLimitError(60);
@@ -225,9 +228,9 @@ return NextResponse.json(body, { status: 503, headers });
 The `Retry-After` HTTP header is automatically added by `withApiHandler` and `getErrorHeaders()` for:
 
 | Status Code | Default Retry-After |
-|-------------|---------------------|
-| 429 | 60 seconds |
-| 503 | 30 seconds |
+| ----------- | ------------------- |
+| 429         | 60 seconds          |
+| 503         | 30 seconds          |
 
 Clients and frontend code should read this header and wait the indicated number of seconds before retrying. Do not retry immediately on 429 or 503.
 
@@ -237,20 +240,20 @@ Clients and frontend code should read this header and wait the indicated number 
 
 The `details` field in the error response is **only included in development mode** (`NODE_ENV === "development"`). In production, this field is always omitted to avoid leaking internal system information to clients.
 
-| Environment | `details` field |
-|-------------|-----------------|
-| `development` | ✅ Included |
-| `production` | ❌ Omitted |
+| Environment   | `details` field |
+| ------------- | --------------- |
+| `development` | ✅ Included     |
+| `production`  | ❌ Omitted      |
 
 ---
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/utils/errorHelpers.ts` | Error factory functions and HTTP header helpers |
+| File                          | Purpose                                                        |
+| ----------------------------- | -------------------------------------------------------------- |
+| `src/utils/errorHelpers.ts`   | Error factory functions and HTTP header helpers                |
 | `src/utils/withApiHandler.ts` | HOF wrapper for API routes — catches and translates all errors |
-| `docs/error-handling.md` | This document |
+| `docs/error-handling.md`      | This document                                                  |
 
 ---
 
@@ -281,7 +284,7 @@ Use **exponential backoff with jitter** to avoid thundering herd:
 async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
-  maxRetries = 5
+  maxRetries = 5,
 ): Promise<Response> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch(url, options);
@@ -316,18 +319,18 @@ async function fetchWithRetry(
 
 ### Retry Decision Matrix
 
-| Status | Should Retry | Strategy |
-|--------|-------------|----------|
-| 400 | No | Fix request first |
-| 401 | No | Re-authenticate |
-| 403 | No | Check permissions |
-| 404 | No | Resource doesn't exist |
-| 409 | No | Resolve conflict first |
-| 429 | Yes | Wait `Retry-After`, then backoff |
-| 500 | Yes | Exponential backoff |
-| 502 | Yes | Exponential backoff |
-| 503 | Yes | Wait `Retry-After`, then backoff |
-| 504 | Yes | Exponential backoff |
+| Status | Should Retry | Strategy                         |
+| ------ | ------------ | -------------------------------- |
+| 400    | No           | Fix request first                |
+| 401    | No           | Re-authenticate                  |
+| 403    | No           | Check permissions                |
+| 404    | No           | Resource doesn't exist           |
+| 409    | No           | Resolve conflict first           |
+| 429    | Yes          | Wait `Retry-After`, then backoff |
+| 500    | Yes          | Exponential backoff              |
+| 502    | Yes          | Exponential backoff              |
+| 503    | Yes          | Wait `Retry-After`, then backoff |
+| 504    | Yes          | Exponential backoff              |
 
 ### Frontend Integration
 
@@ -353,17 +356,17 @@ async function apiRequest(url: string, init?: RequestInit) {
 
 `src/app/transaction-error/page.tsx` maps backend-normalized chain errors into three user-facing recovery categories. The page keeps the shared `ErrorLayout` and `ErrorButton` shell, focuses the `<h1>` on load, and always provides both a `Try Again` path and a `Go to Dashboard` path.
 
-| UI category | Backend codes | Recovery behavior |
-|-------------|---------------|-------------------|
-| `rejected` | `VALIDATION_ERROR`, `BAD_REQUEST`, `UNPROCESSABLE_ENTITY`, `CONFLICT`, `SIGNATURE_INVALID`, `USER_REJECTED` | Explain that the transaction was not accepted, prompt the user to review wallet approval, parameters, and current commitment state, then try again. |
-| `timed-out` | `GATEWAY_TIMEOUT`, `RPC_TIMEOUT`, `BLOCKCHAIN_UNAVAILABLE`, `SERVICE_UNAVAILABLE` | Treat the transaction outcome as unknown. If a hash is available, point the user to Stellar Expert before retrying so the same signed transaction is not resubmitted blindly. |
-| `failed` | `BLOCKCHAIN_CALL_FAILED`, `BAD_GATEWAY`, `INTERNAL_ERROR`, unknown codes | Explain that execution or upstream chain handling failed, show the normalized code, and let the user retry after checking balance, fees, and contract state. |
+| UI category | Backend codes                                                                                               | Recovery behavior                                                                                                                                                             |
+| ----------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rejected`  | `VALIDATION_ERROR`, `BAD_REQUEST`, `UNPROCESSABLE_ENTITY`, `CONFLICT`, `SIGNATURE_INVALID`, `USER_REJECTED` | Explain that the transaction was not accepted, prompt the user to review wallet approval, parameters, and current commitment state, then try again.                           |
+| `timed-out` | `GATEWAY_TIMEOUT`, `RPC_TIMEOUT`, `BLOCKCHAIN_UNAVAILABLE`, `SERVICE_UNAVAILABLE`                           | Treat the transaction outcome as unknown. If a hash is available, point the user to Stellar Expert before retrying so the same signed transaction is not resubmitted blindly. |
+| `failed`    | `BLOCKCHAIN_CALL_FAILED`, `BAD_GATEWAY`, `INTERNAL_ERROR`, unknown codes                                    | Explain that execution or upstream chain handling failed, show the normalized code, and let the user retry after checking balance, fees, and contract state.                  |
 
 The backend source of truth remains `src/lib/backend/errorCodes.ts` and the Soroban normalization in `src/lib/backend/services/contracts.ts`. When adding a new normalized chain error, update this table and the page mapping together.
 
 ---
 
-*This document was created as part of issue #133. Update it as new error types are introduced.*
+_This document was created as part of issue #133. Update it as new error types are introduced._
 
 ---
 
@@ -379,11 +382,11 @@ Every captured error produces a `ClientErrorRecord`:
 
 ```ts
 interface ClientErrorRecord {
-  message: string        // redacted error message
-  digest: string | undefined  // Next.js error digest (if available)
-  route: string          // window.location.pathname at time of error
-  timestamp: string      // ISO 8601 UTC timestamp
-  stack?: string         // stack trace — omitted in production
+  message: string; // redacted error message
+  digest: string | undefined; // Next.js error digest (if available)
+  route: string; // window.location.pathname at time of error
+  timestamp: string; // ISO 8601 UTC timestamp
+  stack?: string; // stack trace — omitted in production
 }
 ```
 
@@ -398,15 +401,15 @@ Sensitive keys: `token`, `authorization`, `password`, `secret`, `key`, `privatek
 The default transport writes to `console.error`. Replace it before your app mounts with `setErrorTransport`:
 
 ```ts
-import { setErrorTransport } from '@/lib/observability/reportError'
+import { setErrorTransport } from '@/lib/observability/reportError';
 
 // Wire up your observability sink (Sentry, Datadog, custom ingest…)
 setErrorTransport((record) => {
   fetch('/api/client-errors', {
     method: 'POST',
     body: JSON.stringify(record),
-  })
-})
+  });
+});
 ```
 
 No runtime dependency is added — the transport is a plain function and the default is a console call.
@@ -417,14 +420,14 @@ No runtime dependency is added — the transport is a plain function and the def
 
 ```ts
 useEffect(() => {
-  reportError(error, window.location.pathname)
-}, [error])
+  reportError(error, window.location.pathname);
+}, [error]);
 ```
 
 ### Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/observability/reportError.ts` | Reporter, `ClientErrorRecord` type, `setErrorTransport` |
-| `src/lib/observability/__tests__/reportError.test.ts` | Unit tests (transport, redaction, stack-trace behaviour) |
-| `src/app/error.tsx` | Route error boundary — calls `reportError` on mount/update |
+| File                                                  | Purpose                                                    |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| `src/lib/observability/reportError.ts`                | Reporter, `ClientErrorRecord` type, `setErrorTransport`    |
+| `src/lib/observability/__tests__/reportError.test.ts` | Unit tests (transport, redaction, stack-trace behaviour)   |
+| `src/app/error.tsx`                                   | Route error boundary — calls `reportError` on mount/update |

@@ -62,36 +62,25 @@ const mockCommitments = [
 
 describe('PortfolioAllocationChartInner', () => {
   it('renders with commitments', () => {
-    const { container } = render(
-      <PortfolioAllocationChartInner commitments={mockCommitments} />,
-    );
+    const { container } = render(<PortfolioAllocationChartInner commitments={mockCommitments} />);
     expect(container.firstChild).toBeTruthy();
   });
 
   it('renders empty state when no commitments', () => {
     render(<PortfolioAllocationChartInner commitments={[]} />);
     expect(screen.getByText('No Portfolio Data')).toBeTruthy();
-    expect(
-      screen.getByText(/create a commitment/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/create a commitment/i)).toBeTruthy();
   });
 
   it('renders accessible table with allocation data', () => {
-    render(
-      <PortfolioAllocationChartInner commitments={mockCommitments} />,
-    );
+    render(<PortfolioAllocationChartInner commitments={mockCommitments} />);
     const table = screen.getByRole('table');
     expect(table).toBeTruthy();
-    expect(table).toHaveAttribute(
-      'aria-label',
-      'Portfolio allocation by risk profile',
-    );
+    expect(table).toHaveAttribute('aria-label', 'Portfolio allocation by risk profile');
   });
 
   it('shows risk profile categories by default', () => {
-    render(
-      <PortfolioAllocationChartInner commitments={mockCommitments} />,
-    );
+    render(<PortfolioAllocationChartInner commitments={mockCommitments} />);
     expect(screen.getAllByText('Safe').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Balanced').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Aggressive').length).toBeGreaterThanOrEqual(1);
@@ -99,9 +88,7 @@ describe('PortfolioAllocationChartInner', () => {
 
   it('renders with a single commitment', () => {
     const single = [mockCommitments[0]!];
-    const { container } = render(
-      <PortfolioAllocationChartInner commitments={single} />,
-    );
+    const { container } = render(<PortfolioAllocationChartInner commitments={single} />);
     expect(container.firstChild).toBeTruthy();
     expect(screen.getAllByText('Safe').length).toBeGreaterThanOrEqual(1);
   });

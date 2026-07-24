@@ -1,19 +1,11 @@
-import { logError, logInfo } from "../logger";
-import {
-  ConflictError,
-  InternalError,
-  NotFoundError,
-  ValidationError,
-} from "../errors";
-import { getStorageAdapter } from "../storage";
-import type {
-  MarketplaceListing,
-  CreateListingRequest,
-} from "@/lib/types/domain";
-import { cache } from "@/lib/backend/cache/factory";
-import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
+import { logError, logInfo } from '../logger';
+import { ConflictError, InternalError, NotFoundError, ValidationError } from '../errors';
+import { getStorageAdapter } from '../storage';
+import type { MarketplaceListing, CreateListingRequest } from '@/lib/types/domain';
+import { cache } from '@/lib/backend/cache/factory';
+import { CacheKey, CacheTTL } from '@/lib/backend/cache/index';
 
-export type MarketplaceCommitmentType = "Safe" | "Balanced" | "Aggressive";
+export type MarketplaceCommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
 export interface MarketplacePublicListing {
   listingId: string;
@@ -58,13 +50,13 @@ export interface FeaturedMarketplaceConfig {
   limit: number;
 }
 
-const MARKETPLACE_LISTING_COUNTER_KEY = "marketplace:listings:counter";
+const MARKETPLACE_LISTING_COUNTER_KEY = 'marketplace:listings:counter';
 
 const MOCK_LISTINGS: MarketplacePublicListing[] = [
   {
-    listingId: "LST-001",
-    commitmentId: "CMT-001",
-    type: "Safe",
+    listingId: 'LST-001',
+    commitmentId: 'CMT-001',
+    type: 'Safe',
     amount: 50000,
     remainingDays: 25,
     maxLoss: 2,
@@ -73,9 +65,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 52000,
   },
   {
-    listingId: "LST-002",
-    commitmentId: "CMT-002",
-    type: "Balanced",
+    listingId: 'LST-002',
+    commitmentId: 'CMT-002',
+    type: 'Balanced',
     amount: 100000,
     remainingDays: 45,
     maxLoss: 8,
@@ -84,9 +76,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 105000,
   },
   {
-    listingId: "LST-003",
-    commitmentId: "CMT-003",
-    type: "Aggressive",
+    listingId: 'LST-003',
+    commitmentId: 'CMT-003',
+    type: 'Aggressive',
     amount: 250000,
     remainingDays: 80,
     maxLoss: 100,
@@ -95,9 +87,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 262000,
   },
   {
-    listingId: "LST-004",
-    commitmentId: "CMT-004",
-    type: "Safe",
+    listingId: 'LST-004',
+    commitmentId: 'CMT-004',
+    type: 'Safe',
     amount: 75000,
     remainingDays: 15,
     maxLoss: 2,
@@ -106,9 +98,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 76500,
   },
   {
-    listingId: "LST-005",
-    commitmentId: "CMT-005",
-    type: "Balanced",
+    listingId: 'LST-005',
+    commitmentId: 'CMT-005',
+    type: 'Balanced',
     amount: 150000,
     remainingDays: 55,
     maxLoss: 8,
@@ -117,9 +109,9 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
     price: 155000,
   },
   {
-    listingId: "LST-006",
-    commitmentId: "CMT-006",
-    type: "Aggressive",
+    listingId: 'LST-006',
+    commitmentId: 'CMT-006',
+    type: 'Aggressive',
     amount: 500000,
     remainingDays: 85,
     maxLoss: 100,
@@ -130,26 +122,22 @@ const MOCK_LISTINGS: MarketplacePublicListing[] = [
 ];
 
 const SORT_CONFIG = {
-  price: { key: "price", order: "desc" },
-  amount: { key: "amount", order: "desc" },
-  complianceScore: { key: "complianceScore", order: "desc" },
-  remainingDays: { key: "remainingDays", order: "asc" },
-  maxLoss: { key: "maxLoss", order: "asc" },
-  currentYield: { key: "currentYield", order: "desc" },
-} as const satisfies Record<
-  string,
-  { key: keyof MarketplacePublicListing; order: "asc" | "desc" }
->;
+  price: { key: 'price', order: 'desc' },
+  amount: { key: 'amount', order: 'desc' },
+  complianceScore: { key: 'complianceScore', order: 'desc' },
+  remainingDays: { key: 'remainingDays', order: 'asc' },
+  maxLoss: { key: 'maxLoss', order: 'asc' },
+  currentYield: { key: 'currentYield', order: 'desc' },
+} as const satisfies Record<string, { key: keyof MarketplacePublicListing; order: 'asc' | 'desc' }>;
 
-export const FEATURED_MARKETPLACE_CONFIG: FeaturedMarketplaceConfig =
-  Object.freeze({
-    minComplianceScore: 85,
-    maxLoss: 8,
-    limit: 4,
-  });
+export const FEATURED_MARKETPLACE_CONFIG: FeaturedMarketplaceConfig = Object.freeze({
+  minComplianceScore: 85,
+  maxLoss: 8,
+  limit: 4,
+});
 
 export const FEATURED_MARKETPLACE_CACHE_CONTROL =
-  "public, max-age=300, s-maxage=300, stale-while-revalidate=600";
+  'public, max-age=300, s-maxage=300, stale-while-revalidate=600';
 
 export type MarketplaceSortBy = keyof typeof SORT_CONFIG;
 
@@ -163,14 +151,10 @@ function getActiveListingStorageKey(commitmentId: string): string {
 
 function normalizeStorageError(error: unknown): InternalError {
   const normalized = error instanceof Error ? error : new Error(String(error));
-  logError(
-    undefined,
-    "[MarketplaceService] Storage operation failed",
-    normalized,
-  );
+  logError(undefined, '[MarketplaceService] Storage operation failed', normalized);
 
   return new InternalError(
-    "Marketplace storage is temporarily unavailable. Please try again later.",
+    'Marketplace storage is temporarily unavailable. Please try again later.',
   );
 }
 
@@ -183,7 +167,7 @@ function sortListings(
   return [...listings].sort((a, b) => {
     const lhs = a[key] as number;
     const rhs = b[key] as number;
-    return order === "asc" ? lhs - rhs : rhs - lhs;
+    return order === 'asc' ? lhs - rhs : rhs - lhs;
   });
 }
 
@@ -203,7 +187,7 @@ function queryHash(query: MarketplaceListingsQuery): string {
   return JSON.stringify(entries);
 }
 
-const LISTINGS_PREFIX = "commitlabs:marketplace:listings:";
+const LISTINGS_PREFIX = 'commitlabs:marketplace:listings:';
 
 export async function listMarketplaceListings(
   query: MarketplaceListingsQuery,
@@ -211,10 +195,10 @@ export async function listMarketplaceListings(
   const cacheKey = CacheKey.marketplaceListings(queryHash(query));
   const cached = await cache.get<MarketplacePublicListing[]>(cacheKey);
   if (cached !== null) {
-    logInfo(undefined, "[cache] hit marketplace-listings", { query });
+    logInfo(undefined, '[cache] hit marketplace-listings', { query });
     return cached;
   }
-  logInfo(undefined, "[cache] miss marketplace-listings", { query });
+  logInfo(undefined, '[cache] miss marketplace-listings', { query });
 
   let results = MOCK_LISTINGS;
 
@@ -223,9 +207,7 @@ export async function listMarketplaceListings(
   }
   if (query.minCompliance !== undefined) {
     const minCompliance = query.minCompliance;
-    results = results.filter(
-      (listing) => listing.complianceScore >= minCompliance,
-    );
+    results = results.filter((listing) => listing.complianceScore >= minCompliance);
   }
   if (query.maxLoss !== undefined) {
     const maxLoss = query.maxLoss;
@@ -240,8 +222,7 @@ export async function listMarketplaceListings(
     results = results.filter((listing) => listing.amount <= maxAmount);
   }
 
-  const sortBy =
-    query.sortBy && isMarketplaceSortBy(query.sortBy) ? query.sortBy : "price";
+  const sortBy = query.sortBy && isMarketplaceSortBy(query.sortBy) ? query.sortBy : 'price';
 
   // TODO(on-chain): Replace mock listings with marketplace contract reads.
   // TODO(attestation): Merge latest attestation engine score per commitment when available.
@@ -257,8 +238,7 @@ export function selectFeaturedMarketplaceListings(
   return [...listings]
     .filter(
       (listing) =>
-        listing.complianceScore >= config.minComplianceScore &&
-        listing.maxLoss <= config.maxLoss,
+        listing.complianceScore >= config.minComplianceScore && listing.maxLoss <= config.maxLoss,
     )
     .sort((left, right) => {
       if (right.complianceScore !== left.complianceScore) {
@@ -281,22 +261,16 @@ export function selectFeaturedMarketplaceListings(
 class MarketplaceService {
   private readonly storage = getStorageAdapter();
 
-  private async loadListing(
-    listingId: string,
-  ): Promise<MarketplaceListing | null> {
+  private async loadListing(listingId: string): Promise<MarketplaceListing | null> {
     try {
-      return await this.storage.get<MarketplaceListing>(
-        getListingStorageKey(listingId),
-      );
+      return await this.storage.get<MarketplaceListing>(getListingStorageKey(listingId));
     } catch (error) {
       throw normalizeStorageError(error);
     }
   }
 
-  async createListing(
-    request: CreateListingRequest,
-  ): Promise<MarketplaceListing> {
-    logInfo(undefined, "[MarketplaceService] Creating listing", { request });
+  async createListing(request: CreateListingRequest): Promise<MarketplaceListing> {
+    logInfo(undefined, '[MarketplaceService] Creating listing', { request });
 
     this.validateCreateListingRequest(request);
 
@@ -308,20 +282,15 @@ class MarketplaceService {
       if (activeListingId) {
         const existingListing = await this.loadListing(activeListingId);
 
-        if (existingListing?.status === "Active") {
-          throw new ConflictError(
-            "Commitment is already listed on the marketplace.",
-            {
-              commitmentId: request.commitmentId,
-              existingListingId: existingListing.id,
-            },
-          );
+        if (existingListing?.status === 'Active') {
+          throw new ConflictError('Commitment is already listed on the marketplace.', {
+            commitmentId: request.commitmentId,
+            existingListingId: existingListing.id,
+          });
         }
       }
 
-      const listingSequence = await this.storage.increment(
-        MARKETPLACE_LISTING_COUNTER_KEY,
-      );
+      const listingSequence = await this.storage.increment(MARKETPLACE_LISTING_COUNTER_KEY);
       const listingId = `listing_${listingSequence}_${Date.now()}`;
       const now = new Date().toISOString();
 
@@ -331,32 +300,25 @@ class MarketplaceService {
         price: request.price,
         currencyAsset: request.currencyAsset,
         sellerAddress: request.sellerAddress,
-        status: "Active",
+        status: 'Active',
         createdAt: now,
         updatedAt: now,
       };
 
       await this.storage.set(getListingStorageKey(listingId), listing);
-      await this.storage.set(
-        getActiveListingStorageKey(request.commitmentId),
-        listingId,
-      );
+      await this.storage.set(getActiveListingStorageKey(request.commitmentId), listingId);
 
-      logInfo(undefined, "[MarketplaceService] Listing created", { listingId });
+      logInfo(undefined, '[MarketplaceService] Listing created', { listingId });
 
       // Invalidate all cached listing queries — the set has changed.
       await cache.invalidate(LISTINGS_PREFIX);
-      logInfo(
-        undefined,
-        "[cache] invalidated marketplace-listings after create",
-        {
-          listingId,
-        },
-      );
+      logInfo(undefined, '[cache] invalidated marketplace-listings after create', {
+        listingId,
+      });
 
       // Invalidate marketplace stats as the set of active listings changed.
       await cache.delete(CacheKey.marketplaceStats());
-      logInfo(undefined, "[cache] invalidated marketplace-stats after create", {
+      logInfo(undefined, '[cache] invalidated marketplace-stats after create', {
         listingId,
       });
 
@@ -367,7 +329,7 @@ class MarketplaceService {
   }
 
   async cancelListing(listingId: string, sellerAddress: string): Promise<void> {
-    logInfo(undefined, "[MarketplaceService] Cancelling listing", {
+    logInfo(undefined, '[MarketplaceService] Cancelling listing', {
       listingId,
       sellerAddress,
     });
@@ -375,19 +337,19 @@ class MarketplaceService {
     const listing = await this.getListing(listingId);
 
     if (!listing) {
-      throw new NotFoundError("Listing", { listingId });
+      throw new NotFoundError('Listing', { listingId });
     }
 
     if (listing.sellerAddress !== sellerAddress) {
-      throw new ValidationError("Only the seller can cancel this listing.", {
+      throw new ValidationError('Only the seller can cancel this listing.', {
         listingId,
         expectedSeller: listing.sellerAddress,
         providedSeller: sellerAddress,
       });
     }
 
-    if (listing.status !== "Active") {
-      throw new ConflictError("Only active listings can be cancelled.", {
+    if (listing.status !== 'Active') {
+      throw new ConflictError('Only active listings can be cancelled.', {
         listingId,
         currentStatus: listing.status,
       });
@@ -396,7 +358,7 @@ class MarketplaceService {
     try {
       const cancelledListing: MarketplaceListing = {
         ...listing,
-        status: "Cancelled",
+        status: 'Cancelled',
         updatedAt: new Date().toISOString(),
       };
 
@@ -404,19 +366,15 @@ class MarketplaceService {
 
       // Invalidate all cached listing queries — the set has changed.
       await cache.invalidate(LISTINGS_PREFIX);
-      logInfo(
-        undefined,
-        "[cache] invalidated marketplace-listings after cancel",
-        { listingId },
-      );
+      logInfo(undefined, '[cache] invalidated marketplace-listings after cancel', { listingId });
 
       // Invalidate marketplace stats as the set of active listings changed.
       await cache.delete(CacheKey.marketplaceStats());
-      logInfo(undefined, "[cache] invalidated marketplace-stats after cancel", {
+      logInfo(undefined, '[cache] invalidated marketplace-stats after cancel', {
         listingId,
       });
 
-      logInfo(undefined, "[MarketplaceService] Listing cancelled", {
+      logInfo(undefined, '[MarketplaceService] Listing cancelled', {
         listingId,
       });
     } catch (error) {
@@ -454,9 +412,7 @@ class MarketplaceService {
     const totalYield = listings.reduce((sum, l) => sum + l.currentYield, 0);
     const averageYield = parseFloat((totalYield / activeListings).toFixed(2));
 
-    const sortedPrices = [...listings]
-      .map((l) => l.price)
-      .sort((a, b) => a - b);
+    const sortedPrices = [...listings].map((l) => l.price).sort((a, b) => a - b);
     const mid = Math.floor(sortedPrices.length / 2);
     const medianPrice =
       sortedPrices.length % 2 !== 0
@@ -485,30 +441,30 @@ class MarketplaceService {
     listingId: string,
     buyerAddress: string,
   ): Promise<PurchasePreflightResponse> {
-    logInfo(undefined, "[MarketplaceService] Purchase preflight", {
+    logInfo(undefined, '[MarketplaceService] Purchase preflight', {
       listingId,
       buyerAddress,
     });
 
     const listing = this.listings.get(listingId);
     if (!listing) {
-      throw new NotFoundError("Listing", { listingId });
+      throw new NotFoundError('Listing', { listingId });
     }
 
     const reasons: string[] = [];
 
-    if (listing.status !== "Active") {
-      reasons.push("listing_inactive");
+    if (listing.status !== 'Active') {
+      reasons.push('listing_inactive');
     }
 
     if (listing.sellerAddress === buyerAddress) {
-      reasons.push("buyer_is_seller");
+      reasons.push('buyer_is_seller');
     }
 
     // Example of how we might handle non-transferable commitments
     // In a real app, this would check a property on the commitment or contract
-    if (listing.commitmentId.includes("non-transferable")) {
-      reasons.push("non_transferable");
+    if (listing.commitmentId.includes('non-transferable')) {
+      reasons.push('non_transferable');
     }
 
     return {
@@ -520,29 +476,29 @@ class MarketplaceService {
   private validateCreateListingRequest(request: CreateListingRequest): void {
     const errors: string[] = [];
 
-    if (!request.commitmentId || typeof request.commitmentId !== "string") {
-      errors.push("commitmentId is required and must be a string");
+    if (!request.commitmentId || typeof request.commitmentId !== 'string') {
+      errors.push('commitmentId is required and must be a string');
     }
 
-    if (!request.price || typeof request.price !== "string") {
-      errors.push("price is required and must be a string");
+    if (!request.price || typeof request.price !== 'string') {
+      errors.push('price is required and must be a string');
     } else {
       const priceNum = Number.parseFloat(request.price);
       if (Number.isNaN(priceNum) || priceNum <= 0) {
-        errors.push("price must be a positive number");
+        errors.push('price must be a positive number');
       }
     }
 
-    if (!request.currencyAsset || typeof request.currencyAsset !== "string") {
-      errors.push("currencyAsset is required and must be a string");
+    if (!request.currencyAsset || typeof request.currencyAsset !== 'string') {
+      errors.push('currencyAsset is required and must be a string');
     }
 
-    if (!request.sellerAddress || typeof request.sellerAddress !== "string") {
-      errors.push("sellerAddress is required and must be a string");
+    if (!request.sellerAddress || typeof request.sellerAddress !== 'string') {
+      errors.push('sellerAddress is required and must be a string');
     }
 
     if (errors.length > 0) {
-      throw new ValidationError("Invalid listing request", { errors });
+      throw new ValidationError('Invalid listing request', { errors });
     }
   }
 }

@@ -6,11 +6,11 @@
  * navigation without being carried across separate sessions.
  */
 
-import { useCallback, useState } from "react";
-import { RANGE_OPTIONS, type RangeKey } from "./HealthMetricsRangeSelector";
+import { useCallback, useState } from 'react';
+import { RANGE_OPTIONS, type RangeKey } from './HealthMetricsRangeSelector';
 
-const SESSION_KEY = "healthMetrics.selectedRange";
-const DEFAULT_RANGE: RangeKey = "30d";
+const SESSION_KEY = 'healthMetrics.selectedRange';
+const DEFAULT_RANGE: RangeKey = '30d';
 
 const VALID_KEYS = new Set<string>(RANGE_OPTIONS.map((o) => o.key));
 
@@ -65,7 +65,7 @@ export function useHealthMetricsRange(): UseHealthMetricsRangeReturn {
         return date >= start;
       });
     },
-    [selectedRange]
+    [selectedRange],
   );
 
   return { selectedRange, setRange, filterByRange };

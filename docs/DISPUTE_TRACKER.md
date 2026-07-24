@@ -4,11 +4,11 @@ A read-only stepper rendered on the commitment detail page that makes the disput
 
 ## Where it lives
 
-| File | Purpose |
-|------|---------|
-| `src/components/dispute/DisputeStatusTracker.tsx` | Component + exported types |
-| `src/components/dispute/DisputeStatusTracker.test.tsx` | RTL unit tests |
-| `src/app/commitments/[id]/page.tsx` | Mount point |
+| File                                                   | Purpose                    |
+| ------------------------------------------------------ | -------------------------- |
+| `src/components/dispute/DisputeStatusTracker.tsx`      | Component + exported types |
+| `src/components/dispute/DisputeStatusTracker.test.tsx` | RTL unit tests             |
+| `src/app/commitments/[id]/page.tsx`                    | Mount point                |
 
 ## Data sources
 
@@ -28,24 +28,21 @@ interface DisputeStatusTrackerProps {
 
 interface DisputeInfo {
   stage: 'filed' | 'under_review' | 'resolved';
-  filedAt?: string;          // ISO-8601
-  reasonCategory?: string;   // free-text label shown under Filed step
-  reviewStartedAt?: string;  // ISO-8601
-  resolvedAt?: string;       // ISO-8601
-  resolution?:
-    | 'resolved_in_favor_of_owner'
-    | 'resolved_in_favor_of_counterparty'
-    | 'dismissed';
+  filedAt?: string; // ISO-8601
+  reasonCategory?: string; // free-text label shown under Filed step
+  reviewStartedAt?: string; // ISO-8601
+  resolvedAt?: string; // ISO-8601
+  resolution?: 'resolved_in_favor_of_owner' | 'resolved_in_favor_of_counterparty' | 'dismissed';
 }
 ```
 
 ## Stepper stages
 
-| Stage | Step highlighted | Notes |
-|-------|-----------------|-------|
-| `filed` | Filed | Dispute submitted, awaiting triage |
-| `under_review` | Under Review | Under active investigation |
-| `resolved` | Resolved | Shows outcome label |
+| Stage          | Step highlighted | Notes                              |
+| -------------- | ---------------- | ---------------------------------- |
+| `filed`        | Filed            | Dispute submitted, awaiting triage |
+| `under_review` | Under Review     | Under active investigation         |
+| `resolved`     | Resolved         | Shows outcome label                |
 
 ## Accessibility
 

@@ -4,19 +4,19 @@ This document summarizes the test coverage for the commitment dispute, resolve, 
 
 ## Files under test
 
-| Route | File |
-|-------|------|
+| Route                                | File                                            |
+| ------------------------------------ | ----------------------------------------------- |
 | `POST /api/commitments/[id]/dispute` | `src/app/api/commitments/[id]/dispute/route.ts` |
 | `POST /api/commitments/[id]/resolve` | `src/app/api/commitments/[id]/resolve/route.ts` |
-| `POST /api/commitments/[id]/fund` | `src/app/api/commitments/[id]/fund/route.ts` |
+| `POST /api/commitments/[id]/fund`    | `src/app/api/commitments/[id]/fund/route.ts`    |
 
 ## Test files
 
-| Route | Test file |
-|-------|-----------|
+| Route   | Test file                                            |
+| ------- | ---------------------------------------------------- |
 | Dispute | `src/app/api/commitments/[id]/dispute/route.test.ts` |
 | Resolve | `src/app/api/commitments/[id]/resolve/route.test.ts` |
-| Fund | `src/app/api/commitments/[id]/fund/route.test.ts` |
+| Fund    | `src/app/api/commitments/[id]/fund/route.test.ts`    |
 
 ## Covered behaviors
 

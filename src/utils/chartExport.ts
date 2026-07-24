@@ -68,7 +68,10 @@ export function buildHealthMetricsCsvContent(
 }
 
 export function sanitizeExportFilename(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return value
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 export function buildHealthMetricsFilename(
@@ -165,7 +168,14 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 // ── Attestation CSV export helpers ──────────────────────────────────────────
 
-export const ATTESTATION_CSV_HEADERS = ['ID', 'Title', 'Description', 'TX Hash', 'Timestamp', 'Severity'] as const;
+export const ATTESTATION_CSV_HEADERS = [
+  'ID',
+  'Title',
+  'Description',
+  'TX Hash',
+  'Timestamp',
+  'Severity',
+] as const;
 
 export function buildAttestationCsvRows(attestations: Attestation[]): CsvRow[] {
   return attestations.map((a) => [
@@ -179,10 +189,7 @@ export function buildAttestationCsvRows(attestations: Attestation[]): CsvRow[] {
 }
 
 export function buildAttestationCsvContent(attestations: Attestation[]): string {
-  return buildCsv(
-    [...ATTESTATION_CSV_HEADERS],
-    buildAttestationCsvRows(attestations),
-  );
+  return buildCsv([...ATTESTATION_CSV_HEADERS], buildAttestationCsvRows(attestations));
 }
 
 export function buildAttestationExportFilename(commitmentId: string): string {

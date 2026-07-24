@@ -13,10 +13,8 @@ import {
   type AuditEventSeverity,
 } from '../auditLog';
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ISO_TIMESTAMP_REGEX =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ISO_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 const REDACTED = '[REDACTED]';
 
 describe('auditLog — recordAuditEvent and store', () => {
@@ -81,8 +79,18 @@ describe('auditLog — recordAuditEvent and store', () => {
     });
 
     it('assigns unique IDs to successive events', () => {
-      const a = recordAuditEvent({ eventType: 'DISPUTE_OPENED', actorAddress: '0xA', commitmentId: 'cm-x', details: {} });
-      const b = recordAuditEvent({ eventType: 'DISPUTE_OPENED', actorAddress: '0xA', commitmentId: 'cm-x', details: {} });
+      const a = recordAuditEvent({
+        eventType: 'DISPUTE_OPENED',
+        actorAddress: '0xA',
+        commitmentId: 'cm-x',
+        details: {},
+      });
+      const b = recordAuditEvent({
+        eventType: 'DISPUTE_OPENED',
+        actorAddress: '0xA',
+        commitmentId: 'cm-x',
+        details: {},
+      });
       expect(a.id).not.toBe(b.id);
     });
 
@@ -106,8 +114,18 @@ describe('auditLog — recordAuditEvent and store', () => {
     const seed: Omit<AuditLogEntry, 'id' | 'timestamp'>[] = [
       { eventType: 'DISPUTE_OPENED', actorAddress: '0xAlice', commitmentId: 'cm-A', details: {} },
       { eventType: 'DISPUTE_RESOLVED', actorAddress: '0xBob', commitmentId: 'cm-A', details: {} },
-      { eventType: 'DISPUTE_OPEN_FAILED', actorAddress: '0xAlice', commitmentId: 'cm-B', details: {} },
-      { eventType: 'DISPUTE_RESOLVED_FAILED', actorAddress: '0xCarol', commitmentId: 'cm-B', details: {} },
+      {
+        eventType: 'DISPUTE_OPEN_FAILED',
+        actorAddress: '0xAlice',
+        commitmentId: 'cm-B',
+        details: {},
+      },
+      {
+        eventType: 'DISPUTE_RESOLVED_FAILED',
+        actorAddress: '0xCarol',
+        commitmentId: 'cm-B',
+        details: {},
+      },
     ];
 
     beforeEach(() => {
@@ -234,8 +252,18 @@ describe('auditLog — recordAuditEvent and store', () => {
     });
 
     it('getRecentAuditEvents filters by actor', async () => {
-      await appendAuditEvent({ category: 'auth', action: 'login', severity: 'info', actor: '0xAlice' });
-      await appendAuditEvent({ category: 'auth', action: 'login', severity: 'info', actor: '0xBob' });
+      await appendAuditEvent({
+        category: 'auth',
+        action: 'login',
+        severity: 'info',
+        actor: '0xAlice',
+      });
+      await appendAuditEvent({
+        category: 'auth',
+        action: 'login',
+        severity: 'info',
+        actor: '0xBob',
+      });
       const events = await getRecentAuditEvents(10, { actor: '0xAlice' });
       expect(events).toHaveLength(1);
     });

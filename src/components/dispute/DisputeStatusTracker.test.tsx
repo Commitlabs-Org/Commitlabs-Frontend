@@ -35,9 +35,7 @@ describe('DisputeStatusTracker', () => {
 
     it('renders as a section with an accessible label', () => {
       renderTracker(BASE_DISPUTE);
-      expect(
-        screen.getByRole('region', { name: /dispute status/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: /dispute status/i })).toBeInTheDocument();
     });
   });
 
@@ -76,9 +74,7 @@ describe('DisputeStatusTracker', () => {
         const list = screen.getByRole('list', { name: /dispute lifecycle steps/i });
         const items = within(list).getAllByRole('listitem');
 
-        const currentItem = items.find((li) =>
-          li.textContent?.includes(currentLabel),
-        );
+        const currentItem = items.find((li) => li.textContent?.includes(currentLabel));
         expect(currentItem).toHaveAttribute('aria-current', 'step');
       });
 
@@ -86,9 +82,7 @@ describe('DisputeStatusTracker', () => {
         renderTracker({ ...BASE_DISPUTE, stage });
         const list = screen.getByRole('list', { name: /dispute lifecycle steps/i });
         const items = within(list).getAllByRole('listitem');
-        const currentItems = items.filter(
-          (li) => li.getAttribute('aria-current') === 'step',
-        );
+        const currentItems = items.filter((li) => li.getAttribute('aria-current') === 'step');
         expect(currentItems).toHaveLength(1);
       });
 

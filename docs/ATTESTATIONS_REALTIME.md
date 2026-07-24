@@ -6,19 +6,19 @@
 
 ## Props
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `attestations` | `Attestation[]` | required | Static list rendered on initial load. |
-| `summary` | `{ complianceCount, warningCount, violationCount }` | required | Initial summary counts; merged with live arrivals. |
-| `onSelectAttestation` | `(id: string) => void` | required | Called when a row is clicked. |
-| `onViewAll` | `() => void` | required | Called when "View All" is clicked. |
-| `commitmentId` | `string \| null` | `null` | Commitment ID used to open the SSE stream. Pass `null` to disable streaming. |
-| `streamingEnabled` | `boolean` | `true` | Set to `false` to disable streaming while keeping `commitmentId` available. |
+| Prop                  | Type                                                | Default  | Description                                                                  |
+| --------------------- | --------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| `attestations`        | `Attestation[]`                                     | required | Static list rendered on initial load.                                        |
+| `summary`             | `{ complianceCount, warningCount, violationCount }` | required | Initial summary counts; merged with live arrivals.                           |
+| `onSelectAttestation` | `(id: string) => void`                              | required | Called when a row is clicked.                                                |
+| `onViewAll`           | `() => void`                                        | required | Called when "View All" is clicked.                                           |
+| `commitmentId`        | `string \| null`                                    | `null`   | Commitment ID used to open the SSE stream. Pass `null` to disable streaming. |
+| `streamingEnabled`    | `boolean`                                           | `true`   | Set to `false` to disable streaming while keeping `commitmentId` available.  |
 
 ## Usage Example
 
 ```tsx
-import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel'
+import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
 
 export default function CommitmentPage({ commitment, attestations }) {
   return (
@@ -30,7 +30,7 @@ export default function CommitmentPage({ commitment, attestations }) {
       commitmentId={commitment.id}
       streamingEnabled={true}
     />
-  )
+  );
 }
 ```
 
@@ -39,22 +39,22 @@ export default function CommitmentPage({ commitment, attestations }) {
 The hook lives at `src/hooks/useAttestationStream.ts` and can be reused independently.
 
 ```ts
-import { useAttestationStream } from '@/hooks/useAttestationStream'
+import { useAttestationStream } from '@/hooks/useAttestationStream';
 
 useAttestationStream({
   commitmentId: 'abc-123',
   onAttestation: (attestation) => console.log('new', attestation),
   enabled: true,
-})
+});
 ```
 
 ### Options
 
-| Option | Type | Description |
-|---|---|---|
-| `commitmentId` | `string \| null` | Commitment to subscribe to. |
+| Option          | Type                       | Description                                         |
+| --------------- | -------------------------- | --------------------------------------------------- |
+| `commitmentId`  | `string \| null`           | Commitment to subscribe to.                         |
 | `onAttestation` | `(a: Attestation) => void` | Callback fired for each received attestation event. |
-| `enabled` | `boolean` | When `false` the stream is not opened. |
+| `enabled`       | `boolean`                  | When `false` the stream is not opened.              |
 
 ## Behaviour
 
@@ -84,12 +84,12 @@ A visually-hidden `role="status"` / `aria-live="polite"` live region announces e
 
 The server-side SSE endpoint is at `src/app/api/commitments/[id]/events/route.ts`. It emits the following events:
 
-| Event name | Payload |
-|---|---|
-| `snapshot` | Initial commitment status on connect. |
-| `status_change` | Emitted when commitment status transitions. |
-| `attestation` | New attestation object (matches the `Attestation` interface). |
-| `: keepalive` | SSE comment sent every ~20 s to keep the connection alive. |
+| Event name      | Payload                                                       |
+| --------------- | ------------------------------------------------------------- |
+| `snapshot`      | Initial commitment status on connect.                         |
+| `status_change` | Emitted when commitment status transitions.                   |
+| `attestation`   | New attestation object (matches the `Attestation` interface). |
+| `: keepalive`   | SSE comment sent every ~20 s to keep the connection alive.    |
 
 ## Testing
 

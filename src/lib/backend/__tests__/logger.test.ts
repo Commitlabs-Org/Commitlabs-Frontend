@@ -1,11 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  logInfo,
-  logWarn,
-  logError,
-  logDebug,
-  getRequestId,
-} from '../logger';
+import { logInfo, logWarn, logError, logDebug, getRequestId } from '../logger';
 
 /**
  * Parses the single argument the logger passes to a console spy back into the

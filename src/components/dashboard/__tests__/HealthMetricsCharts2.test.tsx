@@ -59,17 +59,13 @@ const representativeFees = [
 // ---------------------------------------------------------------------------
 describe('HealthMetricsComplianceChart — representative series', () => {
   it('renders without crashing', () => {
-    const { container } = render(
-      <HealthMetricsComplianceChart data={representativeCompliance} />,
-    );
+    const { container } = render(<HealthMetricsComplianceChart data={representativeCompliance} />);
     expect(container.firstChild).toBeTruthy();
   });
 
   it('renders the description footer text', () => {
     render(<HealthMetricsComplianceChart data={representativeCompliance} />);
-    expect(
-      screen.getByText(/compliance score/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/compliance score/i)).toBeInTheDocument();
   });
 });
 
@@ -88,9 +84,7 @@ describe('HealthMetricsComplianceChart — empty series', () => {
 describe('HealthMetricsComplianceChart — single data point', () => {
   it('renders a single-point series', () => {
     const { container } = render(
-      <HealthMetricsComplianceChart
-        data={[{ date: 'Jan', complianceScore: 60 }]}
-      />,
+      <HealthMetricsComplianceChart data={[{ date: 'Jan', complianceScore: 60 }]} />,
     );
     expect(container.firstChild).toBeTruthy();
   });
@@ -144,16 +138,12 @@ describe('HealthMetricsComplianceChart — CustomTooltip behaviour', () => {
   });
 
   it('returns null when payload is empty', () => {
-    const { container } = render(
-      <ComplianceTooltip active={true} payload={[]} label="Jan" />,
-    );
+    const { container } = render(<ComplianceTooltip active={true} payload={[]} label="Jan" />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders label and score when active with payload', () => {
-    render(
-      <ComplianceTooltip active={true} payload={[{ value: 91 }]} label="Mar" />,
-    );
+    render(<ComplianceTooltip active={true} payload={[{ value: 91 }]} label="Mar" />);
     expect(screen.getByText('Mar')).toBeInTheDocument();
     expect(screen.getByText('Score: 91')).toBeInTheDocument();
   });
@@ -164,9 +154,7 @@ describe('HealthMetricsComplianceChart — CustomTooltip behaviour', () => {
 // ---------------------------------------------------------------------------
 describe('HealthMetricsFeeGenerationChart — representative series', () => {
   it('renders without crashing', () => {
-    const { container } = render(
-      <HealthMetricsFeeGenerationChart data={representativeFees} />,
-    );
+    const { container } = render(<HealthMetricsFeeGenerationChart data={representativeFees} />);
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -186,9 +174,7 @@ describe('HealthMetricsFeeGenerationChart — empty series', () => {
 describe('HealthMetricsFeeGenerationChart — single data point', () => {
   it('renders a single-point series', () => {
     const { container } = render(
-      <HealthMetricsFeeGenerationChart
-        data={[{ date: 'Jan', feeAmount: 50 }]}
-      />,
+      <HealthMetricsFeeGenerationChart data={[{ date: 'Jan', feeAmount: 50 }]} />,
     );
     expect(container.firstChild).toBeTruthy();
   });
@@ -210,12 +196,7 @@ describe('HealthMetricsFeeGenerationChart — zero fees', () => {
 
 describe('HealthMetricsFeeGenerationChart — volatility meter integration', () => {
   it('renders VolatilityExposureMeter when volatilityPercent is provided', () => {
-    render(
-      <HealthMetricsFeeGenerationChart
-        data={representativeFees}
-        volatilityPercent={35}
-      />,
-    );
+    render(<HealthMetricsFeeGenerationChart data={representativeFees} volatilityPercent={35} />);
     expect(screen.getByTestId('volatility-meter')).toBeInTheDocument();
   });
 
@@ -257,24 +238,18 @@ describe('HealthMetricsFeeGenerationChart — CustomTooltip behaviour', () => {
   });
 
   it('returns null when payload is empty', () => {
-    const { container } = render(
-      <FeeTooltip active={true} payload={[]} label="Jan" />,
-    );
+    const { container } = render(<FeeTooltip active={true} payload={[]} label="Jan" />);
     expect(container.firstChild).toBeNull();
   });
 
   it('renders label and formatted fee when active', () => {
-    render(
-      <FeeTooltip active={true} payload={[{ value: 1340 }]} label="Mar" />,
-    );
+    render(<FeeTooltip active={true} payload={[{ value: 1340 }]} label="Mar" />);
     expect(screen.getByText('Mar')).toBeInTheDocument();
     expect(screen.getByText(/Fees:.*1,340/)).toBeInTheDocument();
   });
 
   it('renders zero fee correctly', () => {
-    render(
-      <FeeTooltip active={true} payload={[{ value: 0 }]} label="Jan" />,
-    );
+    render(<FeeTooltip active={true} payload={[{ value: 0 }]} label="Jan" />);
     expect(screen.getByText(/Fees:.*0/)).toBeInTheDocument();
   });
 });

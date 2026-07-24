@@ -8,7 +8,9 @@ import CommitmentJourney from './CommitmentJourney';
 describe('CommitmentJourney — milestone states', () => {
   it('renders the section heading', () => {
     render(<CommitmentJourney />);
-    expect(screen.getByRole('heading', { level: 1, name: /Alice.*Commitment Journey/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: /Alice.*Commitment Journey/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders the USER JOURNEY badge', () => {
@@ -59,11 +61,11 @@ describe('CommitmentJourney — milestone states', () => {
   it('Balanced Commitment card shows 60-day duration', () => {
     render(<CommitmentJourney />);
     const heading = screen.getByRole('heading', { name: 'Balanced Commitment' });
-    const card = (heading.closest('div') as HTMLElement);
+    const card = heading.closest('div') as HTMLElement;
     expect(within(card).getByText('60 days')).toBeInTheDocument();
   });
 
-  it('renders the subtitle describing Alice\'s deployment', () => {
+  it("renders the subtitle describing Alice's deployment", () => {
     render(<CommitmentJourney />);
     expect(screen.getByText(/\$100,000/)).toBeInTheDocument();
   });

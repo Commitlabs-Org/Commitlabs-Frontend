@@ -9,16 +9,16 @@ import CommitmentHealthMetrics from './CommitmentHealthMetrics';
 import { EXPOSURE_ZONE_THRESHOLDS } from '@/utils/exposure';
 
 vi.mock('next/dynamic', () => ({
-    default: (loader: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>) => {
-        const LazyComponent = React.lazy(loader);
-        return function DynamicComponent(props: Record<string, unknown>) {
-            return (
-                <React.Suspense fallback={null}>
-                    <LazyComponent {...props} />
-                </React.Suspense>
-            );
-        };
-    },
+  default: (loader: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>) => {
+    const LazyComponent = React.lazy(loader);
+    return function DynamicComponent(props: Record<string, unknown>) {
+      return (
+        <React.Suspense fallback={null}>
+          <LazyComponent {...props} />
+        </React.Suspense>
+      );
+    };
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -33,35 +33,35 @@ vi.mock('next/dynamic', () => ({
 // ---------------------------------------------------------------------------
 
 vi.mock('./HealthMetricsValueHistoryChart', () => ({
-    HealthMetricsValueHistoryChart: vi.fn((props: Record<string, unknown>) => (
-        <div data-testid="value-chart">{JSON.stringify(props)}</div>
-    )),
+  HealthMetricsValueHistoryChart: vi.fn((props: Record<string, unknown>) => (
+    <div data-testid="value-chart">{JSON.stringify(props)}</div>
+  )),
 }));
 
 vi.mock('./HealthMetricsDrawdownChart', () => ({
-    HealthMetricsDrawdownChart: vi.fn((props: Record<string, unknown>) => (
-        <div data-testid="drawdown-chart">{JSON.stringify(props)}</div>
-    )),
+  HealthMetricsDrawdownChart: vi.fn((props: Record<string, unknown>) => (
+    <div data-testid="drawdown-chart">{JSON.stringify(props)}</div>
+  )),
 }));
 
 vi.mock('./HealthMetricsFeeGenerationChart', () => ({
-    HealthMetricsFeeGenerationChart: vi.fn((props: Record<string, unknown>) => (
-        <div data-testid="fee-chart">{JSON.stringify(props)}</div>
-    )),
+  HealthMetricsFeeGenerationChart: vi.fn((props: Record<string, unknown>) => (
+    <div data-testid="fee-chart">{JSON.stringify(props)}</div>
+  )),
 }));
 
 vi.mock('./HealthMetricsComplianceChart', () => ({
-    HealthMetricsComplianceChart: vi.fn((props: Record<string, unknown>) => (
-        <div data-testid="compliance-chart">{JSON.stringify(props)}</div>
-    )),
+  HealthMetricsComplianceChart: vi.fn((props: Record<string, unknown>) => (
+    <div data-testid="compliance-chart">{JSON.stringify(props)}</div>
+  )),
 }));
 
 vi.mock('./ChartExportMenu', () => ({
-    ChartExportMenu: vi.fn(({ tab, disabled }: { tab: string; disabled?: boolean }) => (
-        <div data-testid={`export-menu-${tab}`} data-disabled={String(Boolean(disabled))}>
-            Export
-        </div>
-    )),
+  ChartExportMenu: vi.fn(({ tab, disabled }: { tab: string; disabled?: boolean }) => (
+    <div data-testid={`export-menu-${tab}`} data-disabled={String(Boolean(disabled))}>
+      Export
+    </div>
+  )),
 }));
 
 // Pull in the mocked modules so we can assert on call args directly too.
@@ -75,63 +75,63 @@ import { HealthMetricsComplianceChart } from './HealthMetricsComplianceChart';
 // ---------------------------------------------------------------------------
 
 function isoDay(daysAgo: number): string {
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    return date.toISOString().slice(0, 10);
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString().slice(0, 10);
 }
 
 const valueHistoryData = [
-    { date: isoDay(3), currentValue: 1000, initialAmount: 900 },
-    { date: isoDay(15), currentValue: 1100, initialAmount: 900 },
+  { date: isoDay(3), currentValue: 1000, initialAmount: 900 },
+  { date: isoDay(15), currentValue: 1100, initialAmount: 900 },
 ];
 
 const drawdownData = [
-    { date: isoDay(3), drawdownPercent: 2.5 },
-    { date: isoDay(15), drawdownPercent: 4.1 },
+  { date: isoDay(3), drawdownPercent: 2.5 },
+  { date: isoDay(15), drawdownPercent: 4.1 },
 ];
 
 const feeGenerationData = [
-    { date: isoDay(3), feeAmount: 12.5 },
-    { date: isoDay(15), feeAmount: 9.75 },
+  { date: isoDay(3), feeAmount: 12.5 },
+  { date: isoDay(15), feeAmount: 9.75 },
 ];
 
 const complianceData = [
-    { date: isoDay(3), complianceScore: 98 },
-    { date: isoDay(15), complianceScore: 95 },
+  { date: isoDay(3), complianceScore: 98 },
+  { date: isoDay(15), complianceScore: 95 },
 ];
 
 const sampleExposure = {
-    status: 'ok' as const,
-    exposurePercent: 32,
-    level: 'low' as const,
-    drawdownThresholdPercent: 0.1,
-    zoneThresholds: EXPOSURE_ZONE_THRESHOLDS,
+  status: 'ok' as const,
+  exposurePercent: 32,
+  level: 'low' as const,
+  drawdownThresholdPercent: 0.1,
+  zoneThresholds: EXPOSURE_ZONE_THRESHOLDS,
 };
 
 const baseProps = {
-    commitmentId: 'commitment-1',
-    valueHistoryData,
-    drawdownData,
-    feeGenerationData,
-    complianceData,
-    thresholdPercent: 10,
-    exposure: sampleExposure,
+  commitmentId: 'commitment-1',
+  valueHistoryData,
+  drawdownData,
+  feeGenerationData,
+  complianceData,
+  thresholdPercent: 10,
+  exposure: sampleExposure,
 };
 
 function renderComponent(overrides: Partial<typeof baseProps> = {}) {
-    return render(<CommitmentHealthMetrics {...baseProps} {...overrides} />);
+  return render(<CommitmentHealthMetrics {...baseProps} {...overrides} />);
 }
 
 // Tab button labels exactly as rendered by the component.
 const TAB_LABELS = {
-    value: 'Value History',
-    drawdown: 'Drawdown',
-    fee: 'Fee Generation',
-    compliance: 'Compliance',
+  value: 'Value History',
+  drawdown: 'Drawdown',
+  fee: 'Fee Generation',
+  compliance: 'Compliance',
 } as const;
 
 beforeEach(() => {
-    vi.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 // ---------------------------------------------------------------------------
@@ -139,45 +139,45 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - initial render', () => {
-    it('defaults to the Value History tab and renders the value chart', () => {
-        renderComponent();
+  it('defaults to the Value History tab and renders the value chart', () => {
+    renderComponent();
 
-        expect(screen.getByTestId('value-chart')).toBeInTheDocument();
-        expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('value-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+  });
+
+  it('renders all four tab buttons', () => {
+    renderComponent();
+
+    Object.values(TAB_LABELS).forEach((label) => {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     });
+  });
 
-    it('renders all four tab buttons', () => {
-        renderComponent();
+  it('applies the active styling class only to the default Value History button', () => {
+    renderComponent();
 
-        Object.values(TAB_LABELS).forEach((label) => {
-            expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
-        });
+    const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
+    const drawdownButton = screen.getByRole('button', { name: TAB_LABELS.drawdown });
+
+    // The component has no role="tab"/aria-selected — "active" is communicated
+    // purely via this Tailwind class. We assert on that real mechanism instead
+    // of an ARIA attribute that doesn't exist in the markup.
+    expect(valueButton.className).toContain('bg-[#222]');
+    expect(valueButton.className).toContain('text-[#0ff0fc]');
+    expect(drawdownButton.className).not.toContain('bg-[#222]');
+  });
+
+  it('passes valueHistoryData and exposure to the value chart on initial render', () => {
+    renderComponent();
+
+    expect((HealthMetricsValueHistoryChart as Mock).mock.calls[0][0]).toMatchObject({
+      data: valueHistoryData,
+      exposure: baseProps.exposure,
     });
-
-    it('applies the active styling class only to the default Value History button', () => {
-        renderComponent();
-
-        const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
-        const drawdownButton = screen.getByRole('button', { name: TAB_LABELS.drawdown });
-
-        // The component has no role="tab"/aria-selected — "active" is communicated
-        // purely via this Tailwind class. We assert on that real mechanism instead
-        // of an ARIA attribute that doesn't exist in the markup.
-        expect(valueButton.className).toContain('bg-[#222]');
-        expect(valueButton.className).toContain('text-[#0ff0fc]');
-        expect(drawdownButton.className).not.toContain('bg-[#222]');
-    });
-
-    it('passes valueHistoryData and exposure to the value chart on initial render', () => {
-        renderComponent();
-
-        expect((HealthMetricsValueHistoryChart as Mock).mock.calls[0][0]).toMatchObject({
-                data: valueHistoryData,
-                exposure: baseProps.exposure,
-            });
-    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -185,81 +185,83 @@ describe('CommitmentHealthMetrics - initial render', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - tab switching via click', () => {
-    it('switches to Drawdown and renders only the drawdown chart with correct props', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('switches to Drawdown and renders only the drawdown chart with correct props', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
 
-        expect(screen.getByTestId('drawdown-chart')).toBeInTheDocument();
-        expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('drawdown-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
 
-        expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({
-                data: drawdownData,
-                thresholdPercent: baseProps.thresholdPercent,
-                exposure: baseProps.exposure,
-            });
+    expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({
+      data: drawdownData,
+      thresholdPercent: baseProps.thresholdPercent,
+      exposure: baseProps.exposure,
     });
+  });
 
-    it('switches to Fee Generation and renders only the fee chart with correct props', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('switches to Fee Generation and renders only the fee chart with correct props', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
 
-        expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
-        expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
 
-        expect((HealthMetricsFeeGenerationChart as Mock).mock.calls[0][0]).toMatchObject({
-                data: feeGenerationData,
-                exposure: baseProps.exposure,
-            });
+    expect((HealthMetricsFeeGenerationChart as Mock).mock.calls[0][0]).toMatchObject({
+      data: feeGenerationData,
+      exposure: baseProps.exposure,
     });
+  });
 
-    it('switches to Compliance and renders only the compliance chart with correct props', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('switches to Compliance and renders only the compliance chart with correct props', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
 
-        expect(screen.getByTestId('compliance-chart')).toBeInTheDocument();
-        expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('compliance-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
 
-        // Compliance chart only ever takes `data` - no thresholdPercent/exposure.
-        expect((HealthMetricsComplianceChart as Mock).mock.calls[0][0]).toEqual({ data: complianceData });
+    // Compliance chart only ever takes `data` - no thresholdPercent/exposure.
+    expect((HealthMetricsComplianceChart as Mock).mock.calls[0][0]).toEqual({
+      data: complianceData,
     });
+  });
 
-    it('switches back to Value History after visiting another tab', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('switches back to Value History after visiting another tab', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
-        expect(screen.getByTestId('compliance-chart')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
+    expect(screen.getByTestId('compliance-chart')).toBeInTheDocument();
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.value }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.value }));
 
-        expect(screen.getByTestId('value-chart')).toBeInTheDocument();
-        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
-    });
+    expect(screen.getByTestId('value-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+  });
 
-    it('moves the active styling class to whichever tab was just clicked', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('moves the active styling class to whichever tab was just clicked', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        const feeButton = screen.getByRole('button', { name: TAB_LABELS.fee });
-        const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
+    const feeButton = screen.getByRole('button', { name: TAB_LABELS.fee });
+    const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
 
-        await user.click(feeButton);
+    await user.click(feeButton);
 
-        expect(feeButton.className).toContain('bg-[#222]');
-        expect(valueButton.className).not.toContain('bg-[#222]');
-    });
+    expect(feeButton.className).toContain('bg-[#222]');
+    expect(valueButton.className).not.toContain('bg-[#222]');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -274,47 +276,47 @@ describe('CommitmentHealthMetrics - tab switching via click', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - keyboard interaction', () => {
-    it('is focusable via Tab key and activates on Enter', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('is focusable via Tab key and activates on Enter', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        const drawdownButton = screen.getByRole('button', { name: TAB_LABELS.drawdown });
+    const drawdownButton = screen.getByRole('button', { name: TAB_LABELS.drawdown });
 
-        drawdownButton.focus();
-        expect(drawdownButton).toHaveFocus();
+    drawdownButton.focus();
+    expect(drawdownButton).toHaveFocus();
 
-        await user.keyboard('{Enter}');
+    await user.keyboard('{Enter}');
 
-        expect(screen.getByTestId('drawdown-chart')).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('drawdown-chart')).toBeInTheDocument();
+  });
 
-    it('activates a focused tab on Space key press', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('activates a focused tab on Space key press', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        const feeButton = screen.getByRole('button', { name: TAB_LABELS.fee });
+    const feeButton = screen.getByRole('button', { name: TAB_LABELS.fee });
 
-        feeButton.focus();
-        expect(feeButton).toHaveFocus();
+    feeButton.focus();
+    expect(feeButton).toHaveFocus();
 
-        await user.keyboard(' ');
+    await user.keyboard(' ');
 
-        expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
+  });
 
-    it('moves focus between tab buttons in DOM order using Tab', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('moves focus between tab buttons in DOM order using Tab', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
-        const drawdownButton = screen.getByRole('button', { name: TAB_LABELS.drawdown });
+    const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
+    const drawdownButton = screen.getByRole('button', { name: TAB_LABELS.drawdown });
 
-        valueButton.focus();
-        expect(valueButton).toHaveFocus();
+    valueButton.focus();
+    expect(valueButton).toHaveFocus();
 
-        await user.tab();
-        expect(drawdownButton).toHaveFocus();
-    });
+    await user.tab();
+    expect(drawdownButton).toHaveFocus();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -322,55 +324,55 @@ describe('CommitmentHealthMetrics - keyboard interaction', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - empty datasets', () => {
-    it('shows the empty state when valueHistoryData is empty', () => {
-        renderComponent({ valueHistoryData: [] });
+  it('shows the empty state when valueHistoryData is empty', () => {
+    renderComponent({ valueHistoryData: [] });
 
-        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
-        expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
+    expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+    expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state when drawdownData is empty', async () => {
+    const user = userEvent.setup();
+    renderComponent({ drawdownData: [] });
+
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
+
+    expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+    expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state when feeGenerationData is empty', async () => {
+    const user = userEvent.setup();
+    renderComponent({ feeGenerationData: [] });
+
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
+
+    expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+    expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state when complianceData is empty', async () => {
+    const user = userEvent.setup();
+    renderComponent({ complianceData: [] });
+
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
+
+    expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
+    expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+  });
+
+  it('still renders all four tab buttons even when every dataset is empty', () => {
+    renderComponent({
+      valueHistoryData: [],
+      drawdownData: [],
+      feeGenerationData: [],
+      complianceData: [],
     });
 
-    it('shows the empty state when drawdownData is empty', async () => {
-        const user = userEvent.setup();
-        renderComponent({ drawdownData: [] });
-
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
-
-        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
-        expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
+    Object.values(TAB_LABELS).forEach((label) => {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     });
-
-    it('shows the empty state when feeGenerationData is empty', async () => {
-        const user = userEvent.setup();
-        renderComponent({ feeGenerationData: [] });
-
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
-
-        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
-        expect(screen.queryByTestId('fee-chart')).not.toBeInTheDocument();
-    });
-
-    it('shows the empty state when complianceData is empty', async () => {
-        const user = userEvent.setup();
-        renderComponent({ complianceData: [] });
-
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
-
-        expect(screen.getByTestId('empty-chart-message')).toBeInTheDocument();
-        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
-    });
-
-    it('still renders all four tab buttons even when every dataset is empty', () => {
-        renderComponent({
-            valueHistoryData: [],
-            drawdownData: [],
-            feeGenerationData: [],
-            complianceData: [],
-        });
-
-        Object.values(TAB_LABELS).forEach((label) => {
-            expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
-        });
-    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -378,18 +380,18 @@ describe('CommitmentHealthMetrics - empty datasets', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - optional props', () => {
-    it('renders the drawdown chart without thresholdPercent/exposure when omitted', async () => {
-        const user = userEvent.setup();
-        renderComponent({ thresholdPercent: undefined, exposure: undefined });
+  it('renders the drawdown chart without thresholdPercent/exposure when omitted', async () => {
+    const user = userEvent.setup();
+    renderComponent({ thresholdPercent: undefined, exposure: undefined });
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
 
-        expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({
-                data: drawdownData,
-                thresholdPercent: undefined,
-                exposure: undefined,
-            });
+    expect((HealthMetricsDrawdownChart as Mock).mock.calls[0][0]).toMatchObject({
+      data: drawdownData,
+      thresholdPercent: undefined,
+      exposure: undefined,
     });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -397,35 +399,35 @@ describe('CommitmentHealthMetrics - optional props', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - rapid tab switching', () => {
-    it('settles on the last clicked tab when switching tabs rapidly in succession', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('settles on the last clicked tab when switching tabs rapidly in succession', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.value }));
-        await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.drawdown }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.compliance }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.value }));
+    await user.click(screen.getByRole('button', { name: TAB_LABELS.fee }));
 
-        // Only the final tab's chart should be mounted.
-        expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
-        expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
-    });
+    // Only the final tab's chart should be mounted.
+    expect(screen.getByTestId('fee-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('value-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('drawdown-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('compliance-chart')).not.toBeInTheDocument();
+  });
 
-    it('clicking the already-active tab repeatedly keeps the same chart mounted without error', async () => {
-        const user = userEvent.setup();
-        renderComponent();
+  it('clicking the already-active tab repeatedly keeps the same chart mounted without error', async () => {
+    const user = userEvent.setup();
+    renderComponent();
 
-        const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
+    const valueButton = screen.getByRole('button', { name: TAB_LABELS.value });
 
-        await user.click(valueButton);
-        await user.click(valueButton);
-        await user.click(valueButton);
+    await user.click(valueButton);
+    await user.click(valueButton);
+    await user.click(valueButton);
 
-        expect(screen.getByTestId('value-chart')).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('value-chart')).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -433,23 +435,21 @@ describe('CommitmentHealthMetrics - rapid tab switching', () => {
 // ---------------------------------------------------------------------------
 
 describe('CommitmentHealthMetrics - static content', () => {
-    it('renders the "Health Metrics" heading', () => {
-        renderComponent();
+  it('renders the "Health Metrics" heading', () => {
+    renderComponent();
 
-        expect(
-            screen.getByRole('heading', { name: 'Health Metrics' }),
-        ).toBeInTheDocument();
-    });
+    expect(screen.getByRole('heading', { name: 'Health Metrics' })).toBeInTheDocument();
+  });
 
-    it('renders export menu for the active tab', () => {
-        renderComponent();
+  it('renders export menu for the active tab', () => {
+    renderComponent();
 
-        expect(screen.getByTestId('export-menu-value')).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('export-menu-value')).toBeInTheDocument();
+  });
 
-    it('disables export menu while loading', () => {
-        renderComponent({ isLoading: true });
+  it('disables export menu while loading', () => {
+    renderComponent({ isLoading: true });
 
-        expect(screen.getByTestId('export-menu-value')).toHaveAttribute('data-disabled', 'true');
-    });
+    expect(screen.getByTestId('export-menu-value')).toHaveAttribute('data-disabled', 'true');
+  });
 });

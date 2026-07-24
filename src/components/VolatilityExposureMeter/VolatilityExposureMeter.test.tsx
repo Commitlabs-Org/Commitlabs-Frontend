@@ -3,21 +3,20 @@ import { describe, it, expect } from 'vitest';
 import VolatilityExposureMeter from './VolatilityExposureMeter';
 
 // Phase 2 Observations:
-// 1. The clamp logic: 
+// 1. The clamp logic:
 //    if (typeof value !== 'number' || Number.isNaN(value)) return 0
 //    return Math.max(0, Math.min(100, value))
-// 2. The exposureLevel thresholds: 
+// 2. The exposureLevel thresholds:
 //    <= 33 -> 'low'
 //    <= 66 -> 'medium'
 //    else -> 'high'
-// 3. The aria-label format: 
+// 3. The aria-label format:
 //    `Volatility exposure: ${percent}%, ${level} range.`
-// 4. The aria-describedby condition: 
-//    Applied to the section element (`aria-describedby={description ? 'volatility-exposure-desc' : undefined}`) 
+// 4. The aria-describedby condition:
+//    Applied to the section element (`aria-describedby={description ? 'volatility-exposure-desc' : undefined}`)
 //    and renders `<p id="volatility-exposure-desc">` when description is provided.
 
 describe('VolatilityExposureMeter', () => {
-
   describe('clamp behavior', () => {
     it('clamps valuePercent 150 to 100 in the rendered output', () => {
       render(<VolatilityExposureMeter valuePercent={150} />);
@@ -51,7 +50,7 @@ describe('VolatilityExposureMeter', () => {
 
     it('renders 0 when valuePercent is a non-number', () => {
       // @ts-expect-error Testing invalid prop type
-      render(<VolatilityExposureMeter valuePercent={"abc" as any} />);
+      render(<VolatilityExposureMeter valuePercent={'abc' as any} />);
       const meter = screen.getByRole('meter');
       expect(meter).toHaveAttribute('aria-valuenow', '0');
     });
@@ -99,8 +98,10 @@ describe('VolatilityExposureMeter', () => {
 
   describe('aria-describedby wiring', () => {
     it('renders description and wires aria-describedby to the region when description prop is provided', () => {
-      render(<VolatilityExposureMeter valuePercent={50} description="This is a test description" />);
-      
+      render(
+        <VolatilityExposureMeter valuePercent={50} description="This is a test description" />,
+      );
+
       const descElement = screen.getByText('This is a test description');
       expect(descElement).toBeInTheDocument();
       expect(descElement).toHaveAttribute('id', 'volatility-exposure-desc');
@@ -111,7 +112,7 @@ describe('VolatilityExposureMeter', () => {
 
     it('does not render description and omits aria-describedby when description prop is absent', () => {
       render(<VolatilityExposureMeter valuePercent={50} />);
-      
+
       const descElement = screen.queryByText(/test description/i);
       expect(descElement).not.toBeInTheDocument();
 

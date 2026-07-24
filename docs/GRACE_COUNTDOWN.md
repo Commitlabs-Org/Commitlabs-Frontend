@@ -23,12 +23,12 @@ If the value is missing, invalid, or `0`, the banner falls back to the penalty-n
 
 States:
 
-| State | Condition | User message |
-| --- | --- | --- |
-| Loading | Protocol constants are still loading | Checking grace period |
+| State     | Condition                                               | User message                                              |
+| --------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| Loading   | Protocol constants are still loading                    | Checking grace period                                     |
 | Pre-grace | Current time is before `maturityDate - gracePeriodDays` | Penalty applies now, with a countdown to the grace window |
-| In-grace | Current time is on or after the grace-window start | Early exit is penalty-free until maturity |
-| No grace | Grace period is `0` or unavailable | Early exit uses the penalty shown in the modal |
+| In-grace  | Current time is on or after the grace-window start      | Early exit is penalty-free until maturity                 |
+| No grace  | Grace period is `0` or unavailable                      | Early exit uses the penalty shown in the modal            |
 
 ## Accessibility
 

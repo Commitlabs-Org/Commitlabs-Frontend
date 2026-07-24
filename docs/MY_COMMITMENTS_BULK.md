@@ -7,12 +7,14 @@ The bulk actions feature allows users to select multiple commitments from the My
 ## Features
 
 ### Multi-Select Functionality
+
 - **Per-card selection**: Each commitment card has a checkbox for individual selection
 - **Select all on page**: A master checkbox in the grid header selects/deselects all visible commitments
 - **Indeterminate state**: The master checkbox shows an indeterminate state when some but not all items are selected
 - **Selection persistence**: Selected items persist across filtering operations within the same session
 
 ### Bulk Action Bar
+
 - **Fixed positioning**: Appears at the bottom of the screen when items are selected
 - **Selection count**: Displays the number of selected commitments
 - **Export selected**: Triggers export modal with only selected commitments
@@ -20,6 +22,7 @@ The bulk actions feature allows users to select multiple commitments from the My
 - **Live region**: Uses ARIA live region for screen reader announcements
 
 ### Export Integration
+
 - **Selected scope**: Export modal shows "Selected commitments" option when items are pre-selected
 - **Count display**: Shows the number of selected commitments in the export modal
 - **API integration**: Selected IDs are passed to the export endpoint as query parameters
@@ -118,7 +121,7 @@ interface ExportCommitmentsModalProps {
 import { useGridSelection } from '@/hooks/useGridSelection';
 
 const { selectedIds, toggleSelection, selectAll, clearSelection } = useGridSelection({
-  visibleIds: commitments.map(c => c.id),
+  visibleIds: commitments.map((c) => c.id),
 });
 
 // Toggle individual item
@@ -141,7 +144,7 @@ import { BulkActionBar } from '@/components/BulkActionBar';
   onClear={clearSelection}
   onExportSelected={() => openExportModal(selectedIds)}
   isExporting={isExporting}
-/>
+/>;
 ```
 
 ### MyCommitmentsGrid with Selection
@@ -161,21 +164,25 @@ import { BulkActionBar } from '@/components/BulkActionBar';
 ## Accessibility
 
 ### Keyboard Navigation
+
 - **Tab order**: Checkboxes are keyboard accessible via Tab key
 - **Space/Enter**: Toggles checkbox state when focused
 - **Master checkbox**: Selects/deselects all visible items
 
 ### ARIA Labels
+
 - Checkboxes have descriptive labels: "Select commitment {id}"
 - Master checkbox: "Select all commitments" / "Deselect all commitments"
 - Action buttons: "Export {n} selected commitments", "Clear selection"
 
 ### Live Regions
+
 - Bulk action bar uses `role="status"` with `aria-live="polite"`
 - Screen readers announce selection count changes
 - `aria-atomic="true"` ensures complete announcements
 
 ### Visual Indicators
+
 - Selected cards: Cyan border (`border-[#0FF0FC]/50`) with ring
 - Unselected cards: Default border with hover state
 - Indeterminate checkbox: Native browser indeterminate state
@@ -231,7 +238,7 @@ const url = new URL('/api/commitments/export', window.location.origin);
 url.searchParams.set('ownerAddress', normalizedAddress);
 
 // Add selected IDs
-selectedIds.forEach(id => url.searchParams.append('ids', id));
+selectedIds.forEach((id) => url.searchParams.append('ids', id));
 
 // Result: /api/commitments/export?ownerAddress=GABC123&ids=CMT-001&ids=CMT-002&ids=CMT-003
 ```
@@ -239,6 +246,7 @@ selectedIds.forEach(id => url.searchParams.append('ids', id));
 ### Backend Handling
 
 The backend should:
+
 1. Parse the `ids` query parameter array
 2. Filter commitments to only include those IDs
 3. Generate CSV with filtered results
@@ -247,16 +255,19 @@ The backend should:
 ## Edge Cases
 
 ### Filtering While Selected
+
 - Selected items persist even when filtered out
 - Master checkbox only considers visible items
 - Selection count shows total selected (not just visible)
 
 ### Empty Grid
+
 - Master checkbox is disabled when grid is empty
 - Bulk action bar doesn't render with zero selections
 - Export modal shows "All commitments" when no selection
 
 ### Large Selections
+
 - URL length limits: Consider POST for very large selections
 - Performance: Selection state uses Set for O(1) lookups
 - UI: Count displays without performance impact
@@ -275,16 +286,19 @@ Potential improvements for future iterations:
 ## Troubleshooting
 
 ### Selection Not Persisting
+
 - Ensure `useGridSelection` is called with correct `visibleIds`
 - Check that `toggleSelection` is properly passed to cards
 - Verify selection state is not being reset by parent re-renders
 
 ### Export Not Using Selection
+
 - Confirm `selectedIds` are passed to `ExportCommitmentsModal`
 - Check that `handleExportSelected` sets state before opening modal
 - Verify modal receives and displays selected count
 
 ### Indeterminate State Not Showing
+
 - Ensure checkbox ref is properly set in `MyCommitmentsGrid`
 - Check that `isIndeterminate` is computed correctly
 - Verify `visibleIds` are up-to-date with filtered commitments

@@ -10,32 +10,34 @@ controls and a real-time headroom gauge.
 
 ## Location
 
-| Artifact | Path |
-|----------|------|
-| Component | `src/components/create/AllocationConstraintsEditor.tsx` |
-| Styles | `src/components/create/AllocationConstraintsEditor.module.css` |
-| Tests | `src/components/create/AllocationConstraintsEditor.test.tsx` |
+| Artifact    | Path                                                           |
+| ----------- | -------------------------------------------------------------- |
+| Component   | `src/components/create/AllocationConstraintsEditor.tsx`        |
+| Styles      | `src/components/create/AllocationConstraintsEditor.module.css` |
+| Tests       | `src/components/create/AllocationConstraintsEditor.test.tsx`   |
 | Integration | `src/components/CreateCommitmentStepConfigure.tsx` (line ~341) |
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `maxLossPercent` | `number` | — | Current max loss setting (0–100) |
-| `commitmentType` | `'safe' \| 'balanced' \| 'aggressive'` | — | Selected risk profile |
-| `amount` | `string \| number` | — | Commitment amount |
-| `asset` | `string` | — | Asset symbol (XLM, USDC, ETH) |
-| `onChangeMaxLoss` | `(value: number) => void` | — | Called when the user adjusts max loss via the editor |
+| Prop              | Type                                   | Default | Description                                          |
+| ----------------- | -------------------------------------- | ------- | ---------------------------------------------------- |
+| `maxLossPercent`  | `number`                               | —       | Current max loss setting (0–100)                     |
+| `commitmentType`  | `'safe' \| 'balanced' \| 'aggressive'` | —       | Selected risk profile                                |
+| `amount`          | `string \| number`                     | —       | Commitment amount                                    |
+| `asset`           | `string`                               | —       | Asset symbol (XLM, USDC, ETH)                        |
+| `onChangeMaxLoss` | `(value: number) => void`              | —       | Called when the user adjusts max loss via the editor |
 
 ## Features
 
 ### Headroom Gauge
+
 - Rendered as `role="progressbar"` with `aria-valuemin`, `aria-valuemax`, `aria-valuenow`
 - Displays the stop-loss threshold as a filled bar against the protocol ceiling
 - Color-coded: green (≤30%), yellow (30–70%), red (>70%)
 - Updates live as the user adjusts the max-loss value
 
 ### Constraint Items
+
 - Maximum acceptable loss (absolute value in asset terms)
 - Commitment type label
 - Protocol ceiling (fetched from `/api/protocol/constants`)
@@ -43,11 +45,13 @@ controls and a real-time headroom gauge.
 - Same cyan-dot visual pattern as `CommitmentDetailAllocationConstraints`
 
 ### Inline Max-Loss Controls
+
 - Slider + number input duplicate controls inside the editor panel
 - Bound to the same `onChangeMaxLoss` callback as the main form controls
 - Clamped to protocol ceiling (falls back to 100% if constants fetch fails)
 
 ### On-Chain Enforcement Banner
+
 - Same wording and styling as the detail-page component
 
 ## Data Flow
@@ -81,6 +85,7 @@ npx vitest run --reporter=verbose src/components/create/AllocationConstraintsEdi
 ```
 
 The test suite:
+
 - Mocks the protocol constants API with `global.fetch`
 - Verifies ARIA attributes on the headroom gauge
 - Verifies constraint text is rendered for each commitment type

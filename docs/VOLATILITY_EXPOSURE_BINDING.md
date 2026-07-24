@@ -10,21 +10,21 @@ This document describes how live commitment metrics feed the `VolatilityExposure
 
 ## Exposure calculation
 
-| Input | Role |
-| --- | --- |
-| Latest drawdown (0–1 fraction) | Compared against `maxLossPercent` to produce a drawdown exposure score (0–100). |
-| Value history (≥ 2 points) | Mean absolute period-over-period return, scaled by protocol `maxLossPercentCeiling`. |
-| `maxLossPercent` | Commitment rule; also drives the drawdown chart reference line (`maxLoss / 100`). |
+| Input                          | Role                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| Latest drawdown (0–1 fraction) | Compared against `maxLossPercent` to produce a drawdown exposure score (0–100).      |
+| Value history (≥ 2 points)     | Mean absolute period-over-period return, scaled by protocol `maxLossPercentCeiling`. |
+| `maxLossPercent`               | Commitment rule; also drives the drawdown chart reference line (`maxLoss / 100`).    |
 
 When both drawdown and volatility signals exist, the final score is a weighted blend (60% drawdown, 40% volatility). If only one signal is available, that signal is used alone.
 
 ## Thresholds
 
-| Threshold | Value | Usage |
-| --- | --- | --- |
-| Low / medium boundary | 33% | Meter zone label and `aria-valuetext` band |
-| Medium / high boundary | 66% | Meter zone label and `aria-valuetext` band |
-| Drawdown reference line | `maxLossPercent / 100` | Drawdown chart dashed threshold |
+| Threshold               | Value                  | Usage                                      |
+| ----------------------- | ---------------------- | ------------------------------------------ |
+| Low / medium boundary   | 33%                    | Meter zone label and `aria-valuetext` band |
+| Medium / high boundary  | 66%                    | Meter zone label and `aria-valuetext` band |
+| Drawdown reference line | `maxLossPercent / 100` | Drawdown chart dashed threshold            |
 
 Zone thresholds are exported as `EXPOSURE_ZONE_THRESHOLDS` from `src/utils/exposure.ts`.
 

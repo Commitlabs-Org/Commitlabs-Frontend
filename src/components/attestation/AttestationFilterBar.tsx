@@ -1,18 +1,22 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { ATTESTATION_TYPES, type AttestationType, type AttestationSeverity } from '@/lib/types/domain'
+import { useState } from 'react';
+import {
+  ATTESTATION_TYPES,
+  type AttestationType,
+  type AttestationSeverity,
+} from '@/lib/types/domain';
 
 export interface AttestationFilterBarProps {
   attestations: Array<{
-    id: string
-    severity?: AttestationSeverity
-    attestationType?: AttestationType
-  }>
+    id: string;
+    severity?: AttestationSeverity;
+    attestationType?: AttestationType;
+  }>;
   onFilterChange: (filters: {
-    severity: AttestationSeverity | 'all'
-    type: AttestationType | 'all'
-  }) => void
+    severity: AttestationSeverity | 'all';
+    type: AttestationType | 'all';
+  }) => void;
 }
 
 const SEVERITY_OPTIONS = [
@@ -20,7 +24,7 @@ const SEVERITY_OPTIONS = [
   { value: 'ok', label: 'Info' },
   { value: 'warning', label: 'Warning' },
   { value: 'violation', label: 'Violation' },
-] as const
+] as const;
 
 const TYPE_OPTIONS = [
   { value: 'all', label: 'All Types' },
@@ -28,14 +32,14 @@ const TYPE_OPTIONS = [
     value: type,
     label: type.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
   })),
-] as const
+] as const;
 
 export default function AttestationFilterBar({
   attestations,
   onFilterChange,
 }: AttestationFilterBarProps) {
-  const [severityFilter, setSeverityFilter] = useState<AttestationSeverity | 'all'>('all')
-  const [typeFilter, setTypeFilter] = useState<AttestationType | 'all'>('all')
+  const [severityFilter, setSeverityFilter] = useState<AttestationSeverity | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<AttestationType | 'all'>('all');
 
   // Calculate counts for each severity
   const severityCounts = {
@@ -43,7 +47,7 @@ export default function AttestationFilterBar({
     ok: attestations.filter((a) => a.severity === 'ok').length,
     warning: attestations.filter((a) => a.severity === 'warning').length,
     violation: attestations.filter((a) => a.severity === 'violation').length,
-  }
+  };
 
   // Calculate counts for each type
   const typeCounts: Record<string, number> = {
@@ -55,26 +59,22 @@ export default function AttestationFilterBar({
       }),
       {} as Record<string, number>,
     ),
-  }
+  };
 
   const handleSeverityChange = (value: AttestationSeverity | 'all') => {
-    setSeverityFilter(value)
-    onFilterChange({ severity: value, type: typeFilter })
-  }
+    setSeverityFilter(value);
+    onFilterChange({ severity: value, type: typeFilter });
+  };
 
   const handleTypeChange = (value: AttestationType | 'all') => {
-    setTypeFilter(value)
-    onFilterChange({ severity: severityFilter, type: value })
-  }
+    setTypeFilter(value);
+    onFilterChange({ severity: severityFilter, type: value });
+  };
 
   return (
     <div className="flex flex-col gap-4 border-b border-gray-200 pb-4">
       {/* Severity Tabs */}
-      <div
-        className="flex gap-2"
-        role="tablist"
-        aria-label="Filter attestations by severity"
-      >
+      <div className="flex gap-2" role="tablist" aria-label="Filter attestations by severity">
         {SEVERITY_OPTIONS.map((option) => (
           <button
             key={option.value}
@@ -119,5 +119,5 @@ export default function AttestationFilterBar({
         </select>
       </div>
     </div>
-  )
+  );
 }

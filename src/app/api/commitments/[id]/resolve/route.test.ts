@@ -191,7 +191,9 @@ describe('POST /api/commitments/[id]/resolve', () => {
     });
 
     it('rejects missing request body', async () => {
-      const req = new NextRequest('http://localhost/api/commitments/cmt-123/resolve', { method: 'POST' });
+      const req = new NextRequest('http://localhost/api/commitments/cmt-123/resolve', {
+        method: 'POST',
+      });
       await expectError(req, { params: { id: 'cmt-123' } }, 400, 'VALIDATION_ERROR');
     });
 

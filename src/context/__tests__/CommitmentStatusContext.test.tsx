@@ -25,7 +25,7 @@ describe('CommitmentStatusContext', () => {
               expiresAt: '2026-02-09T00:00:00Z',
             },
           }),
-      })
+      }),
     ) as any;
   });
 
@@ -42,9 +42,7 @@ describe('CommitmentStatusContext', () => {
       return (
         <div>
           <div data-testid="loading">{isLoading ? 'Loading' : 'Loaded'}</div>
-          {status && (
-            <div data-testid="status">{status.status}</div>
-          )}
+          {status && <div data-testid="status">{status.status}</div>}
         </div>
       );
     }
@@ -52,7 +50,7 @@ describe('CommitmentStatusContext', () => {
     render(
       <CommitmentStatusProvider commitmentId="1">
         <TestComponent />
-      </CommitmentStatusProvider>
+      </CommitmentStatusProvider>,
     );
 
     expect(screen.getByTestId('loading')).toHaveTextContent('Loading');
@@ -69,7 +67,7 @@ describe('CommitmentStatusContext', () => {
     render(
       <CommitmentStatusProvider commitmentId="1" pollIntervalMs={1000}>
         <TestComponent />
-      </CommitmentStatusProvider>
+      </CommitmentStatusProvider>,
     );
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
@@ -108,7 +106,7 @@ describe('CommitmentStatusContext', () => {
     render(
       <CommitmentStatusProvider commitmentId="1">
         <TestComponent />
-      </CommitmentStatusProvider>
+      </CommitmentStatusProvider>,
     );
 
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('Network error'));
@@ -118,14 +116,16 @@ describe('CommitmentStatusContext', () => {
     function TestComponent() {
       const { refreshStatus } = useCommitmentStatus();
       return (
-        <button data-testid="refresh" onClick={refreshStatus}>Refresh</button>
+        <button data-testid="refresh" onClick={refreshStatus}>
+          Refresh
+        </button>
       );
     }
 
     render(
       <CommitmentStatusProvider commitmentId="1">
         <TestComponent />
-      </CommitmentStatusProvider>
+      </CommitmentStatusProvider>,
     );
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));

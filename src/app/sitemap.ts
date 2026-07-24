@@ -1,6 +1,6 @@
-import { MetadataRoute } from 'next'
+import { MetadataRoute } from 'next';
 
-const BASE_URL = 'https://commitlabs.com'
+const BASE_URL = 'https://commitlabs.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
@@ -28,5 +28,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.1,
     },
-  ]
+  ];
 }

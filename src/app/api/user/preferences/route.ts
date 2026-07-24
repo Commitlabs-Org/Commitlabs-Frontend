@@ -24,20 +24,20 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 import { ValidationError } from '@/lib/backend/errors';
 import {
-    userPreferencesSchema,
-    DEFAULT_PREFERENCES,
-    jsonFilePreferencesStore,
-    requireWalletAuth,
-    type PreferencesStore,
+  userPreferencesSchema,
+  DEFAULT_PREFERENCES,
+  jsonFilePreferencesStore,
+  requireWalletAuth,
+  type PreferencesStore,
 } from '@/lib/backend/preferences';
 
 // Allow injection of a custom store in tests.
 let _store: PreferencesStore = jsonFilePreferencesStore;
 export function __setStoreForTesting(store: PreferencesStore): void {
-    _store = store;
+  _store = store;
 }
 export function __resetStore(): void {
-    _store = jsonFilePreferencesStore;
+  _store = jsonFilePreferencesStore;
 }
 
 // ─── GET /api/user/preferences ───────────────────────────────────────────────
@@ -63,12 +63,12 @@ export function __resetStore(): void {
  *         description: Authentication required
  */
 export const GET = withApiHandler(async (req: NextRequest) => {
-    const address = requireWalletAuth(req.headers.get('authorization'));
+  const address = requireWalletAuth(req.headers.get('authorization'));
 
-    const stored = await _store.get(address);
-    const preferences = stored ?? { ...DEFAULT_PREFERENCES };
+  const stored = await _store.get(address);
+  const preferences = stored ?? { ...DEFAULT_PREFERENCES };
 
-    return ok({ address, preferences });
+  return ok({ address, preferences });
 });
 
 // ─── PUT /api/user/preferences ───────────────────────────────────────────────
@@ -98,34 +98,32 @@ export const GET = withApiHandler(async (req: NextRequest) => {
  *         description: Authentication required
  */
 export const PUT = withApiHandler(async (req: NextRequest) => {
-    const address = requireWalletAuth(req.headers.get('authorization'));
+  const address = requireWalletAuth(req.headers.get('authorization'));
 
-    // Parse body
-    let body: unknown;
-    try {
-        body = await req.json();
-    } catch {
-        throw new ValidationError('Request body must be valid JSON.');
-    }
+  // Parse body
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    throw new ValidationError('Request body must be valid JSON.');
+  }
 
-    // Validate with Zod
-    const result = userPreferencesSchema.safeParse(body);
-    if (!result.success) {
-        const details = result.error.issues.map((e) => ({
-            field: e.path.join('.'),
-            message: e.message,
-        }));
-        throw new ValidationError('Invalid preference data.', details);
-    }
+  // Validate with Zod
+  const result = userPreferencesSchema.safeParse(body);
+  if (!result.success) {
+    const details = result.error.issues.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
+    throw new ValidationError('Invalid preference data.', details);
+  }
 
-    // Guard against empty payload
-    if (Object.keys(result.data).length === 0) {
-        throw new ValidationError(
-            'Request body must contain at least one preference field.',
-        );
-    }
+  // Guard against empty payload
+  if (Object.keys(result.data).length === 0) {
+    throw new ValidationError('Request body must contain at least one preference field.');
+  }
 
-    const preferences = await _store.upsert(address, result.data);
+  const preferences = await _store.upsert(address, result.data);
 
-    return ok({ address, preferences });
+  return ok({ address, preferences });
 });

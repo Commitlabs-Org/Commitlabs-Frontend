@@ -9,10 +9,9 @@ export default function GlossaryPage() {
   const entries = useMemo(() => {
     const q = query.trim().toLowerCase();
     return Object.values(glossary)
-      .filter((entry) =>
-        !q ||
-        entry.term.toLowerCase().includes(q) ||
-        entry.definition.toLowerCase().includes(q),
+      .filter(
+        (entry) =>
+          !q || entry.term.toLowerCase().includes(q) || entry.definition.toLowerCase().includes(q),
       )
       .sort((a, b) => a.term.localeCompare(b.term));
   }, [query]);
@@ -32,7 +31,12 @@ export default function GlossaryPage() {
         placeholder="e.g. drawdown"
         type="search"
         value={query}
-        style={{ marginBottom: '1.5rem', padding: '0.4rem 0.75rem', width: '100%', maxWidth: '28rem' }}
+        style={{
+          marginBottom: '1.5rem',
+          padding: '0.4rem 0.75rem',
+          width: '100%',
+          maxWidth: '28rem',
+        }}
       />
 
       {entries.length === 0 ? (
