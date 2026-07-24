@@ -185,14 +185,14 @@ This project includes a reusable helper to attach standard security headers to H
 1. Import the helper:
 
    ```typescript
-   import { attachSecurityHeaders } from "@/utils/response";
+   import { attachSecurityHeaders } from "@/lib/backend/apiResponse";
    ```
 
 2. Wrap your response object before returning it in a route handler:
 
    ```typescript
    import { NextResponse } from "next/server";
-   import { attachSecurityHeaders } from "@/utils/response";
+   import { attachSecurityHeaders } from "@/lib/backend/apiResponse";
 
    export async function GET() {
      const response = NextResponse.json({ data: "secure content" });
@@ -209,7 +209,7 @@ This project includes a reusable helper to attach standard security headers to H
   ```
 
 - **Disabling/Modifying Headers:**
-  The `attachSecurityHeaders` function returns the modified `Response` object. You can further modify headers on the returned object if needed, or update the `src/utils/response.ts` file to change default behaviors globally.
+  The `attachSecurityHeaders` function returns the modified `Response` object. You can further modify headers on the returned object if needed, or update the `src/lib/backend/apiResponse.ts` file to change default behaviors globally.
 
 ## 📡 API Reference
 
@@ -263,3 +263,4 @@ We welcome contributions! Please review our community guidelines before getting 
 3. Make and test your updates following the project guidelines.
 4. Commit and push your changes to your fork.
 5. Open a Pull Request with a clear description.
+

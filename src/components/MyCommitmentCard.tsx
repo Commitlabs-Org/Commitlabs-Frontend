@@ -16,6 +16,8 @@ import { TrendingUp as Increase, TrendingDown as Decrease, Tag } from "lucide-re
 
 interface MyCommitmentCardProps {
   commitment: Commitment;
+  isSelected?: boolean;
+  onSelect?: () => void;
   listing?: MarketplaceListing;
   sellerAddress?: string;
   onDetails?: (id: string) => void;
@@ -27,6 +29,8 @@ interface MyCommitmentCardProps {
 
 const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   commitment,
+  isSelected = false,
+  onSelect = () => {},
   listing,
   sellerAddress,
   onDetails,

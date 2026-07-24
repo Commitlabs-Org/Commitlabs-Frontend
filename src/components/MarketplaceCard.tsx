@@ -248,7 +248,7 @@ function MarketplaceCardComponent({
         : "bg-[#2b1c10] text-[#FF8904]";
 
   const resolvedTradeHref =
-    tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
+    tradeHref ?? `/commitments/${encodeURIComponent(id)}`;
 
   async function handleTrade() {
     if (onPurchase) {
