@@ -4,12 +4,12 @@ import { getValidatedEnv } from '@/lib/backend/env';
 
 // Mock env.ts to control environment variables
 vi.mock('@/lib/backend/env', async (importOriginal) => {
-  const actual = await importOriginal<any>();
-  let mockEnv: any = {};
+  const actual = await importOriginal<typeof import('@/lib/backend/env')>();
+  let mockEnv: Partial<actual.ValidatedEnv> = {};
   return {
     ...actual,
     getValidatedEnv: vi.fn(() => mockEnv),
-    _setMockEnv: (env: any) => { mockEnv = env; },
+    _setMockEnv: (env: Partial<actual.ValidatedEnv>) => { mockEnv = env; },
   };
 });
 
