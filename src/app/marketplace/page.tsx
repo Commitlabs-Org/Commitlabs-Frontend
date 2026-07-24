@@ -1,5 +1,9 @@
 'use client'
 
+// Marketplace comparison UI is handled by the marketplace route and components under the
+// marketplace-specific component tree. The legacy CompareCommitmentsTray implementation is
+// not used in this codebase, so any future compare tray should stay within the marketplace
+// area and be wired through /marketplace/compare.
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHeader'
