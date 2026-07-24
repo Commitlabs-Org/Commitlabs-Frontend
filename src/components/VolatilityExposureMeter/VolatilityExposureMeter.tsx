@@ -50,7 +50,7 @@ function TrendSparkline({ data }: SparklineProps) {
       return `${x.toFixed(1)},${y.toFixed(1)}`
     })
     .join(' ')
-  const trend = data[data.length - 1] >= data[0]
+  const trend = (data[data.length - 1] ?? 0) >= (data[0] ?? 0)
   const stroke = trend ? '#ef4444' : '#22c55e' // higher volatility = red; lower = green
   return (
     <svg
@@ -80,7 +80,11 @@ export default function VolatilityExposureMeter({
 }: VolatilityExposureMeterProps) {
   const percent = clamp(valuePercent)
   const level = exposureLevel(percent)
+  const levelLabel = level === 'low' ? 'Low' : level === 'medium' ? 'Moderate' : 'Elevated'
   const ariaLabel = `Volatility exposure: ${percent}%, ${level} range.`
+  const valueText = insufficientData
+    ? 'Insufficient data'
+    : `${Math.round(percent)}% exposure — ${levelLabel}`
   const reducedMotion = useReducedMotion()
   const hasHistory = historyData && historyData.length >= 2
 
