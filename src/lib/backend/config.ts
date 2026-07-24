@@ -26,7 +26,7 @@ function buildFromLegacyEnv(): ContractsConfig | null {
   };
 
   for (const [key, envNames] of Object.entries(mapping)) {
-    const addr = env[envNames[0]] || env[envNames[1]] || "";
+    const addr = (envNames[0] ? env[envNames[0]] : undefined) || (envNames[1] ? env[envNames[1]] : undefined) || "";
     if (addr) v1[key] = { address: addr };
   }
 

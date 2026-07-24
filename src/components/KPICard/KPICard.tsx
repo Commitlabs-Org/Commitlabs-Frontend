@@ -2,15 +2,16 @@
 
 import React from 'react';
 import { clsx } from 'clsx';
-import { 
-    TrendingUp, 
-    TrendingDown, 
-    Minus, 
-    AlertCircle, 
+import {
+    TrendingUp,
+    TrendingDown,
+    Minus,
+    AlertCircle,
     Loader2,
-    LucideIcon 
+    LucideIcon
 } from 'lucide-react';
 import styles from './KPICard.module.css';
+import { formatNumber, formatCurrency, formatPercent } from '@/utils/format';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -34,36 +35,85 @@ export interface KPICardProps {
     label: string;
     value?: string | number;
     previousValue?: string | number;
-    
+
     // Visual configuration
     variant?: KPICardVariant;
     size?: KPICardSize;
     icon?: LucideIcon;
-    
+
     // Delta/change tracking
     delta?: KPIDelta;
-    
+
     // State management
     state?: CardState;
     loadingMessage?: string;
     errorMessage?: string;
-    
+
     // Formatting
     format?: MetricCategory;
     unit?: string;
     decimals?: number;
-    
+
     // Optional metadata
     description?: string;
     tooltip?: string;
-    
+
+    // Sparkline — array of recent numeric values rendered as a mini trend line
+    sparklineData?: number[];
+
+    // Drilldown navigation link
+    drilldownHref?: string;
+    drilldownLabel?: string;
+
     // Callbacks
     onRetry?: () => void;
     onClick?: () => void;
-    
+
     // Accessibility
     ariaLabel?: string;
 }
+
+// ============================================================================
+// SPARKLINE COMPONENT
+// ============================================================================
+
+interface SparklineProps {
+    data: number[];
+    width?: number;
+    height?: number;
+}
+
+const Sparkline: React.FC<SparklineProps> = ({ data, width = 80, height = 28 }) => {
+    if (data.length < 2) return null;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const pts = data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((v - min) / range) * height;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const isPositive = data[data.length - 1] >= data[0];
+    const color = isPositive ? '#22c55e' : '#ef4444';
+    return (
+        <svg
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            aria-hidden="true"
+            className="overflow-visible"
+        >
+            <polyline
+                points={pts.join(' ')}
+                fill="none"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+};
 
 // ============================================================================
 // FORMAT UTILITIES
@@ -75,7 +125,7 @@ export interface KPICardProps {
 export function formatNumber(value: string | number, decimals: number = 0): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     return num.toLocaleString('en-US', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
@@ -86,13 +136,13 @@ export function formatNumber(value: string | number, decimals: number = 0): stri
  * Format as currency (USD by default)
  */
 export function formatCurrency(
-    value: string | number, 
+    value: string | number,
     currency: string = 'USD',
     decimals: number = 2
 ): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
@@ -105,16 +155,16 @@ export function formatCurrency(
  * Format as percentage
  */
 export function formatPercentage(
-    value: string | number, 
+    value: string | number,
     decimals: number = 1,
     showSign: boolean = false
 ): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     const formatted = Math.abs(num).toFixed(decimals);
     const sign = showSign && num > 0 ? '+' : '';
-    
+
     return `${sign}${formatted}%`;
 }
 
@@ -124,7 +174,7 @@ export function formatPercentage(
 export function formatCompact(value: string | number): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(num)) return '--';
-    
+
     if (num >= 1_000_000_000) {
         return `${(num / 1_000_000_000).toFixed(1)}B`;
     }
@@ -141,18 +191,18 @@ export function formatCompact(value: string | number): string {
  * Calculate delta between two values
  */
 export function calculateDelta(
-    current: string | number, 
+    current: string | number,
     previous: string | number
 ): KPIDelta {
     const curr = typeof current === 'string' ? parseFloat(current) : current;
     const prev = typeof previous === 'string' ? parseFloat(previous) : previous;
-    
+
     if (isNaN(curr) || isNaN(prev) || prev === 0) {
         return { value: 0, direction: 'neutral' };
     }
-    
+
     const percentChange = ((curr - prev) / prev) * 100;
-    
+
     return {
         value: Math.abs(percentChange),
         direction: percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'neutral',
@@ -170,17 +220,17 @@ interface DeltaIndicatorProps {
 }
 
 const DeltaIndicator: React.FC<DeltaIndicatorProps> = ({ delta, size = 'medium' }) => {
-    const Icon = delta.direction === 'up' 
-        ? TrendingUp 
-        : delta.direction === 'down' 
-            ? TrendingDown 
+    const Icon = delta.direction === 'up'
+        ? TrendingUp
+        : delta.direction === 'down'
+            ? TrendingDown
             : Minus;
-    
+
     const isPositive = delta.direction === 'up';
     const isNegative = delta.direction === 'down';
-    
+
     return (
-        <div 
+        <div
             className={clsx(
                 styles.delta,
                 styles[`delta${size.charAt(0).toUpperCase() + size.slice(1)}`],
@@ -236,7 +286,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, size = 'mediu
             <AlertCircle className={styles.errorIcon} size={size === 'small' ? 16 : size === 'large' ? 28 : 20} />
             <span className={styles.errorMessage}>{message || 'Failed to load'}</span>
             {onRetry && (
-                <button 
+                <button
                     className={styles.retryButton}
                     onClick={onRetry}
                     aria-label="Retry loading data"
@@ -306,6 +356,9 @@ export const KPICard: React.FC<KPICardProps> = ({
     decimals = 0,
     description,
     tooltip,
+    sparklineData,
+    drilldownHref,
+    drilldownLabel = 'View details',
     onRetry,
     onClick,
     ariaLabel,
@@ -313,25 +366,25 @@ export const KPICard: React.FC<KPICardProps> = ({
     // Format value based on format type
     const formattedValue = (() => {
         if (value === undefined || value === null) return '--';
-        
+
         switch (format) {
             case 'currency':
-                return formatCurrency(value, unit || 'USD', decimals);
+                return formatCurrency(value, { currency: unit || 'USD', decimals });
             case 'percentage':
-                return formatPercentage(value, decimals);
+                return formatPercent(value, { decimals });
             case 'count':
-                return formatCompact(value);
+                return formatNumber(value, { compact: true });
             case 'score':
-                return formatNumber(value, decimals);
+                return formatNumber(value, { decimals });
             default:
-                return formatNumber(value, decimals);
+                return formatNumber(value, { decimals });
         }
     })();
 
     // Calculate delta if previous value provided
     const displayDelta = delta || (
-        previousValue !== undefined 
-            ? calculateDelta(value as string | number, previousValue) 
+        previousValue !== undefined
+            ? calculateDelta(value as string | number, previousValue)
             : undefined
     );
 
@@ -362,10 +415,10 @@ export const KPICard: React.FC<KPICardProps> = ({
 
     // Default state
     return (
-        <div 
+        <div
             className={clsx(
-                styles.card, 
-                styles[variant], 
+                styles.card,
+                styles[variant],
                 styles[size],
                 { [styles.clickable]: !!onClick }
             )}
@@ -399,6 +452,24 @@ export const KPICard: React.FC<KPICardProps> = ({
             {/* Description (optional) */}
             {description && (
                 <p className={styles.description}>{description}</p>
+            )}
+
+            {/* Sparkline */}
+            {sparklineData && sparklineData.length >= 2 && (
+                <div className="mt-2 flex justify-end" aria-hidden="true">
+                    <Sparkline data={sparklineData} />
+                </div>
+            )}
+
+            {/* Drilldown link */}
+            {drilldownHref && (
+                <a
+                    href={drilldownHref}
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-[#51A2FF] hover:underline focus:outline-none focus:ring-1 focus:ring-[#51A2FF] rounded"
+                    aria-label={`${drilldownLabel} for ${label}`}
+                >
+                    {drilldownLabel} →
+                </a>
             )}
         </div>
     );

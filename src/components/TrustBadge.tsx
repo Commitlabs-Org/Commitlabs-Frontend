@@ -37,7 +37,7 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
         return {
           icon: <AlertCircle className="w-3 h-3" />,
           label: 'Self-Reported',
-          colorClass: 'text-white/40 bg-white/5 border-white/10',
+          colorClass: 'text-white/60 bg-white/5 border-white/10',
           description: 'This seller has not yet completed the verification process. Exercise caution.'
         };
     }

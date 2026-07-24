@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,template,loading,error,not-found,global-error,route,default,sitemap,robots,manifest,icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx}",
+    "src/middleware.{ts,tsx}",
+    "next.config.js",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx,mjs}"],
+  "ignore": ["contracts/**", "e2e/**", ".next/**"],
+  "ignoreDependencies": ["@vitest/ui", "tailwindcss", "@vitejs/plugin-react"],
+  "ignoreBinaries": ["stellar"],
+  "vitest": {
+    "config": ["vitest.config.ts"],
+    "entry": ["tests/**/*.{test,spec}.{ts,tsx}", "src/**/*.{test,spec}.{ts,tsx}"]
+  }
+}

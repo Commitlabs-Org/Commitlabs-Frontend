@@ -1,0 +1,172 @@
+.container {
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  outline: none;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.container:focus-visible {
+  border-color: rgba(239, 68, 68, 0.8);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2), 0 4px 20px rgba(239, 68, 68, 0.2);
+}
+
+.container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ef4444, transparent);
+  opacity: 0.8;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.warningIcon {
+  color: #ef4444;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fca5a5;
+  margin: 0;
+}
+
+.subtitle {
+  color: #d1d5db;
+  font-size: 0.875rem;
+  margin: 0 0 1rem 0;
+}
+
+.errorList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.errorItem {
+  margin: 0;
+}
+
+.jumpButton {
+  width: 100%;
+  background: rgba(26, 26, 26, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+  font-family: inherit;
+}
+
+.jumpButton:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+  transform: translateY(-1px);
+}
+
+.jumpButton:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.stepBadge {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-right: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.errorMessage {
+  font-size: 0.9rem;
+  flex-grow: 1;
+  color: #f3f4f6;
+  margin-right: 1rem;
+}
+
+.jumpText {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+.jumpButton:hover .jumpText {
+  opacity: 1;
+}
+
+.arrowIcon {
+  transition: transform 0.2s ease;
+}
+
+.jumpButton:hover .arrowIcon {
+  transform: translateX(3px);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@media (max-width: 640px) {
+  .jumpButton {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .stepBadge {
+    margin-right: 0;
+  }
+
+  .errorMessage {
+    margin-right: 0;
+  }
+
+  .jumpText {
+    align-self: flex-end;
+  }
+}

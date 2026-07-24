@@ -7,6 +7,38 @@ base; they exist primarily for analytics hooks and development/testing.
 Each entry includes the HTTP method, path, expected request body (if any), and
 an example response. All endpoints return JSON.
 
+## OpenAPI Spec & CI
+
+The machine-readable API contract lives in [`openapi.yaml`](../openapi.yaml) at
+the repo root. CI enforces two checks on every PR:
+
+1. **Spec validity** — `validate-openapi.sh` runs Redocly lint against
+   `openapi.yaml` and fails on schema or structural errors.
+2. **Route coverage** — `scripts/check-route-coverage.sh` discovers every
+   `src/app/api/**/route.ts` file, maps it to an `/api/...` path (dynamic
+   segments become `{param}`), and fails if that path is absent from
+   `openapi.yaml`.
+
+### Adding a new API route
+
+When you add `src/app/api/<segments>/route.ts`:
+
+1. Add a matching path entry under `paths:` in `openapi.yaml` (use `{id}` for
+   dynamic segments, e.g. `src/app/api/foo/[id]/bar` → `/api/foo/{id}/bar`).
+2. Run locally before pushing:
+
+   ```bash
+   bash validate-openapi.sh
+   bash scripts/check-route-coverage.sh
+   ```
+
+3. Update this document with request/response examples if the endpoint is
+   user-facing.
+
+Undocumented routes block merge until the spec is updated.
+
+---
+
 ## CORS Summary
 
 - Public browser routes return wildcard CORS without credentials.
@@ -61,6 +93,44 @@ Retry-After: 60
 | 503    | 30 s                        | Service temporarily unavailable |
 
 Clients should wait the indicated seconds before retrying. See [error-handling.md](./error-handling.md) for the full client retry strategy (exponential backoff + jitter).
+
+---
+
+## `GET /api/marketplace/listings/[id]`
+
+Fetches a single marketplace listing by its listing ID. This endpoint is used by
+`/marketplace/[id]` to render deep-linkable listing detail pages.
+
+- **Authentication**: none
+- **Path parameter**: `id` — the marketplace listing ID
+- **Response**:
+  - `200 OK`: Listing returned.
+  - `404 Not Found`: Listing does not exist.
+
+### Example
+
+```bash
+curl -X GET http://localhost:3000/api/marketplace/listings/LST-001
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "listing": {
+      "listingId": "LST-001",
+      "commitmentId": "CMT-001",
+      "type": "Safe",
+      "amount": 50000,
+      "remainingDays": 25,
+      "maxLoss": 2,
+      "currentYield": 5.2,
+      "complianceScore": 95,
+      "price": 52000
+    }
+  }
+}
+```
 
 ---
 

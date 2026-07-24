@@ -321,4 +321,17 @@ describe('validateAttestationData', () => {
       validateAttestationData('health_check', { complianceScore: 50, violation: false }),
     ).not.toThrow();
   });
+
+  // New test: unknown attestation type should be rejected
+  it('throws error for unknown attestation type', () => {
+    // @ts-ignore intentionally using invalid type
+    expect(() => validateAttestationData('unknown_type' as any, {})).toThrow();
+  });
+
+  // New test: feeEarned string exceeding MAX_STRING_LENGTH
+  it('rejects feeEarned string exceeding MAX_STRING_LENGTH', () => {
+    expect(() =>
+      feeGenerationDataSchema.parse({ feeEarned: oversizedString() }),
+    ).toThrow(ZodError);
+  });
 });

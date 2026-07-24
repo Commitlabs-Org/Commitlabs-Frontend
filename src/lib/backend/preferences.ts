@@ -22,6 +22,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { UnauthorizedError } from './errors';
+import { verifySessionToken } from './auth';
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -62,10 +63,27 @@ export const userPreferencesSchema = z.object({
         .max(10)
         .regex(/^[a-z]{2,3}(-[A-Z]{2,3})?$/, 'language must be a valid BCP-47 tag (e.g. "en", "en-US")')
         .optional(),
+    seenWizardTour: z.boolean().optional(),
+    overviewWidgetLayout: z
+        .array(
+            z.object({
+                id: z.string(),
+                label: z.string(),
+                visible: z.boolean(),
+                order: z.number().int().nonnegative(),
+            })
+        )
+        .optional(),
 });
 
 /** Shape returned/stored for a single wallet. */
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+
+/** Default ordered widget layout for the overview page. */
+export const DEFAULT_OVERVIEW_WIDGET_LAYOUT: NonNullable<UserPreferences['overviewWidgetLayout']> = [
+    { id: 'at-risk', label: 'At-Risk Commitments', visible: true, order: 0 },
+    { id: 'commitment-detail', label: 'Commitment Detail', visible: true, order: 1 },
+];
 
 /** The defaults applied when no preferences exist yet. */
 export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
@@ -74,6 +92,8 @@ export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
     notificationCategories: { expiry: true, violation: true, health_check: true },
     theme: 'system',
     language: 'en',
+    seenWizardTour: false,
+    overviewWidgetLayout: DEFAULT_OVERVIEW_WIDGET_LAYOUT,
 };
 
 // ─── Storage Adapter Interface ───────────────────────────────────────────────
@@ -178,7 +198,7 @@ export function requireWalletAuth(authHeader: string | null): string {
     }
 
     const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+    if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer') {
         throw new UnauthorizedError(
             'Authorization header must be in format: Bearer <token>',
         );
@@ -186,7 +206,13 @@ export function requireWalletAuth(authHeader: string | null): string {
 
     const token = parts[1];
 
-    // Decode placeholder token: session_<address>_<timestamp>
+    // 1. Try to verify session token via the session store first
+    const session = verifySessionToken(token);
+    if (session.valid && session.address) {
+        return session.address;
+    }
+
+    // 2. Fall back to placeholder token: session_<address>_<timestamp>
     const match = token.match(/^session_([A-Z0-9]+)_\d+$/);
     if (!match) {
         throw new UnauthorizedError('Invalid or expired session token.');

@@ -1,7 +1,28 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import ScrollToTopButton from "@/components/landing-page/ui/ScrollToTop"
-import { ToastProvider } from "@/components/toast/ToastProvider"
+import ScrollToTopButton from '@/components/landing-page/ui/ScrollToTop'
+import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { ToastProvider } from '@/components/toast/ToastProvider'
+import { CommandPaletteProvider } from '@/components/CommandPalette'
+import { NetworkMismatchBanner } from '@/components/wallet/NetworkMismatchBanner'
+import { Inter, Roboto_Mono } from 'next/font/google'
+import { MotionProvider } from "@/components/MotionProvider"
+import { WebVitalsReporter } from "@/components/perf/WebVitalsReporter"
+import { AppShellConnectionStatus } from '@/components/shell/AppShellConnectionStatus'
+import { WalletProvider } from '@/components/auth/WalletProvider'
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+})
+
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-roboto',
+})
 
 export const metadata: Metadata = {
   title: 'CommitLabs - Liquidity as a Commitment',
@@ -43,9 +64,11 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  verification: {
-    google: 'your-google-site-verification-code',
-  },
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? {
+    verification: {
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    },
+  } : {}),
 }
 
 export default function RootLayout({
@@ -54,32 +77,45 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={['scroll-smooth', inter.variable, robotoMono.variable].join(' ')}
+    >
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "CommitLabs",
-              "description": "Transform passive liquidity into enforceable, attestable, and composable on-chain commitments",
-              "url": "https://commitlabs.com",
-              "publisher": {
-                "@type": "Organization",
-                "name": "CommitLabs",
-                "url": "https://commitlabs.com"
-              }
-            })
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'CommitLabs',
+              description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
+              url: 'https://commitlabs.com',
+              publisher: {
+                '@type': 'Organization',
+                name: 'CommitLabs',
+                url: 'https://commitlabs.com',
+              },
+            }),
           }}
         />
       </head>
       <body>
+        <WebVitalsReporter />
         <a href="#main-content" className="skip-link">Skip to main content</a>
-        <ToastProvider>
-          {children}
-          <ScrollToTopButton />
-        </ToastProvider>
+        <ThemeProvider>
+          <WalletProvider>
+            <MotionProvider>
+              <ToastProvider>
+                <NetworkMismatchBanner />
+                <AppShellConnectionStatus>{children}</AppShellConnectionStatus>
+                <ScrollToTopButton />
+                <CommandPaletteProvider />
+              </ToastProvider>
+            </MotionProvider>
+          </WalletProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

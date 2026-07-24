@@ -1,7 +1,8 @@
 {
   "extends": [
     "next/core-web-vitals",
-    "next/typescript"
+    "next/typescript",
+    "plugin:jsx-a11y/recommended"
   ],
   "rules": {
     "@typescript-eslint/no-unused-vars": [
@@ -10,6 +11,14 @@
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+    "react/jsx-no-target-blank": [
+      "error",
+      {
+        "allowReferrer": false,
+        "enforceDynamicLinks": "always",
+        "warnOnSpreadAttributes": true
       }
     ]
   }

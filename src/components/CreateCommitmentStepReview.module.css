@@ -495,3 +495,66 @@
 .highlightValue {
   color: #0ff0fc;
 }
+
+/* Wallet Disconnected Warning Banner */
+.walletWarningBanner {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+.walletWarningIcon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.walletWarningContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+  text-align: left;
+}
+
+.walletWarningContent h4 {
+  color: #3b82f6;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.walletWarningContent p {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.connectWalletButton {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.connectWalletButton:hover {
+  background-color: #2563eb;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+.connectWalletButton:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}

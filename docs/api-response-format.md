@@ -191,10 +191,63 @@ export const GET = withApiHandler(async () => {
 
 ---
 
+## Client-side Fetch Helper (`apiClient.ts`)
+
+A shared client-side fetch wrapper (`src/lib/apiClient.ts`) is available to make API requests with built-in:
+- **Request Timeout**: Aborts automatically after a timeout (default 5000ms).
+- **Consistent Envelope Parsing**: Automatically unwraps `{ ok: true, data: T }` envelopes or parses standard error envelopes.
+- **Typed Errors**: Throws a subclass of `Error` called `ApiError` containing the API-returned error code, message, and details.
+
+### Basic Usage
+
+Use convenience methods like `apiGet`, `apiPost`, `apiPut`, or `apiDelete`:
+
+```ts
+import { apiGet, ApiError } from '@/lib/apiClient';
+
+interface Commitment {
+  id: string;
+  status: string;
+}
+
+async function loadData() {
+  try {
+    const commitments = await apiGet<Commitment[]>('/api/commitments');
+    console.log(commitments);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      console.error(`API Error [${err.code}]: ${err.message}`);
+    } else {
+      console.error('Network or other error:', err);
+    }
+  }
+}
+```
+
+### Low-level Custom Requests
+
+You can use the generic `apiFetch` for other methods or custom configurations:
+
+```ts
+import { apiFetch } from '@/lib/apiClient';
+
+const data = await apiFetch<MyResponseType>(
+  '/api/custom-endpoint',
+  {
+    method: 'PATCH',
+    headers: { 'X-Custom-Header': 'value' },
+  },
+  10000 // custom 10s timeout
+);
+```
+
+---
+
 ## Files
 
 | File | Purpose |
 |------|---------|
+| `src/lib/apiClient.ts`            | Client-side API fetch client with timeout & typed errors |
 | `src/lib/backend/apiResponse.ts` | `ok()` and `fail()` response helpers |
 | `src/lib/backend/errors.ts`      | Typed error classes with HTTP status codes |
 | `src/lib/backend/withApiHandler.ts` | HOF that catches `ApiError` and calls `fail()` |
@@ -203,3 +256,4 @@ export const GET = withApiHandler(async () => {
 ---
 
 *Created as part of issue #105. Update this document when new error codes are introduced.*
+

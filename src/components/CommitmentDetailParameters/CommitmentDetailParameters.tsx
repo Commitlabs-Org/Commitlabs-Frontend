@@ -1,6 +1,7 @@
 import { Clock, AlertTriangle, Shield, DollarSign } from 'lucide-react'
 import styles from './CommitmentDetailParameters.module.css'
 import { PiStack } from 'react-icons/pi'
+import GlossaryTerm from '../GlossaryTerm'
 
 const DEFAULT_DURATION_DESCRIPTION = 'Commitment lock period'
 const DEFAULT_MAX_LOSS_DESCRIPTION = 'Maximum acceptable loss before violation'
@@ -61,7 +62,7 @@ export function CommitmentDetailParameters({
             <div className={styles.iconWrap}>
               <AlertTriangle size={22} color="#FF3B30" strokeWidth={2} />
             </div>
-            <span className={styles.label}>Max Loss Threshold</span>
+            <span className={styles.label}><GlossaryTerm termKey="max loss threshold">Max Loss Threshold</GlossaryTerm></span>
           </div>
           <p className={styles.value}>{maxLossLabel}</p>
           <p className={styles.description}>{maxLossDescription}</p>
@@ -83,7 +84,7 @@ export function CommitmentDetailParameters({
             <div className={styles.iconWrap}>
               <DollarSign size={22} color="#F5A623" strokeWidth={2} />
             </div>
-            <span className={styles.label}>Early Exit Penalty</span>
+            <span className={styles.label}><GlossaryTerm termKey="early exit">Early Exit Penalty</GlossaryTerm></span>
           </div>
           <p className={styles.value}>{earlyExitPenaltyLabel}</p>
           <p className={styles.description}>{earlyExitPenaltyDescription}</p>

@@ -1,108 +1,126 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { apiGet } from '@/lib/apiClient';
 import { CommitmentDetailOverview } from "@/components/CommitmentDetailOverview";
-import { Commitment } from "@/types/commitment";
-import { listCommitments } from "@/lib/backend/mocks/contracts";
+import { AtRiskCommitments } from "@/components/dashboard/AtRiskCommitments";
+import { RecentActivityFeed } from "@/components/dashboard/RecentActivityFeed";
+import { Commitment } from "@/lib/types/domain";
+import OverviewTimeRangeSelector from "@/components/overview/OverviewTimeRangeSelector";
+import { useOverviewTimeRange } from "@/hooks/useOverviewTimeRange";
+
+const PortfolioAllocationChart = dynamic(
+  () =>
+    import(
+      "@/components/dashboard/PortfolioAllocationChart"
+    ).then((mod) => mod.PortfolioAllocationChartInner),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-[#111] border border-[#222] rounded-xl p-6 h-80 animate-pulse" />
+    ),
+  },
+);
 
 export default function CommitmentOverviewPage() {
   const [commitments, setCommitments] = useState<Commitment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [atRiskVisible, setAtRiskVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const { selectedRange, setRange, filterByRange } = useOverviewTimeRange();
 
   useEffect(() => {
-    setIsLoading(true);
-    listCommitments()
-      .then((data) => {
-        setCommitments(data);
-      })
-      .catch(() => {
-        setError("Failed to load commitments. Please try again.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, []);
+    if (!atRiskVisible) return;
+    async function loadCommitments() {
+      setLoading(true);
+      try {
+        const data = await apiGet<{ data: Commitment[] }>('/api/commitments');
+        setCommitments(data.data);
+          if (data && Array.isArray(data.data)) {
+            setCommitments(data.data);
+          } else if (Array.isArray(data)) {
+            setCommitments(data);
+          }
+      } catch (err) {
+        console.error("Failed to load commitments", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCommitments();
+  }, [atRiskVisible]);
 
-  const displayed = atRiskVisible
-    ? commitments.filter((c) => c.complianceScore < 80)
-    : commitments;
+  const renderWidget = (id: string) => {
+    switch (id) {
+      case "at-risk":
+        return <AtRiskCommitments commitments={commitments} />;
+      case "commitment-detail":
+        return (
+          <CommitmentDetailOverview
+            commitmentTypeLabel="Safe Commitment"
+            currentValue="52,600"
+            currentValueAsset="XLM"
+            gainLossLabel="+5.20% (+2,600 XLM)"
+            gainLossVariant="positive"
+            initialAmount="50,000"
+            initialAmountAsset="XLM"
+            createdDate="Jan 10, 2026"
+            expiresDate="Feb 9, 2026"
+            daysRemaining={12}
+            durationPercentComplete={87}
+            complianceScore={95}
+            complianceScoreLabel="Excellent compliance with commitment rules"
+            maxLossThreshold="2%"
+            currentDrawdown="0.8%"
+            feesGenerated="$126"
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
-  if (isLoading) {
-    return (
-      <main className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
-        <div className="mx-auto w-full max-w-[1200px]">
-          <p className="text-white/60">Loading commitments…</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
-        <div className="mx-auto w-full max-w-[1200px]">
-          <p className="text-red-400">{error}</p>
-        </div>
-      </main>
-    );
-  }
+  const filteredCommitments = filterByRange(
+    commitments,
+    (c) => (c as Commitment & { createdAt?: string }).createdAt ?? new Date(0).toISOString()
+  );
 
   return (
-    <main className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
-      <div className="mx-auto w-full max-w-[1200px]">
-        <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setAtRiskVisible((prev) => !prev)}
-            aria-pressed={atRiskVisible}
-            className="rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-sm text-white/80 hover:bg-white/10 transition-colors"
-          >
-            {atRiskVisible ? "Show All" : "Show At-Risk Only"}
-          </button>
+    <main id="main-content" className="min-h-screen w-full bg-[#0a0a0a] px-6 py-10 text-white">
+      <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-6">
+        {/* Page header with time-range filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-2xl font-semibold text-white">Commitments Overview</h1>
+          <OverviewTimeRangeSelector
+            selected={selectedRange}
+            onChange={setRange}
+            aria-label="Filter overview by time range"
+          />
         </div>
-
-        {displayed.length === 0 ? (
-          <p className="text-white/60">
-            {atRiskVisible
-              ? "No at-risk commitments found."
-              : "No commitments found."}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {displayed.map((commitment) => (
-              <CommitmentDetailOverview
-                key={commitment.id}
-                commitmentTypeLabel={`${commitment.type} Commitment`}
-                currentValue={commitment.currentValue}
-                currentValueAsset={commitment.asset}
-                gainLossLabel={
-                  commitment.changePercent >= 0
-                    ? `+${commitment.changePercent}%`
-                    : `${commitment.changePercent}%`
-                }
-                gainLossVariant={
-                  commitment.changePercent > 0
-                    ? "positive"
-                    : commitment.changePercent < 0
-                    ? "negative"
-                    : "neutral"
-                }
-                initialAmount={commitment.amount}
-                initialAmountAsset={commitment.asset}
-                createdDate={commitment.createdDate}
-                expiresDate={commitment.expiryDate}
-                daysRemaining={commitment.daysRemaining}
-                durationPercentComplete={commitment.durationProgress}
-                complianceScore={commitment.complianceScore}
-                maxLossThreshold={commitment.maxLoss}
-                currentDrawdown={commitment.currentDrawdown}
-                feesGenerated="—"
-              />
-            ))}
-          </div>
-        )}
+        <div className="w-full">
+          <PortfolioAllocationChart commitments={commitments} />
+        </div>
+        <div className="w-full">
+          <RecentActivityFeed commitments={commitments} />
+        </div>
+        <CommitmentDetailOverview
+          commitmentTypeLabel="Safe Commitment"
+          currentValue="52,600"
+          currentValueAsset="XLM"
+          gainLossLabel="+5.20% (+2,600 XLM)"
+          gainLossVariant="positive"
+          initialAmount="50,000"
+          initialAmountAsset="XLM"
+          createdDate="Jan 10, 2026"
+          expiresDate="Feb 9, 2026"
+          daysRemaining={12}
+          durationPercentComplete={87}
+          complianceScore={95}
+          complianceScoreLabel="Excellent compliance with commitment rules"
+          maxLossThreshold="2%"
+          currentDrawdown="0.8%"
+          feesGenerated="$126"
+        />
       </div>
     </main>
   );

@@ -2,6 +2,10 @@
 
 This document defines the accessibility standards for presenting dense numeric data, financial metrics, and complex tables within the CommitLabs platform.
 
+> Part of CommitLabs' accessibility effort. For the overall WCAG 2.1 AA target,
+> current conformance posture, known gaps, and how to report problems, see the
+> [Accessibility Statement](accessibility/ACCESSIBILITY_STATEMENT.md).
+
 ## 1. General Principles
 
 - **Clarity over Density**: While we aim for information density, accessibility requires that the logical relationship between data points remains clear.

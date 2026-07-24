@@ -135,29 +135,29 @@ describe('OkBodySchema', () => {
 describe('HealthResponseSchema', () => {
   const valid = {
     success: true,
-    data: { status: 'ok', timestamp: '2026-04-23T23:31:42.241Z' },
+    data: { status: 'ok', uptime: 123.45, version: '0.1.0' },
   };
 
   it('accepts a valid health response', () => {
     expectValid(HealthResponseSchema, valid);
   });
 
-  it('rejects non-datetime timestamp', () => {
-    expectInvalid(HealthResponseSchema, {
-      ...valid,
-      data: { ...valid.data, timestamp: 'not-a-date' },
-    });
-  });
-
   it('rejects missing status', () => {
     expectInvalid(HealthResponseSchema, {
       success: true,
-      data: { timestamp: '2026-04-23T23:31:42.241Z' },
+      data: { uptime: 123.45, version: '0.1.0' },
     });
   });
 
-  it('rejects missing timestamp', () => {
-    expectInvalid(HealthResponseSchema, { success: true, data: { status: 'ok' } });
+  it('rejects non-numeric uptime', () => {
+    expectInvalid(HealthResponseSchema, {
+      ...valid,
+      data: { ...valid.data, uptime: 'abc' },
+    });
+  });
+
+  it('rejects missing version', () => {
+    expectInvalid(HealthResponseSchema, { success: true, data: { status: 'ok', uptime: 123.45 } });
   });
 });
 
