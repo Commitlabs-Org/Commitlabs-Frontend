@@ -226,12 +226,7 @@ describe('GET /api/admin/audit-events — authorized', () => {
 
     expect(res.status).toBe(200);
     expect(body.meta.limit).toBe(10);
-    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(10, {
-      actor: undefined,
-      type: undefined,
-      startTime: undefined,
-      endTime: undefined,
-    });
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(10, {});
   });
 
   it('filters events by actor', async () => {
@@ -245,15 +240,9 @@ describe('GET /api/admin/audit-events — authorized', () => {
     expect(res.status).toBe(200);
     expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(50, {
       actor: '0xdeadbeef',
-      type: undefined,
-      startTime: undefined,
-      endTime: undefined,
     });
     expect(auditLog.getAuditEventCount).toHaveBeenCalledWith({
       actor: '0xdeadbeef',
-      type: undefined,
-      startTime: undefined,
-      endTime: undefined,
     });
     expect(body.data.events).toEqual([MOCK_EVENTS[0]]);
     expect(body.data.total).toBe(1);
@@ -269,10 +258,7 @@ describe('GET /api/admin/audit-events — authorized', () => {
 
     expect(res.status).toBe(200);
     expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(50, {
-      actor: undefined,
       type: 'attestation.recorded',
-      startTime: undefined,
-      endTime: undefined,
     });
     expect(body.data.events[0]?.action).toBe('attestation.recorded');
     expect(body.data.total).toBe(1);
@@ -291,8 +277,6 @@ describe('GET /api/admin/audit-events — authorized', () => {
 
     expect(res.status).toBe(200);
     expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(50, {
-      actor: undefined,
-      type: undefined,
       startTime: '2026-04-22T00:00:00.000Z',
       endTime: '2026-04-22T23:59:59.000Z',
     });
@@ -373,12 +357,7 @@ describe('GET /api/admin/audit-events — authorized', () => {
     const res = await GET(req, { params: {} });
 
     expect(res.status).toBe(200);
-    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(1, {
-      actor: undefined,
-      type: undefined,
-      startTime: undefined,
-      endTime: undefined,
-    });
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(1, {});
   });
 
   it('accepts limit=200 (maximum boundary)', async () => {
@@ -386,12 +365,7 @@ describe('GET /api/admin/audit-events — authorized', () => {
     const res = await GET(req, { params: {} });
 
     expect(res.status).toBe(200);
-    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(200, {
-      actor: undefined,
-      type: undefined,
-      startTime: undefined,
-      endTime: undefined,
-    });
+    expect(auditLog.getRecentAuditEvents).toHaveBeenCalledWith(200, {});
   });
 
   it('ensures all events have actor and ip redacted', async () => {

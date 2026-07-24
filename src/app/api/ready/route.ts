@@ -4,22 +4,25 @@ import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/co
 import { logger } from '@/lib/backend';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { getBackendConfig } from '@/lib/backend/config';
+import { getValidatedEnv } from '@/lib/backend/env';
 import { SorobanRpc } from '@stellar/stellar-sdk';
 
-const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL;
 const READY_CORS_POLICY = {
   GET: { access: 'public' },
 } satisfies CorsRoutePolicy;
 
 async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
-  if (!SOROBAN_RPC_URL) {
+  const env = getValidatedEnv();
+  const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
+  
+  if (!sorobanRpcUrl) {
     logger.warn('SOROBAN_RPC_URL not configured, skipping RPC connectivity check');
     return { reachable: false, error: 'SOROBAN_RPC_URL not configured' };
   }
 
   const start = Date.now();
   try {
-    const response = await fetch(SOROBAN_RPC_URL, {
+    const response = await fetch(sorobanRpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getHealth', params: [] }),
@@ -38,7 +41,7 @@ async function checkSorobanRpc(): Promise<{ reachable: boolean; latencyMs?: numb
     return { reachable: true, latencyMs };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    logger.error('Soroban RPC connectivity check threw', { error, url: SOROBAN_RPC_URL });
+    logger.error('Soroban RPC connectivity check threw', { error, url: sorobanRpcUrl });
     return { reachable: false, error: error.message };
   }
 }
@@ -55,7 +58,10 @@ async function probeContractReachability(): Promise<{
   error?: string;
   details?: string;
 }> {
-  if (!SOROBAN_RPC_URL) {
+  const env = getValidatedEnv();
+  const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
+  
+  if (!sorobanRpcUrl) {
     return { reachable: false, error: 'RPC not configured' };
   }
 
@@ -69,8 +75,8 @@ async function probeContractReachability(): Promise<{
     }
 
     const start = Date.now();
-    const server = new SorobanRpc.Server(SOROBAN_RPC_URL, {
-      allowHttp: SOROBAN_RPC_URL.startsWith('http://'),
+    const server = new SorobanRpc.Server(sorobanRpcUrl, {
+      allowHttp: sorobanRpcUrl.startsWith('http://'),
     });
 
     // Perform a lightweight read: fetch the contract's metadata
@@ -91,16 +97,19 @@ export const OPTIONS = createCorsOptionsHandler(READY_CORS_POLICY);
 export const GET = withApiHandler(async () => {
   logger.info('Readiness check requested');
 
+  const env = getValidatedEnv();
+  const sorobanRpcUrl = env.SOROBAN_RPC_URL ?? env.NEXT_PUBLIC_SOROBAN_RPC_URL;
+
   const rpc = await checkSorobanRpc();
   const contract = await probeContractReachability();
 
-  const ready = (rpc.reachable || !SOROBAN_RPC_URL) && (contract.reachable || !SOROBAN_RPC_URL);
+  const ready = (rpc.reachable || !sorobanRpcUrl) && (contract.reachable || !sorobanRpcUrl);
   const body = {
     status: ready ? 'ready' : 'not_ready',
     timestamp: new Date().toISOString(),
     checks: {
-      sorobanRpc: SOROBAN_RPC_URL ? { ...rpc } : { reachable: null, note: 'not configured' },
-      contract: SOROBAN_RPC_URL ? { ...contract } : { reachable: null, note: 'not configured' },
+      sorobanRpc: sorobanRpcUrl ? { ...rpc } : { reachable: null, note: 'not configured' },
+      contract: sorobanRpcUrl ? { ...contract } : { reachable: null, note: 'not configured' },
     },
   };
 

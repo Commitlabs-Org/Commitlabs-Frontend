@@ -6,8 +6,8 @@
    Base Card Structure
    --------------------------------------------------------------------------- */
 .card {
-  background: #0a0a0a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 16px;
   padding: 1.5rem;
   display: flex;
@@ -55,32 +55,32 @@
    Accent Color Variants
    --------------------------------------------------------------------------- */
 .teal {
-  --accent-color: #0ff0fc;
-  --glow-color: rgba(15, 240, 252, 0.2);
+  --accent-color: var(--accent-teal);
+  --glow-color: rgba(var(--accent-teal-rgb), 0.2);
 }
 
 .green {
-  --accent-color: #00ff7a;
-  --glow-color: rgba(0, 255, 122, 0.2);
+  --accent-color: var(--accent-green);
+  --glow-color: rgba(var(--accent-green-rgb), 0.2);
 }
 
 .blue {
-  --accent-color: #3b82f6;
+  --accent-color: var(--accent-blue);
   --glow-color: rgba(59, 130, 246, 0.2);
 }
 
 .purple {
-  --accent-color: #a855f7;
+  --accent-color: var(--accent-purple);
   --glow-color: rgba(168, 85, 247, 0.2);
 }
 
 .orange {
-  --accent-color: #f97316;
+  --accent-color: var(--accent-orange);
   --glow-color: rgba(249, 115, 22, 0.2);
 }
 
 .neutral {
-  --accent-color: #94a3b8;
+  --accent-color: var(--accent-neutral);
   --glow-color: rgba(148, 163, 184, 0.2);
 }
 
@@ -101,7 +101,7 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
-  border: 0.56px solid rgba(255, 255, 255, 0.1);
+  border: 0.56px solid var(--border-subtle);
   color: var(--accent-color);
   flex-shrink: 0;
 }
@@ -118,7 +118,7 @@
 
 .label {
   font-size: 0.875rem;
-  color: #99a1af;
+  color: var(--text-secondary);
   font-weight: 500;
   flex: 1;
 }
@@ -132,7 +132,7 @@
 }
 
 .tooltip {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.75rem;
   cursor: help;
   margin-left: auto;
@@ -192,18 +192,18 @@
 }
 
 .deltaPositive {
-  background: rgba(0, 255, 122, 0.15);
-  color: #00ff7a;
+  background: rgba(var(--accent-green-rgb), 0.15);
+  color: var(--accent-green);
 }
 
 .deltaNegative {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  background: rgba(var(--accent-danger-rgb), 0.15);
+  color: var(--accent-danger);
 }
 
 .deltaNeutral {
   background: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .deltaPeriod {
@@ -217,7 +217,7 @@
    --------------------------------------------------------------------------- */
 .description {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
 }
@@ -260,7 +260,7 @@
 
 .loadingMessage {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .skeleton {
@@ -312,18 +312,18 @@
 }
 
 .errorIcon {
-  color: #ef4444;
+  color: var(--accent-danger);
 }
 
 .errorMessage {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .retryButton {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  background: rgba(var(--accent-danger-rgb), 0.15);
+  border: 1px solid rgba(var(--accent-danger-rgb), 0.3);
+  color: var(--accent-danger);
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
   font-size: 0.75rem;
@@ -333,8 +333,8 @@
 }
 
 .retryButton:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(var(--accent-danger-rgb), 0.25);
+  border-color: rgba(var(--accent-danger-rgb), 0.5);
 }
 
 /* ---------------------------------------------------------------------------
@@ -361,7 +361,7 @@
 
 .emptyMessage {
   font-size: 0.875rem;
-  color: #64748b;
+  color: #808b9e;
   font-style: italic;
 }
 

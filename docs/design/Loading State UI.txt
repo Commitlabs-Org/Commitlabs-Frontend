@@ -1,0 +1,66 @@
+UI Feedback & Loading States System
+
+Role: UI/UX Designer
+Type: Design System · Components
+Focus: Clarity · Responsiveness · User Feedback
+
+Overview
+
+I designed a reusable feedback and loading states system to improve perceived performance and user confidence across product flows. The system standardizes how the interface communicates progress, status, and completion during actions such as form submissions, transactions, and data fetching.
+
+Design Goals
+
+Provide clear feedback during wait states
+
+Reduce user uncertainty during async actions
+
+Maintain visual consistency across the product
+
+Build reusable, scalable UI components
+
+Components Designed
+Loading Indicators
+
+A set of spinners and progress bars designed for different contexts and screen densities.
+
+Small, default, and large spinner variants
+
+Determinate and indeterminate progress bars
+
+Minimal motion to avoid distraction
+
+Interactive States
+
+Clear status buttons that communicate system behavior in real time:
+
+Processing – action in progress
+
+Saving – temporary data persistence
+
+Connecting – network-dependent actions
+
+Success – completed actions with confirmation feedback
+
+Each state uses color, iconography, and motion to reinforce meaning while remaining accessible.
+
+Skeleton States
+
+Skeleton cards designed to replace empty screens while content loads.
+
+Mirrors final layout to reduce layout shift
+
+Improves perceived loading speed
+
+Keeps users oriented while data is fetched
+
+Design Decisions
+
+Neutral backgrounds to reduce visual noise
+
+Consistent spacing and border radius across components
+
+Accessible color contrast for all states
+
+Components designed for easy handoff to developers
+
+https://www.figma.com/design/m5aXXmWBTxVGlQSViGRj9e/Loading-State?node-id=2-4&t=FlDEstvGCxYOyuFO-0

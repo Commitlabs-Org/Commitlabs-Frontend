@@ -11,6 +11,7 @@ export interface Commitment {
   id: string;
   type: CommitmentType;
   status: CommitmentStatus;
+  ownerAddress?: string;
   asset: string;
   amount: string;
   currentValue?: string;
@@ -50,8 +51,10 @@ export interface Attestation {
   id: string;
   commitmentId: string;
   kind?: string;
+  status?: string;
   verdict?: AttestationVerdict;
   observedAt: string;
+  timestamp?: string;
   title?: string;
   description?: string;
   txHash?: string;
@@ -161,3 +164,24 @@ export type HistoryEvent =
   | AttestationEvent
   | EarlyExitEvent
   | SettlementEvent;
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export type NotificationSeverity = 'info' | 'warning' | 'critical';
+
+export type NotificationType = 'expiry' | 'violation' | 'health_check' | 'marketplace';
+
+export interface Notification {
+  id: string;
+  ownerAddress: string;
+  title: string;
+  message: string;
+  severity: NotificationSeverity;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+  relatedCommitmentId?: string;
+  relatedListingId?: string;
+}

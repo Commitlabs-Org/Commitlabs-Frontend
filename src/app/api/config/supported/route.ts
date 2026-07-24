@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server";
-import { ok, methodNotAllowed } from "@/lib/backend/apiResponse";
+import { ok, methodNotAllowed, attachSecurityHeaders } from "@/lib/backend/apiResponse";
 import { createCorsOptionsHandler, type CorsRoutePolicy } from "@/lib/backend/cors";
 import { logInfo } from "@/lib/backend/logger";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
-import { attachSecurityHeaders } from "@/utils/response";
 import { getSupportedConfig } from "@/lib/backend/config";
 
 const SUPPORTED_CONFIG_CORS_POLICY = {

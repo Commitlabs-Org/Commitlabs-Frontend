@@ -6,7 +6,7 @@ This document describes the user-facing settlement and early-exit flows in the C
 
 - `src/components/modals/SettlementModal.tsx`
 - `src/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal.tsx`
-- `test-settle.md`
+- [test-settle.md](testing/test-settle.md)
 - Settlement endpoints: `POST /api/commitments/[id]/settle` and settlement preview/status routes when present in the commitment detail flow
 - Early-exit endpoints: `POST /api/commitments/[id]/early-exit` and `POST /api/commitments/[id]/early-exit/preview`
 
@@ -29,7 +29,7 @@ The ineligible state is intentionally specific. `getSettlementIneligibleReasonCo
 
 ### Settlement API Contract
 
-`POST /api/commitments/[id]/settle` settles a matured commitment and returns final funds to the owner. `test-settle.md` documents the current response shape:
+`POST /api/commitments/[id]/settle` settles a matured commitment and returns final funds to the owner. [test-settle.md](testing/test-settle.md) documents the current response shape:
 
 ```json
 {

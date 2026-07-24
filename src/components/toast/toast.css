@@ -91,6 +91,31 @@
   color: #374151;
 }
 
+.toast-action {
+  margin: 0.75rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.toast-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .toast-close {
   margin-left: 0.5rem;
   margin-top: 0.125rem;

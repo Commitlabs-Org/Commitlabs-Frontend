@@ -49,10 +49,12 @@ describe("ERROR_CODE_REGISTRY", () => {
       });
     });
 
-    it("should not have duplicate error codes", () => {
-      const codes = Object.keys(ERROR_CODE_REGISTRY);
-      const uniqueCodes = new Set(codes);
-      expect(codes.length).toBe(uniqueCodes.size);
+    it("should have each entry's .code field match its registry key", () => {
+      // Ensures no entry's .code string silently diverges from its key, which
+      // is the form of duplication that validateErrorCodeRegistry detects.
+      Object.entries(ERROR_CODE_REGISTRY).forEach(([key, def]) => {
+        expect(def.code).toBe(key);
+      });
     });
   });
 
@@ -83,7 +85,7 @@ describe("ERROR_CODE_REGISTRY", () => {
     });
 
     it("should have meaningful descriptions for each code", () => {
-      Object.entries(ERROR_CODE_REGISTRY).forEach(([key, definition]) => {
+      Object.entries(ERROR_CODE_REGISTRY).forEach(([_key, definition]) => {
         // Description should be substantial (at least 20 characters)
         expect(definition.description.length).toBeGreaterThan(20);
 
@@ -227,6 +229,32 @@ describe("ERROR_CODE_REGISTRY", () => {
       expect(validation.errors).toHaveLength(0);
     });
 
+    it("should detect duplicate .code values when two entries share the same code string", () => {
+      // Temporarily inject a second entry whose .code field duplicates an
+      // existing one. JS object literals silently drop duplicate keys, so a
+      // genuine collision can only arise via a distinct key with a reused
+      // .code string — exactly what validateErrorCodeRegistry detects.
+      const injectedKey = "__TEST_DUPLICATE__";
+      (ERROR_CODE_REGISTRY as Record<string, (typeof ERROR_CODE_REGISTRY)[keyof typeof ERROR_CODE_REGISTRY]>)[injectedKey] = {
+        code: "BAD_REQUEST", // intentional duplicate of the real BAD_REQUEST .code
+        statusCode: 400,
+        meaning: "Test duplicate entry",
+        clientHandling: "Test",
+        retriable: false,
+        description: "Triggered only in tests to verify duplicate detection.",
+      };
+      try {
+        const validation = validateErrorCodeRegistry();
+        expect(validation.valid).toBe(false);
+        expect(validation.duplicates).toContain("BAD_REQUEST");
+        expect(
+          validation.errors.some((e) => e.includes("Duplicate error codes")),
+        ).toBe(true);
+      } finally {
+        delete (ERROR_CODE_REGISTRY as Record<string, unknown>)[injectedKey];
+      }
+    });
+
     it("should validate structure in detail", () => {
       const validation = validateErrorCodeRegistry();
 
@@ -335,7 +363,7 @@ describe("ERROR_CODE_REGISTRY", () => {
 
   describe("Documentation Completeness", () => {
     it("should have meaningful meanings for all codes", () => {
-      Object.entries(ERROR_CODE_REGISTRY).forEach(([code, def]) => {
+      Object.entries(ERROR_CODE_REGISTRY).forEach(([_code, def]) => {
         expect(def.meaning.length).toBeGreaterThan(10);
         expect(def.meaning).not.toMatch(/^[a-z]/); // Should start with capital letter
       });
@@ -372,7 +400,7 @@ describe("ERROR_CODE_REGISTRY", () => {
     });
 
     it("should have description that starts with trigger condition", () => {
-      Object.entries(ERROR_CODE_REGISTRY).forEach(([code, def]) => {
+      Object.entries(ERROR_CODE_REGISTRY).forEach(([_code, def]) => {
         expect(def.description.toLowerCase()).toMatch(
           /triggered|thrown|returned/,
         );

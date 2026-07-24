@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
-import { ok } from "@/lib/backend/apiResponse";
+import { ok, attachSecurityHeaders } from "@/lib/backend/apiResponse";
 import { logInfo } from "@/lib/backend/logger";
-import { attachSecurityHeaders } from "@/utils/response";
 import { getProtocolConstants } from "@/lib/backend/services/protocolConstants";
 
 /**

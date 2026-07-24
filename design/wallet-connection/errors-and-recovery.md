@@ -1,5 +1,16 @@
 # Wallet Connection — Errors & Recovery
 
+> **Status: Aspirational / Not yet implemented.**
+> The flow described in this document has not been built. The current implementation
+> (`src/components/WalletConnectButton.tsx`) is a single button with a three-bucket
+> keyword-match error helper (`walletErrorMessage`). None of the states (S1–S10),
+> error categories (E1–E5), re-detect polling, timeouts, hard network-mismatch stop,
+> "Install Freighter →" action, or telemetry events described below exist in production.
+> Do not assume this flow is live. This document describes the intended design for a
+> future implementation.
+
+---
+
 This document maps every failure mode in the wallet connection flow to a recovery action.
 Per-state visual specs are in [`states.md`](./states.md); this file focuses on **what
 happens after the failure**.
