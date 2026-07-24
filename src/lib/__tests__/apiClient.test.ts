@@ -36,7 +36,7 @@ describe('apiClient', () => {
     await expect(apiGet('/api/missing')).rejects.toThrow(ApiError);
     await expect(apiGet('/api/missing')).rejects.toMatchObject({
       code: 'NOT_FOUND',
-      message: 'Not found',
+      message: 'The requested resource was not found.',
     });
   });
 

@@ -11,7 +11,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AlertCircle, ArrowLeft, Loader2, Search } from 'lucide-react'
 import styles from './MarketplaceHeader.module.css';
-import { apiGet, apiFetch } from '@/lib/apiClient';
+import { apiRequest } from '@/lib/client/apiClient';
+import { useApi } from '@/hooks/useApi';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,17 +81,9 @@ export function MarketplaceHeader({
   backHref = '/',
   createHref = '/create',
   searchQuery: controlledQuery,
-}: MarketplaceHeaderProps) {
-  const [stats, setStats] = useState<MarketplaceStats | null>(null);
-  const [statsError, setStatsError] = useState<string | null>(null);
-  const [sortValue, setSortValue] = useState<SortValue>('popular');
-  const [query, setQuery] = useState(controlledQuery ?? '');
   ownerAddress,
   onResultSelect,
 }: MarketplaceHeaderProps) {
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const [stats, setStats] = useState<MarketplaceStats | null>(null)
-  const [statsError, setStatsError] = useState<string | null>(null)
   const [sortValue, setSortValue] = useState<SortValue>('popular')
 
   // ── Typeahead ──────────────────────────────────────────────────────────────
@@ -106,22 +99,10 @@ export function MarketplaceHeader({
   const uid = useId()
   const listboxId = `${uid}-listbox`
 
-  // ── Fetch stats on mount ───────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false
-    const fetchStats = async () => {
-      try {
-        const data = await apiGet<MarketplaceStats>('/api/marketplace/stats');
-        if (!cancelled) setStats(data);
-      } catch (e) {
-        if (!cancelled) setStatsError((e as Error).message)
-      }
-    }
-    fetchStats()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data: stats, error: statsError } = useApi<MarketplaceStats>(
+    (signal) => apiRequest<MarketplaceStats>('/api/marketplace/stats', { method: 'GET', signal }),
+    [],
+  )
 
   // ── Debounced typeahead search ─────────────────────────────────────────────
   useEffect(() => {
@@ -150,7 +131,7 @@ export function MarketplaceHeader({
         asset: trimmed,
       })
 
-      apiFetch<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
+      apiRequest<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
           .then((data) => {
             setResults(data.data ?? []);
             setIsDropdownOpen(true);
@@ -335,7 +316,7 @@ export function MarketplaceHeader({
             </div>
           )}
           {statsError && (
-            <div className={styles.error}>Error: {statsError}</div>
+            <div className={styles.error}>Error: {statsError.message}</div>
           )}
 
           {/* ── Sort control ── */}

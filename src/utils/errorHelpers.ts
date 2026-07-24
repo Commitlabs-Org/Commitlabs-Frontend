@@ -11,6 +11,15 @@ export interface ApiErrorResponse {
     };
 }
 
+export interface UiApiError {
+  code: string;
+  message: string;
+  status?: number;
+  details?: unknown;
+  retryAfterSeconds?: number;
+  correlationId?: string;
+}
+
 // ─── Error Factories ──────────────────────────────────────────────────────────
 
 
@@ -107,4 +116,75 @@ export function getErrorHeaders(error: ApiErrorResponse): Record<string, string>
     }
 
     return headers;
+}
+
+export function normalizeApiError(error: unknown, status?: number): UiApiError {
+  const maybeErrorLike = error as Partial<UiApiError> & { code?: string; message?: string };
+  const codeFromError = typeof maybeErrorLike?.code === 'string' ? maybeErrorLike.code : undefined;
+  const messageFromError = typeof maybeErrorLike?.message === 'string' ? maybeErrorLike.message : undefined;
+  const inboundMessage = messageFromError || (error instanceof Error ? error.message : undefined) || 'Something went wrong.';
+  const lower = inboundMessage.toLowerCase();
+
+  const code = codeFromError?.toUpperCase() ||
+    (lower.includes('fetch') || lower.includes('network') ? 'NETWORK_ERROR' : undefined) ||
+    (lower.includes('timeout') || lower.includes('aborted') ? 'TIMEOUT' : undefined) ||
+    (lower.includes('not found') ? 'NOT_FOUND' : undefined) ||
+    (lower.includes('unauthorized') ? 'UNAUTHORIZED' : undefined) ||
+    (lower.includes('forbidden') ? 'FORBIDDEN' : undefined) ||
+    (lower.includes('rate limit') ? 'RATE_LIMIT_EXCEEDED' : undefined) ||
+    'REQUEST_FAILED';
+
+  if (code === 'NETWORK_ERROR') {
+    return {
+      code,
+      message: 'We could not reach the server. Please try again.',
+      status,
+    };
+  }
+
+  if (code === 'TIMEOUT') {
+    return {
+      code,
+      message: 'The request took too long. Please try again.',
+      status,
+    };
+  }
+
+  if (code === 'NOT_FOUND') {
+    return {
+      code,
+      message: 'The requested resource was not found.',
+      status,
+    };
+  }
+
+  if (code === 'UNAUTHORIZED') {
+    return {
+      code,
+      message: 'You are not authorized to perform that action.',
+      status,
+    };
+  }
+
+  if (code === 'FORBIDDEN') {
+    return {
+      code,
+      message: 'You do not have permission to do that.',
+      status,
+    };
+  }
+
+  if (code === 'RATE_LIMIT_EXCEEDED') {
+    return {
+      code,
+      message: 'Too many requests. Please wait before trying again.',
+      status,
+    };
+  }
+
+  return {
+    code,
+    message: inboundMessage,
+    status,
+  };
 }
