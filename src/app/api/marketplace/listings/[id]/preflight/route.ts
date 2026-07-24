@@ -16,6 +16,10 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: { params
     throw new BadRequestError("Invalid JSON body");
   }
 
+  if (!body || typeof body !== 'object') {
+    throw new BadRequestError("Invalid JSON body");
+  }
+
   const { buyerAddress } = body;
 
   if (!buyerAddress) {

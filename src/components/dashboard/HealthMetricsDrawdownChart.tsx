@@ -30,6 +30,7 @@ interface HealthMetricsDrawdownChartProps {
     volatilityPercent?: number;
     /** Vertical annotation lines for lifecycle events (inception, rebalances, etc.). */
     lifecycleEvents?: LifecycleEvent[];
+    exposure?: CommitmentExposureResult;
 }
 
 interface TooltipPayload {
@@ -58,8 +59,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
 export const HealthMetricsDrawdownChart: React.FC<HealthMetricsDrawdownChartProps> = ({
     data,
     thresholdPercent,
-    volatilityPercent,
     lifecycleEvents = [],
+    exposure,
 }) => {
     return (
         <>

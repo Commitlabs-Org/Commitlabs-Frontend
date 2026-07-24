@@ -102,7 +102,7 @@ pnpm test -- src/components/marketplace/RelistPriceEditor.test.tsx
 | Scenario | Behaviour |
 |----------|-----------|
 | Cancel API returns 4xx/5xx | Error toast with server message; price rolled back. |
-| Create API returns 4xx/5xx | Error toast with server message; price rolled back. |
+| Create API returns 4xx/5xx | Error toast with server message; listing cancelled, no new listing created (user must manually relist). |
 | Network failure | Error toast with generic message; price rolled back. |
 | Invalid input (client-side) | Inline validation error, no API call made. |
 

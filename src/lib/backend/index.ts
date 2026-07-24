@@ -9,10 +9,6 @@ export type { ValidatedEnv } from "./env";
 export { ok, fail, methodNotAllowed, getCorrelationId } from "./apiResponse";
 export type { OkResponse, FailResponse, ApiResponse } from "./apiResponse";
 export { getBackendConfig } from "./config";
-export {
-  createCommitmentOnChain,
-  earlyExitCommitmentOnChain,
-} from "./contracts";
 export { mapCommitmentFromChain, mapAttestationFromChain } from "./dto";
 export {
   createCommitmentSchema,

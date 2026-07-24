@@ -38,6 +38,12 @@ vi.mock('@/components/VolatilityExposureMeter/VolatilityExposureMeter', () => ({
 
 import { HealthMetricsComplianceChart } from '../HealthMetricsComplianceChart';
 import { HealthMetricsFeeGenerationChart } from '../HealthMetricsFeeGenerationChart';
+import { computeCommitmentExposure } from '@/utils/exposure';
+
+const sampleExposure = computeCommitmentExposure({
+  maxLossPercent: 10,
+  drawdownHistory: [{ date: 'Jan', drawdownPercent: 0.04 }],
+});
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -209,17 +215,17 @@ describe('HealthMetricsFeeGenerationChart — zero fees', () => {
 });
 
 describe('HealthMetricsFeeGenerationChart — volatility meter integration', () => {
-  it('renders VolatilityExposureMeter when volatilityPercent is provided', () => {
+  it('renders VolatilityExposureMeter when exposure is provided', () => {
     render(
       <HealthMetricsFeeGenerationChart
         data={representativeFees}
-        volatilityPercent={35}
+        exposure={sampleExposure}
       />,
     );
     expect(screen.getByTestId('volatility-meter')).toBeInTheDocument();
   });
 
-  it('does not render VolatilityExposureMeter when volatilityPercent is omitted', () => {
+  it('does not render VolatilityExposureMeter when exposure is omitted', () => {
     render(<HealthMetricsFeeGenerationChart data={representativeFees} />);
     expect(screen.queryByTestId('volatility-meter')).toBeNull();
   });
