@@ -35,6 +35,12 @@ import { HealthMetricsComplianceChart } from '../HealthMetricsComplianceChart';
 import { HealthMetricsDrawdownChart } from '../HealthMetricsDrawdownChart';
 import { HealthMetricsFeeGenerationChart } from '../HealthMetricsFeeGenerationChart';
 import { HealthMetricsValueHistoryChart } from '../HealthMetricsValueHistoryChart';
+import { computeCommitmentExposure } from '@/utils/exposure';
+
+const sampleExposure = computeCommitmentExposure({
+  maxLossPercent: 10,
+  drawdownHistory: [{ date: 'Jan', drawdownPercent: 0.04 }],
+});
 
 // ---------------------------------------------------------------------------
 // Shared test data
@@ -147,12 +153,12 @@ describe('HealthMetricsDrawdownChart', () => {
     expect(container.firstChild).toBeTruthy();
   });
 
-  it('renders VolatilityExposureMeter when volatilityPercent is provided', () => {
-    render(<HealthMetricsDrawdownChart data={drawdownData} volatilityPercent={40} />);
+  it('renders VolatilityExposureMeter when exposure is provided', () => {
+    render(<HealthMetricsDrawdownChart data={drawdownData} exposure={sampleExposure} />);
     expect(screen.getByTestId('volatility-meter')).toBeTruthy();
   });
 
-  it('does not render VolatilityExposureMeter when volatilityPercent is omitted', () => {
+  it('does not render VolatilityExposureMeter when exposure is omitted', () => {
     render(<HealthMetricsDrawdownChart data={drawdownData} />);
     expect(screen.queryByTestId('volatility-meter')).toBeNull();
   });
@@ -224,12 +230,12 @@ describe('HealthMetricsFeeGenerationChart', () => {
     expect(container.firstChild).toBeTruthy();
   });
 
-  it('renders VolatilityExposureMeter when volatilityPercent is provided', () => {
-    render(<HealthMetricsFeeGenerationChart data={feeData} volatilityPercent={20} />);
+  it('renders VolatilityExposureMeter when exposure is provided', () => {
+    render(<HealthMetricsFeeGenerationChart data={feeData} exposure={sampleExposure} />);
     expect(screen.getByTestId('volatility-meter')).toBeTruthy();
   });
 
-  it('does not render VolatilityExposureMeter when volatilityPercent is omitted', () => {
+  it('does not render VolatilityExposureMeter when exposure is omitted', () => {
     render(<HealthMetricsFeeGenerationChart data={feeData} />);
     expect(screen.queryByTestId('volatility-meter')).toBeNull();
   });
@@ -310,12 +316,12 @@ describe('HealthMetricsValueHistoryChart', () => {
     expect(container.firstChild).toBeTruthy();
   });
 
-  it('renders VolatilityExposureMeter when volatilityPercent is provided', () => {
-    render(<HealthMetricsValueHistoryChart data={valueData} volatilityPercent={55} />);
+  it('renders VolatilityExposureMeter when exposure is provided', () => {
+    render(<HealthMetricsValueHistoryChart data={valueData} exposure={sampleExposure} />);
     expect(screen.getByTestId('volatility-meter')).toBeTruthy();
   });
 
-  it('does not render VolatilityExposureMeter when volatilityPercent is omitted', () => {
+  it('does not render VolatilityExposureMeter when exposure is omitted', () => {
     render(<HealthMetricsValueHistoryChart data={valueData} />);
     expect(screen.queryByTestId('volatility-meter')).toBeNull();
   });

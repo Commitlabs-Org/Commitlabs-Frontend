@@ -40,19 +40,32 @@ export default function NotFound() {
         </p>
 
         {/* Search Bar */}
-        <div className={styles.searchBox}>
-          <input
-            type="text"
-            placeholder="Search the site..."
-            className={styles.searchInput}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                // You can implement search functionality here
-                console.log('Search:', e.currentTarget.value)
-              }
-            }}
-          />
-        </div>
+        <form
+          className={styles.searchBox}
+          onSubmit={(e) => {
+            e.preventDefault()
+            const query = (e.currentTarget.elements.namedItem('q') as HTMLInputElement).value.trim()
+            if (query) {
+              router.push(`/marketplace?q=${encodeURIComponent(query)}`)
+            }
+          }}
+        >
+          <label htmlFor="not-found-search" className={styles.searchLabel}>
+            Search the site
+          </label>
+          <div className={styles.searchRow}>
+            <input
+              id="not-found-search"
+              type="search"
+              name="q"
+              placeholder="Search the site..."
+              className={styles.searchInput}
+            />
+            <button type="submit" className={styles.searchButton}>
+              Search
+            </button>
+          </div>
+        </form>
 
         {/* Action Buttons */}
         <div className={styles.actions}>

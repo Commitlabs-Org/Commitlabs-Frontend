@@ -1,5 +1,9 @@
 'use client'
 
+// Marketplace comparison UI is handled by the marketplace route and components under the
+// marketplace-specific component tree. The legacy CompareCommitmentsTray implementation is
+// not used in this codebase, so any future compare tray should stay within the marketplace
+// area and be wired through /marketplace/compare.
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { MarketplaceHeader } from '@/components/MarketplaceHeader/MarketplaceHeader'
@@ -12,23 +16,14 @@ import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { TrustBadge } from '@/components/TrustBadge'
 import { CompareTray } from '@/components/marketplace/CompareTray'
 import { useCompareListings } from '@/hooks/useCompareListings'
+import { useMarketplaceFilters, type Filters } from '@/hooks/useMarketplaceFilters'
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
 import { RecentlyViewedRail } from '@/components/marketplace/RecentlyViewedRail'
 
-// Interfaces matching the components
-interface Filters {
-  sortBy: string
-  commitmentType: ('balanced' | 'aggressive' | 'conservative')[]
-  priceRange: [number, number]
-  durationRange: [number, number]
-  minCompliance: number
-  maxLoss: number
-}
-
 
 // Listing type for marketplace items
-interface Listing {
+export interface Listing {
   id: string
   type: 'Safe' | 'Balanced' | 'Aggressive'
   score: number
@@ -247,7 +242,7 @@ function ListTypeIcon({ type }: { type: 'Safe' | 'Balanced' | 'Aggressive' }) {
   )
 }
 
-function MarketplaceRow({ item }: { item: Listing }) {
+export function MarketplaceRow({ item }: { item: Listing }) {
   const badgeClass =
     item.type === "Safe"
       ? "bg-[#0f2a1d] text-[#00C950]"
@@ -317,14 +312,14 @@ function MarketplaceRow({ item }: { item: Listing }) {
       {/* Actions */}
       <div className="flex items-center gap-3 pt-4 sm:pt-0 border-t border-white/5 sm:border-0">
         <Link
-          href={`/commitments?id=${item.id}`}
+          href={`/commitments/${item.id}`}
           className="flex-1 sm:flex-none text-center rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 sm:px-4 sm:py-2.5 text-sm font-semibold transition-colors hover:bg-white/10"
         >
           Details
         </Link>
         {item.forSale && (
           <Link
-            href={`/marketplace/trade?id=${item.id}`}
+            href={`/commitments/${item.id}`}
             className="flex-1 sm:flex-none text-center rounded-xl border border-[#0FF0FC]/40 bg-[#0FF0FC]/10 px-6 py-3.5 sm:px-4 sm:py-2.5 text-sm font-bold text-[#0FF0FC] transition-colors hover:bg-[#0FF0FC]/20"
           >
             Trade
@@ -360,20 +355,13 @@ export default function Marketplace() {
     removeListing,
     clearAll: clearCompareListings,
   } = useCompareListings()
+  const { filters, updateFilters } = useMarketplaceFilters()
 
-  const {
-    recentIds,
-    addView,
-    clearAll: clearRecentListings,
-  } = useRecentlyViewed()
-  const [filters, setFilters] = useState<Filters>({
-    sortBy: 'price',
-    commitmentType: ['balanced'],
-    priceRange: [0, 1000000],
-    durationRange: [0, 90],
-    minCompliance: 0,
-    maxLoss: 100,
-  })
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('commitlabs:visited-marketplace', 'true');
+    }
+  }, []);
 
   useEffect(() => {
     // Simulate loading for demo purposes
@@ -441,7 +429,7 @@ export default function Marketplace() {
   }, [filteredListings, currentPage])
 
   const handleFilterChange = (newFilters: Filters) => {
-    setFilters(newFilters)
+    updateFilters(newFilters)
     setCurrentPage(1)
   }
 
@@ -462,6 +450,8 @@ export default function Marketplace() {
         <div className="md:hidden mb-6">
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
+            aria-expanded={showMobileFilters}
+            aria-controls="marketplace-filters"
             className="w-full flex items-center justify-center gap-2 py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors active:scale-[0.98]"
           >
             <span className="text-base font-semibold">{showMobileFilters ? 'Hide Filters' : 'Show Filters'}</span>
@@ -471,7 +461,7 @@ export default function Marketplace() {
         {/* Main Content: Two Columns */}
         <div className="flex flex-col gap-6 md:flex-row items-start">
           {/* Sidebar Filters */}
-          <aside className={`
+          <aside id="marketplace-filters" className={`
             md:w-[280px] lg:w-[320px] md:shrink-0 md:sticky md:top-[120px] 
             md:max-h-[calc(100vh-140px)] md:overflow-y-auto custom-scrollbar
             ${showMobileFilters ? 'block' : 'hidden md:block'}
@@ -491,38 +481,37 @@ export default function Marketplace() {
                 cardCount={9}
               />
             ) : (
-              <>
-                <RecentlyViewedRail
-                  recentIds={recentIds}
-                  listings={mockListings}
-                  onClear={clearRecentListings}
-                  onViewListing={addView}
-                />
-                <MarketplaceResultsLayout
-                  totalCount={filteredListings.length}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                >
-                  {viewMode === 'grid' ? (
-                    <ErrorBoundary>
-                      <MarketplaceGrid
-                        items={pagedListings}
-                        isComparePinned={isPinned}
-                        isCompareFull={isCompareFull}
-                        onCompareToggle={(listing: MarketplaceCardProps) => toggleListing(listing)}
-                        onView={addView}
-                      />
-                    </ErrorBoundary>
-                  ) : (
-                    <ErrorBoundary>
-                      <MarketplaceListView items={pagedListings} />
-                    </ErrorBoundary>
-                  )}
-                </MarketplaceResultsLayout>
-              </>
+              <MarketplaceResultsLayout
+                totalCount={filteredListings.length}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                // pagination UI is now handled by infinite scroll in MarketplaceGrid
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              >
+                {viewMode === 'grid' ? (
+                  <ErrorBoundary>
+                    <MarketplaceGrid
+                      queryParams={{
+                        sortBy: filters.sortBy,
+                        type: filters.commitmentType.join(','),
+                        minAmount: filters.priceRange[0],
+                        maxAmount: filters.priceRange[1],
+                        minCompliance: filters.minCompliance,
+                        maxLoss: filters.maxLoss,
+                      }}
+                      isComparePinned={isPinned}
+                      isCompareFull={isCompareFull}
+                      onCompareToggle={(listing: MarketplaceCardProps) => toggleListing(listing)}
+                    />
+                  </ErrorBoundary>
+                ) : (
+                  <ErrorBoundary>
+                    <MarketplaceListView items={pagedListings} />
+                  </ErrorBoundary>
+                )}
+              </MarketplaceResultsLayout>
             )}
           </div>
         </div>

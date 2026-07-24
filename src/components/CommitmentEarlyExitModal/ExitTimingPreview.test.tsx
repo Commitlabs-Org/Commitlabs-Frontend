@@ -1,10 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import { ExitTimingPreview } from './ExitTimingPreview';
 
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 global.fetch = mockFetch;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe('ExitTimingPreview', () => {
   const defaultProps = {
@@ -76,6 +78,28 @@ describe('ExitTimingPreview', () => {
     // Scrub to 30 days (maturity)
     fireEvent.change(slider, { target: { value: '30' } });
     
+    await waitFor(() => {
+      expect(screen.getByText('-0.00')).toBeInTheDocument();
+      expect(screen.getByText('50,000.00')).toBeInTheDocument();
+    });
+  });
+
+  it('projects 0 penalty once the grace window starts', async () => {
+    render(
+      <ExitTimingPreview
+        {...defaultProps}
+        maturityDate={new Date(Date.now() + 10 * DAY_MS)}
+        gracePeriodDays={7}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('-1,500.00')).toBeInTheDocument();
+    });
+
+    const slider = screen.getByRole('slider');
+    fireEvent.change(slider, { target: { value: '3' } });
+
     await waitFor(() => {
       expect(screen.getByText('-0.00')).toBeInTheDocument();
       expect(screen.getByText('50,000.00')).toBeInTheDocument();

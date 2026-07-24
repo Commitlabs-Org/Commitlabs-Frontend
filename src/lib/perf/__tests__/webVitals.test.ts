@@ -79,11 +79,28 @@ describe('webVitals reporter', () => {
   })
 
   it('evaluates values against the documented budget', () => {
+    // LCP
     expect(isWithinBudget('LCP', WEB_VITALS_BUDGET.LCP)).toBe(true)
     expect(isWithinBudget('LCP', WEB_VITALS_BUDGET.LCP + 1)).toBe(false)
+
+    // INP
+    expect(isWithinBudget('INP', WEB_VITALS_BUDGET.INP)).toBe(true)
+    expect(isWithinBudget('INP', WEB_VITALS_BUDGET.INP + 1)).toBe(false)
+
+    // CLS
     expect(isWithinBudget('CLS', 0.05)).toBe(true)
     expect(isWithinBudget('CLS', 0.2)).toBe(false)
-    // Metrics without a budget are treated as within budget.
-    expect(isWithinBudget('TTFB', 99999)).toBe(true)
+
+    // FCP
+    expect(isWithinBudget('FCP', WEB_VITALS_BUDGET.FCP)).toBe(true)
+    expect(isWithinBudget('FCP', WEB_VITALS_BUDGET.FCP + 1)).toBe(false)
+
+    // TTFB
+    expect(isWithinBudget('TTFB', WEB_VITALS_BUDGET.TTFB)).toBe(true)
+    expect(isWithinBudget('TTFB', WEB_VITALS_BUDGET.TTFB + 1)).toBe(false)
+
+    // FID
+    expect(isWithinBudget('FID', WEB_VITALS_BUDGET.FID)).toBe(true)
+    expect(isWithinBudget('FID', WEB_VITALS_BUDGET.FID + 1)).toBe(false)
   })
 })

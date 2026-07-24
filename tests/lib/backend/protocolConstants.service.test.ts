@@ -35,6 +35,7 @@ describe("getProtocolConstants() — defaults", () => {
     expect(commitmentLimits.minDurationDays).toBe(1);
     expect(commitmentLimits.maxDurationDays).toBe(365);
     expect(commitmentLimits.maxLossPercentCeiling).toBe(100);
+    expect(commitmentLimits.earlyExitGracePeriodDays).toBe(7);
   });
 
   it("returns the 3 default penalty tiers with correct percents", () => {
@@ -88,6 +89,11 @@ describe("getProtocolConstants() — env overrides", () => {
   it("respects COMMITLABS_MAX_LOSS_PERCENT_CEILING", () => {
     vi.stubEnv("COMMITLABS_MAX_LOSS_PERCENT_CEILING", "50");
     expect(getProtocolConstants().commitmentLimits.maxLossPercentCeiling).toBe(50);
+  });
+
+  it("respects COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS", () => {
+    vi.stubEnv("COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS", "5");
+    expect(getProtocolConstants().commitmentLimits.earlyExitGracePeriodDays).toBe(5);
   });
 
   it("respects NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION for protocolVersion", () => {
@@ -156,6 +162,11 @@ describe("getProtocolConstants() — invalid env values", () => {
     vi.stubEnv("COMMITLABS_MAX_AMOUNT_XLM", "");
     // parseInt("") is NaN → falls back to default
     expect(getProtocolConstants().commitmentLimits.maxAmountXlm).toBe(1_000_000);
+  });
+
+  it("falls back to default early exit grace period when env is non-numeric", () => {
+    vi.stubEnv("COMMITLABS_EARLY_EXIT_GRACE_PERIOD_DAYS", "soon");
+    expect(getProtocolConstants().commitmentLimits.earlyExitGracePeriodDays).toBe(7);
   });
 
   it("throws on malformed COMMITLABS_PENALTY_TIERS_JSON (bad JSON)", () => {
