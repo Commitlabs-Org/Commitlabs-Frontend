@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchProtocolConstants, type ProtocolConstants } from '../protocol';
+import {
+  fetchProtocolConstants,
+  getEarlyExitGracePeriodDays,
+  type ProtocolConstants,
+} from '../protocol';
 
 const protocolConstantsFixture = {
   protocolVersion: '1.0.0',
@@ -27,6 +31,7 @@ const protocolConstantsFixture = {
     minDurationDays: 7,
     maxDurationDays: 365,
     maxLossPercentCeiling: 50,
+    earlyExitGracePeriodDays: 7,
   },
   cachedAt: '2026-06-27T08:00:00.000Z',
 } satisfies ProtocolConstants;
@@ -46,7 +51,10 @@ describe('fetchProtocolConstants', () => {
   it('requests protocol constants and resolves the typed constants shape', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: vi.fn().mockResolvedValueOnce(protocolConstantsFixture),
+      json: vi.fn().mockResolvedValueOnce({
+        success: true,
+        data: protocolConstantsFixture,
+      }),
     });
 
     const constants: ProtocolConstants = await fetchProtocolConstants();
@@ -65,6 +73,7 @@ describe('fetchProtocolConstants', () => {
       minDurationDays: 7,
       maxDurationDays: 365,
       maxLossPercentCeiling: 50,
+      earlyExitGracePeriodDays: 7,
     });
   });
 
@@ -82,5 +91,55 @@ describe('fetchProtocolConstants', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith('/api/protocol/constants');
+  });
+
+  it('throws a clear validation error when the protocol constants response body is malformed', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValueOnce({
+        success: true,
+        data: {
+          protocolVersion: '1.0.0',
+          network: 'testnet',
+          fees: {
+            networkBaseFeeStroops: 100,
+            platformFeePercent: 2.5,
+          },
+          penalties: [
+            {
+              type: 'early_exit',
+              earlyExitPenaltyPercent: 15,
+              description: 'Penalty charged when a commitment exits before maturity.',
+            },
+          ],
+          commitmentLimits: {
+            minAmountXlm: 10,
+            maxAmountXlm: 100_000,
+            minDurationDays: 7,
+            maxDurationDays: 365,
+            maxLossPercentCeiling: 50,
+          },
+          cachedAt: '2026-06-27T08:00:00.000Z',
+        },
+      }),
+    });
+
+    await expect(fetchProtocolConstants()).rejects.toThrow(
+      /Failed to validate protocol constants response payload/i,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/protocol/constants');
+  });
+});
+
+describe('getEarlyExitGracePeriodDays', () => {
+  it('returns the normalized grace-period constant', () => {
+    expect(getEarlyExitGracePeriodDays(protocolConstantsFixture)).toBe(7);
+  });
+
+  it('falls back to 0 when constants are unavailable', () => {
+    expect(getEarlyExitGracePeriodDays(null)).toBe(0);
+    expect(getEarlyExitGracePeriodDays(undefined)).toBe(0);
   });
 });

@@ -1,14 +1,18 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useEffect, useRef } from 'react'
 import type { MarketplaceCardProps } from './MarketplaceCard'
 import { MarketplaceCard } from './MarketplaceCard'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { usePaginatedListings } from '@/hooks/usePaginatedListings'
 
 export interface MarketplaceGridProps {
-  items: MarketplaceCardProps[]
+  /** Optional pre‑loaded items – if omitted the component fetches via the hook */
+  items?: MarketplaceCardProps[]
   isComparePinned?: (id: string) => boolean
   isCompareFull?: boolean
   onCompareToggle?: (listing: MarketplaceCardProps) => void
   onView?: (id: string) => void
+  /** Additional query parameters for filtering/sorting */
+  queryParams?: Record<string, any>
   /** Optional comparator applied before rendering. Stabilize with useCallback. */
   sortFn?: (a: MarketplaceCardProps, b: MarketplaceCardProps) => number
   /** Optional predicate applied before rendering. Stabilize with useCallback. */
@@ -38,12 +42,22 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
   isCompareFull = false,
   onCompareToggle,
   onView,
+  queryParams = {},
   sortFn,
   filterFn,
 }: MarketplaceGridProps) {
+  // Use the pagination hook when no items are supplied.
+  // We disable the hook when pre-loaded items are supplied.
+  const { listings, isLoading, hasMore, loadMore } = usePaginatedListings(
+    queryParams,
+    9,
+    !!items
+  );
+  const rawItems = items ?? listings;
+
   // Memoize derived list — only recomputes when items / predicates change.
   const displayedItems = useMemo(() => {
-    let result = items
+    let result = rawItems
     if (filterFn) {
       result = result.filter(filterFn)
     }
@@ -51,7 +65,22 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
       result = [...result].sort(sortFn)
     }
     return result
-  }, [items, filterFn, sortFn])
+  }, [rawItems, filterFn, sortFn])
+
+  // IntersectionObserver for infinite scroll (sentinel element)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (items || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          loadMore();
+        }
+      });
+    });
+    if (sentinelRef.current) observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [items, hasMore, loadMore]);
 
   if (!displayedItems || displayedItems.length === 0) {
     return (
@@ -62,7 +91,7 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
           className="rounded-[20px] px-6 border border-[rgba(255,255,255,0.12)] bg-[radial-gradient(140%_140%_at_0%_0%,rgba(255,255,255,0.06),rgba(255,255,255,0.01)_65%),rgba(0,0,0,0.45)] shadow-[0_18px_45px_rgba(0,0,0,0.55),inset_0_0_0_1px_rgba(255,255,255,0.04)]"
         />
       </section>
-    )
+    );
   }
 
   const isLargeList = displayedItems.length > VIRTUALIZE_THRESHOLD
@@ -84,14 +113,32 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
                 {...item}
                 compareSelected={compareSelected}
                 compareDisabled={isCompareFull && !compareSelected}
-                onCompareToggle={
-                  onCompareToggle ? () => onCompareToggle(item) : undefined
-                }
+                onCompareToggle={onCompareToggle ? () => onCompareToggle(item) : undefined}
                 onView={onView}
               />
             </li>
-          )
+          );
         })}
+        {/* Loading indicator row */}
+        {isLoading && hasMore && !items && (
+          <li className="col-span-full flex justify-center py-4" aria-live="polite">
+            Loading more listings…
+          </li>
+        )}
+        {/* Load more button */}
+        {hasMore && !isLoading && !items && (
+          <li className="col-span-full flex justify-center py-4">
+            <button
+              type="button"
+              className="rounded-xl border px-5 py-2 bg-[rgba(8,12,16,0.95)] text-white hover:border-[rgba(0,212,255,0.45)]"
+              onClick={loadMore}
+            >
+              Load more
+            </button>
+          </li>
+        )}
+        {/* Sentinel for infinite scroll */}
+        {!items && <div ref={sentinelRef} className="hidden" />}
       </ul>
     </section>
   )

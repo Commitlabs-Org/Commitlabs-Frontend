@@ -481,6 +481,12 @@ class MarketplaceService {
     };
   }
 
+  async getPublicListing(
+    listingId: string,
+  ): Promise<MarketplacePublicListing | null> {
+    return MOCK_LISTINGS.find((listing) => listing.listingId === listingId) ?? null;
+  }
+
   async getPurchasePreflight(
     listingId: string,
     buyerAddress: string,

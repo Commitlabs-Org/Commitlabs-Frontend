@@ -3,7 +3,7 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { ArrowRight, ShieldCheck, Wallet } from 'lucide-react'
-import Dialog from '@/components/ui/Dialog'
+import { Dialog } from '@/components/ui/Dialog'
 import { useWallet } from '@/components/auth/WalletProvider'
 
 interface RequireWalletProps {
@@ -50,12 +50,17 @@ export default function RequireWallet({ children }: RequireWalletProps) {
 
   return (
     <Dialog
-      open
-      title="Connect your wallet to continue"
-      description={`You need a connected wallet to ${routeAction}. Once connected, you’ll stay on ${pathname} and we’ll continue right where you left off.`}
+      isOpen={true}
+      onClose={() => { }}
       initialFocusRef={connectButtonRef}
     >
       <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-bold text-white">Connect your wallet to continue</h2>
+          <p className="mt-2 text-sm text-white/70">
+            You need a connected wallet to {routeAction}. Once connected, you’ll stay on {pathname} and we’ll continue right where you left off.
+          </p>
+        </div>
         <div className="rounded-[28px] border border-[#0ff0fc1f] bg-[linear-gradient(180deg,rgba(15,240,252,0.12),rgba(15,240,252,0.04))] p-5">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#0ff0fc59] bg-[#0ff0fc14]">

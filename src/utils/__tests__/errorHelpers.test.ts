@@ -7,6 +7,7 @@ import {
   gatewayTimeoutError,
   resolveServerError,
   getErrorHeaders,
+  normalizeApiError,
 } from "@/utils/errorHelpers";
 
 const originalEnv = process.env.NODE_ENV;
@@ -275,5 +276,24 @@ describe("getErrorHeaders", () => {
   it("omits Retry-After when retryAfter is not set", () => {
     const result = getErrorHeaders(internalServerError());
     expect(result["Retry-After"]).toBeUndefined();
+  });
+});
+
+// ── normalizeApiError ────────────────────────────────────────────────────────
+
+describe("normalizeApiError", () => {
+  it("maps known backend error codes to friendly UI messages", () => {
+    const result = normalizeApiError({ code: "NOT_FOUND", message: "The thing was not found." }, 404);
+
+    expect(result.code).toBe("NOT_FOUND");
+    expect(result.message).toBe("The requested resource was not found.");
+    expect(result.status).toBe(404);
+  });
+
+  it("maps network failures to a friendly message", () => {
+    const result = normalizeApiError(new TypeError("Failed to fetch"), 0);
+
+    expect(result.code).toBe("NETWORK_ERROR");
+    expect(result.message).toBe("We could not reach the server. Please try again.");
   });
 });

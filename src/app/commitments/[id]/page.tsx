@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useRef, useState } from 'react';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
+import CommitmentDetailHeader from '@/components/Commitmentdetailheader';
 import CommitmentHealthMetrics from '@/components/dashboard/CommitmentHealthMetrics';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import CommitmentDetailAllocationConstraints from '@/components/CommitmentDetailAllocationConstraints';
@@ -15,7 +15,9 @@ import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/Comm
 import DisputeModal from '@/components/modals/DisputeModal';
 import DisputeStatusTracker, { type DisputeInfo } from '@/components/dispute/DisputeStatusTracker';
 import { openExplorerUrl } from '@/utils/explorerLinks';
+import { computeCommitmentExposure } from '@/utils/exposure';
 import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
+import { useShareLink } from '@/hooks/useShareLink';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -152,6 +154,12 @@ export default function CommitmentDetailPage({
     const earlyExitPenaltyLabel = `${commitment.earlyExitPenaltyPercent ?? 3}%`
     const { canEarlyExit } = commitment
 
+    const exposure = computeCommitmentExposure({
+        valueHistory: MOCK_VALUE_HISTORY_DATA,
+        drawdownHistory: MOCK_DRAWDOWN_DATA,
+        maxLossPercent: commitment.maxLoss,
+    });
+
     const [exportModalOpen, setExportModalOpen] = useState(false);
     const [earlyExitModalOpen, setEarlyExitModalOpen] = useState(false);
     const [disputeModalOpen, setDisputeModalOpen] = useState(false);
@@ -209,28 +217,11 @@ export default function CommitmentDetailPage({
             <main id="main-content" className="min-h-screen bg-[#050505] text-[#f5f5f7] p-4 sm:p-8 lg:p-12">
                 <div className="max-w-7xl mx-auto space-y-8">
                     
-                    <header className="flex flex-col gap-4">
-                        <Link
-                            href="/commitments"
-                            className="text-[#666] hover:text-[#0ff0fc] transition-colors text-sm w-fit"
-                            aria-label="Back to My Commitments"
-                        >
-                            ← Back to My Commitments
-                        </Link>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-linear-to-b from-white to-[#99a1af]">
-                                    {commitment.type} Commitment #{commitment.id}
-                                </h1>
-                                <p className="text-[#99a1af] mt-2">
-                                    {commitment.type} Strategy
-                                </p>
-                            </div>
-                            <div className="hidden sm:block">
-                                <StatusBadge statusOverride={commitmentStatusOverride ?? undefined} />
-                            </div>
-                        </div>
-                    </header>
+                    <CommitmentDetailHeaderWithStatus
+                        commitmentId={commitment.id}
+                        commitmentType={commitment.type}
+                        statusOverride={commitmentStatusOverride ?? undefined}
+                    />
 
                     <div className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]">
                         <CommitmentDetailParameters
@@ -252,8 +243,7 @@ export default function CommitmentDetailPage({
                                     drawdownData={MOCK_DRAWDOWN_DATA}
                                     valueHistoryData={MOCK_VALUE_HISTORY_DATA}
                                     feeGenerationData={MOCK_FEE_GENERATION_DATA}
-                                    thresholdPercent={0.5}
-                                    volatilityPercent={35}
+                                    exposure={exposure}
                                 />
                             </ErrorBoundary>
 
@@ -333,37 +323,37 @@ export default function CommitmentDetailPage({
             </main>
         </CommitmentStatusProvider>
     );
+}
 
-function StatusBadge({ statusOverride }: { statusOverride?: string }) {
+function CommitmentDetailHeaderWithStatus({
+    commitmentId,
+    commitmentType,
+    statusOverride,
+}: {
+    commitmentId: string;
+    commitmentType: string;
+    statusOverride?: string;
+}) {
+    const router = useRouter();
     const { status, isLoading } = useCommitmentStatus();
-    if (isLoading || !status) {
-        return (
-            <span className="px-4 py-2 bg-[#1a1a1a] border border-[#222] rounded-lg text-[#99a1af] text-sm font-medium">
-                Loading...
-            </span>
-        );
-    }
-    const visibleStatus = statusOverride ?? status.status;
-    const getStatusColor = (label: string) => {
-        switch (label.toLowerCase()) {
-            case 'active':
-                return 'text-[#0ff0fc] border-[#0ff0fc]/30';
-            case 'settled':
-                return 'text-[#4ade80] border-[#4ade80]/30';
-            case 'violated':
-            case 'disputed':
-                return 'text-[#f87171] border-[#f87171]/30';
-            case 'early exit':
-            case 'under review':
-                return 'text-[#fbbf24] border-[#fbbf24]/30';
-            default:
-                return 'text-[#99a1af] border-[#222]';
-        }
-    };
+    const title = `${commitmentType} Commitment #${commitmentId}`;
+    const visibleStatus = statusOverride ?? status?.status ?? (isLoading ? 'Loading' : 'Active');
+    const { shareLink } = useShareLink({
+        commitmentId,
+        title,
+        text: `${commitmentType} commitment details on Commitlabs.`,
+    });
+
+    const statusVariant = visibleStatus.toLowerCase().replace(/\s+/g, '_');
+
     return (
-        <span className={`px-4 py-2 bg-[#1a1a1a] border rounded-lg text-sm font-medium ${getStatusColor(visibleStatus)}`}>
-            {visibleStatus}
-        </span>
+        <CommitmentDetailHeader
+            commitmentId={title}
+            statusLabel={visibleStatus}
+            statusVariant={statusVariant}
+            onBack={() => router.push('/commitments')}
+            onShare={shareLink}
+        />
     );
 }
 
@@ -398,5 +388,4 @@ function CommitmentDetailActionsUsingContext({
             previewRefreshTrigger={previewRefreshTrigger}
         />
     );
-}
 }

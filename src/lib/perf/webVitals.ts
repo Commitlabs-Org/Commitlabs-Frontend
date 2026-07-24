@@ -40,6 +40,12 @@ export const WEB_VITALS_BUDGET = {
   INP: 200,
   /** Cumulative Layout Shift — unitless. */
   CLS: 0.1,
+  /** First Contentful Paint — milliseconds. */
+  FCP: 1800,
+  /** Time to First Byte — milliseconds. */
+  TTFB: 800,
+  /** First Input Delay — milliseconds (legacy; prefer INP for new work). */
+  FID: 100,
 } as const
 
 export type WebVitalsSink = (record: WebVitalRecord) => void

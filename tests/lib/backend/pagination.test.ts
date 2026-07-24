@@ -38,6 +38,18 @@ describe('Pagination Utilities', () => {
             expect(result.pageSize).toBe(DEFAULT_PAGE_SIZE);
             expect(result.offset).toBe(10);
         });
+
+        it('respects a custom defaultPageSize option', () => {
+            const params = new URLSearchParams();
+            const result = parsePaginationParams(params, { defaultPageSize: 25 });
+            expect(result.pageSize).toBe(25);
+        });
+
+        it('computes offset from custom page and pageSize values', () => {
+            const params = new URLSearchParams({ page: '3', pageSize: '10' });
+            const result = parsePaginationParams(params);
+            expect(result.offset).toBe(20);
+        });
     });
 
     describe('GROUP B: pageSize clamping (above MAX_PAGE_SIZE)', () => {
@@ -71,6 +83,26 @@ describe('Pagination Utilities', () => {
             const params = new URLSearchParams({ pageSize: '1' });
             const result = parsePaginationParams(params);
             expect(result.pageSize).toBe(1);
+        });
+
+        it('respects a custom maxPageSize option', () => {
+            expect(() =>
+                parsePaginationParams(
+                    new URLSearchParams({ pageSize: '51' }),
+                    { maxPageSize: 50 }
+                )
+            ).toThrow(PaginationParseError);
+
+            const result = parsePaginationParams(
+                new URLSearchParams({ pageSize: '50' }),
+                { maxPageSize: 50 }
+            );
+            expect(result.pageSize).toBe(50);
+        });
+
+        it('throws PaginationParseError for non-numeric pageSize', () => {
+            const params = new URLSearchParams({ pageSize: 'xyz' });
+            expect(() => parsePaginationParams(params)).toThrow(PaginationParseError);
         });
     });
 
@@ -127,7 +159,7 @@ describe('Pagination Utilities', () => {
                 hasNextPage: true,
                 hasPrevPage: true
             });
-            expect(result.data.length).toBe(10);
+            expect(result.data).toEqual([40, 41, 42, 43, 44, 45, 46, 47, 48, 49]);
         });
 
         it('calculates correctly for last page exact fit (100 total, page 10, size 10)', () => {
@@ -156,7 +188,7 @@ describe('Pagination Utilities', () => {
                 hasNextPage: false,
                 hasPrevPage: true
             });
-            expect(result.data.length).toBe(5);
+            expect(result.data).toEqual([90, 91, 92, 93, 94]);
         });
 
         it('calculates correctly for zero total items (0 total, page 1, size 10, BUG: totalPages=1 instead of 0)', () => {

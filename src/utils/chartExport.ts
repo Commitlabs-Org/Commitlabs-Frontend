@@ -1,4 +1,5 @@
 import { buildCsv, type CsvRow } from '@/lib/backend/csv';
+import type { Attestation } from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
 
 export type HealthMetricsTab = 'value' | 'drawdown' | 'fee' | 'compliance';
 
@@ -160,4 +161,32 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     image.onerror = () => reject(new Error('Failed to load chart SVG for PNG export'));
     image.src = src;
   });
+}
+
+// ── Attestation CSV export helpers ──────────────────────────────────────────
+
+export const ATTESTATION_CSV_HEADERS = ['ID', 'Title', 'Description', 'TX Hash', 'Timestamp', 'Severity'] as const;
+
+export function buildAttestationCsvRows(attestations: Attestation[]): CsvRow[] {
+  return attestations.map((a) => [
+    a.id,
+    a.title,
+    a.description,
+    a.txHash,
+    typeof a.timestamp === 'string' ? a.timestamp : a.timestamp.toISOString(),
+    a.severity,
+  ]);
+}
+
+export function buildAttestationCsvContent(attestations: Attestation[]): string {
+  return buildCsv(
+    [...ATTESTATION_CSV_HEADERS],
+    buildAttestationCsvRows(attestations),
+  );
+}
+
+export function buildAttestationExportFilename(commitmentId: string): string {
+  const safeId = sanitizeExportFilename(commitmentId || 'commitment');
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  return sanitizeExportFilename(`attestations-${safeId}-${dateStamp}.csv`);
 }

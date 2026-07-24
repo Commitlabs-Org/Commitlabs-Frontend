@@ -1,9 +1,12 @@
 'use client';
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useRef } from 'react';
 import MyCommitmentCard from './MyCommitmentCard';
 import { Commitment } from '@/types/commitment';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useGridSelection } from '@/hooks/useGridSelection';
+import { BulkActionBar } from './BulkActionBar';
+import { Check } from 'lucide-react';
 
 interface MyCommitmentsGridProps {
   commitments: Commitment[];
@@ -11,6 +14,8 @@ interface MyCommitmentsGridProps {
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
   onListForSale?: (id: string) => void;
+  onExportSelected?: (selectedIds: string[]) => void;
+  isExporting?: boolean;
   /** Optional comparator to sort commitments before rendering.
    *  Memoized internally so callers should stabilize the reference. */
   sortFn?: (a: Commitment, b: Commitment) => number;
@@ -45,6 +50,8 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(({
   onAttestations,
   onEarlyExit,
   onListForSale,
+  onExportSelected,
+  isExporting = false,
   sortFn,
   filterFn,
 }) => {
@@ -62,11 +69,78 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(({
 
   const isLargeList = displayedCommitments.length > VIRTUALIZE_THRESHOLD;
 
+  const visibleIds = displayedCommitments.map(c => c.id);
+
+  const {
+    selectedIds,
+    selectedCount,
+    isAllSelected,
+    isIndeterminate,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+  } = useGridSelection({ visibleIds });
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      clearSelection();
+    } else {
+      selectAll();
+    }
+  };
+
+  const handleExportSelected = () => {
+    if (onExportSelected) {
+      onExportSelected(Array.from(selectedIds));
+    }
+  };
+
+  // Stable per-id toggle handlers so cards whose selection state hasn't
+  // changed don't receive a new `onSelect` reference (and re-render) just
+  // because some other card was selected/deselected. `toggleSelection`
+  // itself is referentially stable (useCallback with no deps), so each
+  // per-id closure only needs to be created once and can be cached forever.
+  const toggleHandlersRef = useRef<Map<string, () => void>>(new Map());
+  const getToggleHandler = (id: string) => {
+    let handler = toggleHandlersRef.current.get(id);
+    if (!handler) {
+      handler = () => toggleSelection(id);
+      toggleHandlersRef.current.set(id, handler);
+    }
+    return handler;
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-[14px] text-[#94A3B8]">
-        <span className="text-[16px] font-semibold text-white">{displayedCommitments.length}</span>{' '}
-        commitments found
+      {/* Header with select all control */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              ref={(input) => {
+                if (input) {
+                  input.indeterminate = isIndeterminate;
+                }
+              }}
+              onChange={handleSelectAll}
+              className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#0FF0FC] focus:ring-2 focus:ring-[#0FF0FC] focus:ring-offset-0 focus:ring-offset-[#0a0a0a]"
+              aria-label={isAllSelected ? 'Deselect all commitments' : 'Select all commitments'}
+            />
+            <span className="text-[14px] text-[#94A3B8]">
+              <span className="text-[16px] font-semibold text-white">{displayedCommitments.length}</span>{' '}
+              commitments found
+            </span>
+          </label>
+        </div>
+
+        {selectedCount > 0 && (
+          <div className="flex items-center gap-2 text-sm text-[#0FF0FC]">
+            <Check size={16} />
+            <span>{selectedCount} selected</span>
+          </div>
+        )}
       </div>
 
       {displayedCommitments.length > 0 ? (
@@ -81,10 +155,12 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(({
             >
               <MyCommitmentCard
                 commitment={commitment}
-                onDetails={onDetails}
-                onAttestations={onAttestations}
-                onEarlyExit={onEarlyExit}
-                onListForSale={onListForSale}
+                isSelected={selectedIds.has(commitment.id)}
+                onSelect={getToggleHandler(commitment.id)}
+                {...(onDetails ? { onDetails } : {})}
+                {...(onAttestations ? { onAttestations } : {})}
+                {...(onEarlyExit ? { onEarlyExit } : {})}
+                {...(onListForSale ? { onListForSale } : {})}
               />
             </div>
           ))}
@@ -96,6 +172,14 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(({
           cta={{ label: 'Create your first commitment', href: '/create' }}
         />
       )}
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        selectedCount={selectedCount}
+        onClear={clearSelection}
+        onExportSelected={handleExportSelected}
+        isExporting={isExporting}
+      />
     </div>
   );
 });

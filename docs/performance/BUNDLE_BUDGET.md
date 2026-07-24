@@ -15,6 +15,7 @@ client bundle.
 ```bash
 npm run build     # size-limit measures the production build output
 npm run size      # check .next chunks against .size-limit.json (gzip)
+npm run analyze   # run build with @next/bundle-analyzer to inspect bundle composition
 ```
 
 ## Budgets
@@ -66,3 +67,12 @@ build + check.
    they land in a route-level chunk instead of the shared bundle. See
    [GRID_RENDER.md](GRID_RENDER.md) and [LAZY_HEALTH_CHARTS.md](LAZY_HEALTH_CHARTS.md).
 4. Re-run `npm run size` to confirm you're back under budget.
+
+## Top Offenders & Split Candidates
+
+The following heavy dependencies are currently impacting the bundle and are prime candidates for dynamic imports (`next/dynamic`) or code splitting in follow-up PRs:
+- `recharts` (Charts and graphs)
+- `framer-motion` (Animations)
+- `@stellar/stellar-sdk` (Heavy cryptography/blockchain utilities)
+- `lucide-react` (Icons)
+- `react-icons` (Icons)
