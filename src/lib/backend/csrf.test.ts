@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { assertMutationCsrf, assertSameOriginForCookieSession, CSRF_HEADER_NAME } from './csrf';
 import { CsrfValidationError } from './errors';
-import { __resetSessionStoreForTests, createBrowserSession, SESSION_COOKIE_NAME } from './session';
+import { __resetSessionStoreForTests, createBrowserSession, rotateCsrfToken, SESSION_COOKIE_NAME } from './session';
 
 const BASE = 'http://localhost:3000';
 
@@ -119,6 +119,75 @@ describe('assertMutationCsrf', () => {
     ).not.toThrow();
   });
 
+  it('verifies a freshly generated CSRF token against the same browser session', () => {
+    const { sessionId, csrfToken } = createBrowserSession();
+    expect(() =>
+      assertMutationCsrf(
+        req('POST', {
+          cookie: `${SESSION_COOKIE_NAME}=${sessionId}`,
+          origin: BASE,
+          csrf: csrfToken,
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('throws when CSRF header is present but empty', () => {
+    const { sessionId } = createBrowserSession();
+    expect(() =>
+      assertMutationCsrf(
+        req('POST', {
+          cookie: `${SESSION_COOKIE_NAME}=${sessionId}`,
+          origin: BASE,
+          csrf: '',
+        }),
+      ),
+    ).toThrow(CsrfValidationError);
+  });
+
+  it('throws when the CSRF token belongs to a different session cookie', () => {
+    const { sessionId: sessionA, csrfToken: tokenA } = createBrowserSession();
+    const { sessionId: sessionB } = createBrowserSession();
+
+    expect(() =>
+      assertMutationCsrf(
+        req('POST', {
+          cookie: `${SESSION_COOKIE_NAME}=${sessionB}`,
+          origin: BASE,
+          csrf: tokenA,
+        }),
+      ),
+    ).toThrow(CsrfValidationError);
+  });
+
+  it('rejects the old token after CSRF rotation and accepts the new token', () => {
+    const { sessionId, csrfToken: oldToken } = createBrowserSession();
+    const newToken = rotateCsrfToken(sessionId);
+
+    expect(newToken).toBeTruthy();
+    expect(newToken).not.toEqual(oldToken);
+
+    expect(() =>
+      assertMutationCsrf(
+        req('POST', {
+          cookie: `${SESSION_COOKIE_NAME}=${sessionId}`,
+          origin: BASE,
+          csrf: oldToken,
+        }),
+      ),
+    ).toThrow(CsrfValidationError);
+
+    expect(() =>
+      assertMutationCsrf(
+        req('POST', {
+          cookie: `${SESSION_COOKIE_NAME}=${sessionId}`,
+          origin: BASE,
+          csrf: newToken!,
+        }),
+      ),
+    ).not.toThrow();
+  });
+
   it('throws when session cookie does not map to a server session', () => {
     expect(() =>
       assertMutationCsrf(
@@ -159,5 +228,9 @@ describe('assertMutationCsrf', () => {
 describe('assertSameOriginForCookieSession', () => {
   it('rejects when Origin and Referer are both missing', () => {
     expect(() => assertSameOriginForCookieSession(req('POST', {}))).toThrow(CsrfValidationError);
+  });
+
+  it('allows when Origin matches the request origin', () => {
+    expect(() => assertSameOriginForCookieSession(req('POST', { origin: BASE }))).not.toThrow();
   });
 });

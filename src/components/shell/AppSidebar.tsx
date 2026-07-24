@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SidebarSearch } from './SidebarSearch'
 
 interface NavItem {
   href: string
@@ -59,9 +60,11 @@ const navItems: NavItem[] = [
 
 export interface AppSidebarProps {
   className?: string
+  /** Wallet/owner address used to scope the commitment search. */
+  ownerAddress?: string
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
+export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '', ownerAddress }) => {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -184,7 +187,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
             ref={sidebarRef}
             initial={false}
             animate={{
-              x: isMobileOpen ? 0 : undefined,
+              x: isMobileOpen ? 0 : 0,
               width: isCollapsed ? 80 : 240
             }}
             exit={{ x: '-100%' }}
@@ -235,6 +238,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ className = '' }) => {
                   <X size={20} />
                 </button>
               </div>
+            </div>
+
+            {/* Global Search */}
+            <div className="border-b border-white/10">
+              <SidebarSearch
+                {...(ownerAddress !== undefined ? { ownerAddress } : {})}
+                isCollapsed={isCollapsed}
+                onResultSelect={() => setIsMobileOpen(false)}
+              />
             </div>
 
             {/* Navigation Items */}

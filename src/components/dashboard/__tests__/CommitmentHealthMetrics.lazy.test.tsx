@@ -6,6 +6,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import CommitmentHealthMetrics from '../CommitmentHealthMetrics';
+import { computeCommitmentExposure } from '@/utils/exposure';
 
 const defaultProps = {
   commitmentId: 'commitment-1',
@@ -14,7 +15,10 @@ const defaultProps = {
   valueHistoryData: [{ date: '2026-01', currentValue: 1000, initialAmount: 900 }],
   feeGenerationData: [{ date: '2026-01', feeAmount: 50 }],
   thresholdPercent: 0.25,
-  volatilityPercent: 30,
+  exposure: computeCommitmentExposure({
+    maxLossPercent: 10,
+    drawdownHistory: [{ date: '2026-01', drawdownPercent: 0.03 }],
+  }),
 };
 
 const renderMetrics = (overrides: Partial<typeof defaultProps> = {}) => {

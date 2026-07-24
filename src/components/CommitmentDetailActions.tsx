@@ -125,6 +125,30 @@ export function CommitmentDetailActions ({
             </span>
           </button>
 
+          {/* Print / Save PDF */}
+          {commitmentId && (
+            <a
+              href={`/commitments/${commitmentId}/print`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`
+                w-full rounded-2xl px-6 py-4
+                bg-[#161616] border border-[#232323]
+                hover:bg-[#1a1a1a] hover:border-[#1f1f1f]
+                transition-all duration-200
+                flex items-center gap-4
+                cursor-pointer no-underline
+                ${focusRing}
+              `}
+              aria-label="Print or save as PDF"
+            >
+              <FiFileText className="text-white/70" size={22} />
+              <span className="text-white text-base flex-1 text-left font-medium">
+                Print / Save PDF
+              </span>
+            </a>
+          )}
+
           {/* Report an Issue */}
           <button
             onClick={onReportIssue}

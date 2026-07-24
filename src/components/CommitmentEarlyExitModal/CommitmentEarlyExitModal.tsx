@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, X, Info } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
+import {
+  fetchProtocolConstants,
+  getEarlyExitGracePeriodDays,
+} from '@/utils/protocol';
 import { ExitTimingPreview } from './ExitTimingPreview';
+import { GraceCountdownBanner } from './GraceCountdownBanner';
 
 export interface CommitmentEarlyExitModalProps {
   isOpen: boolean;
@@ -43,6 +48,7 @@ export default function CommitmentEarlyExitModal({
   maturityDate,
 }: CommitmentEarlyExitModalProps) {
   const [confirmationInput, setConfirmationInput] = useState('')
+  const [gracePeriodDays, setGracePeriodDays] = useState<number | null>(null)
   const hasTypedConfirmation = confirmationInput.trim() === commitmentId
   const canConfirm = hasAcknowledged && hasTypedConfirmation
 
@@ -53,6 +59,31 @@ export default function CommitmentEarlyExitModal({
   const handleClose = useCallback(() => {
     (onClose ?? onCancel)();
   }, [onClose, onCancel]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isMounted = true;
+    setGracePeriodDays(null);
+
+    fetchProtocolConstants()
+      .then((constants) => {
+        if (isMounted) {
+          setGracePeriodDays(getEarlyExitGracePeriodDays(constants));
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setGracePeriodDays(0);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   return (
     <Dialog
@@ -135,11 +166,17 @@ export default function CommitmentEarlyExitModal({
           </tbody>
         </table>
 
-        <ExitTimingPreview 
+        <GraceCountdownBanner
+          maturityDate={effectiveMaturityDate}
+          gracePeriodDays={gracePeriodDays}
+        />
+
+        <ExitTimingPreview
           commitmentId={commitmentId}
           originalAmount={parsedOriginalAmount}
           currentPenaltyPercent={parsedPenaltyPercent}
           maturityDate={effectiveMaturityDate}
+          gracePeriodDays={gracePeriodDays ?? 0}
         />
 
         {/* Important Notice Block */}
