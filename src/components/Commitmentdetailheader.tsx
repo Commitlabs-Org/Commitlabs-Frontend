@@ -10,6 +10,7 @@ interface CommitmentDetailHeaderProps {
     statusVariant: 'active' | 'settled' | 'violated' | 'early_exit' | string;
     onBack: () => void;
     onShare: () => void | Promise<unknown>;
+    explorerNetwork?: ExplorerNetwork;
 }
 
 type CopyStatus = 'idle' | 'copied' | 'unavailable';

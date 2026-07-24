@@ -43,6 +43,20 @@ export function buildExplorerUrl(
   return url.toString()
 }
 
+const PUBLIC_NETWORK_PASSPHRASE = 'Public Global Stellar Network ; September 2015'
+
+/**
+ * Maps a Stellar network passphrase (e.g. NEXT_PUBLIC_NETWORK_PASSPHRASE) to the
+ * explorer network segment used in stellar.expert URLs. Any passphrase other than
+ * the public mainnet one — including testnet, futurenet, or an unset value — is
+ * treated as testnet, matching the app's default network.
+ */
+export function getExplorerNetworkFromPassphrase(
+  passphrase: string | null | undefined,
+): ExplorerNetwork {
+  return passphrase === PUBLIC_NETWORK_PASSPHRASE ? 'public' : 'testnet'
+}
+
 export function openExplorerUrl(
   kind: ExplorerLinkKind,
   id: string | null | undefined,

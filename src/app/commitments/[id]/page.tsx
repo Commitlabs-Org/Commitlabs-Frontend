@@ -18,6 +18,7 @@ import { openExplorerUrl } from '@/utils/explorerLinks';
 import { computeCommitmentExposure } from '@/utils/exposure';
 import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
 import { useShareLink } from '@/hooks/useShareLink';
+import { getAppExplorerNetwork } from './explorerNetwork';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -152,7 +153,6 @@ export default function CommitmentDetailPage({
     const maxLossLabel = `${commitment.maxLoss}%`
     const commitmentTypeLabel = commitment.type
     const earlyExitPenaltyLabel = `${commitment.earlyExitPenaltyPercent ?? 3}%`
-    const { canEarlyExit } = commitment
 
     const exposure = computeCommitmentExposure({
         valueHistory: MOCK_VALUE_HISTORY_DATA,
@@ -353,6 +353,7 @@ function CommitmentDetailHeaderWithStatus({
             statusVariant={statusVariant}
             onBack={() => router.push('/commitments')}
             onShare={shareLink}
+            explorerNetwork={getAppExplorerNetwork()}
         />
     );
 }

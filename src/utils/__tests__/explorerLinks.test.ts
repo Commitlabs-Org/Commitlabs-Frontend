@@ -1,7 +1,13 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it, vi } from 'vitest'
-import { buildExplorerUrl, openExplorerUrl, safeExternalUrl, KNOWN_EXPLORER_HOSTS } from '../explorerLinks'
+import {
+  buildExplorerUrl,
+  getExplorerNetworkFromPassphrase,
+  openExplorerUrl,
+  safeExternalUrl,
+  KNOWN_EXPLORER_HOSTS,
+} from '../explorerLinks'
 
 const validTxHash = 'a'.repeat(64)
 const validAccount = `G${'A'.repeat(55)}`
@@ -44,6 +50,27 @@ describe('explorerLinks', () => {
 
     expect(openExplorerUrl('tx', 'abc 123')).toBe(false)
     expect(openSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('getExplorerNetworkFromPassphrase', () => {
+  it('maps the public mainnet passphrase to "public"', () => {
+    expect(
+      getExplorerNetworkFromPassphrase('Public Global Stellar Network ; September 2015'),
+    ).toBe('public')
+  })
+
+  it('maps the testnet passphrase to "testnet"', () => {
+    expect(getExplorerNetworkFromPassphrase('Test SDF Network ; September 2015')).toBe(
+      'testnet',
+    )
+  })
+
+  it('falls back to "testnet" for unrecognized, null, undefined, or empty passphrases', () => {
+    expect(getExplorerNetworkFromPassphrase('Some Futurenet Passphrase')).toBe('testnet')
+    expect(getExplorerNetworkFromPassphrase(null)).toBe('testnet')
+    expect(getExplorerNetworkFromPassphrase(undefined)).toBe('testnet')
+    expect(getExplorerNetworkFromPassphrase('')).toBe('testnet')
   })
 })
 
