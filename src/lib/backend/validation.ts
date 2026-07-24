@@ -1,46 +1,6 @@
 import { z } from "zod";
 import { StrKey } from "@stellar/stellar-sdk";
-import * as ConfigModule from "./config";
-
-const getSupportedAssetCodes = () => {
-  try {
-    return (ConfigModule.SUPPORTED_ASSETS ?? []).map((a) => a.code);
-  } catch {
-    return [];
-  }
-};
-
-const getMinDurationDays = () => {
-  try {
-    return ConfigModule.PARAMETER_BOUNDS?.durationDays?.min ?? 1;
-  } catch {
-    return 1;
-  }
-};
-
-const getMaxDurationDays = () => {
-  try {
-    return ConfigModule.PARAMETER_BOUNDS?.durationDays?.max ?? 365;
-  } catch {
-    return 365;
-  }
-};
-
-const getMinAmount = () => {
-  try {
-    return ConfigModule.PARAMETER_BOUNDS?.amount?.min ?? 1;
-  } catch {
-    return 1;
-  }
-};
-
-const getMaxAmount = () => {
-  try {
-    return ConfigModule.PARAMETER_BOUNDS?.amount?.max ?? 1000000;
-  } catch {
-    return 1000000;
-  }
-};
+import { PARAMETER_BOUNDS, SUPPORTED_ASSETS } from "./config";
 
 // ─── Warning types ────────────────────────────────────────────────────────────
 
@@ -176,23 +136,21 @@ const _paginationSchema2 = z.object({
 });
 
 
-
-
 export const createCommitmentSchema = z.object({
   ownerAddress: addressSchema2,
   asset: z
     .string()
     .trim()
     .transform((asset) => asset.toUpperCase())
-    .refine((asset) => getSupportedAssetCodes().includes(asset), {
-      message: `Asset is not supported. Supported assets: ${getSupportedAssetCodes().join(", ")}.`,
+    .refine((asset) => (SUPPORTED_ASSETS ?? []).map((a) => a.code).includes(asset), {
+      message: `Asset is not supported. Supported assets: ${(SUPPORTED_ASSETS ?? []).map((a) => a.code).join(", ")}.`,
     }),
   amount: amountSchema2,
   durationDays: z.coerce
     .number()
     .int()
-    .min(getMinDurationDays())
-    .max(getMaxDurationDays()),
+    .min(PARAMETER_BOUNDS.durationDays.min)
+    .max(PARAMETER_BOUNDS.durationDays.max),
   maxLossBps: z.coerce.number().min(0),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -329,10 +287,10 @@ export type CommitmentDraftInput = z.infer<typeof commitmentDraftInputSchema>;
 // ─── Warning rules ────────────────────────────────────────────────────────────
 
 const HIGH_RISK_THRESHOLD_BPS = 5000;
-const UNUSUAL_DURATION_MIN_DAYS = getMinDurationDays();
-const UNUSUAL_DURATION_MAX_DAYS = getMaxDurationDays();
-const UNUSUAL_AMOUNT_MIN = getMinAmount();
-const UNUSUAL_AMOUNT_MAX = getMaxAmount();
+const UNUSUAL_DURATION_MIN_DAYS = PARAMETER_BOUNDS.durationDays.min;
+const UNUSUAL_DURATION_MAX_DAYS = PARAMETER_BOUNDS.durationDays.max;
+const UNUSUAL_AMOUNT_MIN = PARAMETER_BOUNDS.amount.min;
+const UNUSUAL_AMOUNT_MAX = PARAMETER_BOUNDS.amount.max;
 
 function checkWarnings(data: ValidatedCommitmentDraft): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
@@ -444,7 +402,7 @@ export function validateSupportedAsset(
   }
 
   const trimmed = assetCode.trim().toUpperCase();
-  const supported = getSupportedAssetCodes();
+  const supported = SUPPORTED_ASSETS.map((a) => a.code);
 
   if (!supported.includes(trimmed)) {
     throw new ValidationError(
@@ -549,9 +507,8 @@ export function handleValidationError(error: unknown) {
   }
   if (error instanceof z.ZodError) {
     const firstError = error.issues[0];
-    if (!firstError) throw error;
-    const field = firstError.path.join(".");
-    return Response.json({ error: firstError.message, field }, { status: 400 });
+    const field = firstError?.path.join(".");
+    return Response.json({ error: firstError?.message, field }, { status: 400 });
   }
   throw error; // Re-throw if not validation error
 }
