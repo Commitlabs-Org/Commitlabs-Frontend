@@ -21,8 +21,11 @@ describe('RequireWallet', () => {
     document.body.style.overflow = ''
   })
 
-  it('renders protected content immediately when the wallet is already connected', () => {
+  it('renders protected content immediately when the wallet is already connected', async () => {
     window.localStorage.setItem('commitlabs.wallet.address', 'GCONNECTED123')
+    window.freighterApi = {
+      isConnected: vi.fn().mockResolvedValue(true),
+    }
 
     render(
       <WalletProvider>
@@ -32,7 +35,7 @@ describe('RequireWallet', () => {
       </WalletProvider>
     )
 
-    return waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText('Protected content')).toBeTruthy()
       expect(screen.queryByRole('dialog')).toBeNull()
     })

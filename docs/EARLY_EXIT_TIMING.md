@@ -12,3 +12,9 @@ To help liquidity providers make informed decisions about when to trigger an ear
 - **Debouncing:** The slider utilizes a simulated debounce strategy to ensure the UI feels responsive while deferring state recalculations by a small timeout.
 - **Fallback Mechanism:** If the preview API fails or rate-limits, it gracefully falls back to a static calculation using the `originalAmount` and `penaltyPercent` props to estimate the baseline penalty.
 - **Accessibility:** Uses accessible range input features (`aria-label`) to announce the currently selected simulated date. It is strictly presented as an objective projection and eschews financial advice wording.
+
+## Grace Period Countdown
+
+The modal also includes a grace-period countdown banner driven by `commitmentLimits.earlyExitGracePeriodDays` from the protocol constants endpoint. The banner appears before `ExitTimingPreview` and tells the user whether the current early exit still incurs a penalty or whether waiting reaches a penalty-free window near maturity.
+
+See [GRACE_COUNTDOWN.md](GRACE_COUNTDOWN.md) for the component states, accessibility behavior, and tests.

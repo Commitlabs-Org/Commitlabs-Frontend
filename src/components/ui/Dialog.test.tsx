@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { axe } from 'vitest-axe';
 import { Dialog } from '@/components/ui/Dialog';
 
 describe('Dialog Primitive', () => {
@@ -192,7 +193,6 @@ describe('Dialog Primitive', () => {
     );
 
     const first = screen.getByText('First');
-    const second = screen.getByText('Second');
     const third = screen.getByText('Third');
 
     // Simulate focus on the last element
@@ -260,5 +260,16 @@ describe('Dialog Primitive', () => {
 
     expect(backdrop.className).not.toContain('animate-in');
     expect(dialog.className).not.toContain('animate-in');
+  });
+
+  it('should have no accessibility violations when open', async () => {
+    render(
+      <Dialog isOpen={true} onClose={vi.fn()} labelledById="title" describedById="desc">
+        <h2 id="title">Dialog Title</h2>
+        <p id="desc">Dialog Description</p>
+      </Dialog>
+    );
+    const results = await axe(document.body);
+    expect(results).toHaveNoViolations();
   });
 });

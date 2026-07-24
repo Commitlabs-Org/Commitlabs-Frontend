@@ -131,6 +131,17 @@ describe('POST /api/marketplace/listings/[id]/preflight', () => {
     expect(marketplaceService.getPurchasePreflight).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when body is null', async () => {
+    const res = await POST(makeRequest(null as any), makeContext(), 'corr-preflight-null');
+    const { status, data } = await parseResponse(res);
+
+    expect(status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('BAD_REQUEST');
+    expect(data.error.message).toBe('Invalid JSON body');
+    expect(marketplaceService.getPurchasePreflight).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when buyerAddress is malformed', async () => {
     const res = await POST(
       makeRequest({ buyerAddress: 'not-a-stellar-address' }),
