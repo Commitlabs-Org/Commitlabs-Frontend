@@ -23,7 +23,6 @@
     "test:e2e": "playwright test",
     "test:contracts:deploy": "node contracts/scripts/deploy-testnet.smoke.mjs",
     "seed:mock": "tsx scripts/seed-backend-mock.ts",
-    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -52,7 +51,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
-    "@next/bundle-analyzer": "^16.2.9",
+    "@next/bundle-analyzer": "^14.0.0",
     "@playwright/test": "^1.61.1",
     "@size-limit/file": "^12.1.0",
     "@testing-library/dom": "^10.4.1",

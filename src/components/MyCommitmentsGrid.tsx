@@ -94,10 +94,10 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = ({
               commitment={commitment}
               isSelected={selectedIds.has(commitment.id)}
               onSelect={() => toggleSelection(commitment.id)}
-              onDetails={onDetails}
-              onAttestations={onAttestations}
-              onEarlyExit={onEarlyExit}
-              onListForSale={onListForSale}
+              ...(onDetails ? { onDetails } : {}),
+              ...(onAttestations ? { onAttestations } : {}),
+              ...(onEarlyExit ? { onEarlyExit } : {}),
+              ...(onListForSale ? { onListForSale } : {})
             />
           ))}
         </div>

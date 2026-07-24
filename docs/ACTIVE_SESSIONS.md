@@ -55,7 +55,7 @@ export default function MyPage() {
   useEffect(() => {
     fetch('/api/auth/sessions', { credentials: 'same-origin' })
       .then(r => r.json())
-      .then(d => setSessions(d.sessions ?? []))
+      .then(d => setSessions(d.data?.sessions ?? []))
   }, [])
 
   return (

@@ -248,6 +248,10 @@ export function getErrorCodesByStatus(): Record<number, ErrorCodeDefinition[]> {
 
 /**
  * Validate that all error codes in the registry are unique (no duplicates).
+ * Duplicate detection checks the `.code` field on each definition value, not
+ * the object key. JavaScript object literals silently discard duplicate keys,
+ * so key-counting can never find a collision; two distinct keys that both carry
+ * the same `.code` string represent a real, detectable duplicate.
  * Call this in tests to enforce registry integrity.
  */
 export function validateErrorCodeRegistry(): {
@@ -255,12 +259,18 @@ export function validateErrorCodeRegistry(): {
   duplicates: string[];
   errors: string[];
 } {
-  const codes = Object.keys(ERROR_CODE_REGISTRY);
-  const uniqueCodes = new Set(codes);
-  const duplicates = codes.filter((code) => {
-    const count = codes.filter((c) => c === code).length;
-    return count > 1;
-  });
+  const definitions = Object.values(ERROR_CODE_REGISTRY);
+  const codeValues = definitions.map((def) => def.code);
+  const seen = new Set<string>();
+  const duplicateSet = new Set<string>();
+  for (const codeValue of codeValues) {
+    if (seen.has(codeValue)) {
+      duplicateSet.add(codeValue);
+    } else {
+      seen.add(codeValue);
+    }
+  }
+  const duplicates = [...duplicateSet];
 
   const errors: string[] = [];
 
@@ -272,37 +282,36 @@ export function validateErrorCodeRegistry(): {
   }
 
   // Check for empty code strings
-  codes.forEach((code) => {
-    if (!code || code.trim() === "") {
+  Object.values(ERROR_CODE_REGISTRY).forEach((def) => {
+    if (!def.code || def.code.trim() === "") {
       errors.push(`Empty error code found`);
     }
   });
 
   // Check for required fields in each definition
-  codes.forEach((code) => {
-    const def = ERROR_CODE_REGISTRY[code];
-    if (!def.code) errors.push(`Missing 'code' field in ${code}`);
-    if (!def.meaning) errors.push(`Missing 'meaning' field in ${code}`);
+  Object.entries(ERROR_CODE_REGISTRY).forEach(([key, def]) => {
+    if (!def.code) errors.push(`Missing 'code' field in ${key}`);
+    if (!def.meaning) errors.push(`Missing 'meaning' field in ${key}`);
     if (!def.clientHandling)
-      errors.push(`Missing 'clientHandling' field in ${code}`);
+      errors.push(`Missing 'clientHandling' field in ${key}`);
     if (def.description === undefined || def.description === null) {
-      errors.push(`Missing 'description' field in ${code}`);
+      errors.push(`Missing 'description' field in ${key}`);
     }
     if (typeof def.retriable !== "boolean") {
-      errors.push(`Invalid 'retriable' field in ${code}`);
+      errors.push(`Invalid 'retriable' field in ${key}`);
     }
     if (
       typeof def.statusCode !== "number" ||
       def.statusCode < 400 ||
       def.statusCode >= 600
     ) {
-      errors.push(`Invalid 'statusCode' in ${code}`);
+      errors.push(`Invalid 'statusCode' in ${key}`);
     }
   });
 
   return {
     valid: errors.length === 0,
-    duplicates: [...new Set(duplicates)],
+    duplicates,
     errors,
   };
 }
