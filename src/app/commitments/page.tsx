@@ -118,11 +118,41 @@ const mockCommitments: Commitment[] = [
   },
 ]
 
-const mockStats: CommitmentStats = {
-  totalActive: 3,
-  totalCommittedValue: '$461,850',
-  avgComplianceScore: 86,
-  totalFeesGenerated: '$1,250',
+function calculateStatsFromCommitments(commitments: Commitment[]): CommitmentStats {
+  if (commitments.length === 0) {
+    return {
+      totalActive: 0,
+      totalCommittedValue: '$0',
+      avgComplianceScore: 0,
+      totalFeesGenerated: '$0',
+    }
+  }
+
+  // Count active commitments
+  const activeCommitments = commitments.filter((c) => c.status === 'Active')
+  const totalActive = activeCommitments.length
+
+  // Sum all committed values
+  const totalCommittedValue = commitments.reduce((sum, c) => {
+    const amount = Number(c.amount.replace(/,/g, ''))
+    return sum + amount
+  }, 0)
+
+  // Calculate average compliance score
+  const avgComplianceScore =
+    commitments.length > 0
+      ? Math.round(commitments.reduce((sum, c) => sum + c.complianceScore, 0) / commitments.length)
+      : 0
+
+  // Calculate total fees generated (1% of total committed value as placeholder)
+  const totalFeesGeneratedAmount = Math.round(totalCommittedValue * 0.01)
+
+  return {
+    totalActive,
+    totalCommittedValue: `$${totalCommittedValue.toLocaleString()}`,
+    avgComplianceScore,
+    totalFeesGenerated: `$${totalFeesGeneratedAmount.toLocaleString()}`,
+  }
 }
 
 function getEarlyExitValues(originalAmount: string, asset: string, penaltyPercent: number) {
@@ -223,6 +253,12 @@ export default function MyCommitments() {
     )
   }, [commitmentForEarlyExit, protocolConstants])
 
+  // Calculate stats from commitmentsList
+  const calculatedStats = useMemo(
+    () => calculateStatsFromCommitments(commitmentsList),
+    [commitmentsList]
+  )
+
   // Callbacks
   const openEarlyExitModal = useCallback((id: string) => {
     setEarlyExitCommitmentId(id)
@@ -261,8 +297,8 @@ export default function MyCommitments() {
   )
 
   const handleViewAttestations = useCallback(
-    (id: string) => console.log('Attestations for', id),
-    []
+    (id: string) => router.push(`/commitments/${id}`),
+    [router]
   )
 
   const closeEarlyExitModal = useCallback(() => {
@@ -323,10 +359,10 @@ export default function MyCommitments() {
         ) : (
           <>
             <MyCommitmentsStats
-              totalActive={mockStats.totalActive}
-              totalCommittedValue={mockStats.totalCommittedValue}
-              avgComplianceScore={mockStats.avgComplianceScore}
-              totalFeesGenerated={mockStats.totalFeesGenerated}
+              totalActive={calculatedStats.totalActive}
+              totalCommittedValue={calculatedStats.totalCommittedValue}
+              avgComplianceScore={calculatedStats.avgComplianceScore}
+              totalFeesGenerated={calculatedStats.totalFeesGenerated}
             />
 
             <MyCommitmentsFilters
