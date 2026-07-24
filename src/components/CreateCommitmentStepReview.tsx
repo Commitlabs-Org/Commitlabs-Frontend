@@ -14,6 +14,7 @@ import {
 import WizardStepper from "./WizardStepper";
 import styles from "./CreateCommitmentStepReview.module.css";
 import { useWallet } from "@/hooks/useWallet";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import ValidationSummary, { ValidationErrorItem } from "./create/ValidationSummary";
 
 interface CreateCommitmentStepReviewProps {
@@ -55,6 +56,7 @@ export default function CreateCommitmentStepReview({
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acknowledgedRisks, setAcknowledgedRisks] = useState(false);
   const { connected, address, connect } = useWallet();
+  const { isOnline } = useOnlineStatus();
   const [validationErrors, setValidationErrors] = useState<ValidationErrorItem[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
@@ -196,7 +198,7 @@ export default function CreateCommitmentStepReview({
     }
   };
 
-  const canSubmit = acceptedTerms && acknowledgedRisks && !isSubmitting && validationErrors.length === 0;
+  const canSubmit = acceptedTerms && acknowledgedRisks && !isSubmitting && validationErrors.length === 0 && isOnline;
 
   const getIconAndStyle = () => {
     const l = typeLabel.toLowerCase();
@@ -512,6 +514,11 @@ export default function CreateCommitmentStepReview({
         {/* Footer */}
         <div className={styles.footer}>
           {submitError && <p className={styles.submitError} role="alert">{submitError}</p>}
+          {!isOnline && (
+            <p className={styles.submitError} role="status">
+              You are offline. Reconnect to submit this commitment.
+            </p>
+          )}
           <button
             onClick={onSubmit}
             disabled={!canSubmit}

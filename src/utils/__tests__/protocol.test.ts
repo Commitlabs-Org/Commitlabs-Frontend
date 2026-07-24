@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchProtocolConstants, type ProtocolConstants } from '../protocol';
+import {
+  fetchProtocolConstants,
+  getEarlyExitGracePeriodDays,
+  type ProtocolConstants,
+} from '../protocol';
 
 const protocolConstantsFixture = {
   protocolVersion: '1.0.0',
@@ -27,6 +31,7 @@ const protocolConstantsFixture = {
     minDurationDays: 7,
     maxDurationDays: 365,
     maxLossPercentCeiling: 50,
+    earlyExitGracePeriodDays: 7,
   },
   cachedAt: '2026-06-27T08:00:00.000Z',
 } satisfies ProtocolConstants;
@@ -65,6 +70,7 @@ describe('fetchProtocolConstants', () => {
       minDurationDays: 7,
       maxDurationDays: 365,
       maxLossPercentCeiling: 50,
+      earlyExitGracePeriodDays: 7,
     });
   });
 
@@ -82,5 +88,16 @@ describe('fetchProtocolConstants', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith('/api/protocol/constants');
+  });
+});
+
+describe('getEarlyExitGracePeriodDays', () => {
+  it('returns the normalized grace-period constant', () => {
+    expect(getEarlyExitGracePeriodDays(protocolConstantsFixture)).toBe(7);
+  });
+
+  it('falls back to 0 when constants are unavailable', () => {
+    expect(getEarlyExitGracePeriodDays(null)).toBe(0);
+    expect(getEarlyExitGracePeriodDays(undefined)).toBe(0);
   });
 });

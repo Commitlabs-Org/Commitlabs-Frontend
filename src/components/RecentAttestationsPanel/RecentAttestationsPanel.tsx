@@ -1,7 +1,13 @@
 'use client'
 
+import { useCallback, useState } from 'react'
 import styles from './RecentAttestationsPanel.module.css'
 import { EmptyState } from '@/components/ui/EmptyState'
+import {
+  buildAttestationCsvContent,
+  buildAttestationExportFilename,
+  downloadCsvContent,
+} from '@/utils/chartExport'
 
 export interface Attestation {
   id: string
@@ -14,6 +20,7 @@ export interface Attestation {
 
 export interface RecentAttestationsPanelProps {
   attestations: Attestation[]
+  commitmentId?: string
   summary: {
     complianceCount: number
     warningCount: number
@@ -21,6 +28,10 @@ export interface RecentAttestationsPanelProps {
   }
   onSelectAttestation: (id: string) => void
   onViewAll: () => void
+  /** Optional commitment ID to enable real-time SSE streaming of new attestations. */
+  commitmentId?: string | null
+  /** Set to false to disable streaming even when commitmentId is provided. */
+  streamingEnabled?: boolean
 }
 
 // Utility function to format relative time
@@ -129,12 +140,49 @@ function ArrowRightIcon() {
   )
 }
 
+function DownloadIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path
+        d="M8 2v8M5 7l3 3 3-3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 13h10"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 export default function RecentAttestationsPanel({
   attestations,
+  commitmentId = '',
   summary,
   onSelectAttestation,
   onViewAll,
+  commitmentId = null,
+  streamingEnabled = true,
 }: RecentAttestationsPanelProps) {
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportCsv = useCallback(async () => {
+    if (attestations.length === 0) return
+    setIsExporting(true)
+    try {
+      const content = buildAttestationCsvContent(attestations)
+      const filename = buildAttestationExportFilename(commitmentId)
+      await downloadCsvContent(content, filename)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [attestations, commitmentId])
+
   const getSeverityIcon = (severity: Attestation['severity']) => {
     switch (severity) {
       case 'ok':
@@ -163,17 +211,44 @@ export default function RecentAttestationsPanel({
 
   return (
     <section className={styles.panel} aria-label="Recent Attestations">
+      {/* Accessible live region for new attestation announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveAnnouncement}
+      </div>
+
       <header className={styles.header}>
         <h2 className={styles.title}>Recent Attestations</h2>
-        <button
-          type="button"
-          className={styles.viewAllButton}
-          onClick={onViewAll}
-          aria-label="View all attestations"
-        >
-          View All
-          <ArrowRightIcon />
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.exportButton}
+            onClick={handleExportCsv}
+            disabled={attestations.length === 0 || isExporting}
+            aria-label={
+              attestations.length === 0
+                ? 'Export attestations as CSV (no attestations to export)'
+                : 'Export attestations as CSV'
+            }
+            aria-disabled={attestations.length === 0 || isExporting}
+          >
+            <DownloadIcon />
+            {isExporting ? 'Exporting…' : 'Export CSV'}
+          </button>
+          <button
+            type="button"
+            className={styles.viewAllButton}
+            onClick={onViewAll}
+            aria-label="View all attestations"
+          >
+            View All
+            <ArrowRightIcon />
+          </button>
+        </div>
       </header>
 
       <div className={styles.attestationsList} role="list">

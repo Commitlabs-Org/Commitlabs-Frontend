@@ -2,6 +2,10 @@
 
 This document tracks **breaking backend API changes** that may impact this frontend. Keep entries brief, actionable, and linked to implementation artifacts.
 
+> For frontend-facing changes (features, fixes, releases) see the root
+> [`CHANGELOG.md`](../CHANGELOG.md) and the [release process](RELEASE_PROCESS.md).
+> This file is scoped to backend API breaking changes only.
+
 ## Purpose
 
 - Provide a single source of truth for backend API breaking changes.

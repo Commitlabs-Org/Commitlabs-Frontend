@@ -3,9 +3,13 @@
  */
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ErrorBoundary, withErrorBoundary } from '@/components/ErrorBoundary';
+import {
+  setErrorTransport,
+  type ClientErrorRecord,
+} from '@/lib/observability/reportError';
 
 // Component that throws an error
 class ThrowingComponent extends Component<{ shouldThrow?: boolean }> {
@@ -206,5 +210,47 @@ describe('withErrorBoundary HOC', () => {
     });
 
     expect(SafeComponent.displayName).toBe('withErrorBoundary(Component)');
+  });
+});
+
+describe('ErrorBoundary — error-monitoring seam', () => {
+  afterEach(() => {
+    // Restore the default (console) transport so other suites are unaffected.
+    setErrorTransport((r) => console.error('[reportError]', r));
+  });
+
+  it('forwards caught errors to the reportError seam', () => {
+    const captured: ClientErrorRecord[] = [];
+    setErrorTransport((r) => captured.push(r));
+
+    const originalError = console.error;
+    console.error = vi.fn();
+    try {
+      render(
+        <ErrorBoundary>
+          <ThrowingComponent shouldThrow={true} />
+        </ErrorBoundary>,
+      );
+    } finally {
+      console.error = originalError;
+    }
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0].message).toContain('Test error from ThrowingComponent');
+    expect(typeof captured[0].timestamp).toBe('string');
+    expect(typeof captured[0].route).toBe('string');
+  });
+
+  it('does not report when no error is thrown', () => {
+    const captured: ClientErrorRecord[] = [];
+    setErrorTransport((r) => captured.push(r));
+
+    render(
+      <ErrorBoundary>
+        <div>Healthy child</div>
+      </ErrorBoundary>,
+    );
+
+    expect(captured).toHaveLength(0);
   });
 });

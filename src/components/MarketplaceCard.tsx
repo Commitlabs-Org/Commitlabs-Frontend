@@ -1,11 +1,12 @@
 "use client";
 import { ReputationDisplay } from "./ReputationDisplay";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
+import Link from "next/link";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
 import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
 import { TrustBadge, TrustLevel } from "./TrustBadge";
-
+import { formatPercent } from '@/utils/format';
 export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 
 export interface MarketplaceCardProps {
@@ -29,6 +30,7 @@ export interface MarketplaceCardProps {
   compareSelected?: boolean;
   compareDisabled?: boolean;
   onCompareToggle?: () => void;
+  onView?: (id: string) => void;
 }
 
 function clampScore(score: number) {
@@ -210,11 +212,18 @@ function MarketplaceCardComponent({
   compareSelected = false,
   compareDisabled = false,
   onCompareToggle,
+  onView,
 }: MarketplaceCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPurchaseSuccessOpen, setIsPurchaseSuccessOpen] = useState(false);
   const [purchaseTxHash, setPurchaseTxHash] = useState<string | undefined>();
   const [isPurchasing, setIsPurchasing] = useState(false);
+
+  useEffect(() => {
+    if (isModalOpen && onView) {
+      onView(id);
+    }
+  }, [isModalOpen, id, onView]);
 
   const clampedScore = clampScore(score);
   const cardBorderClass =
@@ -301,7 +310,7 @@ function MarketplaceCardComponent({
           </span>
             {/* Compact reputation display */}
             {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
-              <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>"{clampedScore}%"</span>
+            <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>{formatPercent(clampedScore, { decimals: 0 })}</span>
             ) : (
               <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">New seller</span>
             )}
@@ -383,15 +392,25 @@ function MarketplaceCardComponent({
                 View
               </button>
 
-              <button
-                type="button"
-                onClick={handleTrade}
-                disabled={isPurchasing}
-                className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
-                aria-label={`Trade ${id}`}
-              >
-                <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
-              </button>
+              {onPurchase ? (
+                <button
+                  type="button"
+                  onClick={handleTrade}
+                  disabled={isPurchasing}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
+                </button>
+              ) : (
+                <Link
+                  href={resolvedTradeHref}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> Trade
+                </Link>
+              )}
             </div>
           </>
         ) : (

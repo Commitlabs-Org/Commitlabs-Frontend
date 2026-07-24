@@ -69,8 +69,9 @@ export function Dialog({
           return;
         }
 
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
+        const firstElement = focusableElements[0] as HTMLElement | undefined;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined;
+        if (!firstElement || !lastElement) return;
 
         if (event.shiftKey && document.activeElement === firstElement) {
           event.preventDefault();
@@ -90,7 +91,7 @@ export function Dialog({
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
         if (focusableElements.length > 0) {
-          focusableElements[0].focus();
+          (focusableElements[0] as HTMLElement | undefined)?.focus();
         } else {
           dialogRef.current.focus();
         }

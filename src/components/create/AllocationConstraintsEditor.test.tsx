@@ -18,6 +18,7 @@ const mockProtocolConstants = {
     minDurationDays: 1,
     maxDurationDays: 365,
     maxLossPercentCeiling: 100,
+    earlyExitGracePeriodDays: 7,
   },
   cachedAt: new Date().toISOString(),
 }

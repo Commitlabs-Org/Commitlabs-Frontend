@@ -340,7 +340,7 @@ export function validateAddress(address: string): string {
     return addressSchema2.parse(address);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new ValidationError(error.issues[0].message, "address");
+      throw new ValidationError(error.issues[0]?.message ?? "Invalid address", "address");
     }
     throw error;
   }
@@ -442,7 +442,7 @@ export function validateAmount(amount: string | number): number {
     return amountSchema3.parse(amount);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new ValidationError(error.issues[0].message, "amount");
+      throw new ValidationError(error.issues[0]?.message ?? "Invalid amount", "amount");
     }
     throw error;
   }
