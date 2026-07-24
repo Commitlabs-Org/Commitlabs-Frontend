@@ -97,6 +97,9 @@ interface CommitmentHealthMetricsProps {
   isLoading?: boolean;
   /** Lifecycle event annotations passed through to both value-history and drawdown charts. */
   lifecycleEvents?: import('./HealthMetricsDrawdownChart').LifecycleEvent[];
+  exposure?: import('@/utils/exposure').CommitmentExposureResult;
+  benchmarkData?: BenchmarkPoint[];
+  benchmarkLabel?: string;
 }
 
 export default function CommitmentHealthMetrics({
@@ -109,6 +112,9 @@ export default function CommitmentHealthMetrics({
   volatilityPercent,
   isLoading = false,
   lifecycleEvents,
+  exposure,
+  benchmarkData,
+  benchmarkLabel,
 }: CommitmentHealthMetricsProps) {
   const [activeTab, setActiveTab] = useState<TabType>("value");
   const { selectedRange, setRange, filterByRange } = useHealthMetricsRange();
@@ -213,6 +219,9 @@ export default function CommitmentHealthMetrics({
                 data={filteredValueHistory as Array<{ date: string; currentValue: number; initialAmount?: number }>}
                 volatilityPercent={volatilityPercent}
                 lifecycleEvents={lifecycleEvents}
+                exposure={exposure}
+                benchmarkData={benchmarkData}
+                benchmarkLabel={benchmarkLabel}
               />
             )}
           </div>
@@ -235,6 +244,7 @@ export default function CommitmentHealthMetrics({
                 thresholdPercent={thresholdPercent}
                 volatilityPercent={volatilityPercent}
                 lifecycleEvents={lifecycleEvents}
+                exposure={exposure}
               />
             )}
           </div>
@@ -255,6 +265,7 @@ export default function CommitmentHealthMetrics({
               <HealthMetricsFeeGenerationChart
                 data={filteredFeeGenerationHistory as Array<{ date: string; feeAmount: number }>}
                 volatilityPercent={volatilityPercent}
+                exposure={exposure}
               />
             )}
           </div>
