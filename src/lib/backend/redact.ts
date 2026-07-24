@@ -5,34 +5,9 @@
  * tokens, nonces, and other security-sensitive values.
  */
 
-/**
- * Default denylist of sensitive field names
- */
-const DEFAULT_DENYLIST = new Set([
-  'signature',
-  'token',
-  'nonce',
-  'authorization',
-  'password',
-  'secret',
-  'key',
-  'privateKey',
-  'publicKey',
-  'mnemonic',
-  'seed',
-  'hash',
-  'digest',
-  'auth',
-  'bearer',
-  'apikey',
-  'apikey',
-  'api_key',
-  'session',
-  'cookie',
-  'csrf',
-  'xss',
-  'sql',
-])
+import { SENSITIVE_FIELDS } from '@/lib/shared/sensitiveFields'
+
+const DEFAULT_DENYLIST = SENSITIVE_FIELDS
 
 /**
  * Configuration options for redaction
@@ -61,18 +36,17 @@ export function redact<T = unknown>(data: T, options: RedactOptions = {}): T {
   } = options
 
   // Combine default denylist with custom denylist
-  const denylistSet = new Set([
-    ...DEFAULT_DENYLIST,
-    ...denylist
-  ])
+  const denylistSet = new Set(
+    [...DEFAULT_DENYLIST, ...denylist].map(key =>
+      caseInsensitive ? key.toLowerCase() : key
+    )
+  )
 
   // Create case-insensitive matcher if enabled
   const shouldRedact = caseInsensitive
     ? (key: string): boolean => {
         const lowerKey = key.toLowerCase()
-        return Array.from(denylistSet).some(denyKey => 
-          denyKey.toLowerCase() === lowerKey
-        )
+        return denylistSet.has(lowerKey)
       }
     : (key: string): boolean => denylistSet.has(key)
 

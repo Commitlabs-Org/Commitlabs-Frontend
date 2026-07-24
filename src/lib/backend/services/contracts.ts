@@ -159,6 +159,114 @@ interface ContractInvocationResult {
  */
 const ANALYTICS_SCALE = 100;
 
+// --- Retry helper types & implementation ----------------------------------
+export interface RetryOptions {
+  maxAttempts: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+  maxTotalBackoffMs: number;
+  backoffMultiplier: number;
+  isRetryable: (err: unknown) => boolean;
+  random?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+  onRetry?: (info: { attempt: number; delayMs: number; error: unknown }) => void;
+}
+
+/**
+ * Bounded exponential backoff with optional jitter.
+ * Calls `op(attempt)` where attempt is 1-based. Throws the final error
+ * when retries are exhausted or when budget would be exceeded.
+ */
+export async function retryWithBackoff<T>(
+  op: (attempt: number) => Promise<T>,
+  options: RetryOptions,
+): Promise<T> {
+  const {
+    maxAttempts,
+    baseDelayMs,
+    maxDelayMs,
+    maxTotalBackoffMs,
+    backoffMultiplier,
+    isRetryable,
+    random = () => Math.random(),
+    sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)),
+    onRetry,
+  } = options;
+
+  let totalBackoff = 0;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await op(attempt);
+    } catch (err) {
+      const isLast = attempt >= maxAttempts;
+      if (!isRetryable(err) || isLast) {
+        throw err;
+      }
+
+      // Ceiling for this attempt's backoff (based on attempt index)
+      const rawCeiling = baseDelayMs * Math.pow(backoffMultiplier, attempt - 1);
+      const ceiling = Math.min(rawCeiling, maxDelayMs);
+
+      // jitter between ceiling/2 and ceiling
+      const delay = Math.round(ceiling / 2 + (random() ?? 0) * (ceiling / 2));
+
+      // If adding this delay would exceed budget, stop retrying and rethrow
+      if (maxTotalBackoffMs !== undefined && totalBackoff + delay > maxTotalBackoffMs) {
+        throw err;
+      }
+
+      onRetry?.({ attempt, delayMs: delay, error: err });
+      await sleep(delay);
+      totalBackoff += delay;
+      // continue to next attempt
+    }
+  }
+
+  // Should never reach here, but satisfy TS
+  throw new Error('retryWithBackoff: exhausted retries');
+}
+
+/**
+ * Classifier for whether a contract/RPC error is retryable for idempotent reads.
+ */
+export function isRetryableContractError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('deadline')) return true;
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) return true;
+  if (msg.includes('not found') || msg.includes('404')) return false;
+  if (msg.includes('invalid') || msg.includes('malformed')) return false;
+
+  // BackendError handling
+  if (error instanceof BackendError) {
+    const status = (error as BackendError).status;
+    if ([429, 503, 504].includes(status)) return true;
+    return false;
+  }
+
+  // Fallback: treat generic network/gateway failures as retryable
+  if (msg.includes('socket hang up') || msg.includes('econnreset') || msg.includes('connection reset')) return true;
+  if (/5\d\d/.test(msg)) return true; // 5xx
+
+  return false;
+}
+
+/**
+ * Guard that forbids retrying write-mode invocations after the first attempt.
+ */
+export function assertRetrySafe(mode: ContractCallMode, attempt: number): void {
+  if (mode === 'read') return;
+  if (mode === 'write' && attempt === 1) return;
+
+  throw new BackendError({
+    code: 'BLOCKCHAIN_CALL_FAILED',
+    message: 'A write-mode contract invocation must never be retried.',
+    status: 500,
+  });
+}
+
+
 function getRpcUrl(): string {
   return getBackendConfig().sorobanRpcUrl;
 }
@@ -167,45 +275,6 @@ function getNetworkPassphrase(): string {
   return getBackendConfig().networkPassphrase;
 }
 
-function getRpcTimeoutMs(): number {
-  const raw = Number(process.env.SOROBAN_RPC_TIMEOUT_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : 15_000;
-}
-
-async function withRpcTimeout<T>(
-  promise: Promise<T>,
-  methodName: string,
-): Promise<T> {
-  const timeoutMs = getRpcTimeoutMs();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => {
-          reject(
-            new BackendError({
-              code: "GATEWAY_TIMEOUT",
-              message:
-                "The blockchain operation timed out. It may still be processed later.",
-              status: 504,
-              details: {
-                methodName,
-                timeoutMs,
-                retryable: true,
-              },
-            }),
-          );
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-}
 
 function getContractId(kind: "commitmentCore" | "attestationEngine"): string {
   const config = getBackendConfig();
@@ -232,44 +301,6 @@ function getSourcePublicKey(): string | null {
   return process.env.SOROBAN_SOURCE_ACCOUNT || null;
 }
 
-function getRpcTimeoutMs(): number {
-  const raw = Number(process.env.SOROBAN_RPC_TIMEOUT_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : 15_000;
-}
-
-async function withRpcTimeout<T>(
-  operation: Promise<T>,
-  methodName: string,
-  timeoutMs = getRpcTimeoutMs(),
-): Promise<T> {
-  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    return await Promise.race([
-      operation,
-      new Promise<T>((_, reject) => {
-        timeoutHandle = setTimeout(() => {
-          reject(
-            new BackendError({
-              code: "GATEWAY_TIMEOUT",
-              message: "The blockchain operation timed out. It may still be processed later.",
-              status: 504,
-              details: {
-                methodName,
-                timeoutMs,
-                retryable: true,
-              },
-            }),
-          );
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timeoutHandle) {
-      clearTimeout(timeoutHandle);
-    }
-  }
-}
 
 function getSorobanServer(): SorobanRpc.Server {
   const url = getRpcUrl();

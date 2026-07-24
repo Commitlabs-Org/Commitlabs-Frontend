@@ -2,6 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { axe } from "vitest-axe";
 
 import { TrustBadge, type TrustLevel } from "@/components/TrustBadge";
 
@@ -30,7 +31,7 @@ const TRUST_LEVELS: Array<{
     label: "Self-Reported",
     description:
       "This seller has not yet completed the verification process. Exercise caution.",
-    colorClass: "text-white/40",
+    colorClass: "text-white/60",
   },
 ];
 
@@ -108,7 +109,7 @@ describe("TrustBadge", () => {
 
     const badge = screen.getByRole("status", { name: "Self-Reported" });
     expect(badge).toHaveTextContent("Self-Reported");
-    expect(badge.className).toContain("text-white/40");
+    expect(badge.className).toContain("text-white/60");
   });
 
   it("handles empty className without breaking layout classes", () => {
@@ -117,5 +118,16 @@ describe("TrustBadge", () => {
     const badge = screen.getByRole("status", { name: "Top Reputation" });
     expect(badge.className).toContain("text-[#51A2FF]");
     expect(badge.className).toContain("rounded-full");
+  });
+
+  describe("accessibility", () => {
+    it.each(TRUST_LEVELS)(
+      "should have no accessibility violations for $level trust level",
+      async ({ level }) => {
+        const { container } = render(<TrustBadge level={level} />);
+        const results = await axe(container);
+        expect(results).toHaveNoViolations();
+      }
+    );
   });
 });

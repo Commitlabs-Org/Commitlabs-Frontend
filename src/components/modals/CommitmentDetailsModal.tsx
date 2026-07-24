@@ -31,6 +31,9 @@ interface CommitmentDetailsModalProps {
   complianceItems: ComplianceItem[];
   onSelectComplianceItem?: (id: string) => void;
   TypeIcon: React.ComponentType<{ type: "Safe" | "Balanced" | "Aggressive" }>;
+  reputationScore?: number;
+  totalCommitments?: number;
+  successRate?: number;
 }
 
 function capitalizeType(

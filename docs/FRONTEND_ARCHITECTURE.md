@@ -78,11 +78,27 @@ api/
 - `src/lib/backend/cors.ts` defines `CorsRoutePolicy` objects that gate endpoints as `first-party` or `public`.
 - Rate limiting is applied per-IP via `checkRateLimit()` (`src/lib/backend/rateLimit.ts`).
 - Validation uses `zod` schemas at the top of each route handler.
-- API responses use helper functions `ok()` and `fail()` from `src/lib/backend/apiResponse.ts`.
+- API responses use helper functions `ok()`, `fail()`, and `attachSecurityHeaders()` from `src/lib/backend/apiResponse.ts`.
+- **Module Map / Canonical Utilities**: The `src/lib/backend/` directory is the single canonical source of truth for all API-related utilities and handlers. To prevent duplication and drift, backend utilities should not be placed or duplicated in `src/utils/`.
 
 ---
 
+## Fonts & typography
+
+Fonts are loaded via `next/font/google` in `src/app/layout.tsx` to avoid render-blocking `@import` of remote Google Fonts stylesheets.
+
+- `Inter` and `Roboto Mono` are self-hosted and configured with `display: swap`.
+- Tailwind’s font theme uses the existing `--font-roboto` CSS variable.
+
+## Image Conventions
+
+- Raster assets (PNG, JPG, WebP) should always be rendered using `next/image` rather than raw HTML `<img>` tags or CSS `background-image` attributes.
+- Use explicit `width` and `height` properties or the `fill` layout with an explicit container size to prevent Cumulative Layout Shift (CLS).
+- Always provide descriptive `alt` text for accessibility, or an empty string `alt=""` for purely decorative images.
+- Remote images (e.g., from IPFS gateways) are configured under `images.remotePatterns` in `next.config.js`.
+
 ## Wallet & Auth State Flow
+
 
 ### Auth flow
 
@@ -226,8 +242,26 @@ Footer
 
 ## Shared Components
 
+Component file convention: shared React components in `src/` should use TypeScript (`.ts`/`.tsx`) rather than untyped `.jsx` files.
+
+### Foldered Component Convention
+
+For components with associated styles, tests, or sub-components, use a foldered structure:
+```
+src/components/
+└── ComponentName/
+    ├── ComponentName.tsx  # Primary component implementation
+    ├── ComponentName.module.css  # Styles (if using CSS Modules)
+    ├── ComponentName.test.tsx  # Tests
+    ├── SubComponent.tsx  # Sub-components used only by this component
+    └── index.ts  # Optional: Export the component for easier imports
+```
+
+This convention keeps related files grouped together, making the codebase more organized and maintainable.
+
 | Component | File | Usage |
 |-----------|------|-------|
+| `EmptyState` | `src/components/ui/EmptyState.tsx` | Shared empty-state primitive used by `MyCommitmentsGrid`, `MarketplaceGrid`, `RecentAttestationsPanel`; accepts `title`, `description`, `icon`, `cta` (href or onClick) |
 | `ErrorLayout` | `src/components/ErrorLayout.tsx` | 500, 404, network-error, transaction-error pages |
 | `ErrorButton` | `src/components/ErrorButton.tsx` | Buttons on all error pages (supports `href`, `onClick`, `isExternal`) |
 | `Skeleton` | `src/components/Skeleton.tsx` | Generic shimmer placeholder |
@@ -278,3 +312,34 @@ Footer
 | Notification preferences API | `src/app/api/user/preferences/route.ts` |
 | TypeScript types | `src/types/commitment.ts`, `src/types/marketplace.ts` |
 | Test setup | `tests/setup/vitest.setup.ts` |
+
+## Formatting Utilities
+
+All numeric, currency, percentage, and date formatting is centralised in
+`src/utils/format.ts`. Components must use these helpers instead of
+inline `toLocaleString`, `toFixed`, or manual string construction.
+
+### Available helpers
+
+| Helper | Signature | Example output |
+|--------|-----------|----------------|
+| `formatNumber` | `(value, options?) → string` | `"1,234,567"` |
+| `formatCurrency` | `(value, options?) → string` | `"$9,500.00"` |
+| `formatPercent` | `(value, options?) → string` | `"12.3%"` |
+| `formatDate` | `(value, options?) → string` | `"Jun 29, 2026"` |
+
+### Fallback behaviour
+
+All helpers return `"--"` when passed `null`, `undefined`, `NaN`, or `Infinity`. Call sites never need to guard against bad input.
+
+### Options
+
+- **`formatNumber`**: `decimals` (default 0), `locale` (default `"en-US"`), `compact` (default `false`)
+- **`formatCurrency`**: `currency` (default `"USD"`), `decimals` (default 2), `locale`, `compact`
+- **`formatPercent`**: `decimals` (default 1), `isDecimal`, `showSign`, `locale`
+- **`formatDate`**: `style` (`"short"` | `"medium"` | `"long"` | `"full"`), `includeTime`, `locale`
+
+### Migrated components
+
+- `src/components/KPICard/KPICard.tsx` — uses `formatNumber`, `formatCurrency`, `formatPercent`
+- `src/components/MarketplaceCard.tsx` — uses `formatPercent`

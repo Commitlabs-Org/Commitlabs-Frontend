@@ -75,8 +75,15 @@ When building modals, verify the following:
 The following modals have been migrated to the `Dialog` primitive:
 - `CommitmentCreatedModal`
 - `CommitmentDetailsModal`
+- `CommitmentDisputeModal`
 - `SettlementModal`
 - `CommitmentEarlyExitModal`
 - `ExportCommitmentsModal`
 
-Do not reintroduce manual focus or scroll event listeners into these components.
+Do not reintroduce manual focus or scroll event listeners into these components. The `Dialog` primitive automatically guarantees:
+1. Focus trapping (cycles within the active dialog using keyboard Tab/Shift+Tab).
+2. Initial focus on mount (prioritizing the `initialFocusRef` if provided, falling back to the first focusable element, and then the dialog body).
+3. Focus restoration on unmount (returning focus to the previously active element).
+4. Body scroll locking while open.
+5. Sibling root elements accessibility hiding (setting `inert` and `aria-hidden="true"`).
+

@@ -123,12 +123,12 @@ function parseAuditEventFilters(searchParams: URLSearchParams): AuditEventFilter
     );
   }
 
-  return {
-    actor: actorParam?.trim() ?? undefined,
-    type: typeParam?.trim() ?? undefined,
-    startTime,
-    endTime,
-  };
+  const filters: AuditEventFilters = {};
+  if (actorParam !== null) filters.actor = actorParam.trim();
+  if (typeParam !== null) filters.type = typeParam.trim();
+  if (startTime !== undefined) filters.startTime = startTime;
+  if (endTime !== undefined) filters.endTime = endTime;
+  return filters;
 }
 
 /**

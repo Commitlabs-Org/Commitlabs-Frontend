@@ -1,4 +1,5 @@
 'use client';
+import { useRef, useEffect } from 'react';
 import { Shield, TrendingUp, Flame, ArrowRight, ChevronLeft, Info } from 'lucide-react';
 import WizardStepper from './WizardStepper';
 import styles from './CreateCommitmentStepSelectType.module.css';
@@ -21,6 +22,7 @@ interface CreateCommitmentStepSelectTypeProps {
   onSelectType: (type: 'safe' | 'balanced' | 'aggressive') => void;
   onNext: (type: 'safe' | 'balanced' | 'aggressive') => void;
   onBack: () => void;
+  initialFocusField?: string;
 }
 
 const commitmentTypes: CommitmentType[] = [
@@ -67,7 +69,24 @@ export default function CreateCommitmentStepSelectType({
   onSelectType,
   onNext,
   onBack,
+  initialFocusField,
 }: CreateCommitmentStepSelectTypeProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (initialFocusField) {
+      const element = document.getElementById(initialFocusField);
+      if (element) {
+        element.focus();
+        element.scrollIntoView({ block: 'center' });
+      }
+    }
+  }, [initialFocusField]);
+
   const handleContinue = () => {
     if (selectedType) {
       onNext(selectedType);
@@ -92,13 +111,20 @@ export default function CreateCommitmentStepSelectType({
         <WizardStepper currentStep={1} />
 
         <div className={styles.titleSection}>
-          <h2 className={styles.sectionTitle}>Choose Your Commitment Type</h2>
+          <h2 ref={headingRef} tabIndex={-1} className={styles.sectionTitle}>Choose Your Commitment Type</h2>
           <p className={styles.sectionSubtitle}>
             Select the risk profile that matches your investment strategy
           </p>
         </div>
 
-        <div className={styles.cardsContainer} role="radiogroup" aria-label="Commitment type">
+        <div
+          id="commitment-type-container"
+          className={styles.cardsContainer}
+          role="radiogroup"
+          aria-label="Commitment type"
+          tabIndex={-1}
+          style={{ outline: 'none' }}
+        >
           {commitmentTypes.map((type) => {
             const Icon = type.icon;
             const isSelected = selectedType === type.id;
@@ -199,6 +225,7 @@ export default function CreateCommitmentStepSelectType({
           <button
             onClick={handleContinue}
             disabled={!selectedType}
+            data-testid="select-type-continue"
             className={`${styles.continueBtn} ${
               selectedType ? styles.continueBtnEnabled : styles.continueBtnDisabled
             }`}

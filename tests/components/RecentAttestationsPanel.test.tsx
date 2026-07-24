@@ -3,7 +3,8 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
-import RecentAttestationsPanel, { Attestation } from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
+import RecentAttestationsPanel from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
+import { makePanelAttestation } from '../fixtures';
 
 vi.mock('@/components/RecentAttestationsPanel/RecentAttestationsPanel.module.css', () => ({
   default: new Proxy({}, { get: (_target, key) => String(key) }),
@@ -27,31 +28,31 @@ describe('RecentAttestationsPanel', () => {
     violationCount: 1,
   };
 
-  const attestations: Attestation[] = [
-    {
+  const attestations = [
+    makePanelAttestation({
       id: 'ok-1',
       title: 'All checks passed',
       description: 'This attestation is fully compliant.',
       txHash: '0123456789abcdef0123456789abcdef',
       timestamp: '2025-01-01T11:59:00.000Z',
       severity: 'ok',
-    },
-    {
+    }),
+    makePanelAttestation({
       id: 'warning-1',
       title: 'Minor issue detected',
       description: 'Review the warning for best practices.',
       txHash: 'abcdef0123456789abcdef0123456789',
       timestamp: new Date('2025-01-01T09:00:00.000Z'),
       severity: 'warning',
-    },
-    {
+    }),
+    makePanelAttestation({
       id: 'violation-1',
       title: 'Critical violation found',
       description: 'Immediate attention required.',
       txHash: 'fedcba9876543210fedcba9876543210',
       timestamp: '2024-12-30T12:00:00.000Z',
       severity: 'violation',
-    },
+    }),
   ];
 
   it('renders the main panel and summary counts', () => {

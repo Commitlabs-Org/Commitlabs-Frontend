@@ -1,4 +1,4 @@
-// src/components/__tests__/CommitmentDetailAllocationConstraints.test.tsx
+// @vitest-environment happy-dom
 import { render, screen } from "@testing-library/react";
 import CommitmentDetailAllocationConstraints from "../CommitmentDetailAllocationConstraints";
 import { Commitment } from "../../types/commitment";

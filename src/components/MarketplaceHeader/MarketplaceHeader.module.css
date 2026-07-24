@@ -224,6 +224,146 @@
     0 0 0 1px rgba(15, 240, 252, 0.2);
 }
 
+/* ── Stats summary ─────────────────────────────────────────────────────── */
+.statsSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.statItem {
+  white-space: nowrap;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+/* ── Sort control ──────────────────────────────────────────────────────── */
+.sortControl {
+  position: relative;
+}
+
+.sortSelect {
+  height: 44px;
+  padding: 0 2rem 0 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 10, 0.8);
+  color: #f5f5f7;
+  font-size: 0.9rem;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+}
+
+.sortSelect:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ── Typeahead spinner ─────────────────────────────────────────────────── */
+.searchSpinner {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinnerIcon {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Search error message ──────────────────────────────────────────────── */
+.searchError {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #fca5a5;
+  font-size: 0.78rem;
+  z-index: 20;
+}
+
+/* ── Results dropdown ──────────────────────────────────────────────────── */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0;
+  border-radius: 14px;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 30;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdownVisible {
+  display: block;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdownItem:hover,
+.dropdownItemActive {
+  background: rgba(15, 240, 252, 0.08);
+}
+
+.dropdownItemAsset {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f5f5f7;
+}
+
+.dropdownItemMeta {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.dropdownEmpty {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  cursor: default;
+}
+
 /* Tablet: allow wrapping */
 @media (max-width: 900px) {
   .inner {
