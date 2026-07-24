@@ -15,6 +15,7 @@ import {
   createAttestationSchema,
   DisputeReasonSchema,
   ResolveDisputeSchema,
+  addressSchema,
   stellarAddressSchema,
 } from "@/lib/backend/validation";
 
@@ -988,5 +989,45 @@ describe("ResolveDisputeSchema", () => {
         notes: "x".repeat(1001),
       })
     ).toThrow(z.ZodError);
+  });
+});
+
+// ─── Module import regression ────────────────────────────────────────────────
+
+describe("module imports", () => {
+  it("exports addressSchema and stellarAddressSchema as the same Zod schema", () => {
+    expect(addressSchema).toBeDefined();
+    expect(stellarAddressSchema).toBe(addressSchema);
+  });
+
+  it("addressSchema rejects non-Stellar addresses", () => {
+    expect(() => addressSchema.parse("not-a-key")).toThrow(z.ZodError);
+  });
+
+  it("addressSchema accepts valid Stellar addresses", () => {
+    expect(addressSchema.parse(VALID_ADDRESS)).toBe(VALID_ADDRESS);
+  });
+
+  it("addressSchema is referenced by createCommitmentSchema", () => {
+    expect(() =>
+      createCommitmentSchema.parse({
+        ownerAddress: VALID_ADDRESS,
+        asset: SUPPORTED_ASSET_XLM,
+        amount: 10,
+        durationDays: 1,
+        maxLossBps: 0,
+      })
+    ).not.toThrow();
+  });
+
+  it("addressSchema is referenced by createMarketplaceListingSchema", () => {
+    expect(() =>
+      createMarketplaceListingSchema.parse({
+        title: "t",
+        price: 1,
+        category: "c",
+        sellerAddress: VALID_ADDRESS,
+      })
+    ).not.toThrow();
   });
 });

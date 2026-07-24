@@ -50,14 +50,6 @@ export interface PaginationParams {
 }
 
 
-const amountSchema = z.union([z.string(), z.number()]).transform((val) => {
-  const num = typeof val === "string" ? parseFloat(val) : val;
-  if (isNaN(num) || num <= 0) {
-    throw new Error("Amount must be a positive number");
-  }
-  return num;
-});
-
 const _paginationSchema = z
   .object({
     page: z
@@ -87,27 +79,12 @@ const _paginationSchema = z
     page: data.page,
     limit: data.limit,
   }));
-const addressSchema = z
+export const addressSchema = z
   .string()
   .trim()
   .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
     message: "Must be a valid Stellar address (G... format).",
   });
-
-export const createCommitmentSchemaOld = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  amount: amountSchema,
-  creatorAddress: addressSchema,
-});
-
-export const createMarketplaceListingSchemaOld = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  price: amountSchema,
-  category: z.string().min(1, "Category is required"),
-  sellerAddress: addressSchema,
-});
 
 const DisputeReasonSchema = z.object({
     reason: z.string().min(1, "Dispute reason is required").max(500, "Reason must be 500 characters or less"),
@@ -124,8 +101,6 @@ export type DisputeReasonInput = z.infer<typeof DisputeReasonSchema>;
 export type ResolveDisputeInput = z.infer<typeof ResolveDisputeSchema>;
 export type FilterParams = Record<string, string | number | boolean>;
 
-const addressSchema2 = addressSchema;
-
 const amountSchema2 = z.coerce
   .number()
   .positive("Amount must be a positive number");
@@ -137,7 +112,7 @@ const _paginationSchema2 = z.object({
 
 
 export const createCommitmentSchema = z.object({
-  ownerAddress: addressSchema2,
+  ownerAddress: addressSchema,
   asset: z
     .string()
     .trim()
@@ -160,7 +135,7 @@ export const createMarketplaceListingSchema = z.object({
   description: z.string().trim().optional(),
   price: amountSchema2,
   category: z.string().trim().min(1, "Category is required"),
-  sellerAddress: addressSchema2,
+  sellerAddress: addressSchema,
 });
 
 export const createAttestationSchema = z.object({
@@ -337,7 +312,7 @@ export type CreateMarketplaceListingInput = z.infer<
 // Validate Stellar address
 export function validateAddress(address: string): string {
   try {
-    return addressSchema2.parse(address);
+    return addressSchema.parse(address);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new ValidationError(error.issues[0]?.message ?? "Invalid address", "address");
@@ -421,7 +396,7 @@ export function validateSupportedAsset(
  * @example
  * z.object({ ownerAddress: stellarAddressSchema })
  */
-export { addressSchema, addressSchema as stellarAddressSchema };
+export { addressSchema as stellarAddressSchema };
 
 // Amount schema: accept number or numeric string and coerce to number
 const amountSchema3 = z.union([z.number(), z.string()]).transform((v) => {
