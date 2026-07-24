@@ -4,7 +4,9 @@ This document details the architectural design of the CommitLabs Frontend applic
 
 ## 🏗 High-Level Architecture
 
+
 The application follows a standard **Next.js App Router** architecture, leveraging Server Components for static rendering and Client Components for interactivity.
+
 
 ### Component Diagram
 
@@ -19,9 +21,11 @@ graph TD
         Hooks[React Hooks]
         Context[React Context]
     end
+
     
     subgraph "Integration Layer"
-        SorobanUtils[Soroban Utils (src/utils/soroban.ts)]
+        ContractsService[Contracts Service (src/lib/backend/services/contracts.ts)]
+        SorobanUtils[Soroban Utils (src/utils/soroban.ts) - Addresses Only]
         Wallet[Wallet Adapter (Freighter)]
     end
     
@@ -30,12 +34,13 @@ graph TD
         Contracts[Soroban Smart Contracts]
     end
     
+    
     User -->|Interacts| Page
     Page -->|Renders| Comp
     Comp -->|Uses| Hooks
-    Hooks -->|Calls| SorobanUtils
-    SorobanUtils -->|Connects| Wallet
-    SorobanUtils -->|RPC Calls| Stellar
+    Hooks -->|Calls| ContractsService
+    ContractsService -->|RPC Calls| Stellar
+    ContractsService -->|Gets Addresses| SorobanUtils
     Wallet -->|Signs Tx| Stellar
     Stellar -->|Executes| Contracts
 ```
@@ -84,20 +89,16 @@ A secondary market for trading active commitments.
 sequenceDiagram
     participant User
     participant UI as Create Page
-    participant Utils as Soroban Utils
-    participant Wallet as Freighter Wallet
+    participant Service as Contracts Service
     participant Chain as Stellar Network
 
     User->>UI: Select Commitment Type
     User->>UI: Configure Amount & Duration
     User->>UI: Click "Create Commitment"
-    UI->>Utils: Prepare Transaction (create_commitment)
-    Utils->>Wallet: Request Signature
-    Wallet->>User: Prompt Approval
-    User->>Wallet: Approve Transaction
-    Wallet->>Chain: Submit Signed Transaction
-    Chain-->>Utils: Transaction Hash
-    Utils-->>UI: Success / Failure
+    UI->>Service: createCommitmentOnChain()
+    Service->>Chain: Invoke Contract (create_commitment)
+    Chain-->>Service: Transaction Hash & Result
+    Service-->>UI: Success / Failure
     UI->>User: Show Success Modal
 ```
 
@@ -112,9 +113,10 @@ The application interacts with three primary contracts:
 
 ### Wallet Integration
 
--   **Provider**: `@stellar/freighter-api`
--   **Usage**: Used to sign transactions for creating commitments and listing items on the marketplace.
--   **Status**: Currently in development (see `src/utils/soroban.ts`).
+-   **Provider**: Server-side signing using configured Soroban keys
+-   **Usage**: The contracts service handles transaction signing via configured server keys
+-   **Implementation**: See `src/lib/backend/services/contracts.ts` for chain interaction logic
+-   **Configuration**: Contract addresses are managed in `src/utils/soroban.ts`
 
 ## 🛡 Security & Performance
 

@@ -22,6 +22,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { UnauthorizedError } from './errors';
+import { verifySessionToken } from './auth';
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,13 @@ export const userPreferencesSchema = z.object({
             sms: z.boolean().optional(),
         })
         .optional(),
+    notificationCategories: z
+        .object({
+            expiry: z.boolean().optional(),
+            violation: z.boolean().optional(),
+            health_check: z.boolean().optional(),
+        })
+        .optional(),
     theme: z.enum(['light', 'dark', 'system']).optional(),
     language: z
         .string()
@@ -55,17 +63,37 @@ export const userPreferencesSchema = z.object({
         .max(10)
         .regex(/^[a-z]{2,3}(-[A-Z]{2,3})?$/, 'language must be a valid BCP-47 tag (e.g. "en", "en-US")')
         .optional(),
+    seenWizardTour: z.boolean().optional(),
+    overviewWidgetLayout: z
+        .array(
+            z.object({
+                id: z.string(),
+                label: z.string(),
+                visible: z.boolean(),
+                order: z.number().int().nonnegative(),
+            })
+        )
+        .optional(),
 });
 
 /** Shape returned/stored for a single wallet. */
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 
+/** Default ordered widget layout for the overview page. */
+export const DEFAULT_OVERVIEW_WIDGET_LAYOUT: NonNullable<UserPreferences['overviewWidgetLayout']> = [
+    { id: 'at-risk', label: 'At-Risk Commitments', visible: true, order: 0 },
+    { id: 'commitment-detail', label: 'Commitment Detail', visible: true, order: 1 },
+];
+
 /** The defaults applied when no preferences exist yet. */
 export const DEFAULT_PREFERENCES: Required<UserPreferences> = {
     displayCurrency: 'USD',
     notifications: { email: true, push: true, sms: false },
+    notificationCategories: { expiry: true, violation: true, health_check: true },
     theme: 'system',
     language: 'en',
+    seenWizardTour: false,
+    overviewWidgetLayout: DEFAULT_OVERVIEW_WIDGET_LAYOUT,
 };
 
 // ─── Storage Adapter Interface ───────────────────────────────────────────────
@@ -170,7 +198,7 @@ export function requireWalletAuth(authHeader: string | null): string {
     }
 
     const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+    if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer') {
         throw new UnauthorizedError(
             'Authorization header must be in format: Bearer <token>',
         );
@@ -178,16 +206,48 @@ export function requireWalletAuth(authHeader: string | null): string {
 
     const token = parts[1];
 
-    // Decode placeholder token: session_<address>_<timestamp>
-    const match = token.match(/^session_([A-Z0-9]+)_\d+$/);
-    if (!match) {
+    // Try to verify session token via the session store
+    const session = verifySessionToken(token);
+    if (!session.valid || !session.address) {
         throw new UnauthorizedError('Invalid or expired session token.');
     }
 
-    const address = match[1];
-    if (!address) {
-        throw new UnauthorizedError('Could not resolve wallet address from token.');
-    }
+    return session.address;
+}        
 
-    return address;
+
+// ─── Notification Category Filtering ─────────────────────────────────────────
+
+/** A notification category a user can opt out of. Derived from the schema. */
+
+export type NotificationCategory = keyof NonNullable<UserPreferences['notificationCategories']>;
+
+/**
+ * Whether a notification of `category` should be delivered, given the user's
+ * stored preferences.
+ *
+ * Safe-by-default: if preferences are unset, the category key is missing, or
+ * the category is unknown (e.g. a new notification `type` not yet in the
+ * schema), the notification IS delivered. A user only stops receiving a
+ * category by explicitly setting it to `false`.
+ */
+export function isNotificationCategoryEnabled(
+    category: string,
+    prefs: UserPreferences | null,
+): boolean {
+    const stored = (prefs?.notificationCategories ?? {}) as Record<string, boolean | undefined>;
+    const defaults = DEFAULT_PREFERENCES.notificationCategories as Record<string, boolean | undefined>;
+    return stored[category] ?? defaults[category] ?? true;
+}
+
+/**
+ * Filters notifications down to the categories the user has opted into.
+ * Pure and order-preserving — call it before pagination so `total` stays
+ * accurate.
+ */
+export function filterNotificationsByPreferences<T extends { type: string }>(
+    notifications: readonly T[],
+    prefs: UserPreferences | null,
+): T[] {
+    return notifications.filter((n) => isNotificationCategoryEnabled(n.type, prefs));
 }

@@ -1,68 +1,137 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockRequest, parseResponse } from './helpers';
-import { GET } from '@/app/api/marketplace/stats/route';
-import * as rateLimit from '@/lib/backend/rateLimit';
 
-// Mock the logger to avoid polluting test output
-vi.mock('@/lib/backend/logger', () => ({
-    logInfo: vi.fn(),
-    logWarn: vi.fn(),
-    logError: vi.fn(),
-    logDebug: vi.fn(),
+const { mockCache } = vi.hoisted(() => ({
+  mockCache: {
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+    invalidate: vi.fn(),
+  },
 }));
 
-// Mock rateLimit module
+vi.mock('@/lib/backend/cache/factory', () => ({
+  cache: mockCache,
+}));
+
 vi.mock('@/lib/backend/rateLimit', () => ({
-    checkRateLimit: vi.fn(),
+  checkRateLimit: vi.fn(),
 }));
+
+vi.mock('@/lib/backend/services/marketplace', () => ({
+  marketplaceService: {
+    getMarketplaceStats: vi.fn(),
+  },
+}));
+
+import { GET } from '@/app/api/marketplace/stats/route';
+import { CacheTTL } from '@/lib/backend/cache/index';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { marketplaceService } from '@/lib/backend/services/marketplace';
+
+const MARKETPLACE_STATS_KEY = 'commitlabs:marketplace:stats';
+
+const marketplaceStats = {
+  activeListings: 6,
+  averageYield: 12.43,
+  medianPrice: 130000,
+  typeBreakdown: {
+    Safe: 2,
+    Balanced: 2,
+    Aggressive: 2,
+  },
+};
+
+function makeRequest(ip = '203.0.113.20') {
+  return createMockRequest('http://localhost:3000/api/marketplace/stats', {
+    headers: {
+      'x-forwarded-for': ip,
+    },
+  });
+}
 
 describe('GET /api/marketplace/stats', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        // Default to allow
-        vi.mocked(rateLimit.checkRateLimit).mockResolvedValue(true);
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(checkRateLimit).mockResolvedValue(true);
+    mockCache.get.mockResolvedValue(null);
+    mockCache.set.mockResolvedValue(undefined);
+    vi.mocked(marketplaceService.getMarketplaceStats).mockResolvedValue(
+      marketplaceStats as any,
+    );
+  });
 
-    afterEach(() => {
-        vi.resetModules();
-    });
+  it('returns cached stats and marks the response as a cache hit', async () => {
+    mockCache.get.mockResolvedValue(marketplaceStats);
 
-    it('returns 200 with aggregated marketplace stats', async () => {
-        const req = createMockRequest('http://localhost/api/marketplace/stats');
-        
-        const response = await GET(req, { params: {} });
-        const result = await parseResponse(response);
+    const res = await GET(makeRequest(), { params: {} }, 'corr-stats-hit');
+    const { status, data, headers } = await parseResponse(res);
 
-        expect(response.status).toBe(200);
-        expect(result.data.success).toBe(true);
-        expect(result.data.data).toHaveProperty('activeListings');
-        expect(result.data.data).toHaveProperty('averageYield');
-        expect(result.data.data).toHaveProperty('medianPrice');
-        
-        expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=30');
-    });
+    expect(status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data).toEqual(marketplaceStats);
+    expect(headers.get('X-Cache')).toBe('HIT');
+    expect(headers.get('Cache-Control')).toBe(
+      'public, s-maxage=60, stale-while-revalidate=30',
+    );
+    expect(mockCache.get).toHaveBeenCalledWith(MARKETPLACE_STATS_KEY);
+    expect(marketplaceService.getMarketplaceStats).not.toHaveBeenCalled();
+    expect(mockCache.set).not.toHaveBeenCalled();
+  });
 
-    it('returns stats matching the expected mock data values', async () => {
-        const req = createMockRequest('http://localhost/api/marketplace/stats');
-        const response = await GET(req, { params: {} });
-        const result = await parseResponse(response);
+  it('fetches, caches, and returns stats on a cache miss', async () => {
+    const res = await GET(makeRequest(), { params: {} }, 'corr-stats-miss');
+    const { status, data, headers } = await parseResponse(res);
 
-        const stats = result.data.data;
-        expect(stats.activeListings).toBe(6);
-        expect(stats.medianPrice).toBe(130000);
-        expect(stats.averageYield).toBe(12.43);
-        expect(stats.typeBreakdown.Safe).toBe(2);
-    });
+    expect(status).toBe(200);
+    expect(data.data).toEqual(marketplaceStats);
+    expect(headers.get('X-Cache')).toBe('MISS');
+    expect(marketplaceService.getMarketplaceStats).toHaveBeenCalledTimes(1);
+    expect(mockCache.set).toHaveBeenCalledWith(
+      MARKETPLACE_STATS_KEY,
+      marketplaceStats,
+      CacheTTL.MARKETPLACE_STATS,
+    );
+  });
 
-    it('should return 429 when rate limit is exceeded', async () => {
-        vi.mocked(rateLimit.checkRateLimit).mockResolvedValue(false);
+  it('returns zero-listing stats with the same response shape', async () => {
+    const zeroStats = {
+      activeListings: 0,
+      averageYield: 0,
+      medianPrice: 0,
+      typeBreakdown: {
+        Safe: 0,
+        Balanced: 0,
+        Aggressive: 0,
+      },
+    };
+    vi.mocked(marketplaceService.getMarketplaceStats).mockResolvedValue(
+      zeroStats as any,
+    );
 
-        const req = createMockRequest('http://localhost/api/marketplace/stats');
-        const response = await GET(req, { params: {} });
-        const result = await parseResponse(response);
+    const res = await GET(makeRequest(), { params: {} }, 'corr-stats-zero');
+    const { status, data, headers } = await parseResponse(res);
 
-        expect(response.status).toBe(429);
-        expect(result.data.success).toBe(false);
-        expect(result.data.error.code).toBe('RATE_LIMIT_EXCEEDED');
-    });
+    expect(status).toBe(200);
+    expect(data.data).toEqual(zeroStats);
+    expect(headers.get('X-Cache')).toBe('MISS');
+    expect(mockCache.set).toHaveBeenCalledWith(
+      MARKETPLACE_STATS_KEY,
+      zeroStats,
+      CacheTTL.MARKETPLACE_STATS,
+    );
+  });
+
+  it('returns 429 without reading cache when rate limited', async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue(false);
+
+    const res = await GET(makeRequest(), { params: {} }, 'corr-stats-limit');
+    const { status, data } = await parseResponse(res);
+
+    expect(status).toBe(429);
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('RATE_LIMIT_EXCEEDED');
+    expect(mockCache.get).not.toHaveBeenCalled();
+    expect(marketplaceService.getMarketplaceStats).not.toHaveBeenCalled();
+  });
 });

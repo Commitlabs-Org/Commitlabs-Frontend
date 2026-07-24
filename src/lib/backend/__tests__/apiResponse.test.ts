@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { ok, fail, getCorrelationId } from '../apiResponse';
+import { ok, fail, getCorrelationId, attachSecurityHeaders } from '../apiResponse';
 
 describe('API Response Contract', () => {
     describe('getCorrelationId', () => {
@@ -55,6 +55,22 @@ describe('API Response Contract', () => {
             const id2 = getCorrelationId(req2);
 
             expect(id1).not.toBe(id2);
+        });
+    });
+
+    describe('methodNotAllowed', () => {
+        it('should return a 405 response with the Allow header', async () => {
+            const { methodNotAllowed } = await import('../apiResponse');
+            const handler = methodNotAllowed(['GET', 'POST']);
+            const req = new NextRequest('http://localhost:3000/api/test');
+            const res = await handler(req);
+
+            expect(res.status).toBe(405);
+            expect(res.headers.get('Allow')).toBe('GET, POST');
+
+            const json = await res.json();
+            expect(json.success).toBe(false);
+            expect(json.error.code).toBe('METHOD_NOT_ALLOWED');
         });
     });
 
@@ -270,6 +286,60 @@ describe('API Response Contract', () => {
                     },
                 });
             });
+        });
+    });
+
+    describe('attachSecurityHeaders', () => {
+        it('should attach all security headers with default values', () => {
+            const response = new Response('ok');
+            const modifiedResponse = attachSecurityHeaders(response);
+
+            const headers = modifiedResponse.headers;
+            
+            expect(headers.get('Content-Security-Policy')).toBe("default-src 'self'");
+            expect(headers.get('X-Content-Type-Options')).toBe('nosniff');
+            expect(headers.get('X-Frame-Options')).toBe('DENY');
+            expect(headers.get('X-XSS-Protection')).toBe('1; mode=block');
+            expect(headers.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
+            expect(headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
+        });
+
+        it('should allow overriding Content-Security-Policy', () => {
+            const response = new Response('ok');
+            const customCsp = "default-src 'none'; script-src 'self'";
+            const modifiedResponse = attachSecurityHeaders(response, customCsp);
+
+            expect(modifiedResponse.headers.get('Content-Security-Policy')).toBe(customCsp);
+        });
+
+        it('should omit Strict-Transport-Security when the response URL is plain HTTP', () => {
+            const response = new Response('ok');
+            
+            // Mock the URL property to be http://example.com
+            Object.defineProperty(response, 'url', {
+                value: 'http://example.com',
+                writable: false,
+            });
+
+            const modifiedResponse = attachSecurityHeaders(response);
+            
+            expect(modifiedResponse.headers.has('Strict-Transport-Security')).toBe(false);
+            // Other headers should still be present
+            expect(modifiedResponse.headers.get('X-Frame-Options')).toBe('DENY');
+        });
+
+        it('should include Strict-Transport-Security when the response URL is HTTPS', () => {
+            const response = new Response('ok');
+            
+            // Mock the URL property to be https://example.com
+            Object.defineProperty(response, 'url', {
+                value: 'https://example.com',
+                writable: false,
+            });
+
+            const modifiedResponse = attachSecurityHeaders(response);
+            
+            expect(modifiedResponse.headers.get('Strict-Transport-Security')).toBe('max-age=31536000; includeSubDomains');
         });
     });
 });

@@ -1,5 +1,5 @@
 import { NextRequest, type NextResponse } from 'next/server';
-import { ok } from '@/lib/backend/apiResponse';
+import { ok, attachSecurityHeaders } from '@/lib/backend/apiResponse';
 import { TooManyRequestsError } from '@/lib/backend/errors';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import {
@@ -8,7 +8,6 @@ import {
   type MarketplacePublicListing,
 } from '@/lib/backend/services/marketplace';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { attachSecurityHeaders } from '@/utils/response';
 
 interface FeaturedMarketplaceResponse {
   listings: MarketplacePublicListing[];

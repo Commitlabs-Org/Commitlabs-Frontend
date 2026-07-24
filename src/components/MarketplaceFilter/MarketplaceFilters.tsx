@@ -1,6 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 type CommitmentType = "balanced" | "aggressive" | "conservative";
 
@@ -26,15 +27,17 @@ interface MarketplaceFiltersProps {
   onClose?: () => void;
 }
 
+const DEFAULTS: Filters = {
+  sortBy: "price",
+  commitmentType: ["balanced"],
+  priceRange: [0, 1000000],
+  durationRange: [0, 90],
+  minCompliance: 0,
+  maxLoss: 100,
+};
+
 const MarketplaceFilters = ({
-  filters = {
-    sortBy: "price",
-    commitmentType: ["balanced"],
-    priceRange: [0, 1000000],
-    durationRange: [0, 90],
-    minCompliance: 0,
-    maxLoss: 100,
-  },
+  filters = DEFAULTS,
   onFilterChange,
 }: MarketplaceFiltersProps) => {
   const [localFilters, setLocalFilters] = useState<Filters>(filters);
@@ -49,27 +52,62 @@ const MarketplaceFilters = ({
 
   const [sidebarSearch, setSidebarSearch] = useState("");
 
+  // Separate debounced state for continuous (range/text) inputs only.
+  // Discrete toggles (commitmentType, sortBy) bypass debounce for instant feedback.
+  const [continuousFilters, setContinuousFilters] = useState<
+    Pick<Filters, "priceRange" | "durationRange" | "minCompliance" | "maxLoss">
+  >({
+    priceRange: filters.priceRange,
+    durationRange: filters.durationRange,
+    minCompliance: filters.minCompliance,
+    maxLoss: filters.maxLoss,
+  });
+
+  const debouncedContinuous = useDebounce(continuousFilters, 300);
+
+  // Track whether this is the initial mount to avoid double-firing on load.
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    const merged: Filters = { ...localFilters, ...debouncedContinuous };
+    onFilterChange?.(merged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedContinuous]);
+
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const handleFilterUpdate = <K extends keyof Filters>(key: K, value: Filters[K]) => {
+  /** For discrete controls (toggles, sort): apply immediately. */
+  const handleDiscreteUpdate = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     const updated = { ...localFilters, [key]: value };
     setLocalFilters(updated);
     onFilterChange?.(updated);
   };
 
+  /** For continuous controls (range sliders): debounce the propagation. */
+  const handleContinuousUpdate = <K extends keyof typeof continuousFilters>(
+    key: K,
+    value: (typeof continuousFilters)[K],
+  ) => {
+    setLocalFilters((prev) => ({ ...prev, [key]: value }));
+    setContinuousFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleReset = () => {
-    const defaults: Filters = {
-      sortBy: "price",
-      commitmentType: ["balanced"],
-      priceRange: [0, 1000000],
-      durationRange: [0, 90],
-      minCompliance: 0,
-      maxLoss: 100,
-    };
-    setLocalFilters(defaults);
-    onFilterChange?.(defaults);
+    setLocalFilters(DEFAULTS);
+    setContinuousFilters({
+      priceRange: DEFAULTS.priceRange,
+      durationRange: DEFAULTS.durationRange,
+      minCompliance: DEFAULTS.minCompliance,
+      maxLoss: DEFAULTS.maxLoss,
+    });
+    // Cancel any pending debounced apply by immediately notifying with defaults.
+    onFilterChange?.(DEFAULTS);
   };
 
   const formatCurrency = (value: number) => {
@@ -78,21 +116,51 @@ const MarketplaceFilters = ({
     return `$${value}`;
   };
 
+  const renderSectionToggle = (
+    section: string,
+    label: string,
+    panelId: string,
+    options?: { headingClassName?: string },
+  ) => (
+    <button
+      type="button"
+      className={`focus-ring flex w-full items-center justify-between cursor-pointer py-1.5 bg-transparent border-0 text-left text-white ${
+        options?.headingClassName ?? "text-sm font-medium"
+      }`}
+      onClick={() => toggleSection(section)}
+      aria-expanded={expandedSections[section]}
+      aria-controls={panelId}
+    >
+      <span>{label}</span>
+      {section !== "sort" &&
+        (expandedSections[section] ? (
+          <ChevronUp size={18} aria-hidden="true" />
+        ) : (
+          <ChevronDown size={18} aria-hidden="true" />
+        ))}
+    </button>
+  );
+
   return (
     <aside
       className="focus-ring-container custom-scrollbar w-full md:fixed md:top-28 lg:left-10 xl:left-20 md:h-[600px] md:overflow-y-scroll md:w-80 bg-[#0A0A0A] border border-white/10 rounded-xl p-5 text-white custom-scrollbar"
+      aria-label="Marketplace filters"
     >
+      {/* Saved Searches */}
+      <SavedSearches filters={filters} onApplyFilters={onFilterChange || (() => {})} />
+
       {/* Sort By */}
       <div className="mb-4 border-b border-white/5 pb-3">
+        {renderSectionToggle("sort", "Sort By", "marketplace-filter-sort", {
+          headingClassName: "text-lg font-semibold",
+        })}
         <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("sort")}
+          id="marketplace-filter-sort"
+          className="mt-2"
+          hidden={!expandedSections.sort}
         >
-          <span className="text-lg font-semibold">Sort By</span>
-        </div>
-        <div className="mt-2">
           <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} aria-hidden="true" />
             <input
               type="text"
               placeholder="Search filters..."
@@ -104,17 +172,11 @@ const MarketplaceFilters = ({
         </div>
       </div>
 
-      {/* Commitment Type */}
+      {/* Commitment Type - discrete toggle, immediate */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("type")}
-        >
-          <span className="text-sm font-medium">Commitment Type</span>
-          {expandedSections.type ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle("type", "Commitment Type", "marketplace-filter-type")}
         {expandedSections.type && (
-          <div className="mt-2 flex flex-col gap-3">
+          <div id="marketplace-filter-type" className="mt-2 flex flex-col gap-3">
             {commitmentTypes.map((type) => {
               const isActive = localFilters.commitmentType.includes(type);
               return (
@@ -129,7 +191,7 @@ const MarketplaceFilters = ({
                     const next = isActive
                       ? current.filter((t) => t !== type)
                       : [...current, type];
-                    handleFilterUpdate("commitmentType", next);
+                    handleDiscreteUpdate("commitmentType", next);
                   }}
                   aria-pressed={isActive}
                 >
@@ -160,19 +222,12 @@ const MarketplaceFilters = ({
         )}
       </div>
 
-      {/* Price Range */}
+      {/* Price Range - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("price")}
-        >
-          <span className="text-sm font-medium">Price Range</span>
-          {expandedSections.price ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle("price", "Price Range", "marketplace-filter-price")}
         {expandedSections.price && (
-          <div className="mt-3">
+          <div id="marketplace-filter-price" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
-              {/* Active range */}
               <div
                 className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
                 style={{
@@ -180,15 +235,15 @@ const MarketplaceFilters = ({
                   width: `${(localFilters.priceRange[1] / 1000000) * 100}%`,
                 }}
               />
-              {/* Draggable handle */}
               <input
+                aria-label="Maximum price"
                 type="range"
                 min="0"
                 max="1000000"
                 step="10000"
                 value={localFilters.priceRange[1]}
                 onChange={(e) =>
-                  handleFilterUpdate("priceRange", [0, Number(e.target.value)])
+                  handleContinuousUpdate("priceRange", [0, Number(e.target.value)])
                 }
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
@@ -201,17 +256,15 @@ const MarketplaceFilters = ({
         )}
       </div>
 
-      {/* Duration */}
+      {/* Duration - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("duration")}
-        >
-          <span className="text-sm font-medium">Duration Remaining</span>
-          {expandedSections.duration ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle(
+          "duration",
+          "Duration Remaining",
+          "marketplace-filter-duration",
+        )}
         {expandedSections.duration && (
-          <div className="mt-3">
+          <div id="marketplace-filter-duration" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div
                 className="absolute h-1.5 bg-[#4A6B8A] rounded-full"
@@ -221,13 +274,14 @@ const MarketplaceFilters = ({
                 }}
               />
               <input
+                aria-label="Maximum duration remaining"
                 type="range"
                 min="0"
                 max="90"
                 step="1"
                 value={localFilters.durationRange[1]}
                 onChange={(e) =>
-                  handleFilterUpdate("durationRange", [0, Number(e.target.value)])
+                  handleContinuousUpdate("durationRange", [0, Number(e.target.value)])
                 }
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
@@ -240,25 +294,24 @@ const MarketplaceFilters = ({
         )}
       </div>
 
-      {/* Compliance */}
+      {/* Compliance - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("compliance")}
-        >
-          <span className="text-sm font-medium">Min Compliance Score</span>
-          {expandedSections.compliance ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle(
+          "compliance",
+          "Min Compliance Score",
+          "marketplace-filter-compliance",
+        )}
         {expandedSections.compliance && (
-          <div className="mt-3">
+          <div id="marketplace-filter-compliance" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.minCompliance}%` }} />
               <input
+                aria-label="Minimum compliance score"
                 type="range"
                 min="0"
                 max="100"
                 value={localFilters.minCompliance}
-                onChange={(e) => handleFilterUpdate("minCompliance", Number(e.target.value))}
+                onChange={(e) => handleContinuousUpdate("minCompliance", Number(e.target.value))}
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
@@ -270,25 +323,24 @@ const MarketplaceFilters = ({
         )}
       </div>
 
-      {/* Max Loss */}
+      {/* Max Loss - continuous, debounced */}
       <div className="mb-4 border-b border-white/5 pb-3">
-        <div
-          className="flex items-center justify-between cursor-pointer py-1.5"
-          onClick={() => toggleSection("loss")}
-        >
-          <span className="text-sm font-medium">Max Loss Threshold</span>
-          {expandedSections.loss ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
+        {renderSectionToggle(
+          "loss",
+          "Max Loss Threshold",
+          "marketplace-filter-loss",
+        )}
         {expandedSections.loss && (
-          <div className="mt-3">
+          <div id="marketplace-filter-loss" className="mt-3">
             <div className="relative h-1.5 bg-white/10 rounded-full">
               <div className="absolute h-1.5 bg-[#4A6B8A] rounded-full" style={{ width: `${localFilters.maxLoss}%` }} />
               <input
+                aria-label="Maximum loss threshold"
                 type="range"
                 min="0"
                 max="100"
                 value={localFilters.maxLoss}
-                onChange={(e) => handleFilterUpdate("maxLoss", Number(e.target.value))}
+                onChange={(e) => handleContinuousUpdate("maxLoss", Number(e.target.value))}
                 className="focus-ring absolute w-full top-[-6px] h-6 appearance-none bg-transparent pointer-events-auto cursor-pointer rounded-md"
               />
             </div>
@@ -301,6 +353,7 @@ const MarketplaceFilters = ({
       </div>
 
       <button
+        type="button"
         onClick={handleReset}
         className="focus-ring w-full mt-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/20 hover:text-white transition"
       >

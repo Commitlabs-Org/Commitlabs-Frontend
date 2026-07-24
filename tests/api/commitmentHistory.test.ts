@@ -1,48 +1,57 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockRequest, parseResponse } from './helpers';
+import { makeCommitment, makeAttestation } from '../fixtures';
 
 // ---------------------------------------------------------------------------
 // Shared mock data
 // ---------------------------------------------------------------------------
 
 const MOCK_COMMITMENT = {
-  id: 'CMT-001',
+  ...makeCommitment({
+    id: 'CMT-001',
+    asset: 'XLM',
+    amount: '50000',
+    complianceScore: 95,
+    currentValue: '52000',
+    createdAt: '2026-01-10T00:00:00.000Z',
+    expiresAt: '2026-03-10T00:00:00.000Z',
+  }),
   ownerAddress: 'GOWNER',
-  asset: 'XLM',
-  amount: '50000',
   status: 'ACTIVE' as const,
-  complianceScore: 95,
-  currentValue: '52000',
   feeEarned: '200',
   violationCount: 0,
-  createdAt: '2026-01-10T00:00:00.000Z',
-  expiresAt: '2026-03-10T00:00:00.000Z',
 };
 
 const MOCK_ATTESTATIONS = [
   {
-    id: 'ATTR-001',
-    commitmentId: 'CMT-001',
-    kind: 'health_check',
-    observedAt: '2026-01-11T12:00:00Z',
-    txHash: '0xabc',
-    severity: 'ok' as const,
+    ...makeAttestation({
+      id: 'ATTR-001',
+      commitmentId: 'CMT-001',
+      kind: 'health_check',
+      observedAt: '2026-01-11T12:00:00Z',
+      txHash: '0xabc',
+      severity: 'ok',
+    }),
     details: { complianceScore: 95, violation: false },
   },
   {
-    id: 'ATTR-002',
-    commitmentId: 'CMT-001',
-    kind: 'fee_generation',
-    observedAt: '2026-01-15T08:00:00Z',
-    severity: 'ok' as const,
+    ...makeAttestation({
+      id: 'ATTR-002',
+      commitmentId: 'CMT-001',
+      kind: 'fee_generation',
+      observedAt: '2026-01-15T08:00:00Z',
+      severity: 'ok',
+    }),
     details: { feeEarned: '100' },
   },
   {
-    id: 'ATTR-OTHER',
-    commitmentId: 'CMT-999', // different commitment — must be excluded
-    kind: 'health_check',
-    observedAt: '2026-01-12T00:00:00Z',
-    severity: 'ok' as const,
+    ...makeAttestation({
+      id: 'ATTR-OTHER',
+      commitmentId: 'CMT-999', // different commitment — must be excluded
+      kind: 'health_check',
+      observedAt: '2026-01-12T00:00:00Z',
+      severity: 'ok',
+    }),
     details: {},
   },
 ];

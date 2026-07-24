@@ -157,6 +157,7 @@ export const HTTP_ERROR_CODES: Record<number, string> = {
 
 export type BackendErrorCode =
   | "BAD_REQUEST"
+  | "NOT_MATURED"
   | "VALIDATION_ERROR"
   | "UNAUTHORIZED"
   | "FORBIDDEN"
@@ -206,14 +207,140 @@ export function isBackendError(value: unknown): value is BackendError {
   return value instanceof BackendError;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function isRetryableStatus(status: number): boolean {
+  return [429, 503, 504].includes(status);
+}
+
+function classifyBackendError(
+  error: unknown,
+):
+  | {
+      code: BackendErrorCode;
+      status: number;
+      message: string;
+      retryable: boolean;
+    }
+  | undefined {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  const errStr = errMessage.toLowerCase();
+
+  if (
+    errStr.includes("timeout") ||
+    errStr.includes("deadline") ||
+    errStr.includes("timed out")
+  ) {
+    return {
+      code: "GATEWAY_TIMEOUT",
+      status: 504,
+      message:
+        "The blockchain operation timed out. It may still be processed later.",
+      retryable: true,
+    };
+  }
+
+  if (
+    errStr.includes("429") ||
+    errStr.includes("rate limit") ||
+    errStr.includes("too many requests")
+  ) {
+    return {
+      code: "TOO_MANY_REQUESTS",
+      status: 429,
+      message: "Rate limit exceeded for blockchain calls. Please try again later.",
+      retryable: true,
+    };
+  }
+
+  if (
+    errStr.includes("503") ||
+    errStr.includes("service unavailable") ||
+    errStr.includes("temporarily unavailable")
+  ) {
+    return {
+      code: "SERVICE_UNAVAILABLE",
+      status: 503,
+      message: "Blockchain service is temporarily unavailable. Please try again later.",
+      retryable: true,
+    };
+  }
+
+  if (errStr.includes("not found") || errStr.includes("404")) {
+    return {
+      code: "NOT_FOUND",
+      status: 404,
+      message: "The requested resource was not found on the blockchain.",
+      retryable: false,
+    };
+  }
+
+  if (
+    errStr.includes("insufficient") ||
+    errStr.includes("invalid") ||
+    errStr.includes("malformed")
+  ) {
+    return {
+      code: "VALIDATION_ERROR",
+      status: 400,
+      message:
+        "The transaction was rejected due to invalid parameters or state.",
+      retryable: false,
+    };
+  }
+
+  return undefined;
+}
+
 export function normalizeBackendError(
   error: unknown,
   fallback: Omit<BackendErrorOptions, "cause">,
 ): BackendError {
   if (isBackendError(error)) {
-    return error;
+    const details = {
+      ...asRecord(error.details),
+      ...asRecord(fallback.details),
+    };
+    const retryable =
+      asRecord(error.details).retryable === true ||
+      isRetryableStatus(error.status);
+
+    return new BackendError({
+      code: error.code,
+      message: error.message,
+      status: error.status,
+      details: {
+        ...details,
+        retryable,
+      },
+      cause: error,
+    });
   }
-  return new BackendError({ ...fallback, cause: error });
+
+  const classified =
+    fallback.code === "BLOCKCHAIN_CALL_FAILED"
+      ? classifyBackendError(error)
+      : undefined;
+
+  const status = classified?.status ?? fallback.status;
+  const code = classified?.code ?? fallback.code;
+  const message = classified?.message ?? fallback.message;
+  const retryable = classified?.retryable ?? isRetryableStatus(fallback.status);
+
+  return new BackendError({
+    code,
+    message,
+    status,
+    details: {
+      ...asRecord(fallback.details),
+      retryable,
+    },
+    cause: error,
+  });
 }
 
 export function toBackendErrorResponse(

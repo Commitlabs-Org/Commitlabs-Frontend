@@ -1,26 +1,29 @@
 /**
  * Soroban Utility Functions
  *
- * This module handles all interactions with the Stellar network and Soroban smart contracts.
- * It uses the @stellar/stellar-sdk and @stellar/freighter-api libraries.
+ * This module provides contract address configuration and network constants.
+ * All actual blockchain interactions are handled by the contracts service.
  *
- * CURRENT STATUS:
- * - Contract addresses are loaded from environment variables.
- * - Wallet connection and contract interaction functions are placeholders.
- * - TODO: Implement `connectWallet`, `callContract`, and `readContract` using the SDK.
+ * SINGLE SOURCE OF TRUTH:
+ * - Contract addresses: This module (via contractAddresses getters)
+ * - Chain interactions: src/lib/backend/services/contracts.ts
+ * - Client environment variables: src/lib/clientEnv.ts
+ *
+ * For wallet connection, contract calls, and contract reads, use:
+ * @see src/lib/backend/services/contracts.ts
  */
 
-// Soroban utility functions and configuration
-// TODO: Implement actual Soroban contract interactions
+import { getContractAddress } from "../lib/backend/config";
+import { getValidatedClientEnv } from "../lib/clientEnv";
+
+const clientEnv = getValidatedClientEnv();
 
 export const rpcUrl =
-  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ||
+  clientEnv.NEXT_PUBLIC_SOROBAN_RPC_URL ||
   "https://soroban-testnet.stellar.org:443";
 export const networkPassphrase =
-  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ||
+  clientEnv.NEXT_PUBLIC_NETWORK_PASSPHRASE ||
   "Test SDF Network ; September 2015";
-
-import { getContractAddress } from "../lib/backend/config";
 
 /**
  * Lazily-loaded contract addresses to avoid build-time errors when env vars aren't set.
@@ -49,29 +52,3 @@ export const contractAddresses = {
     }
   },
 };
-
-// TODO: Implement wallet connection
-export async function connectWallet() {
-  // Placeholder for wallet connection logic
-  throw new Error("Wallet connection not implemented");
-}
-
-// TODO: Implement contract calls
-export async function callContract(
-  contractAddress: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-  functionName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-  args: any[], // eslint-disable-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-) {
-  // Placeholder for contract call logic
-  throw new Error("Contract calls not implemented");
-}
-
-// TODO: Implement contract reads
-export async function readContract(
-  contractAddress: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-  functionName: string, // eslint-disable-line @typescript-eslint/no-unused-vars
-  args: any[], // eslint-disable-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-) {
-  // Placeholder for contract read logic
-  throw new Error("Contract reads not implemented");
-}

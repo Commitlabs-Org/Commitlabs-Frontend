@@ -52,6 +52,7 @@ Public browser routes:
 - `GET /api/ready`
 - `GET /api/marketplace`
 - `GET /api/marketplace/listings`
+- `GET /api/marketplace/listings/[id]`
 - `GET /api/attestations`
 
 First-party browser routes:

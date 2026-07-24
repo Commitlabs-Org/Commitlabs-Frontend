@@ -1,16 +1,20 @@
-'use client';
+"use client";
+import { ReputationDisplay } from "./ReputationDisplay";
 
-import { useState } from "react";
-import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
+import { memo, useState, useEffect } from "react";
 import Link from "next/link";
+import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
+import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
 import { TrustBadge, TrustLevel } from "./TrustBadge";
-
+import { formatPercent } from '@/utils/format';
 export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 
 export interface MarketplaceCardProps {
   id: string;
   type: CommitmentType;
-  score: number;
+  score: number; // reputation score (0-100)
+  totalCommitments?: number; // optional seller total commitments
+  successRate?: number; // optional seller success rate percentage
   amount: string;
   duration: string;
   yield: string;
@@ -20,6 +24,13 @@ export interface MarketplaceCardProps {
   forSale: boolean;
   tradeHref?: string;
   trustLevel?: TrustLevel;
+  /** Called when user confirms a purchase. Receives the commitment id and
+   *  must return (or resolve to) a tx hash string, or undefined on failure. */
+  onPurchase?: (id: string) => Promise<string | undefined> | string | undefined;
+  compareSelected?: boolean;
+  compareDisabled?: boolean;
+  onCompareToggle?: () => void;
+  onView?: (id: string) => void;
 }
 
 function clampScore(score: number) {
@@ -100,9 +111,9 @@ function TypeIcon({ type }: { type: CommitmentType }) {
       <path
         d="M9.91461 16.9137C10.688 16.9137 11.4297 16.6064 11.9766 16.0596C12.5235 15.5127 12.8307 14.771 12.8307 13.9976C12.8307 12.3879 12.2475 11.6647 11.6643 10.4982C10.4138 7.99851 11.403 5.76942 13.9972 3.49951C14.5804 6.41564 16.3301 9.21512 18.663 11.0814C20.9959 12.9478 22.1623 15.164 22.1623 17.4969C22.1623 18.5692 21.9511 19.6309 21.5408 20.6216C21.1305 21.6122 20.529 22.5123 19.7708 23.2705C19.0126 24.0287 18.1125 24.6302 17.1218 25.0405C16.1312 25.4509 15.0694 25.6621 13.9972 25.6621C12.9249 25.6621 11.8632 25.4509 10.8725 25.0405C9.88187 24.6302 8.98175 24.0287 8.22355 23.2705C7.46534 22.5123 6.8639 21.6122 6.45357 20.6216C6.04323 19.6309 5.83203 18.5692 5.83203 17.4969C5.83203 16.152 6.3371 14.8211 6.99848 13.9976C6.99848 14.771 7.30571 15.5127 7.85259 16.0596C8.39947 16.6064 9.1412 16.9137 9.91461 16.9137Z"
         stroke="#FF8904"
-        stroke-width="2.3329"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="2.3329"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -163,10 +174,31 @@ function DollarSignIcon() {
   );
 }
 
-export function MarketplaceCard({
+function CompareIcon({ selected }: { selected: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M2 4H14M2 8H14M2 12H10"
+        stroke={selected ? "#0FF0FC" : "currentColor"}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MarketplaceCardComponent({
   id,
   type,
   score,
+  totalCommitments,
+  successRate,
   amount,
   duration,
   yield: apy,
@@ -176,39 +208,67 @@ export function MarketplaceCard({
   forSale,
   tradeHref,
   trustLevel,
+  onPurchase,
+  compareSelected = false,
+  compareDisabled = false,
+  onCompareToggle,
+  onView,
 }: MarketplaceCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPurchaseSuccessOpen, setIsPurchaseSuccessOpen] = useState(false);
+  const [purchaseTxHash, setPurchaseTxHash] = useState<string | undefined>();
+  const [isPurchasing, setIsPurchasing] = useState(false);
+
+  useEffect(() => {
+    if (isModalOpen && onView) {
+      onView(id);
+    }
+  }, [isModalOpen, id, onView]);
 
   const clampedScore = clampScore(score);
   const cardBorderClass =
     type === "Safe"
       ? "border-[#00C95066]"
       : type === "Balanced"
-      ? "border-[#2B7FFF66]"
-      : "border-[#FF690066]";
+        ? "border-[#2B7FFF66]"
+        : "border-[#FF690066]";
 
   const scoreColorClass =
     type === "Safe"
       ? "text-[#00C950]/95"
       : type === "Balanced"
-      ? "text-[#51A2FF]/95"
-      : "text-[#FF8904]/95";
+        ? "text-[#51A2FF]/95"
+        : "text-[#FF8904]/95";
 
   const badgeClass =
     type === "Safe"
       ? "bg-[#0f2a1d] text-[#00C950]"
       : type === "Balanced"
-      ? "bg-[#122238] text-[#51A2FF]"
-      : "bg-[#2b1c10] text-[#FF8904]";
+        ? "bg-[#122238] text-[#51A2FF]"
+        : "bg-[#2b1c10] text-[#FF8904]";
 
   const resolvedTradeHref =
-    tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
+    tradeHref ?? `/commitments/${encodeURIComponent(id)}`;
+
+  async function handleTrade() {
+    if (onPurchase) {
+      setIsPurchasing(true);
+      try {
+        const hash = await onPurchase(id);
+        setPurchaseTxHash(hash);
+        setIsPurchaseSuccessOpen(true);
+      } finally {
+        setIsPurchasing(false);
+      }
+    } else {
+      window.location.href = resolvedTradeHref;
+    }
+  }
 
   return (
     <article
-      className={`focus-ring focus-ring-container relative flex flex-col h-full rounded-[14px] p-[18px] bg-[#0A0A0AE5] border border-[rgba(255,255,255,0.08)] ${cardBorderClass} transition-[transform,box-shadow,border-color] duration-180 ease-[ease] overflow-visible hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_24px_60px_rgba(0,0,0,0.62),0_0_30px_rgba(255,255,255,0.08),inset_0_0_0_1px_rgba(255,255,255,0.06)]`}
+      className={`focus-ring-container relative flex flex-col h-full rounded-[14px] p-[18px] bg-[#0A0A0AE5] border border-[rgba(255,255,255,0.08)] ${cardBorderClass} transition-[transform,box-shadow,border-color] duration-180 ease-[ease] overflow-visible hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_24px_60px_rgba(0,0,0,0.62),0_0_30px_rgba(255,255,255,0.08),inset_0_0_0_1px_rgba(255,255,255,0.06)]`}
       aria-label={`Commitment ${id}`}
-      tabIndex={0}
     >
       <header className="flex items-center justify-between gap-3.5 mb-3.5">
         <div
@@ -218,16 +278,42 @@ export function MarketplaceCard({
           <TypeIcon type={type} />
         </div>
         <div className="flex flex-col items-end gap-2">
+          {onCompareToggle && (
+            <button
+              type="button"
+              className={`focus-ring inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide transition-colors ${
+                compareSelected
+                  ? "border-[#0FF0FC]/50 bg-[#0FF0FC]/15 text-[#0FF0FC]"
+                  : compareDisabled
+                    ? "border-white/10 bg-white/[0.02] text-white/30 cursor-not-allowed"
+                    : "border-white/15 bg-white/[0.04] text-white/70 hover:bg-white/[0.08]"
+              }`}
+              onClick={onCompareToggle}
+              disabled={compareDisabled && !compareSelected}
+              aria-pressed={compareSelected}
+              aria-label={
+                compareDisabled && !compareSelected
+                  ? `Compare limit reached. Cannot add ${id}`
+                  : compareSelected
+                    ? `Remove ${id} from compare`
+                    : `Add ${id} to compare`
+              }
+            >
+              <CompareIcon selected={compareSelected} />
+              {compareSelected ? "Comparing" : "Compare"}
+            </button>
+          )}
           <span
             className={`text-[12px] tracking-[0.02em] font-[650] px-3 py-2 rounded-full ${badgeClass}`}
           >
             {type}
           </span>
-          <span
-            className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}
-          >
-            {clampedScore}%
-          </span>
+            {/* Compact reputation display */}
+            {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' ? (
+            <span className={`text-[12px] font-bold px-3 py-2 rounded-[10px] border border-[rgba(255,255,255,0.12)] ${scoreColorClass}`}>{formatPercent(clampedScore, { decimals: 0 })}</span>
+            ) : (
+              <span className="text-[12px] font-bold px-3 py-2 rounded-[10px] border border-gray-500 text-gray-400">New seller</span>
+            )}
         </div>
       </header>
 
@@ -265,7 +351,19 @@ export function MarketplaceCard({
               <span className="text-[15px] font-mono font-semibold text-white/80">
                 {truncateAddress(owner)}
               </span>
-              <TrustBadge level={trustLevel ?? 'unverified'} showTooltip={false} />
+              <TrustBadge
+                level={trustLevel ?? "unverified"}
+                showTooltip={false}
+              />
+              {/* Render ReputationDisplay compactly when data available */}
+              {typeof totalCommitments !== 'undefined' && typeof successRate !== 'undefined' && (
+                <ReputationDisplay
+                  score={clampedScore}
+                  totalCommitments={totalCommitments}
+                  successRate={successRate}
+                  className="mt-2"
+                />
+              )}
             </dd>
           </div>
         </dl>
@@ -285,6 +383,7 @@ export function MarketplaceCard({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <button
+                type="button"
                 className="focus-ring h-11 rounded-[14px] inline-flex items-center justify-center gap-2.5 font-[650] tracking-[0.01em] select-none border border-[rgba(255,255,255,0.16)] text-white/90 bg-[rgba(255,255,255,0.04)] transition-[background,border-color] duration-[160ms] ease-[ease] hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.22)]"
                 onClick={() => setIsModalOpen(true)}
                 aria-label={`View ${id}`}
@@ -293,13 +392,25 @@ export function MarketplaceCard({
                 View
               </button>
 
-              <Link
-                className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px"
-                href={resolvedTradeHref}
-                aria-label={`Trade ${id}`}
-              >
-                <DollarSignIcon /> Trade
-              </Link>
+              {onPurchase ? (
+                <button
+                  type="button"
+                  onClick={handleTrade}
+                  disabled={isPurchasing}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
+                </button>
+              ) : (
+                <Link
+                  href={resolvedTradeHref}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> Trade
+                </Link>
+              )}
             </div>
           </>
         ) : (
@@ -311,6 +422,7 @@ export function MarketplaceCard({
               Not for sale
             </div>
             <button
+              type="button"
               className="focus-ring h-11 rounded-[14px] inline-flex items-center justify-center gap-2.5 font-[650] tracking-[0.01em] select-none border border-[rgba(255,255,255,0.16)] text-white/90 bg-[rgba(255,255,255,0.04)] transition-[background,border-color] duration-[160ms] ease-[ease] hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.22)]"
               onClick={() => setIsModalOpen(true)}
               aria-label={`View ${id}`}
@@ -322,10 +434,10 @@ export function MarketplaceCard({
         )}
       </footer>
 
-
       <CommitmentDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        commitmentId={id}
         typeLabel={`${type} Commitment`}
         typeVariant={type.toLowerCase() as "safe" | "balanced" | "aggressive"}
         currentPrice={price}
@@ -353,9 +465,30 @@ export function MarketplaceCard({
             statusVariant: "ok",
           },
         ]}
+        // Pass reputation data to modal
+        reputationScore={clampedScore}
+        totalCommitments={totalCommitments}
+        successRate={successRate}
         TypeIcon={TypeIcon}
       />
 
+      <PurchaseSuccessModal
+        isOpen={isPurchaseSuccessOpen}
+        onClose={() => setIsPurchaseSuccessOpen(false)}
+        commitmentId={id}
+        commitmentType={`${type} Commitment`}
+        pricePaid={price}
+        txHash={purchaseTxHash}
+        onViewCommitments={() => {
+          setIsPurchaseSuccessOpen(false);
+          window.location.href = '/commitments';
+        }}
+      />
     </article>
   );
 }
+
+// Memoized so the marketplace grid only re-renders cards whose props actually
+// changed. Listing objects keep a stable reference across filter/sort/paginate
+// operations, so React.memo's shallow prop comparison skips unchanged cards.
+export const MarketplaceCard = memo(MarketplaceCardComponent);

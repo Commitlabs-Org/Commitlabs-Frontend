@@ -10,6 +10,8 @@ import {
   NotFoundError,
   ConflictError,
   InternalError,
+  BackendError,
+  normalizeBackendError,
   HTTP_ERROR_CODES,
 } from './errors';
 
@@ -132,5 +134,54 @@ describe('HTTP_ERROR_CODES', () => {
     expect(HTTP_ERROR_CODES[500]).toBe('INTERNAL_ERROR');
     expect(HTTP_ERROR_CODES[502]).toBe('BAD_GATEWAY');
     expect(HTTP_ERROR_CODES[504]).toBe('GATEWAY_TIMEOUT');
+  });
+});
+
+describe('normalizeBackendError', () => {
+  it('should classify timeout errors as GATEWAY_TIMEOUT and retryable', () => {
+    const normalized = normalizeBackendError(new Error('RPC Timeout'), {
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Fallback message',
+      status: 502,
+    });
+
+    expect(normalized).toBeInstanceOf(BackendError);
+    expect(normalized.code).toBe('GATEWAY_TIMEOUT');
+    expect(normalized.status).toBe(504);
+    expect(normalized.message).toContain('timed out');
+    expect(normalized.details).toEqual({ retryable: true });
+  });
+
+  it('should classify rate-limit errors as TOO_MANY_REQUESTS and retryable', () => {
+    const normalized = normalizeBackendError(new Error('429 Too Many Requests'), {
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Fallback message',
+      status: 502,
+    });
+
+    expect(normalized.code).toBe('TOO_MANY_REQUESTS');
+    expect(normalized.status).toBe(429);
+    expect(normalized.details).toEqual({ retryable: true });
+  });
+
+  it('should preserve fallback details and add retryable flag for existing BackendError status', () => {
+    const original = new BackendError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Rate limited',
+      status: 429,
+      details: { limit: 100 },
+    });
+
+    const normalized = normalizeBackendError(original, {
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Fallback message',
+      status: 502,
+      details: { method: 'test' },
+    });
+
+    expect(normalized).toBeInstanceOf(BackendError);
+    expect(normalized.code).toBe('TOO_MANY_REQUESTS');
+    expect(normalized.status).toBe(429);
+    expect(normalized.details).toEqual({ limit: 100, method: 'test', retryable: true });
   });
 });

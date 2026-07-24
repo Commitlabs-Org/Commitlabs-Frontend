@@ -10,10 +10,25 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import type { CancelListingResponse } from '@/types/marketplace';
 
 const MARKETPLACE_LISTING_DETAIL_CORS_POLICY = {
+  GET: { access: 'public' },
   DELETE: { access: 'first-party' },
 } satisfies CorsRoutePolicy;
 
 export const OPTIONS = createCorsOptionsHandler(MARKETPLACE_LISTING_DETAIL_CORS_POLICY);
+
+export const GET = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  const listingId = params.id;
+  if (!listingId) {
+    throw new ValidationError('Listing ID is required');
+  }
+
+  const listing = await marketplaceService.getPublicListing(listingId);
+  if (!listing) {
+    throw new NotFoundError('Listing', { listingId });
+  }
+
+  return ok({ listing }, undefined, 200, correlationId);
+}, { cors: MARKETPLACE_LISTING_DETAIL_CORS_POLICY, enableETag: true });
 
 export const DELETE = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
   assertMutationCsrf(req);
@@ -59,5 +74,5 @@ export const DELETE = withApiHandler(async (req: NextRequest, { params }, correl
   return ok(response, undefined, 200, correlationId);
 }, { cors: MARKETPLACE_LISTING_DETAIL_CORS_POLICY });
 
-const _405 = methodNotAllowed(['DELETE']);
-export { _405 as GET, _405 as POST, _405 as PUT, _405 as PATCH };
+const _405 = methodNotAllowed(['POST', 'PUT', 'PATCH']);
+export { _405 as POST, _405 as PUT, _405 as PATCH };

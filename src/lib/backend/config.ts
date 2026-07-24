@@ -14,22 +14,19 @@ export type ContractsConfig = Record<
   Record<string, ContractEntry | undefined>
 >;
 
-const LEGACY_ENV_MAPPING = {
-  commitmentNFT: "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT",
-  commitmentCore: "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT",
-  attestationEngine: "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT",
-};
-
 function buildFromLegacyEnv(): ContractsConfig | null {
-  const env = getValidatedEnv();
-  const anySet = Object.values(LEGACY_ENV_MAPPING).some(
-    (k) => !!(env as Record<string, string | undefined>)[k],
-  );
-  if (!anySet) return null;
-
+  const env = getValidatedEnv() as Record<string, string | undefined>;
+  
   const v1: Record<string, ContractEntry | undefined> = {};
-  for (const [key, envName] of Object.entries(LEGACY_ENV_MAPPING)) {
-    const addr = (env as Record<string, string | undefined>)[envName] || "";
+  
+  const mapping: Record<string, string[]> = {
+    commitmentNFT: ["COMMITMENT_NFT_CONTRACT", "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT"],
+    commitmentCore: ["COMMITMENT_CORE_CONTRACT", "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT"],
+    attestationEngine: ["ATTESTATION_ENGINE_CONTRACT", "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT"],
+  };
+
+  for (const [key, envNames] of Object.entries(mapping)) {
+    const addr = (envNames[0] ? env[envNames[0]] : undefined) || (envNames[1] ? env[envNames[1]] : undefined) || "";
     if (addr) v1[key] = { address: addr };
   }
 
@@ -75,6 +72,11 @@ export function loadContractsConfig(): ContractsConfig {
   // No config found; return empty object (validation will catch missing keys when used)
   cachedConfig = {};
   return cachedConfig;
+}
+
+/** Clears the module-level config cache. For tests only. */
+export function _resetEnvCache(): void {
+  cachedConfig = null;
 }
 
 export function getActiveContractVersion(): string {
@@ -149,6 +151,7 @@ export type Environment = "development" | "preview" | "production";
  * @property contractAddresses - Addresses of deployed Soroban smart contracts
  * @property environment - Current environment (development | preview | production)
  * @property chainWritesEnabled - Whether on-chain write operations are enabled (env: COMMITLABS_ENABLE_CHAIN_WRITES)
+ * @property activeVersion - The active version of the contracts being used
  */
 export interface BackendConfig {
   sorobanRpcUrl: string;
@@ -156,6 +159,7 @@ export interface BackendConfig {
   contractAddresses: ContractAddresses;
   environment: Environment;
   chainWritesEnabled: boolean;
+  activeVersion: string;
 }
 
 /**
@@ -262,48 +266,87 @@ export function getBackendConfig(): BackendConfig {
     env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
     "Test SDF Network ; September 2015";
 
-  const commitmentNFT =
-    env.COMMITMENT_NFT_CONTRACT ??
-    env.NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT ??
-    "";
+  // Resolve contract addresses via versioned config
+  const activeVersion = getActiveContractVersion();
+  const contracts = getActiveContracts();
 
-  const commitmentCore =
-    env.COMMITMENT_CORE_CONTRACT ??
-    env.NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT ??
-    "";
-
-  const attestationEngine =
-    env.ATTESTATION_ENGINE_CONTRACT ??
-    env.NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT ??
-    "";
+  const contractAddresses: ContractAddresses = {
+    commitmentNFT: contracts.commitmentNFT?.address || "",
+    commitmentCore: contracts.commitmentCore?.address || "",
+    attestationEngine: contracts.attestationEngine?.address || "",
+  };
 
   if (!isTestEnvironment()) {
-    if (!commitmentNFT)
+    if (!contractAddresses.commitmentNFT)
       throw new Error(
-        "Missing required configuration: commitmentNFT. " +
-          "Set COMMITMENT_NFT_CONTRACT or NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT",
+        `Missing required configuration: commitmentNFT in version "${activeVersion}"`,
       );
-    if (!commitmentCore)
+    if (!contractAddresses.commitmentCore)
       throw new Error(
-        "Missing required configuration: commitmentCore. " +
-          "Set COMMITMENT_CORE_CONTRACT or NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT",
+        `Missing required configuration: commitmentCore in version "${activeVersion}"`,
       );
-    if (!attestationEngine)
+    if (!contractAddresses.attestationEngine)
       throw new Error(
-        "Missing required configuration: attestationEngine. " +
-          "Set ATTESTATION_ENGINE_CONTRACT or NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT",
+        `Missing required configuration: attestationEngine in version "${activeVersion}"`,
       );
   }
 
   return {
     sorobanRpcUrl,
     networkPassphrase,
-    contractAddresses: {
-      commitmentNFT,
-      commitmentCore,
-      attestationEngine,
-    },
+    contractAddresses,
     environment: getEnvironment(),
     chainWritesEnabled: env.COMMITLABS_ENABLE_CHAIN_WRITES === "true",
+    activeVersion,
+  };
+}
+
+// ─── Supported Assets and Risk Profiles ─────────────────────────────────────
+
+export interface SupportedAsset {
+  code: string;
+  name: string;
+  decimals: number;
+}
+
+export interface RiskProfile {
+  id: string;
+  name: string;
+  description: string;
+  maxLossBps: number;
+}
+
+export interface ParameterBounds {
+  durationDays: { min: number; max: number };
+  amount: { min: number; max: number };
+}
+
+export interface SupportedConfig {
+  assets: SupportedAsset[];
+  riskProfiles: RiskProfile[];
+  bounds: ParameterBounds;
+}
+
+export const PARAMETER_BOUNDS: ParameterBounds = {
+  durationDays: { min: 1, max: 365 },
+  amount: { min: 0.001, max: 1000000 },
+};
+
+export const RISK_PROFILES: RiskProfile[] = [
+  { id: "conservative", name: "Conservative", description: "Strict capital preservation", maxLossBps: 1000 },
+  { id: "balanced", name: "Balanced", description: "Moderate drawdowns allowed", maxLossBps: 5000 },
+  { id: "aggressive", name: "Aggressive", description: "High loss tolerance", maxLossBps: 10000 },
+];
+
+export const SUPPORTED_ASSETS: SupportedAsset[] = [
+  { code: "XLM", name: "Stellar Lumens", decimals: 7 },
+  { code: "USDC", name: "USD Coin", decimals: 7 },
+];
+
+export function getSupportedConfig(): SupportedConfig {
+  return {
+    assets: SUPPORTED_ASSETS,
+    riskProfiles: RISK_PROFILES,
+    bounds: PARAMETER_BOUNDS,
   };
 }

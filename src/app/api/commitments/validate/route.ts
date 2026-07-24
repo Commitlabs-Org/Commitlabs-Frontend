@@ -2,9 +2,15 @@ import { NextRequest } from "next/server";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
 import { ok } from "@/lib/backend/apiResponse";
 import { validateCommitmentDraft } from "@/lib/backend/validation";
+import { ValidationError } from "@/lib/backend/errors";
 
 export const POST = withApiHandler(async (req: NextRequest) => {
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch (err) {
+    throw new ValidationError('Invalid JSON in request body');
+  }
 
   const result = validateCommitmentDraft(body);
 

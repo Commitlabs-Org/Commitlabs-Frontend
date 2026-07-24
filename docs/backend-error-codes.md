@@ -520,6 +520,8 @@ showBlockchainError(response.error.details);
 // Usually not retriable — user must fix underlying issue
 ```
 
+The backend centralizes blockchain error normalization in `src/lib/backend/errors.ts` so contract invocation failures are classified consistently across the service layer.
+
 **Retriable**: ❌ No
 
 ---

@@ -1,280 +1,361 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { 
-    createSessionToken, 
-    verifySessionToken, 
-    revokeSessionToken,
-    verifySignatureWithNonce,
-    generateNonce,
-    storeNonce,
-    consumeNonce
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  generateNonce,
+  createSessionToken,
+  verifySessionToken,
+  revokeSession,
+  _clearStores,
+  generateChallengeMessage,
+  verifyStellarSignature,
+  verifySignatureWithNonce,
+  getDefaultDomain,
+  _resetDomainCache,
 } from '../auth';
 
-// Mock environment variables
-const originalEnv = process.env;
+// Each test starts from a clean env so domain resolution is deterministic
+// regardless of any stray CI / developer env vars. We stub every
+// DOMAIN_ENV_KEYS entry to '' (rather than unsetting) so the helper's `!raw`
+// check exercises the same code path as a real unset variable.
+const DOMAIN_ENV_KEYS = [
+  'NEXT_PUBLIC_SITE_URL',
+  'NEXT_PUBLIC_APP_URL',
+  'SITE_URL',
+  'APP_URL',
+  'VERCEL_PROJECT_PRODUCTION_URL',
+  'VERCEL_URL',
+] as const;
 
-describe('Session Management', () => {
-    beforeEach(() => {
-        // Reset environment
-        process.env = { ...originalEnv };
-        // Clear any in-memory stores
-        vi.clearAllMocks();
-    });
-
-    describe('createSessionToken', () => {
-        it('should create a valid JWT session token with CSRF token', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const result = createSessionToken(address);
-            
-            expect(result).toHaveProperty('token');
-            expect(result).toHaveProperty('csrfToken');
-            expect(typeof result.token).toBe('string');
-            expect(typeof result.csrfToken).toBe('string');
-            expect(result.csrfToken.length).toBe(64); // 32 bytes = 64 hex chars
-        });
-
-        it('should create different tokens for different addresses', () => {
-            const address1 = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const address2 = 'G123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            
-            const result1 = createSessionToken(address1);
-            const result2 = createSessionToken(address2);
-            
-            expect(result1.token).not.toBe(result2.token);
-            expect(result1.csrfToken).not.toBe(result2.csrfToken);
-        });
-
-        it('should create different tokens for the same address', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            
-            const result1 = createSessionToken(address);
-            const result2 = createSessionToken(address);
-            
-            expect(result1.token).not.toBe(result2.token);
-            expect(result1.csrfToken).not.toBe(result2.csrfToken);
-        });
-    });
-
-    describe('verifySessionToken', () => {
-        it('should verify a valid session token', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const { token, csrfToken } = createSessionToken(address);
-            
-            const result = verifySessionToken(token);
-            
-            expect(result.valid).toBe(true);
-            expect(result.address).toBe(address);
-            expect(result.csrfToken).toBe(csrfToken);
-            expect(result.error).toBeUndefined();
-        });
-
-        it('should reject invalid tokens', () => {
-            const result = verifySessionToken('invalid-token');
-            
-            expect(result.valid).toBe(false);
-            expect(result.address).toBeUndefined();
-            expect(result.csrfToken).toBeUndefined();
-            expect(result.error).toBe('Invalid token');
-        });
-
-        it('should reject empty tokens', () => {
-            const result = verifySessionToken('');
-            
-            expect(result.valid).toBe(false);
-            expect(result.error).toBe('No token provided');
-        });
-
-        it('should reject null/undefined tokens', () => {
-            const result1 = verifySessionToken(null as any);
-            const result2 = verifySessionToken(undefined as any);
-            
-            expect(result1.valid).toBe(false);
-            expect(result1.error).toBe('No token provided');
-            expect(result2.valid).toBe(false);
-            expect(result2.error).toBe('No token provided');
-        });
-
-        it('should reject expired tokens', () => {
-            // Set a very short expiry for testing
-            process.env.JWT_SECRET = 'test-secret';
-            
-            // This would require mocking time or creating a token with past expiry
-            // For now, we'll test the structure by creating a token and verifying it works
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const { token } = createSessionToken(address);
-            const result = verifySessionToken(token);
-            
-            expect(result.valid).toBe(true);
-        });
-
-        it('should reject revoked tokens', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const { token } = createSessionToken(address);
-            
-            // Revoke the token
-            const revoked = revokeSessionToken(token);
-            expect(revoked).toBe(true);
-            
-            // Try to verify the revoked token
-            const result = verifySessionToken(token);
-            expect(result.valid).toBe(false);
-            expect(result.error).toBe('Token has been revoked');
-        });
-    });
-
-    describe('revokeSessionToken', () => {
-        it('should revoke a valid session token', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const { token } = createSessionToken(address);
-            
-            const revoked = revokeSessionToken(token);
-            expect(revoked).toBe(true);
-            
-            // Token should no longer be valid
-            const verification = verifySessionToken(token);
-            expect(verification.valid).toBe(false);
-        });
-
-        it('should return false for invalid tokens', () => {
-            const revoked = revokeSessionToken('invalid-token');
-            expect(revoked).toBe(false);
-        });
-
-        it('should return false for empty/null tokens', () => {
-            const revoked1 = revokeSessionToken('');
-            const revoked2 = revokeSessionToken(null as any);
-            const revoked3 = revokeSessionToken(undefined as any);
-            
-            expect(revoked1).toBe(false);
-            expect(revoked2).toBe(false);
-            expect(revoked3).toBe(false);
-        });
-    });
-
-    describe('Session Security', () => {
-        it('should include all required fields in JWT payload', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const { token } = createSessionToken(address);
-            
-            // Decode the JWT to check its structure (without verification)
-            const parts = token.split('.');
-            expect(parts).toHaveLength(3); // header, payload, signature
-            
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-            
-            expect(payload).toHaveProperty('address', address);
-            expect(payload).toHaveProperty('iat');
-            expect(payload).toHaveProperty('exp');
-            expect(payload).toHaveProperty('csrfToken');
-            expect(typeof payload.iat).toBe('number');
-            expect(typeof payload.exp).toBe('number');
-            expect(typeof payload.csrfToken).toBe('string');
-            expect(payload.csrfToken.length).toBe(64);
-        });
-
-        it('should have reasonable expiry time (24 hours)', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const { token } = createSessionToken(address);
-            
-            const parts = token.split('.');
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-            
-            const now = Math.floor(Date.now() / 1000);
-            const expectedExpiry = now + (24 * 60 * 60); // 24 hours from now
-            
-            // Allow for a few seconds of test execution time
-            expect(payload.exp).toBeGreaterThan(expectedExpiry - 10);
-            expect(payload.exp).toBeLessThan(expectedExpiry + 10);
-        });
-    });
+beforeEach(() => {
+  _resetDomainCache();
+  for (const key of DOMAIN_ENV_KEYS) {
+    vi.stubEnv(key, '');
+  }
 });
 
-describe('Nonce Management', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    describe('generateNonce', () => {
-        it('should generate a random nonce', () => {
-            const nonce1 = generateNonce();
-            const nonce2 = generateNonce();
-            
-            expect(typeof nonce1).toBe('string');
-            expect(typeof nonce2).toBe('string');
-            expect(nonce1.length).toBe(32); // 16 bytes = 32 hex chars
-            expect(nonce2.length).toBe(32);
-            expect(nonce1).not.toBe(nonce2);
-        });
-    });
-
-    describe('storeNonce and getNonceRecord', () => {
-        it('should store and retrieve nonce records', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const nonce = generateNonce();
-            
-            const stored = storeNonce(address, nonce);
-            expect(stored.address).toBe(address);
-            expect(stored.nonce).toBe(nonce);
-            expect(stored.createdAt).toBeInstanceOf(Date);
-            expect(stored.expiresAt).toBeInstanceOf(Date);
-            
-            const retrieved = getNonceRecord(nonce);
-            expect(retrieved).toEqual(stored);
-        });
-
-        it('should return undefined for non-existent nonces', () => {
-            const retrieved = getNonceRecord('non-existent-nonce');
-            expect(retrieved).toBeUndefined();
-        });
-    });
-
-    describe('consumeNonce', () => {
-        it('should consume a valid nonce', () => {
-            const address = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
-            const nonce = generateNonce();
-            
-            storeNonce(address, nonce);
-            
-            const consumed = consumeNonce(nonce);
-            expect(consumed).toBe(true);
-            
-            // Should no longer be available
-            const retrieved = getNonceRecord(nonce);
-            expect(retrieved).toBeUndefined();
-        });
-
-        it('should return false for non-existent nonces', () => {
-            const consumed = consumeNonce('non-existent-nonce');
-            expect(consumed).toBe(false);
-        });
-    });
+afterEach(() => {
+  vi.unstubAllEnvs();
+  _resetDomainCache();
 });
 
-describe('Signature Verification Integration', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+describe('generateNonce', () => {
+  it('returns a 32-character hex string', () => {
+    const nonce = generateNonce();
+    expect(nonce).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it('returns a unique value on each call', () => {
+    const a = generateNonce();
+    const b = generateNonce();
+    expect(a).not.toBe(b);
+  });
+});
+
+describe('session token helpers', () => {
+  beforeEach(() => {
+    _clearStores();
+  });
+
+  afterEach(() => {
+    _clearStores();
+  });
+
+  describe('createSessionToken', () => {
+    it('returns a token string prefixed with "session_"', () => {
+      const token = createSessionToken('GABC123');
+      expect(token).toMatch(/^session_[0-9a-f]{32}$/);
     });
 
-    describe('verifySignatureWithNonce', () => {
-        it('should validate message format', () => {
-            const result = verifySignatureWithNonce({
-                address: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789',
-                signature: 'invalid-signature',
-                message: 'Invalid message format',
-            });
-            
-            expect(result.valid).toBe(false);
-            expect(result.error).toContain('Invalid message format');
-        });
-
-        it('should reject invalid nonces', () => {
-            const result = verifySignatureWithNonce({
-                address: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ123456789',
-                signature: 'invalid-signature',
-                message: 'Sign in to CommitLabs: invalidnonce123',
-            });
-            
-            expect(result.valid).toBe(false);
-            expect(result.error).toContain('Invalid or expired nonce');
-        });
+    it('returns a unique token on each call', () => {
+      const a = createSessionToken('GABC123');
+      const b = createSessionToken('GABC123');
+      expect(a).not.toBe(b);
     });
+  });
+
+  describe('verifySessionToken', () => {
+    it('returns valid=true with address and csrfToken for a fresh token', () => {
+      const address = 'GABC_VALID_ADDRESS';
+      const token = createSessionToken(address);
+      const result = verifySessionToken(token);
+
+      expect(result.valid).toBe(true);
+      expect(result.address).toBe(address);
+      expect(result.csrfToken).toBeTruthy();
+    });
+
+    it('returns valid=false for an unknown token', () => {
+      const result = verifySessionToken('session_nonexistent0000000000000000');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Session not found');
+    });
+
+    it('returns valid=false and deletes the record for an expired token', () => {
+      vi.useFakeTimers();
+      const token = createSessionToken('GEXPIRE');
+
+      // Advance time past 24h SESSION_TTL
+      vi.advanceTimersByTime(25 * 60 * 60 * 1000);
+
+      const result = verifySessionToken(token);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Session expired');
+
+      // Confirm the expired session was cleaned up
+      const second = verifySessionToken(token);
+      expect(second.valid).toBe(false);
+      expect(second.error).toBe('Session not found');
+
+      vi.useRealTimers();
+    });
+
+    it('does not expire a token before the TTL elapses', () => {
+      vi.useFakeTimers();
+      const token = createSessionToken('GSTILL_VALID');
+
+      vi.advanceTimersByTime(23 * 60 * 60 * 1000);
+
+      const result = verifySessionToken(token);
+      expect(result.valid).toBe(true);
+
+      vi.useRealTimers();
+    });
+
+    it('returns valid=false for an empty string token', () => {
+      const result = verifySessionToken('');
+      expect(result.valid).toBe(false);
+    });
+
+    it('rejects a token with a tampered payload (wrong prefix)', () => {
+      const token = createSessionToken('GTAMPERED');
+      const tampered = token.replace('session_', 'tampered_');
+      const result = verifySessionToken(tampered);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Session not found');
+    });
+  });
+
+  describe('revokeSession', () => {
+    it('returns true when revoking an existing session', () => {
+      const token = createSessionToken('GREVOKE');
+      expect(revokeSession(token)).toBe(true);
+    });
+
+    it('returns false when revoking a non-existent session', () => {
+      expect(revokeSession('session_doesnotexist00000000000000')).toBe(false);
+    });
+
+    it('makes the token invalid after revocation', () => {
+      const token = createSessionToken('GREVOKE2');
+      revokeSession(token);
+      const result = verifySessionToken(token);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Session not found');
+    });
+  });
+});
+
+describe('generateChallengeMessage', () => {
+  it('produces a V2 message containing the nonce', () => {
+    const nonce = generateNonce();
+    const msg = generateChallengeMessage(nonce);
+    expect(msg).toContain('[CommitLabs Auth V2]');
+    expect(msg).toContain(`Nonce: ${nonce}`);
+    expect(msg).toContain('Domain: commitlabs.org');
+  });
+
+  it('accepts a custom domain', () => {
+    const nonce = generateNonce();
+    const msg = generateChallengeMessage(nonce, 'example.com');
+    expect(msg).toContain('Domain: example.com');
+  });
+
+  it('takes its default domain from NEXT_PUBLIC_SITE_URL when set', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://staging.commitlabs.org');
+    const nonce = generateNonce();
+    const msg = generateChallengeMessage(nonce);
+    expect(msg).toContain('Domain: staging.commitlabs.org');
+    expect(msg).not.toContain('Domain: commitlabs.org');
+  });
+
+  it('takes its default domain from NEXT_PUBLIC_APP_URL when NEXT_PUBLIC_SITE_URL is unset', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000');
+    const nonce = generateNonce();
+    const msg = generateChallengeMessage(nonce);
+    expect(msg).toContain('Domain: localhost');
+  });
+
+  it('falls back to a hardcoded domain when no env vars are set', () => {
+    const nonce = generateNonce();
+    const msg = generateChallengeMessage(nonce);
+    expect(msg).toContain('Domain: commitlabs.org');
+  });
+
+  it('includes IssuedAt and ExpiresAt timestamps', () => {
+    const nonce = generateNonce();
+    const msg = generateChallengeMessage(nonce);
+    expect(msg).toMatch(/IssuedAt: \d{4}-\d{2}-\d{2}T/);
+    expect(msg).toMatch(/ExpiresAt: \d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe('getDefaultDomain', () => {
+  it('returns "commitlabs.org" when no domain env vars are set', () => {
+    expect(getDefaultDomain()).toBe('commitlabs.org');
+  });
+
+  it('prefers NEXT_PUBLIC_SITE_URL over other env vars', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://staging.commitlabs.org');
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.staging.commitlabs.org');
+    vi.stubEnv('VERCEL_URL', 'preview-abc.vercel.app');
+    expect(getDefaultDomain()).toBe('staging.commitlabs.org');
+  });
+
+  it('falls back to NEXT_PUBLIC_APP_URL when NEXT_PUBLIC_SITE_URL is missing', () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.commitlabs.org/foo');
+    expect(getDefaultDomain()).toBe('app.commitlabs.org');
+  });
+
+  it('falls back to VERCEL_URL when no SITE_URL or APP_URL env vars are set', () => {
+    vi.stubEnv('VERCEL_URL', 'commitlabs-pr-123.vercel.app');
+    expect(getDefaultDomain()).toBe('commitlabs-pr-123.vercel.app');
+  });
+
+  it('falls back to VERCEL_PROJECT_PRODUCTION_URL when other vars are missing', () => {
+    vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'commitlabs.org');
+    expect(getDefaultDomain()).toBe('commitlabs.org');
+  });
+
+  it('extracts hostname from URLs with ports', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000');
+    expect(getDefaultDomain()).toBe('localhost');
+  });
+
+  it('extracts hostname from URLs with paths', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.commitlabs.org/some/path');
+    expect(getDefaultDomain()).toBe('app.commitlabs.org');
+  });
+
+  it('handles raw host strings without a protocol', () => {
+    vi.stubEnv('VERCEL_URL', 'preview-without-protocol.vercel.app');
+    expect(getDefaultDomain()).toBe('preview-without-protocol.vercel.app');
+  });
+
+  it('skips malformed env values and continues down the chain', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'not a url with spaces');
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.commitlabs.org');
+    expect(getDefaultDomain()).toBe('app.commitlabs.org');
+  });
+
+  it('skips all malformed env values and returns the hardcoded fallback', () => {
+    // Each env value is selected so the WHATWG URL parser reliably throws
+    // (unclosed brackets, invalid port, parens in a special scheme authority)
+    // or the resulting hostname is rejected by the regex guard.
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://[invalid');        // throws (unclosed '[')
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://[');                // throws (empty authority + unclosed '[')
+    vi.stubEnv('SITE_URL', 'http://example.com:zzz');            // throws (port must be a uint16)
+    vi.stubEnv('APP_URL', 'http://(badparens)');                  // throws (parens are forbidden in URL-special host)
+    vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'http://[x');     // throws (unclosed '[')
+    vi.stubEnv('VERCEL_URL', '!!!');                              // hostname '!!!' rejected by regex
+    expect(getDefaultDomain()).toBe('commitlabs.org');
+  });
+
+  it('caches the resolved domain across calls', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://first.commitlabs.org');
+    expect(getDefaultDomain()).toBe('first.commitlabs.org');
+    // Change env after the first resolved call; cache should still return the
+    // first value (the auth flow re-resolves only on cache reset).
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://second.commitlabs.org');
+    expect(getDefaultDomain()).toBe('first.commitlabs.org');
+  });
+
+  it('_resetDomainCache forces a re-resolve against the current env', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://first.commitlabs.org');
+    expect(getDefaultDomain()).toBe('first.commitlabs.org');
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://second.commitlabs.org');
+    _resetDomainCache();
+    expect(getDefaultDomain()).toBe('second.commitlabs.org');
+  });
+});
+
+describe('generate/verify domain agreement (issue #1289)', () => {
+  it('accepts a V2 challenge whose Domain: field matches the env-driven default', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://staging.commitlabs.org');
+    const nonce = generateNonce();
+    const message = generateChallengeMessage(nonce);
+
+    const result = await verifySignatureWithNonce({
+      address: 'GABC',
+      signature: 'sig',
+      message,
+    });
+
+    // The verifier should pass the domain check and fail later (no nonce in
+    // KV rather than a domain mismatch) — proving generate and verify agree
+    // on the env-driven domain.
+    expect(result.valid).toBe(false);
+    expect(result.error).not.toBe('Domain mismatch');
+    expect(result.error).toBe('Invalid or expired nonce');
+  });
+
+  it('rejects a V2 challenge whose Domain: field does not match the env-driven default', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://staging.commitlabs.org');
+    const nonce = generateNonce();
+    // Caller overrides with an attacker-controlled domain.
+    const message = generateChallengeMessage(nonce, 'attacker.example.com');
+
+    const result = await verifySignatureWithNonce({
+      address: 'GABC',
+      signature: 'sig',
+      message,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Domain mismatch');
+  });
+
+  it('accepts a V2 challenge with the hardcoded fallback when no env is set', async () => {
+    const nonce = generateNonce();
+    const message = generateChallengeMessage(nonce);
+
+    const result = await verifySignatureWithNonce({
+      address: 'GABC',
+      signature: 'sig',
+      message,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).not.toBe('Domain mismatch');
+    expect(result.error).toBe('Invalid or expired nonce');
+  });
+});
+
+describe('verifyStellarSignature', () => {
+  it('returns valid=false with error when address is missing', () => {
+    const result = verifyStellarSignature('', 'sig', 'message');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Missing required fields');
+  });
+
+  it('returns valid=false with error when signature is missing', () => {
+    const result = verifyStellarSignature('GABC', '', 'message');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Missing required fields');
+  });
+
+  it('returns valid=false with error when message is missing', () => {
+    const result = verifyStellarSignature('GABC', 'sig', '');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Missing required fields');
+  });
+
+  it('returns valid=false for an invalid Stellar address', () => {
+    const result = verifyStellarSignature('INVALID_ADDRESS', 'sig', 'message');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Invalid Stellar address');
+  });
+
+  it('does not throw for malformed input combinations', () => {
+    expect(() => verifyStellarSignature('', '', '')).not.toThrow();
+    expect(() => verifyStellarSignature('x'.repeat(200), '!!!', '\x00\x01')).not.toThrow();
+  });
 });
