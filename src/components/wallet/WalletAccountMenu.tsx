@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
+import { openExplorerUrl } from '@/utils/explorerLinks';
 import { Copy, ExternalLink, LogOut, ChevronDown } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -57,7 +57,7 @@ export const WalletAccountMenu: React.FC = () => {
             setNetwork('public');
           }
         }
-      } catch (e) {
+      } catch {
         // Default to public if fetch fails
         setNetwork('public');
       }
@@ -128,7 +128,7 @@ export const WalletAccountMenu: React.FC = () => {
           ? menuItems.length - 1
           : (currentIndex - 1 + menuItems.length) % menuItems.length;
 
-    menuItems[nextIndex].focus();
+    menuItems[nextIndex]?.focus();
   };
 
   const handleCopyAddress = async () => {
