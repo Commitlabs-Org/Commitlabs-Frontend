@@ -18,6 +18,7 @@ import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
 import { getValidatedClientEnv } from '@/lib/clientEnv'
 import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { sortCommitments, SortOption } from '@/utils/sortCommitments'
+import { OnboardingChecklist } from '@/components/OnboardingChecklist'
 
 const mockCommitments: Commitment[] = [
   {
@@ -322,6 +323,7 @@ export default function MyCommitments() {
           />
         ) : (
           <>
+            <OnboardingChecklist />
             <MyCommitmentsStats
               totalActive={mockStats.totalActive}
               totalCommittedValue={mockStats.totalCommittedValue}

@@ -354,6 +354,12 @@ export default function Marketplace() {
   const { filters, updateFilters } = useMarketplaceFilters()
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('commitlabs:visited-marketplace', 'true');
+    }
+  }, []);
+
+  useEffect(() => {
     // Simulate loading for demo purposes
     const timer = setTimeout(() => {
       setIsLoading(false)
