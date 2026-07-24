@@ -13,8 +13,24 @@ const STORAGE_KEY = "overview-widget-layout";
 
 export const DEFAULT_WIDGET_LAYOUT: WidgetConfig[] = [
   { id: "at-risk", label: "At-Risk Commitments", visible: true, order: 0 },
-  { id: "commitment-detail", label: "Commitment Detail", visible: true, order: 1 },
+  {
+    id: "commitment-detail",
+    label: "Commitment Detail",
+    visible: true,
+    order: 1,
+  },
 ];
+
+function isValidWidgetConfig(item: unknown): item is WidgetConfig {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    typeof (item as Record<string, unknown>).id === "string" &&
+    typeof (item as Record<string, unknown>).label === "string" &&
+    typeof (item as Record<string, unknown>).visible === "boolean" &&
+    typeof (item as Record<string, unknown>).order === "number"
+  );
+}
 
 function loadFromStorage(): WidgetConfig[] | null {
   if (typeof window === "undefined") return null;
@@ -22,8 +38,13 @@ function loadFromStorage(): WidgetConfig[] | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed as WidgetConfig[];
+
+    if (
+      Array.isArray(parsed) &&
+      parsed.length > 0 &&
+      parsed.every(isValidWidgetConfig)
+    ) {
+      return parsed;
     }
     return null;
   } catch {
@@ -68,7 +89,7 @@ export function useWidgetLayout() {
   const toggleVisibility = useCallback((id: string) => {
     setWidgets((prev) => {
       const updated = prev.map((w) =>
-        w.id === id ? { ...w, visible: !w.visible } : w
+        w.id === id ? { ...w, visible: !w.visible } : w,
       );
       saveToStorage(updated);
       return updated;
