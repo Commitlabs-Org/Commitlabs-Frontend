@@ -3,6 +3,7 @@ import { MarketplaceCard } from './MarketplaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { usePaginatedListings } from '@/hooks/usePaginatedListings';
 import { useEffect, useRef } from 'react';
+import type { MarketplaceQueryParams } from '@/types/marketplace';
 
 export interface MarketplaceGridProps {
   /** Optional pre‑loaded items – if omitted the component fetches via the hook */
@@ -11,7 +12,7 @@ export interface MarketplaceGridProps {
   isCompareFull?: boolean;
   onCompareToggle?: (listing: MarketplaceCardProps) => void;
   /** Additional query parameters for filtering/sorting */
-  queryParams?: Record<string, any>;
+  queryParams?: MarketplaceQueryParams;
 }
 
 export function MarketplaceGrid({

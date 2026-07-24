@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard';
+import type { MarketplaceQueryParams } from '@/types/marketplace';
 
 /**
  * Hook to fetch marketplace listings with page-based pagination.
@@ -12,7 +13,7 @@ export function usePaginatedListings(
    * Optional query parameters (filters, sort, etc.) that will be serialized
    * into the request URL. Changing this object will reset pagination.
    */
-  params: Record<string, any> = {},
+  params: MarketplaceQueryParams = {},
   /** Number of items per page - defaults to 9 to match the UI grid */
   pageSize: number = 9,
   /** If true, the hook will not fetch or reset state */
