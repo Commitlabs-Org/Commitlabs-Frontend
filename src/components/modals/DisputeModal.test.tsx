@@ -148,4 +148,24 @@ describe('DisputeModal', () => {
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('handles Tab key gracefully when no focusable elements exist', () => {
+    const { onClose } = renderModal();
+    const dialog = screen.getByRole('dialog', { name: /dispute commitment/i });
+
+    // Temporarily remove all focusable elements to simulate edge case
+    const focusableElements = dialog.querySelectorAll('button, input, select, textarea, [tabindex]');
+    focusableElements.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.setAttribute('disabled', 'disabled');
+        el.setAttribute('tabindex', '-1');
+      }
+    });
+
+    // This should not throw even with no focusable elements
+    expect(() => {
+      fireEvent.keyDown(dialog, { key: 'Tab' });
+      fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    }).not.toThrow();
+  });
 });
