@@ -11,7 +11,7 @@ import { recordAuditEvent } from '@/lib/backend/auditLog';
 
 const DisputeRequestSchema = z.object({
     reason: z.string().min(1, 'Dispute reason is required').max(500),
-    evidence: z.string().optional(),
+    evidence: z.string().max(500).optional(),
     callerAddress: z.string().optional(),
 });
 

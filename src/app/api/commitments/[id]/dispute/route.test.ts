@@ -176,6 +176,14 @@ describe('POST /api/commitments/[id]/dispute', () => {
       const [req, ctx] = makeRequest('cmt-123', { reason: 'x'.repeat(501) });
       await expectError(req, ctx, 400, 'VALIDATION_ERROR');
     });
+
+    it('rejects evidence exceeding 500 characters', async () => {
+      const [req, ctx] = makeRequest('cmt-123', {
+        reason: 'Test',
+        evidence: 'x'.repeat(501),
+      });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
   });
 
   describe('404 - not found', () => {
