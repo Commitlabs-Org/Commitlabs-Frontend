@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { openExplorerUrl } from '@/utils/explorerLinks';
+import { openExplorerUrl, getExplorerNetworkFromPassphrase } from '@/utils/explorerLinks';
 import { Copy, ExternalLink, LogOut, ChevronDown } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -51,11 +51,11 @@ export const WalletAccountMenu: React.FC = () => {
         const response = await fetch('/api/protocol/constants');
         if (response.ok) {
           const data = await response.json();
-          if (data.network === 'testnet') {
-            setNetwork('testnet');
-          } else {
-            setNetwork('public');
-          }
+          // The route wraps its payload in { success, data, meta }, so the
+          // constants live at data.data. The network field is the full Stellar
+          // network passphrase, not the literal word "testnet".
+          const passphrase: string | undefined = data?.data?.network;
+          setNetwork(getExplorerNetworkFromPassphrase(passphrase));
         }
       } catch {
         // Default to public if fetch fails
@@ -182,6 +182,7 @@ export const WalletAccountMenu: React.FC = () => {
               className='origin-top-right absolute right-0 mt-2 w-64 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0a0a0a] shadow-[0_0_22px_rgba(0,0,0,0.45)] ring-1 ring-white ring-opacity-10'
               role='menu'
               aria-label='Wallet account menu'
+              tabIndex={-1}
               onKeyDown={handleMenuKeyDown}
             >
               <div className='px-4 py-3 border-b border-[rgba(255,255,255,0.08)]'>
