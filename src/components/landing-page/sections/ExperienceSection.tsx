@@ -137,17 +137,17 @@ export const ExperienceSection: React.FC = () => {
           <ActionCard
             icon={<FaGithub size={40} />}
             label="View on Github"
-            href="#"
+            href="https://github.com/Commitlabs-Org/Commitlabs-Frontend"
           />
           <ActionCard
             icon={<IoDocumentText size={40} />}
             label="Read Docs"
-            href="#"
+            href="https://github.com/Commitlabs-Org/Commitlabs-Frontend/tree/master/docs"
           />
           <ActionCard
             icon={<FaEnvelope size={40} />}
             label="Get in Touch"
-            href="#"
+            href="https://discord.gg/WV7tdYkJk"
           />
         </motion.div>
       </motion.div>
