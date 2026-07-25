@@ -91,14 +91,6 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
             error: error instanceof Error ? error.message : 'Unknown dispute error',
         });
 
-        if (
-            error instanceof ValidationError ||
-            error instanceof NotFoundError ||
-            error instanceof ConflictError
-        ) {
-            throw error;
-        }
-
         throw error;
     }
 });

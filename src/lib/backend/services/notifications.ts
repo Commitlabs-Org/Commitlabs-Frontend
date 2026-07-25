@@ -1,5 +1,5 @@
 import { getMockData } from '@/lib/backend/mockDb';
-import type { Notification, Commitment, Attestation } from '@/lib/types/domain';
+import type { Notification } from '@/lib/types/domain';
 // import { getUserCommitmentsFromChain } from './contracts'; // TODO: migration path
 
 export async function getUserNotifications(ownerAddress: string): Promise<Notification[]> {
@@ -14,8 +14,7 @@ export async function getUserNotifications(ownerAddress: string): Promise<Notifi
   // The mock-db doesn't store ownerAddress on commitments natively, so we'll pretend
   // they belong to the requested ownerAddress or we'd filter if it exists.
   const userCommitments = mockData.commitments.filter((c) => {
-    const commitmentAny = c as any;
-    return !commitmentAny.ownerAddress || commitmentAny.ownerAddress === ownerAddress;
+    return !c.ownerAddress || c.ownerAddress === ownerAddress;
   });
 
   const commitmentIds = new Set(userCommitments.map((c) => c.id));
@@ -58,7 +57,7 @@ export async function getUserNotifications(ownerAddress: string): Promise<Notifi
 
   // Derive notifications from attestations
   for (const a of userAttestations) {
-    if (a.severity === 'violation' || a.verdict === 'fail' || (a as any).status === 'Violated' || (a as any).status === 'Invalid') {
+    if (a.severity === 'violation' || a.verdict === 'fail' || a.status === 'Violated' || a.status === 'Invalid') {
       notifications.push({
         id: crypto.randomUUID(),
         ownerAddress,
@@ -67,7 +66,7 @@ export async function getUserNotifications(ownerAddress: string): Promise<Notifi
         severity: 'critical',
         type: 'violation',
         read: false,
-        createdAt: a.observedAt || (a as any).timestamp || new Date().toISOString(),
+        createdAt: a.observedAt || a.timestamp || new Date().toISOString(),
         relatedCommitmentId: a.commitmentId,
       });
     } else if (a.severity === 'warning') {
@@ -79,7 +78,7 @@ export async function getUserNotifications(ownerAddress: string): Promise<Notifi
         severity: 'warning',
         type: 'health_check',
         read: false,
-        createdAt: a.observedAt || (a as any).timestamp || new Date().toISOString(),
+        createdAt: a.observedAt || a.timestamp || new Date().toISOString(),
         relatedCommitmentId: a.commitmentId,
       });
     }

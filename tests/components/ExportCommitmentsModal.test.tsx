@@ -61,7 +61,7 @@ describe('ExportCommitmentsModal', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/commitments/export?ownerAddress=GOWNERADDRESS',
+        'http://localhost:3000/api/commitments/export?ownerAddress=GOWNERADDRESS&columns=Commitment+ID%2COwner%2CAsset%2CAmount%2CStatus%2CCompliance+Score%2CCurrent+Value%2CFee+Earned%2CViolation+Count%2CCreated+At%2CExpires+At&dateRange=all&format=csv',
         {
           method: 'GET',
           headers: {
@@ -399,12 +399,82 @@ describe('ExportCommitmentsModal', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/commitments/export?ownerAddress=GOWNERADDRESS',
+        'http://localhost:3000/api/commitments/export?ownerAddress=GOWNERADDRESS&columns=Commitment+ID%2COwner%2CAsset%2CAmount%2CStatus%2CCompliance+Score%2CCurrent+Value%2CFee+Earned%2CViolation+Count%2CCreated+At%2CExpires+At&dateRange=all&format=csv',
         expect.objectContaining({
           headers: { Authorization: 'Bearer token-with-space' },
         })
       );
     });
+  });
+
+  it('includes a non-default date range in the outgoing export request URL', async () => {
+    mockSuccessfulFetch();
+
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText('Date range'), { target: { value: '30d' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('dateRange=30d'),
+        expect.any(Object)
+      );
+    });
+
+    const [calledUrl] = vi.mocked(fetch).mock.calls[0];
+    expect(calledUrl).not.toContain('dateRange=all');
+  });
+
+  it('defaults the date range and format to all-time CSV when left untouched', async () => {
+    mockSuccessfulFetch();
+
+    renderModal();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('dateRange=all'),
+        expect.any(Object)
+      );
+    });
+
+    const [calledUrl] = vi.mocked(fetch).mock.calls[0];
+    expect(calledUrl).toContain('format=csv');
+  });
+
+  it('resets date range and format selections when the dialog reopens', () => {
+    const { rerender } = render(
+      <ExportCommitmentsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        ownerAddress="GOWNERADDRESS"
+        sessionToken="session-token"
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Date range'), { target: { value: 'year' } });
+    expect((screen.getByLabelText('Date range') as HTMLSelectElement).value).toBe('year');
+
+    rerender(
+      <ExportCommitmentsModal
+        isOpen={false}
+        onClose={vi.fn()}
+        ownerAddress="GOWNERADDRESS"
+        sessionToken="session-token"
+      />
+    );
+    rerender(
+      <ExportCommitmentsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        ownerAddress="GOWNERADDRESS"
+        sessionToken="session-token"
+      />
+    );
+
+    expect((screen.getByLabelText('Date range') as HTMLSelectElement).value).toBe('all');
   });
 
   it('skips whitespace-only tokens and falls through to the next storage key', async () => {

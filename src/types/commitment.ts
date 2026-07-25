@@ -1,41 +1,13 @@
-export type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
-export type CommitmentStatus = 'Active' | 'Settled' | 'Violated' | 'Early Exit';
-
-export interface Commitment {
-  id: string;
-  type: CommitmentType;
-  status: CommitmentStatus;
-  asset: string;
-  amount: string;
-  currentValue: string;
-  changePercent: number;
-  durationProgress: number; // 0-100
-  daysRemaining: number;
-  complianceScore: number; // 0-100
-  maxLoss: string;
-  currentDrawdown: string;
-  createdDate: string;
-  expiryDate: string;
-}
-
-export type TrendDirection = 'up' | 'down' | 'neutral';
-
-export interface StatTrend {
-  value: number;
-  direction: TrendDirection;
-  period?: string;
-}
-
-export interface CommitmentStats {
-  totalActive: number;
-  totalCommittedValue: string;
-  avgComplianceScore: number;
-  totalFeesGenerated: string;
-  /** Optional per-metric trend indicators */
-  trends?: {
-    totalActive?: StatTrend;
-    totalCommittedValue?: StatTrend;
-    avgComplianceScore?: StatTrend;
-    totalFeesGenerated?: StatTrend;
-  };
-}
+/**
+ * Re-exports canonical Commitment types from the single source of truth in
+ * `@/lib/types/domain`.  Import from this module in UI-layer files that
+ * previously depended on the now-removed standalone definitions.
+ */
+export type {
+  CommitmentType,
+  CommitmentStatus,
+  Commitment,
+  CommitmentStats,
+  TrendDirection,
+  StatTrend,
+} from '@/lib/types/domain';

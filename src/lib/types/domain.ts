@@ -11,6 +11,7 @@ export interface Commitment {
   id: string;
   type: CommitmentType;
   status: CommitmentStatus;
+  ownerAddress?: string;
   asset: string;
   amount: string;
   currentValue?: string;
@@ -26,11 +27,26 @@ export interface Commitment {
   expiresAt?: string;
 }
 
+export type TrendDirection = 'up' | 'down' | 'neutral';
+
+export interface StatTrend {
+  value: number;
+  direction: TrendDirection;
+  period?: string;
+}
+
 export interface CommitmentStats {
   totalActive: number;
   totalCommittedValue: string;
   avgComplianceScore: number;
   totalFeesGenerated: string;
+  /** Optional per-metric trend indicators */
+  trends?: {
+    totalActive?: StatTrend;
+    totalCommittedValue?: StatTrend;
+    avgComplianceScore?: StatTrend;
+    totalFeesGenerated?: StatTrend;
+  };
 }
 
 export const ATTESTATION_TYPES = [
@@ -50,8 +66,10 @@ export interface Attestation {
   id: string;
   commitmentId: string;
   kind?: string;
+  status?: string;
   verdict?: AttestationVerdict;
   observedAt: string;
+  timestamp?: string;
   title?: string;
   description?: string;
   txHash?: string;
@@ -161,3 +179,24 @@ export type HistoryEvent =
   | AttestationEvent
   | EarlyExitEvent
   | SettlementEvent;
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export type NotificationSeverity = 'info' | 'warning' | 'critical';
+
+export type NotificationType = 'expiry' | 'violation' | 'health_check' | 'marketplace';
+
+export interface Notification {
+  id: string;
+  ownerAddress: string;
+  title: string;
+  message: string;
+  severity: NotificationSeverity;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+  relatedCommitmentId?: string;
+  relatedListingId?: string;
+}

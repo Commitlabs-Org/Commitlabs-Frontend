@@ -8,12 +8,7 @@
  * @see docs/error-handling.md — "Client Error Reporting"
  */
 
-/** Sensitive field names that must never appear in a reported record. */
-const SENSITIVE_FIELDS = new Set([
-  'token', 'authorization', 'password', 'secret', 'key', 'privatekey',
-  'publickey', 'mnemonic', 'seed', 'auth', 'bearer', 'apikey', 'api_key',
-  'session', 'cookie', 'csrf', 'signature', 'nonce',
-])
+import { SENSITIVE_FIELDS } from '@/lib/shared/sensitiveFields'
 
 /** A structured, serialisable client error record. */
 export interface ClientErrorRecord {

@@ -11,7 +11,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AlertCircle, ArrowLeft, Loader2, Search } from 'lucide-react'
 import styles from './MarketplaceHeader.module.css';
-import { apiGet, apiFetch } from '@/lib/apiClient';
+import { apiRequest } from '@/lib/client/apiClient';
+import { useApi } from '@/hooks/useApi';
+import { MarketStatsBanner } from './MarketStatsBanner';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,12 +30,6 @@ export interface CommitmentSearchResult {
   currentValue: string
   createdAt: string
   expiresAt: string
-}
-
-interface MarketplaceStats {
-  activeListings: number
-  averageYield: number
-  medianPrice: number
 }
 
 const SORT_OPTIONS = [
@@ -83,12 +79,10 @@ export function MarketplaceHeader({
   ownerAddress,
   onResultSelect,
 }: MarketplaceHeaderProps) {
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const [stats, setStats] = useState<MarketplaceStats | null>(null)
-  const [statsError, setStatsError] = useState<string | null>(null)
+  // ── Sort ───────────────────────────────────────────────────────────────────
   const [sortValue, setSortValue] = useState<SortValue>('popular')
 
-  // ── Typeahead ──────────────────────────────────────────────────────────────
+  // â”€â”€ Typeahead â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [query, setQuery] = useState(controlledQuery ?? '')
   const [results, setResults] = useState<CommitmentSearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -101,22 +95,10 @@ export function MarketplaceHeader({
   const uid = useId()
   const listboxId = `${uid}-listbox`
 
-  // ── Fetch stats on mount ───────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false
-    const fetchStats = async () => {
-      try {
-        const data = await apiGet<MarketplaceStats>('/api/marketplace/stats');
-        if (!cancelled) setStats(data);
-      } catch (e) {
-        if (!cancelled) setStatsError((e as Error).message)
-      }
-    }
-    fetchStats()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data: stats, error: statsError } = useApi<MarketplaceStats>(
+    (signal) => apiRequest<MarketplaceStats>('/api/marketplace/stats', { method: 'GET', signal }),
+    [],
+  )
 
   // ── Debounced typeahead search ─────────────────────────────────────────────
   useEffect(() => {
@@ -145,20 +127,21 @@ export function MarketplaceHeader({
         asset: trimmed,
       })
 
-      apiFetch<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
-          .then((data) => {
-            setResults(data.data ?? []);
-            setIsDropdownOpen(true);
-            setActiveIndex(-1);
+      apiRequest<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
+        .then((data) => {
+          setResults(data.data ?? []);
+          setIsDropdownOpen(true);
+          setActiveIndex(-1);
+          setIsSearching(false);
+        })
+        .catch((err: unknown) => {
+          const e = err as { name?: string; message?: string }
+          if (e.name !== 'AbortError') {
+            setSearchError(e.message || String(err));
+            setIsDropdownOpen(false);
             setIsSearching(false);
-          })
-          .catch((err: any) => {
-            if (err.name !== 'AbortError') {
-              setSearchError(err.message || String(err));
-              setIsDropdownOpen(false);
-              setIsSearching(false);
-            }
-          })
+          }
+        })
 
       onSearchChange?.(trimmed)
     }, searchDebounceMs)
@@ -166,7 +149,7 @@ export function MarketplaceHeader({
     return () => clearTimeout(timerId)
   }, [query, searchDebounceMs, ownerAddress, onSearchChange])
 
-  // ── Keyboard navigation ────────────────────────────────────────────────────
+  // â”€â”€ Keyboard navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSelect = useCallback(
     (item: CommitmentSearchResult) => {
       setQuery(item.asset)
@@ -218,7 +201,7 @@ export function MarketplaceHeader({
   const activeDescendant =
     activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <header className={styles.root} role="banner">
       <div className={styles.inner}>
@@ -239,7 +222,7 @@ export function MarketplaceHeader({
 
         {/* Right: controls */}
         <div className={styles.controlsBlock}>
-          {/* ── Typeahead combobox ── */}
+          {/* â”€â”€ Typeahead combobox â”€â”€ */}
           <div className={styles.searchWrap}>
             <label htmlFor="marketplace-search" className={styles.srOnly}>
               Search commitments
@@ -294,6 +277,11 @@ export function MarketplaceHeader({
                 </li>
               ) : (
                 results.map((item, i) => (
+                  // Keyboard selection is already handled by the search input's
+                  // onKeyDown (Enter selects the active option; see handleKeyDown
+                  // above), matching the ARIA combobox/listbox pattern where focus
+                  // stays on the input rather than moving to each option.
+                  // eslint-disable-next-line jsx-a11y/click-events-have-key-events
                   <li
                     key={item.commitmentId}
                     id={`${listboxId}-option-${i}`}
@@ -305,7 +293,7 @@ export function MarketplaceHeader({
                   >
                     <span className={styles.dropdownItemAsset}>{item.asset}</span>
                     <span className={styles.dropdownItemMeta}>
-                      {item.riskType} · {item.amount}
+                      {item.riskType} Â· {item.amount}
                     </span>
                   </li>
                 ))
@@ -330,10 +318,13 @@ export function MarketplaceHeader({
             </div>
           )}
           {statsError && (
-            <div className={styles.error}>Error: {statsError}</div>
+            <div className={styles.error}>Error: {statsError.message}</div>
           )}
 
           {/* ── Sort control ── */}
+          <MarketStatsBanner />
+
+          {/* â”€â”€ Sort control â”€â”€ */}
           <div className={styles.sortControl}>
             <label htmlFor="marketplace-sort" className={styles.srOnly}>
               Sort marketplace
@@ -353,7 +344,7 @@ export function MarketplaceHeader({
             </select>
           </div>
 
-          {/* ── Create button ── */}
+          {/* â”€â”€ Create button â”€â”€ */}
           <Link
             href={createHref}
             className={styles.createButton}

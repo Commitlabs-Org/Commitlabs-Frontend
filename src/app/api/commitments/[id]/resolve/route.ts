@@ -94,14 +94,6 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
             error: error instanceof Error ? error.message : 'Unknown resolution error',
         });
 
-        if (
-            error instanceof ValidationError ||
-            error instanceof ConflictError ||
-            error instanceof ForbiddenError
-        ) {
-            throw error;
-        }
-
         throw error;
     }
 });

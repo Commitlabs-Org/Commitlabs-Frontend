@@ -2,10 +2,12 @@
 import { ReputationDisplay } from "./ReputationDisplay";
 
 import { memo, useState, useEffect } from "react";
+import Link from "next/link";
 import { CommitmentDetailsModal } from "./modals/CommitmentDetailsModal";
 import PurchaseSuccessModal from "./modals/PurchaseSuccessModal";
 import { TrustBadge, TrustLevel } from "./TrustBadge";
 import { formatPercent } from '@/utils/format';
+import { RISK_COLORS } from '@/constants/riskColors';
 export type CommitmentType = "Safe" | "Balanced" | "Aggressive";
 
 export interface MarketplaceCardProps {
@@ -79,18 +81,18 @@ function TypeIcon({ type }: { type: CommitmentType }) {
         viewBox="0 0 28 28"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-[26px] h-[26px]"
+        className="w-[26px] h-[26px] text-risk-balanced"
       >
         <path
           d="M25.662 8.16504L15.7472 18.0799L9.91493 12.2476L2.33301 19.8295"
-          stroke="#51A2FF"
+          stroke="currentColor"
           strokeWidth="2.3329"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
           d="M18.6631 8.16504H25.6618V15.1637"
-          stroke="#51A2FF"
+          stroke="currentColor"
           strokeWidth="2.3329"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -105,14 +107,14 @@ function TypeIcon({ type }: { type: CommitmentType }) {
       height="28"
       viewBox="0 0 28 28"
       fill="none"
-      className="w-[26px] h-[26px]"
+      className="w-[26px] h-[26px] text-risk-aggressive"
     >
       <path
         d="M9.91461 16.9137C10.688 16.9137 11.4297 16.6064 11.9766 16.0596C12.5235 15.5127 12.8307 14.771 12.8307 13.9976C12.8307 12.3879 12.2475 11.6647 11.6643 10.4982C10.4138 7.99851 11.403 5.76942 13.9972 3.49951C14.5804 6.41564 16.3301 9.21512 18.663 11.0814C20.9959 12.9478 22.1623 15.164 22.1623 17.4969C22.1623 18.5692 21.9511 19.6309 21.5408 20.6216C21.1305 21.6122 20.529 22.5123 19.7708 23.2705C19.0126 24.0287 18.1125 24.6302 17.1218 25.0405C16.1312 25.4509 15.0694 25.6621 13.9972 25.6621C12.9249 25.6621 11.8632 25.4509 10.8725 25.0405C9.88187 24.6302 8.98175 24.0287 8.22355 23.2705C7.46534 22.5123 6.8639 21.6122 6.45357 20.6216C6.04323 19.6309 5.83203 18.5692 5.83203 17.4969C5.83203 16.152 6.3371 14.8211 6.99848 13.9976C6.99848 14.771 7.30571 15.5127 7.85259 16.0596C8.39947 16.6064 9.1412 16.9137 9.91461 16.9137Z"
-        stroke="#FF8904"
-        stroke-width="2.3329"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        stroke="currentColor"
+        strokeWidth="2.3329"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -234,20 +236,20 @@ function MarketplaceCardComponent({
 
   const scoreColorClass =
     type === "Safe"
-      ? "text-[#00C950]/95"
+      ? "text-risk-safe/95"
       : type === "Balanced"
-        ? "text-[#51A2FF]/95"
-        : "text-[#FF8904]/95";
+        ? "text-risk-balanced/95"
+        : "text-risk-aggressive/95";
 
   const badgeClass =
     type === "Safe"
-      ? "bg-[#0f2a1d] text-[#00C950]"
+      ? "bg-[#0f2a1d] text-risk-safe"
       : type === "Balanced"
-        ? "bg-[#122238] text-[#51A2FF]"
-        : "bg-[#2b1c10] text-[#FF8904]";
+        ? "bg-[#122238] text-risk-balanced"
+        : "bg-[#2b1c10] text-risk-aggressive";
 
   const resolvedTradeHref =
-    tradeHref ?? `/marketplace/trade?id=${encodeURIComponent(id)}`;
+    tradeHref ?? `/commitments/${encodeURIComponent(id)}`;
 
   async function handleTrade() {
     if (onPurchase) {
@@ -391,15 +393,25 @@ function MarketplaceCardComponent({
                 View
               </button>
 
-              <button
-                type="button"
-                onClick={handleTrade}
-                disabled={isPurchasing}
-                className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
-                aria-label={`Trade ${id}`}
-              >
-                <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
-              </button>
+              {onPurchase ? (
+                <button
+                  type="button"
+                  onClick={handleTrade}
+                  disabled={isPurchasing}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> {isPurchasing ? 'Processing…' : 'Trade'}
+                </button>
+              ) : (
+                <Link
+                  href={resolvedTradeHref}
+                  className="focus-ring h-12 text-sm xl:text-base rounded-[14px] inline-flex items-center justify-center gap-1 xl:gap-2.5 font-[650] tracking-[0.01em] select-none text-[#0FF0FC] bg-[#0FF0FC1A] border-[0.56px] border-[#0FF0FC66] transition-[transform,filter] duration-[160ms] ease-[ease] hover:brightness-105 hover:-translate-y-px"
+                  aria-label={`Trade ${id}`}
+                >
+                  <DollarSignIcon /> Trade
+                </Link>
+              )}
             </div>
           </>
         ) : (

@@ -8,10 +8,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NotFound from '@/app/not-found'
 
 const routerBack = vi.fn()
+const routerPush = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     back: routerBack,
+    push: routerPush,
   }),
 }))
 
@@ -30,6 +32,7 @@ vi.mock('next/link', () => ({
 describe('not found page', () => {
   beforeEach(() => {
     routerBack.mockClear()
+    routerPush.mockClear()
   })
 
   it('renders the 404 message, search input, and recovery links', () => {
@@ -56,5 +59,29 @@ describe('not found page', () => {
     fireEvent.change(search, { target: { value: 'escrow status' } })
 
     expect(search).toHaveValue('escrow status')
+  })
+
+  it('search input has an accessible label associated via htmlFor', () => {
+    render(React.createElement(NotFound))
+
+    expect(screen.getByLabelText(/search the site/i)).toBeInTheDocument()
+  })
+
+  it('navigates to /marketplace?q= on form submit with a non-empty query', () => {
+    render(React.createElement(NotFound))
+
+    const search = screen.getByLabelText(/search the site/i)
+    fireEvent.change(search, { target: { value: 'escrow status' } })
+    fireEvent.submit(search.closest('form')!)
+
+    expect(routerPush).toHaveBeenCalledWith('/marketplace?q=escrow%20status')
+  })
+
+  it('does not navigate when form is submitted with an empty query', () => {
+    render(React.createElement(NotFound))
+
+    fireEvent.submit(screen.getByLabelText(/search the site/i).closest('form')!)
+
+    expect(routerPush).not.toHaveBeenCalled()
   })
 })
