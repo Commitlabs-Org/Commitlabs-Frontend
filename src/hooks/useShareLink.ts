@@ -60,8 +60,14 @@ export function useShareLink({
 
           return { ok: true, method: 'web-share' };
         }
-      } catch {
-        // Fall through to clipboard so unsupported or failed share attempts still work.
+      } catch (err) {
+        // If the user dismissed the native share sheet (AbortError),
+        // treat it as a cancellation — no clipboard fallback, no toast.
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return { ok: false };
+        }
+        // For other failures, fall through to clipboard so unsupported
+        // or failed share attempts still work.
       }
     }
 

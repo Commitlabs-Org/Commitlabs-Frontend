@@ -95,6 +95,26 @@ describe('useShareLink', () => {
     );
   });
 
+  it('returns ok: false without clipboard fallback when user cancels Web Share (AbortError)', async () => {
+    const abortError = new DOMException('The user aborted a request.', 'AbortError');
+    const share = vi.fn().mockRejectedValue(abortError);
+    const canShare = vi.fn().mockReturnValue(true);
+    setNavigatorShare(share, canShare);
+
+    const { result } = renderHook(() => useShareLink({ commitmentId: '42' }));
+
+    await act(async () => {
+      await expect(result.current.shareLink()).resolves.toEqual({ ok: false });
+    });
+
+    // Should NOT fall through to clipboard
+    expect(navigator.clipboard?.writeText).toBeUndefined();
+
+    // Should NOT show any toast (success or error)
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it('announces failure without throwing when share and clipboard are unavailable', async () => {
     const share = vi.fn().mockRejectedValue(new Error('blocked'));
     setNavigatorShare(share, vi.fn().mockReturnValue(true));
