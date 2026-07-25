@@ -19,6 +19,7 @@ import { computeCommitmentExposure } from '@/utils/exposure';
 import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
 import { useShareLink } from '@/hooks/useShareLink';
 import { getAppExplorerNetwork } from './explorerNetwork';
+import { RelatedCommitmentsRail, type RelatedCommitment } from '@/components/RelatedCommitmentsRail';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -28,6 +29,12 @@ const MOCK_COMMITMENTS: Record<
   '1': { id: '1', type: 'Balanced', duration: 60, maxLoss: 8, earlyExitPenaltyPercent: 3, canEarlyExit: true },
   '2': { id: '2', type: 'Safe', duration: 30, maxLoss: 2, earlyExitPenaltyPercent: 3, canEarlyExit: false },
 };
+
+const RELATED_COMMITMENTS_MOCK: RelatedCommitment[] = [
+  { id: '1', type: 'Balanced', complianceScore: 98, duration: '60 days', status: 'active' },
+  { id: '2', type: 'Safe', complianceScore: 97, duration: '30 days', status: 'active' },
+  { id: '3', type: 'Aggressive', complianceScore: 88, duration: '90 days', status: 'pending' },
+];
 
 // Mock dispute state — populated from /api/commitments/[id] status + history in production
 const MOCK_DISPUTES: Record<string, DisputeInfo | null> = {
@@ -286,6 +293,11 @@ export default function CommitmentDetailPage({
                                 onReportIssue={handleReportIssue}
                                 onSettle={handleSettle}
                                 commitmentId={commitment.id}
+                            />
+
+                            <RelatedCommitmentsRail
+                                commitments={RELATED_COMMITMENTS_MOCK}
+                                currentId={commitment.id}
                             />
                         </div>
                     </div>
