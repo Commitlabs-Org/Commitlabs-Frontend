@@ -276,7 +276,7 @@ describe('KPICard', () => {
         />,
       );
       // Delta container renders an SVG (the TrendingUp icon)
-      const deltaEl = container.querySelector('[class*="_delta_"]');
+      const deltaEl = container.querySelector(`.${styles.delta}`);
       expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
     });
 
@@ -288,7 +288,7 @@ describe('KPICard', () => {
           delta={{ value: 10, direction: 'down' }}
         />,
       );
-      const deltaEl = container.querySelector('[class*="_delta_"]');
+      const deltaEl = container.querySelector(`.${styles.delta}`);
       expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
     });
 
@@ -300,7 +300,7 @@ describe('KPICard', () => {
           delta={{ value: 0, direction: 'neutral' }}
         />,
       );
-      const deltaEl = container.querySelector('[class*="_delta_"]');
+      const deltaEl = container.querySelector(`.${styles.delta}`);
       expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
     });
 
@@ -330,7 +330,7 @@ describe('KPICard', () => {
 
     it('does not render delta when neither delta nor previousValue is provided', () => {
       const { container } = render(<KPICard label="Revenue" value={100} />);
-      expect(container.querySelector('[class*="_delta_"]')).not.toBeInTheDocument();
+      expect(container.querySelector(`.${styles.delta}`)).not.toBeInTheDocument();
     });
 
     it('delta with isPercentage renders the value formatted to one decimal', () => {
@@ -348,24 +348,24 @@ describe('KPICard', () => {
       const { container } = render(
         <KPICard label="X" value={10} delta={{ value: 5, direction: 'up' }} />,
       );
-      const deltaEl = container.querySelector('[class*="_delta_"]');
-      expect(deltaEl?.className).toMatch(/_deltaPositive_/);
+      const deltaEl = container.querySelector(`.${styles.delta}`);
+      expect(deltaEl?.className.split(' ')).toContain(styles.deltaPositive);
     });
 
     it('delta negative class applied for down direction', () => {
       const { container } = render(
         <KPICard label="X" value={10} delta={{ value: 5, direction: 'down' }} />,
       );
-      const deltaEl = container.querySelector('[class*="_delta_"]');
-      expect(deltaEl?.className).toMatch(/_deltaNegative_/);
+      const deltaEl = container.querySelector(`.${styles.delta}`);
+      expect(deltaEl?.className.split(' ')).toContain(styles.deltaNegative);
     });
 
     it('delta neutral class applied for neutral direction', () => {
       const { container } = render(
         <KPICard label="X" value={10} delta={{ value: 0, direction: 'neutral' }} />,
       );
-      const deltaEl = container.querySelector('[class*="_delta_"]');
-      expect(deltaEl?.className).toMatch(/_deltaNeutral_/);
+      const deltaEl = container.querySelector(`.${styles.delta}`);
+      expect(deltaEl?.className.split(' ')).toContain(styles.deltaNeutral);
     });
 
     it('direction is conveyed by icon shape, not color alone (WCAG 1.4.1)', () => {
@@ -380,7 +380,7 @@ describe('KPICard', () => {
             delta={{ value: 5, direction }}
           />,
         );
-        const deltaEl = container.querySelector('[class*="_delta_"]');
+        const deltaEl = container.querySelector(`.${styles.delta}`);
         expect(deltaEl?.querySelector('svg')).toBeInTheDocument();
         unmount();
       });
@@ -408,13 +408,13 @@ describe('KPICard', () => {
 
     it('renders the spinner SVG', () => {
       const { container } = render(<KPICard label="Revenue" state="loading" />);
-      const loadingEl = container.querySelector('[class*="_loadingState_"]');
+      const loadingEl = container.querySelector(`.${styles.loadingState}`);
       expect(loadingEl?.querySelector('svg')).toBeInTheDocument();
     });
 
     it('renders skeleton bars', () => {
       const { container } = render(<KPICard label="Revenue" state="loading" />);
-      const skeletonBars = container.querySelectorAll('[class*="_skeletonBar_"]');
+      const skeletonBars = container.querySelectorAll(`.${styles.skeletonBar}`);
       expect(skeletonBars.length).toBe(2);
     });
 
@@ -428,7 +428,7 @@ describe('KPICard', () => {
       // label span is inside the default card header, which is not rendered in loading state
       expect(screen.queryByRole('heading')).not.toBeInTheDocument();
       // The loading message is shown instead; the card label text itself is not present
-      const loadingEl = document.querySelector('[class*="_loadingState_"]');
+      const loadingEl = document.querySelector(`.${styles.loadingState}`);
       expect(loadingEl).toBeInTheDocument();
     });
   });
@@ -454,7 +454,7 @@ describe('KPICard', () => {
 
     it('renders the AlertCircle SVG icon', () => {
       const { container } = render(<KPICard label="Revenue" state="error" />);
-      const errorEl = container.querySelector('[class*="_errorState_"]');
+      const errorEl = container.querySelector(`.${styles.errorState}`);
       expect(errorEl?.querySelector('svg')).toBeInTheDocument();
     });
 
@@ -512,13 +512,13 @@ describe('KPICard', () => {
         const { container } = render(
           <KPICard label="Metric" value={1} variant={variant} />,
         );
-        expect(getRoot(container).className).toContain(`_${variant}_`);
+        expect(getRoot(container).className.split(' ')).toContain(styles[variant]);
       },
     );
 
     it('defaults to the "teal" variant when variant is omitted', () => {
       const { container } = render(<KPICard label="Metric" value={1} />);
-      expect(getRoot(container).className).toContain('_teal_');
+      expect(getRoot(container).className.split(' ')).toContain(styles.teal);
     });
   });
 
@@ -533,13 +533,13 @@ describe('KPICard', () => {
         const { container } = render(
           <KPICard label="Metric" value={1} size={size} />,
         );
-        expect(getRoot(container).className).toContain(`_${size}_`);
+        expect(getRoot(container).className.split(' ')).toContain(styles[size]);
       },
     );
 
     it('defaults to the "medium" size when size is omitted', () => {
       const { container } = render(<KPICard label="Metric" value={1} />);
-      expect(getRoot(container).className).toContain('_medium_');
+      expect(getRoot(container).className.split(' ')).toContain(styles.medium);
     });
   });
 

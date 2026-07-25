@@ -11,7 +11,7 @@ import {
     LucideIcon
 } from 'lucide-react';
 import styles from './KPICard.module.css';
-import { formatNumber, formatCurrency, formatPercent } from '@/utils/format';
+// No imports needed from '@/utils/format' as local formatters are used
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -93,7 +93,9 @@ const Sparkline: React.FC<SparklineProps> = ({ data, width = 80, height = 28 }) 
         const y = height - ((v - min) / range) * height;
         return `${x.toFixed(1)},${y.toFixed(1)}`;
     });
-    const isPositive = data[data.length - 1] >= data[0];
+    const lastVal = data[data.length - 1];
+    const firstVal = data[0];
+    const isPositive = lastVal !== undefined && firstVal !== undefined ? lastVal >= firstVal : true;
     const color = isPositive ? '#22c55e' : '#ef4444';
     return (
         <svg
@@ -235,9 +237,9 @@ const DeltaIndicator: React.FC<DeltaIndicatorProps> = ({ delta, size = 'medium' 
                 styles.delta,
                 styles[`delta${size.charAt(0).toUpperCase() + size.slice(1)}`],
                 {
-                    [styles.deltaPositive]: isPositive,
-                    [styles.deltaNegative]: isNegative,
-                    [styles.deltaNeutral]: delta.direction === 'neutral',
+                    [styles.deltaPositive as string]: isPositive,
+                    [styles.deltaNegative as string]: isNegative,
+                    [styles.deltaNeutral as string]: delta.direction === 'neutral',
                 }
             )}
         >
@@ -253,8 +255,8 @@ const DeltaIndicator: React.FC<DeltaIndicatorProps> = ({ delta, size = 'medium' 
 // ============================================================================
 
 interface LoadingStateProps {
-    message?: string;
-    size?: KPICardSize;
+    message?: string | undefined;
+    size?: KPICardSize | undefined;
 }
 
 const LoadingState: React.FC<LoadingStateProps> = ({ message, size = 'medium' }) => {
@@ -275,9 +277,9 @@ const LoadingState: React.FC<LoadingStateProps> = ({ message, size = 'medium' })
 // ============================================================================
 
 interface ErrorStateProps {
-    message?: string;
-    onRetry?: () => void;
-    size?: KPICardSize;
+    message?: string | undefined;
+    onRetry?: (() => void) | undefined;
+    size?: KPICardSize | undefined;
 }
 
 const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, size = 'medium' }) => {
@@ -303,8 +305,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, size = 'mediu
 // ============================================================================
 
 interface EmptyStateProps {
-    message?: string;
-    size?: KPICardSize;
+    message?: string | undefined;
+    size?: KPICardSize | undefined;
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({ message, size = 'medium' }) => {
@@ -369,15 +371,15 @@ export const KPICard: React.FC<KPICardProps> = ({
 
         switch (format) {
             case 'currency':
-                return formatCurrency(value, { currency: unit || 'USD', decimals });
+                return formatCurrency(value, unit || 'USD', decimals);
             case 'percentage':
-                return formatPercent(value, { decimals });
+                return formatPercentage(value, decimals);
             case 'count':
-                return formatNumber(value, { compact: true });
+                return formatCompact(value);
             case 'score':
-                return formatNumber(value, { decimals });
+                return formatNumber(value, decimals);
             default:
-                return formatNumber(value, { decimals });
+                return formatNumber(value, decimals);
         }
     })();
 
@@ -420,7 +422,7 @@ export const KPICard: React.FC<KPICardProps> = ({
                 styles.card,
                 styles[variant],
                 styles[size],
-                { [styles.clickable]: !!onClick }
+                { [styles.clickable as string]: !!onClick }
             )}
             onClick={onClick}
             role={onClick ? 'button' : undefined}
