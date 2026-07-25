@@ -53,23 +53,35 @@ function deserializeFilters(params: URLSearchParams): Filters {
     const priceRange = params.get('priceRange');
     if (priceRange) {
       const [min, max] = priceRange.split(',').map(Number);
-      if (!isNaN(min) && !isNaN(max)) filters.priceRange = [min, max];
+      if (!isNaN(min) && !isNaN(max)) {
+        // Clamp to valid range and ensure min < max
+        const clampedMin = Math.max(0, Math.min(min, 1000000));
+        const clampedMax = Math.max(0, Math.min(max, 1000000));
+        filters.priceRange = [Math.min(clampedMin, clampedMax), Math.max(clampedMin, clampedMax)];
+      }
     }
 
     const durationRange = params.get('durationRange');
     if (durationRange) {
       const [min, max] = durationRange.split(',').map(Number);
-      if (!isNaN(min) && !isNaN(max)) filters.durationRange = [min, max];
+      if (!isNaN(min) && !isNaN(max)) {
+        // Clamp to valid range and ensure min < max
+        const clampedMin = Math.max(0, Math.min(min, 90));
+        const clampedMax = Math.max(0, Math.min(max, 90));
+        filters.durationRange = [Math.min(clampedMin, clampedMax), Math.max(clampedMin, clampedMax)];
+      }
     }
 
     const minCompliance = params.get('minCompliance');
     if (minCompliance && !isNaN(Number(minCompliance))) {
-      filters.minCompliance = Number(minCompliance);
+      // Clamp to 0-100 range
+      filters.minCompliance = Math.max(0, Math.min(Number(minCompliance), 100));
     }
 
     const maxLoss = params.get('maxLoss');
     if (maxLoss && !isNaN(Number(maxLoss))) {
-      filters.maxLoss = Number(maxLoss);
+      // Clamp to 0-100 range (non-negative)
+      filters.maxLoss = Math.max(0, Math.min(Number(maxLoss), 100));
     }
 
     return filters;

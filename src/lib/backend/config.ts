@@ -182,6 +182,7 @@ function isTestEnvironment(): boolean {
 export interface BackendFeatureFlags {
     analyticsUser: boolean;
     marketplace: boolean;
+    marketplaceMockData: boolean;
 }
 
 type FeatureFlagKey = keyof BackendFeatureFlags;
@@ -207,6 +208,10 @@ function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
             marketplace:
                 typeof parsed.marketplace === 'boolean'
                     ? parsed.marketplace
+                    : undefined,
+            marketplaceMockData:
+                typeof parsed.marketplaceMockData === 'boolean'
+                    ? parsed.marketplaceMockData
                     : undefined
         };
     } catch (err) {
@@ -227,6 +232,9 @@ export function getFeatureFlags(): BackendFeatureFlags {
         marketplace:
             fromJson.marketplace ??
             parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE, false),
+        marketplaceMockData:
+            fromJson.marketplaceMockData ??
+            parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA, true),
     };
 }
 

@@ -5,6 +5,7 @@ import { type Locale } from '@/lib/i18n/messages';
 
 const LOCALE_LABELS: Record<Locale, string> = {
   en: 'English',
+  es: 'Español',
 };
 
 const STORAGE_KEY = 'commitlabs:locale';
