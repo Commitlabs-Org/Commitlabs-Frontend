@@ -44,11 +44,12 @@ export default function RelistPriceEditor({
   const [price, setPrice] = useState(listing.price);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [localStatusOverride, setLocalStatusOverride] = useState<'Cancelled' | null>(null);
   const toast = useToast();
   const inputId = useId();
 
-  const isActive = listing.status === 'Active';
-  const isCancelled = listing.status === 'Cancelled';
+  const isActive = localStatusOverride ? false : listing.status === 'Active';
+  const isCancelled = localStatusOverride === 'Cancelled' ? true : listing.status === 'Cancelled';
 
   const handleOpen = useCallback(() => {
     setPrice(listing.price);
@@ -73,6 +74,7 @@ export default function RelistPriceEditor({
 
     const previousPrice = listing.price;
     const numericPrice = Number(price.trim());
+    let wasCancelled = false;
 
     try {
       if (isActive) {
@@ -91,6 +93,7 @@ export default function RelistPriceEditor({
           const data = await cancelRes.json().catch(() => ({}));
           throw new Error(data.message || data.error || 'Failed to cancel existing listing');
         }
+        wasCancelled = true;
       }
 
       const createRes = await fetch('/api/marketplace/listings', {
@@ -119,12 +122,21 @@ export default function RelistPriceEditor({
       });
       setIsEditing(false);
     } catch (err) {
-      setPrice(previousPrice);
       const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      toast.error({
-        title: 'Failed to update listing',
-        description: message,
-      });
+      if (wasCancelled) {
+        setLocalStatusOverride('Cancelled');
+        setIsEditing(false);
+        toast.error({
+          title: 'Update failed, listing cancelled',
+          description: `Your listing was cancelled but could not be recreated: ${message}. Please relist.`,
+        });
+      } else {
+        setPrice(previousPrice);
+        toast.error({
+          title: 'Failed to update listing',
+          description: message,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
