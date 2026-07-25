@@ -103,8 +103,8 @@ export function MarketplaceResultsLayout({
         {totalCount === 0 || emptyStateType === "error" ? (
           <MarketplaceEmptyState
             type={emptyStateType}
-            onRetry={onRetry}
-            onClearFilters={onClearFilters}
+            {...(onRetry !== undefined && { onRetry })}
+            {...(onClearFilters !== undefined && { onClearFilters })}
           />
         ) : (
           children
