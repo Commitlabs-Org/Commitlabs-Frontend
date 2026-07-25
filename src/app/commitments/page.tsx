@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useToast } from '@/components/toast/ToastProvider'
 import MyCommitmentsHeader from '@/components/MyCommitmentsHeader'
 import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsStats'
 import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters'
@@ -17,6 +18,7 @@ import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
 import { getValidatedClientEnv } from '@/lib/clientEnv'
 import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { sortCommitments, SortOption } from '@/utils/sortCommitments'
+import { OnboardingChecklist } from '@/components/OnboardingChecklist'
 
 const mockCommitments: Commitment[] = [
   {
@@ -117,11 +119,41 @@ const mockCommitments: Commitment[] = [
   },
 ]
 
-const mockStats: CommitmentStats = {
-  totalActive: 3,
-  totalCommittedValue: '$461,850',
-  avgComplianceScore: 86,
-  totalFeesGenerated: '$1,250',
+function calculateStatsFromCommitments(commitments: Commitment[]): CommitmentStats {
+  if (commitments.length === 0) {
+    return {
+      totalActive: 0,
+      totalCommittedValue: '$0',
+      avgComplianceScore: 0,
+      totalFeesGenerated: '$0',
+    }
+  }
+
+  // Count active commitments
+  const activeCommitments = commitments.filter((c) => c.status === 'Active')
+  const totalActive = activeCommitments.length
+
+  // Sum all committed values
+  const totalCommittedValue = commitments.reduce((sum, c) => {
+    const amount = Number(c.amount.replace(/,/g, ''))
+    return sum + amount
+  }, 0)
+
+  // Calculate average compliance score
+  const avgComplianceScore =
+    commitments.length > 0
+      ? Math.round(commitments.reduce((sum, c) => sum + c.complianceScore!, 0) / commitments.length)
+      : 0
+
+  // Calculate total fees generated (1% of total committed value as placeholder)
+  const totalFeesGeneratedAmount = Math.round(totalCommittedValue * 0.01)
+
+  return {
+    totalActive,
+    totalCommittedValue: `$${totalCommittedValue.toLocaleString()}`,
+    avgComplianceScore,
+    totalFeesGenerated: `$${totalFeesGeneratedAmount.toLocaleString()}`,
+  }
 }
 
 function getEarlyExitValues(originalAmount: string, asset: string, penaltyPercent: number) {
@@ -149,6 +181,8 @@ export default function MyCommitments() {
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
   const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [selectedIdsForExport, setSelectedIdsForExport] = useState<string[]>([])
+  const [isExporting, _setIsExporting] = useState(false)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
   const [isLoading, setIsLoading] = useState(true)
@@ -220,6 +254,12 @@ export default function MyCommitments() {
     )
   }, [commitmentForEarlyExit, protocolConstants])
 
+  // Calculate stats from commitmentsList
+  const calculatedStats = useMemo(
+    () => calculateStatsFromCommitments(commitmentsList),
+    [commitmentsList]
+  )
+
   // Callbacks
   const openEarlyExitModal = useCallback((id: string) => {
     setEarlyExitCommitmentId(id)
@@ -227,7 +267,6 @@ export default function MyCommitments() {
   }, [])
 
   const openListForSaleModal = useCallback((id: string) => {
-    setSuccessMessage(null)
     setListingCommitmentId(id)
   }, [])
 
@@ -239,12 +278,17 @@ export default function MyCommitments() {
     if (!listingCommitmentId) return
     const committed = commitmentsList.find((c) => c.id === listingCommitmentId)
     if (!committed) return
-    setSuccessMessage(
-      listingId
+    toast.success({
+      title: listingId
         ? `${committed.id} is now listed on the marketplace as ${listingId}. Buyers will see it in the listings grid.`
         : `${committed.id} is now listed on the marketplace. Buyers will see it in the listings grid.`
-    )
-  }, [commitmentsList, listingCommitmentId])
+    })
+  }, [commitmentsList, listingCommitmentId, toast])
+
+  const handleExportSelected = useCallback((ids: string[]) => {
+    setSelectedIdsForExport(ids)
+    setIsExportOpen(true)
+  }, [])
 
   // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
   // own commitment changes, not on every filter/sort that re-runs this page.
@@ -254,8 +298,8 @@ export default function MyCommitments() {
   )
 
   const handleViewAttestations = useCallback(
-    (id: string) => console.log('Attestations for', id),
-    []
+    (id: string) => router.push(`/commitments/${id}`),
+    [router]
   )
 
   const closeEarlyExitModal = useCallback(() => {
@@ -315,11 +359,12 @@ export default function MyCommitments() {
           />
         ) : (
           <>
+            <OnboardingChecklist />
             <MyCommitmentsStats
-              totalActive={mockStats.totalActive}
-              totalCommittedValue={mockStats.totalCommittedValue}
-              avgComplianceScore={mockStats.avgComplianceScore}
-              totalFeesGenerated={mockStats.totalFeesGenerated}
+              totalActive={calculatedStats.totalActive}
+              totalCommittedValue={calculatedStats.totalCommittedValue}
+              avgComplianceScore={calculatedStats.avgComplianceScore}
+              totalFeesGenerated={calculatedStats.totalFeesGenerated}
             />
 
             <MyCommitmentsFilters
@@ -339,6 +384,8 @@ export default function MyCommitments() {
               onAttestations={handleViewAttestations}
               onEarlyExit={openEarlyExitModal}
               onListForSale={openListForSaleModal}
+              onExportSelected={handleExportSelected}
+              isExporting={isExporting}
             />
           </>
         )}
@@ -362,8 +409,12 @@ export default function MyCommitments() {
 
       <ExportCommitmentsModal
         isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
+        onClose={() => {
+          setIsExportOpen(false)
+          setSelectedIdsForExport([])
+        }}
         ownerAddress={address}
+        selectedIds={selectedIdsForExport}
       />
 
       {commitmentForListing && (

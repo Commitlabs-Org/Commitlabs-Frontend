@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiLogOut, FiFileText, FiDownload, FiAlertCircle } from 'react-icons/fi';
+import { FiLogOut, FiFileText, FiDownload, FiAlertCircle, FiCopy } from 'react-icons/fi';
 import { SettlementEligibilityChecklist } from '@/components/settlement/SettlementEligibilityChecklist';
 
 interface CommitmentDetailActionsProps {
@@ -8,6 +8,8 @@ interface CommitmentDetailActionsProps {
   onViewAttestations: () => void;
   onExportData: () => void;
   onReportIssue: () => void;
+  /** Called when the user clicks Duplicate; receives the source commitment id. */
+  onDuplicate?: (commitmentId: string) => void;
   earlyExitDisabledReason?: string;
   commitmentId?: string;
   onSettle?: () => void;
@@ -21,6 +23,7 @@ export function CommitmentDetailActions ({
   onViewAttestations,
   onExportData,
   onReportIssue,
+  onDuplicate,
   earlyExitDisabledReason = 'Early exit is only available before maturity',
   commitmentId,
   onSettle,
@@ -30,6 +33,12 @@ export function CommitmentDetailActions ({
 }: CommitmentDetailActionsProps) {
   const focusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]';
+
+  const settlementChecklistProps = {
+    ...(onSettle !== undefined ? { onSettle } : {}),
+    ...(settleDisabledReason !== undefined ? { disabledReason: settleDisabledReason } : {}),
+    ...(previewRefreshTrigger !== undefined ? { refreshTrigger: previewRefreshTrigger } : {}),
+  };
 
   return (
     <div className="w-full">
@@ -71,9 +80,7 @@ export function CommitmentDetailActions ({
         <div className="mb-8">
           <SettlementEligibilityChecklist
             commitmentId={commitmentId}
-            onSettle={onSettle}
-            disabledReason={settleDisabledReason}
-            refreshTrigger={previewRefreshTrigger}
+            {...settlementChecklistProps}
           />
         </div>
       ) : null}
@@ -125,6 +132,55 @@ export function CommitmentDetailActions ({
             </span>
           </button>
 
+          {/* Duplicate Commitment */}
+          {commitmentId && onDuplicate && (
+            <button
+              onClick={() => onDuplicate(commitmentId)}
+              className={`
+                w-full rounded-2xl px-6 py-4
+                bg-[#0a1a2a] border border-[#0b3d61]
+                hover:bg-[#0d1d2e] hover:border-[#0f4a72]
+                transition-all duration-200
+                flex items-center gap-4
+                cursor-pointer
+                ${focusRing}
+              `}
+              aria-label="Duplicate Commitment - create a new commitment prefilled with these parameters"
+              data-testid="duplicate-commitment-btn"
+            >
+              <FiCopy className="text-[#0FF0FC]/70" size={22}/>
+
+              <div className="text-left">
+                <span className="text-white text-base font-medium block">Duplicate Commitment</span>
+                <span className="text-white/50 text-xs">Open create flow prefilled with these parameters</span>
+              </div>
+            </button>
+          )}
+
+          {/* Print / Save PDF */}
+          {commitmentId && (
+            <a
+              href={`/commitments/${commitmentId}/print`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`
+                w-full rounded-2xl px-6 py-4
+                bg-[#161616] border border-[#232323]
+                hover:bg-[#1a1a1a] hover:border-[#1f1f1f]
+                transition-all duration-200
+                flex items-center gap-4
+                cursor-pointer no-underline
+                ${focusRing}
+              `}
+              aria-label="Print or save as PDF"
+            >
+              <FiFileText className="text-white/70" size={22} />
+              <span className="text-white text-base flex-1 text-left font-medium">
+                Print / Save PDF
+              </span>
+            </a>
+          )}
+
           {/* Report an Issue */}
           <button
             onClick={onReportIssue}
@@ -140,7 +196,7 @@ export function CommitmentDetailActions ({
             aria-label="Report an Issue"
           >
             <FiAlertCircle className="text-white/70" size={22}/>
-            
+
             <span className="text-white text-base flex-1 text-left font-medium">
               Report an Issue
             </span>

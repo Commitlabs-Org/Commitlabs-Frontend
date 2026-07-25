@@ -17,16 +17,27 @@ const mockedGetAddress = vi.mocked(getAddress);
 const mockedFetch = vi.mocked(global.fetch);
 
 describe('WalletAccountMenu', () => {
+  // Helper: build the standard { success, data, meta } envelope that
+  // GET /api/protocol/constants actually returns.
+  function makeConstantsResponse(networkPassphrase: string) {
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: { network: networkPassphrase },
+          meta: {},
+        }),
+    } as Response);
+  }
+
   beforeEach(() => {
     mockedGetAddress.mockReset();
     mockedFetch.mockReset();
-    // Default mock for protocol constants
+    // Default mock: testnet passphrase wrapped in the correct envelope shape.
     mockedFetch.mockImplementation((url) => {
       if (url === '/api/protocol/constants') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ network: 'testnet' }),
-        } as Response);
+        return makeConstantsResponse('Test SDF Network ; September 2015');
       }
       if (url === '/api/auth/logout') {
         return Promise.resolve({
@@ -186,6 +197,48 @@ describe('WalletAccountMenu', () => {
     );
   });
 
+  it('supports arrow-key navigation inside the account menu', async () => {
+    mockedGetAddress.mockResolvedValueOnce({
+      address: 'GABCD1234EFGH5678IJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOP',
+    });
+
+    render(<WalletAccountMenu />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
+    );
+
+    const accountButton = screen.getByRole('button', {
+      name: /connected wallet/i,
+    });
+    fireEvent.click(accountButton);
+
+    const menu = await screen.findByRole('menu', {
+      name: /wallet account menu/i,
+    });
+    const explorerMenuItem = screen.getByRole('menuitem', {
+      name: /View on Stellar.Expert/i,
+    });
+    const disconnectButton = screen.getByRole('menuitem', {
+      name: /Disconnect/i,
+    });
+
+    await waitFor(() => expect(explorerMenuItem).toHaveFocus());
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(disconnectButton).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(explorerMenuItem).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'ArrowUp' });
+    expect(disconnectButton).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(accountButton).toHaveFocus());
+  });
+
   it('shows a recovery message when the user rejects the connection in Freighter', async () => {
     mockedGetAddress.mockResolvedValueOnce({ error: 'User rejected request' });
 
@@ -196,5 +249,56 @@ describe('WalletAccountMenu', () => {
         /Connection canceled in Freighter/i,
       ),
     );
+  });
+
+  describe('network detection from protocol constants', () => {
+    const CONNECTED_ADDRESS = 'GABCD1234EFGH5678IJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOP';
+
+    it('shows "Testnet" badge and links to testnet explorer when backend returns the testnet passphrase', async () => {
+      // Default fetch mock already returns the testnet passphrase.
+      mockedGetAddress.mockResolvedValueOnce({ address: CONNECTED_ADDRESS });
+
+      render(<WalletAccountMenu />);
+
+      await waitFor(() =>
+        expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
+      );
+
+      // Open the menu to reveal the network badge.
+      fireEvent.click(screen.getByRole('button', { name: /connected wallet/i }));
+
+      expect(await screen.findByText(/Testnet/i)).toBeInTheDocument();
+      expect(screen.queryByText(/^Public$/i)).not.toBeInTheDocument();
+    });
+
+    it('shows "Public" badge and links to mainnet explorer when backend returns the mainnet passphrase', async () => {
+      mockedFetch.mockImplementation((url) => {
+        if (url === '/api/protocol/constants') {
+          return makeConstantsResponse(
+            'Public Global Stellar Network ; September 2015',
+          );
+        }
+        if (url === '/api/auth/logout') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ message: 'Logged out successfully' }),
+          } as Response);
+        }
+        return Promise.reject(new Error('Not found'));
+      });
+
+      mockedGetAddress.mockResolvedValueOnce({ address: CONNECTED_ADDRESS });
+
+      render(<WalletAccountMenu />);
+
+      await waitFor(() =>
+        expect(screen.getByText(/GABC…MNOP/)).toBeInTheDocument(),
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /connected wallet/i }));
+
+      expect(await screen.findByText(/Public/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument();
+    });
   });
 });

@@ -326,4 +326,31 @@ describe('cors helper', () => {
 
         expect(response.headers.get('Vary')).toBe('Accept-Encoding, Origin');
     });
+    it('excludes localhost origins in production mode', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'production',
+        writable: true,
+        configurable: true,
+    });
+
+    const policy = {
+        POST: { access: 'first-party' },
+    } satisfies CorsRoutePolicy;
+
+    const request = new NextRequest('http://localhost:3000/api/auth', {
+        method: 'POST',
+        headers: { Origin: 'http://localhost:3000' },
+    });
+
+    expect(() => enforceCorsRequestPolicy(request, policy)).toThrowError(
+        /Origin is not allowed/
+    );
+
+    Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalNodeEnv,
+        writable: true,
+        configurable: true,
+    });
+});
 });

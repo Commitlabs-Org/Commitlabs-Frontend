@@ -25,6 +25,21 @@ describe('useRecentlyViewed', () => {
     expect(result.current.recentIds).toEqual(['001', '002']);
   });
 
+  it('filters out non-string entries from corrupted local storage', async () => {
+    localStorage.setItem(
+      'marketplace-recently-viewed',
+      JSON.stringify(['001', 1, { evil: true }, null, '002'])
+    );
+
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(result.current.recentIds).toEqual(['001', '002']);
+  });
+
   it('adds views with deduplication (moves to front)', async () => {
     const { result } = renderHook(() => useRecentlyViewed());
 

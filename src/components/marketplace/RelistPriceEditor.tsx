@@ -5,11 +5,19 @@ import { Pencil, RotateCcw, Loader2, X, Check } from 'lucide-react';
 import type { MarketplaceListing } from '@/types/marketplace';
 import { useToast } from '@/components/toast/ToastProvider';
 
+export interface MarketplaceStats {
+  floorPrice: string;
+  medianPrice: string;
+  lastSoldPrice?: string;
+  activeSellers: number;
+}
+
 interface RelistPriceEditorProps {
   listing: MarketplaceListing;
   sellerAddress: string;
   commitmentAsset: string;
   onPriceUpdated?: (newPrice: string) => void;
+  marketplaceStats?: MarketplaceStats;
 }
 
 const MIN_PRICE = 0.01;
@@ -30,16 +38,18 @@ export default function RelistPriceEditor({
   sellerAddress,
   commitmentAsset,
   onPriceUpdated,
+  marketplaceStats,
 }: RelistPriceEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [price, setPrice] = useState(listing.price);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [localStatusOverride, setLocalStatusOverride] = useState<'Cancelled' | null>(null);
   const toast = useToast();
   const inputId = useId();
 
-  const isActive = listing.status === 'Active';
-  const isCancelled = listing.status === 'Cancelled';
+  const isActive = localStatusOverride ? false : listing.status === 'Active';
+  const isCancelled = localStatusOverride === 'Cancelled' ? true : listing.status === 'Cancelled';
 
   const handleOpen = useCallback(() => {
     setPrice(listing.price);
@@ -64,6 +74,7 @@ export default function RelistPriceEditor({
 
     const previousPrice = listing.price;
     const numericPrice = Number(price.trim());
+    let wasCancelled = false;
 
     try {
       if (isActive) {
@@ -82,6 +93,7 @@ export default function RelistPriceEditor({
           const data = await cancelRes.json().catch(() => ({}));
           throw new Error(data.message || data.error || 'Failed to cancel existing listing');
         }
+        wasCancelled = true;
       }
 
       const createRes = await fetch('/api/marketplace/listings', {
@@ -110,12 +122,21 @@ export default function RelistPriceEditor({
       });
       setIsEditing(false);
     } catch (err) {
-      setPrice(previousPrice);
       const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-      toast.error({
-        title: 'Failed to update listing',
-        description: message,
-      });
+      if (wasCancelled) {
+        setLocalStatusOverride('Cancelled');
+        setIsEditing(false);
+        toast.error({
+          title: 'Update failed, listing cancelled',
+          description: `Your listing was cancelled but could not be recreated: ${message}. Please relist.`,
+        });
+      } else {
+        setPrice(previousPrice);
+        toast.error({
+          title: 'Failed to update listing',
+          description: message,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -188,6 +209,15 @@ export default function RelistPriceEditor({
           {commitmentAsset}
         </span>
       </div>
+      {marketplaceStats && (
+        <div className="rounded-[6px] border border-white/5 bg-white/3 px-3 py-2 text-[11px] text-[#94A3B8]" aria-label="Marketplace price hints">
+          <span className="mr-3">Floor: <strong className="text-white/80">{marketplaceStats.floorPrice} {commitmentAsset}</strong></span>
+          <span className="mr-3">Median: <strong className="text-white/80">{marketplaceStats.medianPrice} {commitmentAsset}</strong></span>
+          {marketplaceStats.lastSoldPrice && (
+            <span>Last sold: <strong className="text-white/80">{marketplaceStats.lastSoldPrice} {commitmentAsset}</strong></span>
+          )}
+        </div>
+      )}
       {validationError && (
         <p
           id={`${inputId}-error`}

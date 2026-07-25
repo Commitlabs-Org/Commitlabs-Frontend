@@ -29,6 +29,7 @@ import {
   type RecordAttestationOnChainParams,
 } from "@/lib/backend/services/contracts";
 import { validateStellarAddress } from "@/lib/backend/validation";
+import { getClientIp } from "@/lib/backend/getClientIp";
 import {
   PaginationParseError,
   paginateArray,
@@ -180,7 +181,7 @@ function mapToRecordParams(
 
 export const GET = withApiHandler(
   async (req: NextRequest, _context, correlationId) => {
-    if (!(await checkRateLimit("anonymous", "api/attestations"))) {
+    if (!(await checkRateLimit(getClientIp(req), "api/attestations"))) {
       throw new TooManyRequestsError();
     }
 
@@ -223,7 +224,7 @@ export const GET = withApiHandler(
 
 export const POST = withApiHandler(
   async (req: NextRequest, _context, correlationId) => {
-    if (!(await checkRateLimit("anonymous", "api/attestations"))) {
+    if (!(await checkRateLimit(getClientIp(req), "api/attestations"))) {
       throw new TooManyRequestsError();
     }
 

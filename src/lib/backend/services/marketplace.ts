@@ -12,6 +12,7 @@ import type {
 } from "@/lib/types/domain";
 import { cache } from "@/lib/backend/cache/factory";
 import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
+import { isFeatureEnabled } from "../config";
 
 export type MarketplaceCommitmentType = "Safe" | "Balanced" | "Aggressive";
 
@@ -216,6 +217,12 @@ export async function listMarketplaceListings(
   }
   logInfo(undefined, "[cache] miss marketplace-listings", { query });
 
+  if (!isFeatureEnabled("marketplaceMockData")) {
+    throw new InternalError(
+      "Marketplace on-chain reads not yet implemented. Enable marketplaceMockData feature flag to use mock data."
+    );
+  }
+
   let results = MOCK_LISTINGS;
 
   if (query.type) {
@@ -243,8 +250,6 @@ export async function listMarketplaceListings(
   const sortBy =
     query.sortBy && isMarketplaceSortBy(query.sortBy) ? query.sortBy : "price";
 
-  // TODO(on-chain): Replace mock listings with marketplace contract reads.
-  // TODO(attestation): Merge latest attestation engine score per commitment when available.
   const listings = sortListings(results, sortBy);
   await cache.set(cacheKey, listings, CacheTTL.MARKETPLACE_LISTINGS);
   return listings;
@@ -429,6 +434,11 @@ class MarketplaceService {
   }
 
   async getFeaturedListings(): Promise<MarketplacePublicListing[]> {
+    if (!isFeatureEnabled("marketplaceMockData")) {
+      throw new InternalError(
+        "Marketplace on-chain reads not yet implemented. Enable marketplaceMockData feature flag to use mock data."
+      );
+    }
     return selectFeaturedMarketplaceListings(MOCK_LISTINGS);
   }
 
@@ -438,7 +448,12 @@ class MarketplaceService {
    * @returns Promise<MarketplaceStats> - Aggregated metrics including active listings, avg yield, and median price.
    */
   async getMarketplaceStats(): Promise<MarketplaceStats> {
-    // TODO(on-chain): Replace mock listings with marketplace contract reads.
+    if (!isFeatureEnabled("marketplaceMockData")) {
+      throw new InternalError(
+        "Marketplace on-chain reads not yet implemented. Enable marketplaceMockData feature flag to use mock data."
+      );
+    }
+
     const listings = MOCK_LISTINGS;
 
     if (listings.length === 0) {
@@ -479,6 +494,17 @@ class MarketplaceService {
       medianPrice,
       typeBreakdown,
     };
+  }
+
+  async getPublicListing(
+    listingId: string,
+  ): Promise<MarketplacePublicListing | null> {
+    if (!isFeatureEnabled("marketplaceMockData")) {
+      throw new InternalError(
+        "Marketplace on-chain reads not yet implemented. Enable marketplaceMockData feature flag to use mock data."
+      );
+    }
+    return MOCK_LISTINGS.find((listing) => listing.listingId === listingId) ?? null;
   }
 
   async getPurchasePreflight(

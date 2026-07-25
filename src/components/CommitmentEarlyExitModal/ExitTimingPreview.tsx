@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import {
+  DAY_MS,
+  getGracePeriodStartDate,
+  normalizeGracePeriodDays,
+} from './gracePeriod';
 
 interface ExitTimingPreviewProps {
   commitmentId: string;
   originalAmount: number;
   currentPenaltyPercent: number;
   maturityDate: Date;
+  gracePeriodDays?: number;
 }
 
 interface PreviewResult {
@@ -17,6 +23,7 @@ export function ExitTimingPreview({
   originalAmount,
   currentPenaltyPercent,
   maturityDate,
+  gracePeriodDays = 0,
 }: ExitTimingPreviewProps) {
   const [daysFromNow, setDaysFromNow] = useState(0);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -30,8 +37,13 @@ export function ExitTimingPreview({
   const totalDays = useMemo(() => {
     const now = new Date();
     const diffTime = maturityDate.getTime() - now.getTime();
-    return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    return Math.max(1, Math.ceil(diffTime / DAY_MS));
   }, [maturityDate]);
+
+  const normalizedGracePeriodDays = useMemo(
+    () => normalizeGracePeriodDays(gracePeriodDays),
+    [gracePeriodDays],
+  );
 
   // Fetch the baseline penalty from the API when component mounts
   useEffect(() => {
@@ -48,7 +60,7 @@ export function ExitTimingPreview({
         if (isMounted) {
           setBasePenaltyAmount(data.data?.penaltyAmount ?? (originalAmount * currentPenaltyPercent / 100));
         }
-      } catch (err) {
+      } catch (_err) {
         if (isMounted) {
           // Fallback to calculation if API fails
           setBasePenaltyAmount(originalAmount * currentPenaltyPercent / 100);
@@ -66,9 +78,34 @@ export function ExitTimingPreview({
   useEffect(() => {
     if (basePenaltyAmount === null) return;
     
-    // Linearly interpolate the penalty down to 0 at maturity
-    const remainingDays = Math.max(0, totalDays - daysFromNow);
-    const interpolatedPenalty = basePenaltyAmount * (remainingDays / totalDays);
+    const projectedExitDate = new Date(Date.now() + daysFromNow * DAY_MS);
+    let interpolatedPenalty: number;
+
+    if (normalizedGracePeriodDays > 0) {
+      const penaltyFreeDate = getGracePeriodStartDate(
+        maturityDate,
+        normalizedGracePeriodDays,
+      );
+      if (projectedExitDate.getTime() >= penaltyFreeDate.getTime()) {
+        interpolatedPenalty = 0;
+      } else {
+        const fullPenaltyWindowMs = Math.max(
+          DAY_MS,
+          penaltyFreeDate.getTime() - Date.now(),
+        );
+        const remainingPenaltyWindowMs = Math.max(
+          0,
+          penaltyFreeDate.getTime() - projectedExitDate.getTime(),
+        );
+        interpolatedPenalty =
+          basePenaltyAmount * (remainingPenaltyWindowMs / fullPenaltyWindowMs);
+      }
+    } else {
+      // Existing behavior: linearly interpolate the penalty down to 0 at maturity.
+      const remainingDays = Math.max(0, totalDays - daysFromNow);
+      interpolatedPenalty = basePenaltyAmount * (remainingDays / totalDays);
+    }
+
     const netRefund = originalAmount - interpolatedPenalty;
     
     // Simulate debounced API call feel for UI responsiveness
@@ -80,7 +117,14 @@ export function ExitTimingPreview({
     }, 300);
     
     return () => clearTimeout(timeout);
-  }, [daysFromNow, basePenaltyAmount, totalDays, originalAmount]);
+  }, [
+    daysFromNow,
+    basePenaltyAmount,
+    totalDays,
+    originalAmount,
+    maturityDate,
+    normalizedGracePeriodDays,
+  ]);
 
   const projectedDate = new Date();
   projectedDate.setDate(projectedDate.getDate() + daysFromNow);
@@ -113,6 +157,11 @@ export function ExitTimingPreview({
         <div className="text-center mt-3 text-[13px] text-white/80 font-medium">
           Projected Exit Date: <span className="text-white">{projectedDate.toLocaleDateString()}</span>
         </div>
+        {normalizedGracePeriodDays > 0 && (
+          <p className="mt-2 text-center text-[12px] text-white/45">
+            Penalty projection reaches 0 in the final {normalizedGracePeriodDays} days before maturity.
+          </p>
+        )}
       </div>
 
       <div className="bg-white/[0.02] rounded-xl p-4 flex justify-between items-center border border-white/[0.05]">

@@ -50,15 +50,7 @@ export interface PaginationParams {
 }
 
 
-const amountSchema = z.union([z.string(), z.number()]).transform((val) => {
-  const num = typeof val === "string" ? parseFloat(val) : val;
-  if (isNaN(num) || num <= 0) {
-    throw new Error("Amount must be a positive number");
-  }
-  return num;
-});
-
-const paginationSchema = z
+const _paginationSchema = z
   .object({
     page: z
       .union([z.string(), z.number()])
@@ -87,21 +79,12 @@ const paginationSchema = z
     page: data.page,
     limit: data.limit,
   }));
-
-export const createCommitmentSchemaOld = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  amount: amountSchema,
-  creatorAddress: addressSchema,
-});
-
-export const createMarketplaceListingSchemaOld = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  price: amountSchema,
-  category: z.string().min(1, "Category is required"),
-  sellerAddress: addressSchema,
-});
+export const addressSchema = z
+  .string()
+  .trim()
+  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
+    message: "Must be a valid Stellar address (G... format).",
+  });
 
 const DisputeReasonSchema = z.object({
     reason: z.string().min(1, "Dispute reason is required").max(500, "Reason must be 500 characters or less"),
@@ -118,32 +101,24 @@ export type DisputeReasonInput = z.infer<typeof DisputeReasonSchema>;
 export type ResolveDisputeInput = z.infer<typeof ResolveDisputeSchema>;
 export type FilterParams = Record<string, string | number | boolean>;
 
-const addressSchema2 = z
-  .string()
-  .trim()
-  .refine((addr) => StrKey.isValidEd25519PublicKey(addr), {
-    message: "Must be a valid Stellar address (G... format).",
-  });
-
 const amountSchema2 = z.coerce
   .number()
   .positive("Amount must be a positive number");
 
-const paginationSchema2 = z.object({
+const _paginationSchema2 = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-const supportedAssetCodes = SUPPORTED_ASSETS.map((asset) => asset.code);
 
 export const createCommitmentSchema = z.object({
-  ownerAddress: addressSchema2,
+  ownerAddress: addressSchema,
   asset: z
     .string()
     .trim()
     .transform((asset) => asset.toUpperCase())
-    .refine((asset) => supportedAssetCodes.includes(asset), {
-      message: `Asset is not supported. Supported assets: ${supportedAssetCodes.join(", ")}.`,
+    .refine((asset) => (SUPPORTED_ASSETS ?? []).map((a) => a.code).includes(asset), {
+      message: `Asset is not supported. Supported assets: ${(SUPPORTED_ASSETS ?? []).map((a) => a.code).join(", ")}.`,
     }),
   amount: amountSchema2,
   durationDays: z.coerce
@@ -160,7 +135,7 @@ export const createMarketplaceListingSchema = z.object({
   description: z.string().trim().optional(),
   price: amountSchema2,
   category: z.string().trim().min(1, "Category is required"),
-  sellerAddress: addressSchema2,
+  sellerAddress: addressSchema,
 });
 
 export const createAttestationSchema = z.object({
@@ -337,7 +312,7 @@ export type CreateMarketplaceListingInput = z.infer<
 // Validate Stellar address
 export function validateAddress(address: string): string {
   try {
-    return addressSchema2.parse(address);
+    return addressSchema.parse(address);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new ValidationError(error.issues[0]?.message ?? "Invalid address", "address");
@@ -421,7 +396,7 @@ export function validateSupportedAsset(
  * @example
  * z.object({ ownerAddress: stellarAddressSchema })
  */
-export { addressSchema, addressSchema as stellarAddressSchema };
+export { addressSchema as stellarAddressSchema };
 
 // Amount schema: accept number or numeric string and coerce to number
 const amountSchema3 = z.union([z.number(), z.string()]).transform((v) => {
@@ -431,7 +406,7 @@ const amountSchema3 = z.union([z.number(), z.string()]).transform((v) => {
 }).refine((n) => n > 0, { message: 'Amount must be a positive number' });
 
 // Simple pagination schema
-const paginationSchema3 = z.object({
+const _paginationSchema3 = z.object({
   page: z.number().int().min(1).optional(),
   limit: z.number().int().min(1).optional(),
 });
@@ -507,8 +482,8 @@ export function handleValidationError(error: unknown) {
   }
   if (error instanceof z.ZodError) {
     const firstError = error.issues[0];
-    const field = firstError.path.join(".");
-    return Response.json({ error: firstError.message, field }, { status: 400 });
+    const field = firstError?.path.join(".");
+    return Response.json({ error: firstError?.message, field }, { status: 400 });
   }
   throw error; // Re-throw if not validation error
 }

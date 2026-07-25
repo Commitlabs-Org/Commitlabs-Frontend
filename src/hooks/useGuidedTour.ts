@@ -120,14 +120,13 @@ export function useGuidedTour({
       localStorage.setItem('commitlabs:seen-wizard-tour', 'true');
     }
 
-    if (walletAddress) {
-      const token = localStorage.getItem('sessionToken') || `session_${walletAddress}_${Date.now()}`;
+    const hasRealSession = typeof document !== 'undefined' && document.cookie.includes('session=');
+    if (walletAddress && hasRealSession) {
       try {
         await fetch('/api/user/preferences', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ seenWizardTour: true }),
         });
@@ -150,14 +149,10 @@ export function useGuidedTour({
         seen = localStorage.getItem('commitlabs:seen-wizard-tour') === 'true';
       }
 
-      if (walletAddress) {
-        const token = localStorage.getItem('sessionToken') || `session_${walletAddress}_${Date.now()}`;
+      const hasRealSession = typeof document !== 'undefined' && document.cookie.includes('session=');
+      if (walletAddress && hasRealSession) {
         try {
-          const res = await fetch('/api/user/preferences', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const res = await fetch('/api/user/preferences');
           if (res.ok) {
             const data = await res.json();
             if (data?.data?.preferences?.seenWizardTour) {

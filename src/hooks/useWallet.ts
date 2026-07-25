@@ -1,59 +1,102 @@
 import { getAddress, getNetworkDetails, signMessage } from "@stellar/freighter-api";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-const STORED_TOKEN_KEYS = [
-  "commitlabs.sessionToken",
-  "commitlabs:sessionToken",
-  "sessionToken",
-];
+const WALLET_TIMEOUT_MS = 10000;
 
-const getStoredToken = (): string | null => {
-  if (typeof window === "undefined") return null;
-  for (const key of STORED_TOKEN_KEYS) {
-    const val = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
-    if (val?.trim()) return val.trim();
-  }
-  // Try reading from cookies
-  const cookies = document.cookie.split(";");
-  for (const c of cookies) {
-    const [name, val] = c.trim().split("=");
-    if (name === "session" && val) return decodeURIComponent(val);
+const getExpectedWalletNetwork = (): string | null => {
+  if (typeof process !== "undefined") {
+    const envPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE;
+    if (envPassphrase?.trim()) {
+      return envPassphrase.trim();
+    }
   }
   return null;
 };
 
-const getStoredAddress = (): string | null => {
-  if (typeof window === "undefined") return null;
-  return window.sessionStorage.getItem("commitlabs.authAddress") ?? window.localStorage.getItem("commitlabs.authAddress");
+const normalizeWalletError = (message: unknown): string => {
+  const rawMessage =
+    typeof message === "string"
+      ? message
+      : message instanceof Error
+        ? message.message
+        : "";
+  const normalized = rawMessage.trim().toLowerCase();
+
+  if (!normalized) {
+    return "Unable to connect to Freighter. Please try again.";
+  }
+
+  if (
+    normalized.includes("not installed") ||
+    normalized.includes("not available") ||
+    normalized.includes("extension unavailable") ||
+    normalized.includes("freighter is not") ||
+    normalized.includes("not found")
+  ) {
+    return "Freighter is not installed or unavailable. Install it from freighter.app and refresh to continue.";
+  }
+
+  if (
+    normalized.includes("reject") ||
+    normalized.includes("denied") ||
+    normalized.includes("cancel") ||
+    normalized.includes("user cancelled")
+  ) {
+    return "Wallet prompt was rejected. Please try again if you want to continue.";
+  }
+
+  if (normalized.includes("timeout") || normalized.includes("timed out")) {
+    return "Freighter request timed out. Please try again.";
+  }
+
+  if (normalized.includes("network") || normalized.includes("passphrase")) {
+    return "Your wallet is connected to the wrong network. Switch Freighter to the correct network and try again.";
+  }
+
+  if (normalized.includes("freighter") || normalized.includes("locked") || normalized.includes("unavailable")) {
+    return "Freighter is unavailable right now. Please unlock or reopen Freighter and try again.";
+  }
+
+  return "Unable to connect to Freighter. Please try again.";
 };
 
-const saveSession = (token: string, addr: string) => {
-  if (typeof window === "undefined") return;
-  for (const key of STORED_TOKEN_KEYS) {
-    window.localStorage.setItem(key, token);
-    window.sessionStorage.setItem(key, token);
-  }
-  window.localStorage.setItem("commitlabs.authAddress", addr);
-  window.sessionStorage.setItem("commitlabs.authAddress", addr);
+const withWalletTimeout = async <T,>(promise: Promise<T>, fallbackMessage: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `session=${encodeURIComponent(token)}; path=/; SameSite=Lax${secureFlag}`;
+  return await new Promise<T>((resolve, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(fallbackMessage)), WALLET_TIMEOUT_MS);
+
+    promise.then(resolve, reject).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
+  });
 };
 
-const clearSession = () => {
-  if (typeof window === "undefined") return;
-  for (const key of STORED_TOKEN_KEYS) {
-    window.localStorage.removeItem(key);
-    window.sessionStorage.removeItem(key);
-  }
-  window.localStorage.removeItem("commitlabs.authAddress");
-  window.sessionStorage.removeItem("commitlabs.authAddress");
+interface SessionCheckResult {
+  authenticated: boolean;
+  address?: string;
+}
 
-  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
-  // Fallbacks for testing environments or strict cookie parsers
-  document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  document.cookie = "session=; max-age=0";
+/**
+ * Asks the server whether the HttpOnly session cookie (set by
+ * /api/auth/verify) is still valid. The session token itself is never
+ * readable from client-side JavaScript.
+ */
+const checkSession = async (): Promise<SessionCheckResult> => {
+  try {
+    const res = await fetch("/api/auth/session");
+    if (!res.ok) return { authenticated: false };
+    const json = await res.json();
+    const data = json.data || json;
+    if (data.authenticated && data.address) {
+      return { authenticated: true, address: data.address };
+    }
+    return { authenticated: false };
+  } catch {
+    return { authenticated: false };
+  }
 };
 
 /**
@@ -68,34 +111,52 @@ export const useWallet = () => {
   const [walletNetwork, setWalletNetwork] = useState<string | null>(null);
 
   // Authentication State
-  const [sessionToken, setSessionToken] = useState<string | null>(() => getStoredToken());
+  const [authenticated, setAuthenticated] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // signIn() sometimes has to set `address`/`connected` itself (when it
+  // starts without an already-connected wallet), which would otherwise
+  // re-trigger the "sync auth state with server" effect below concurrently
+  // with signIn's own in-progress nonce/verify flow - racing its
+  // checkSession() call against signIn's own setAuthenticated(true) once it
+  // completes. signIn is authoritative for its own outcome, so it flips this
+  // flag to tell that effect to skip the redundant round-trip once.
+  const skipNextAuthSyncRef = useRef(false);
 
   const fetchAddress = useCallback(async () => {
     setConnecting(true);
 
     try {
-      const result = await getAddress();
+      const result = await withWalletTimeout(getAddress(), "Freighter request timed out while checking your wallet.");
 
       if (result.error) {
-        setError(result.error);
+        const message = normalizeWalletError(result.error);
+        setError(message);
         setConnected(false);
         setAddress("");
         setWalletNetwork(null);
       } else if (result.address) {
+        const expectedNetwork = getExpectedWalletNetwork();
         setAddress(result.address);
         setConnected(true);
         setError(null);
+
         try {
-          const details = await getNetworkDetails();
-          setWalletNetwork(details.networkPassphrase ?? null);
+          const details = await withWalletTimeout(getNetworkDetails(), "Freighter request timed out while checking the wallet network.");
+          const networkPassphrase = details.networkPassphrase ?? null;
+          setWalletNetwork(networkPassphrase);
+
+          if (expectedNetwork && networkPassphrase && networkPassphrase !== expectedNetwork) {
+            setError("Your wallet is connected to the wrong network. Switch Freighter to the correct network and try again.");
+          }
         } catch {
           setWalletNetwork(null);
         }
       }
     } catch (e) {
-      setError((e as Error).message || "Unable to connect to Freighter.");
+      const message = normalizeWalletError(e);
+      setError(message);
       setConnected(false);
       setAddress("");
       setWalletNetwork(null);
@@ -105,25 +166,18 @@ export const useWallet = () => {
     }
   }, []);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     setError(null);
-    fetchAddress();
+    await fetchAddress();
   }, [fetchAddress]);
 
   const signOut = useCallback(async () => {
     try {
-      const storedToken = getStoredToken();
-      if (storedToken) {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${storedToken}`,
-          },
-        }).catch(() => {});
-      }
+      // The HttpOnly session cookie is sent automatically; the server reads
+      // it to know which session to revoke.
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     } finally {
-      clearSession();
-      setSessionToken(null);
+      setAuthenticated(false);
       setAuthError(null);
     }
   }, []);
@@ -146,26 +200,30 @@ export const useWallet = () => {
     try {
       let currentAddress = address;
       if (!connected || !currentAddress) {
-        const result = await getAddress();
+        const result = await withWalletTimeout(getAddress(), "Freighter request timed out while preparing authentication.");
         if (result.error) {
-          throw new Error(result.error);
+          throw new Error(normalizeWalletError(result.error));
         }
         if (!result.address) {
           throw new Error("Unable to retrieve address from Freighter.");
         }
         currentAddress = result.address;
+        skipNextAuthSyncRef.current = true;
         setAddress(currentAddress);
         setConnected(true);
         setError(null);
       }
 
-      const nonceRes = await fetch("/api/auth/nonce", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ address: currentAddress }),
-      });
+      const nonceRes = await withWalletTimeout(
+        fetch("/api/auth/nonce", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ address: currentAddress }),
+        }),
+        "Authentication timed out while fetching the nonce."
+      );
 
       if (!nonceRes.ok) {
         throw new Error("Failed to fetch authentication nonce.");
@@ -178,7 +236,10 @@ export const useWallet = () => {
         throw new Error("Nonce response is missing the challenge message.");
       }
 
-      const signResult = await signMessage(message, { address: currentAddress });
+      const signResult = await withWalletTimeout(
+        signMessage(message, { address: currentAddress }),
+        "Authentication timed out while requesting a signature."
+      );
       if (!signResult) {
         throw new Error("No response received from Freighter.");
       }
@@ -189,17 +250,20 @@ export const useWallet = () => {
         throw new Error("User rejected the signature or no signature returned.");
       }
 
-      const verifyRes = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          address: currentAddress,
-          signature: signResult.signedMessage,
-          message: message,
+      const verifyRes = await withWalletTimeout(
+        fetch("/api/auth/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            address: currentAddress,
+            signature: signResult.signedMessage,
+            message: message,
+          }),
         }),
-      });
+        "Authentication timed out while verifying your signature."
+      );
 
       if (!verifyRes.ok) {
         const errData = await verifyRes.json().catch(() => ({}));
@@ -208,20 +272,25 @@ export const useWallet = () => {
 
       const verifyData = await verifyRes.json();
       const vData = verifyData.data || verifyData;
-      const { verified, sessionToken: token } = vData;
+      const { verified } = vData;
 
-      if (!verified || !token) {
-        throw new Error("Verification failed: Session token not received.");
+      if (!verified) {
+        throw new Error("Verification failed.");
       }
 
-      saveSession(token, currentAddress);
-      setSessionToken(token);
+      // The server has set the HttpOnly session cookie on this response;
+      // there is no token for the client to hold onto.
+      setAuthenticated(true);
       setAuthError(null);
+      setError(null);
     } catch (e) {
       const msg = (e as Error).message || "Authentication handshake failed.";
       setAuthError(msg);
-      clearSession();
-      setSessionToken(null);
+      setError(msg);
+      setAuthenticated(false);
+      setConnected(false);
+      setAddress("");
+      setWalletNetwork(null);
       throw e;
     } finally {
       setAuthenticating(false);
@@ -233,28 +302,49 @@ export const useWallet = () => {
     fetchAddress();
   }, [fetchAddress]);
 
-  // Sync session state once connection check completes or when address/connected changes
+  // Sync auth state with the server once the Freighter connection check
+  // completes, or whenever the connected address changes. The session lives
+  // exclusively in the HttpOnly cookie, so the only way to know if it's
+  // still valid is to ask the server.
+  //
+  // Skipped once when signIn() itself just set `connected`/`address` (see
+  // skipNextAuthSyncRef above) - signIn already determines the authoritative
+  // outcome via its own nonce/verify flow, so a redundant checkSession() call
+  // here would race against signIn's own setAuthenticated(true) and could
+  // clobber it depending on which one resolves last.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (!initialCheckDone) return;
-
-    const storedToken = getStoredToken();
-    const storedAddress = getStoredAddress();
-
-    if (connected && address) {
-      if (storedToken && storedAddress === address) {
-        setSessionToken(storedToken);
-      } else {
-        clearSession();
-        setSessionToken(null);
-      }
-    } else {
-      clearSession();
-      setSessionToken(null);
+    if (skipNextAuthSyncRef.current) {
+      skipNextAuthSyncRef.current = false;
+      return;
     }
-  }, [address, connected, initialCheckDone]);
+    let cancelled = false;
 
-  const authenticated = !!sessionToken;
+    (async () => {
+      if (!connected || !address) {
+        if (!cancelled) setAuthenticated(false);
+        return;
+      }
+
+      const session = await checkSession();
+      if (cancelled) return;
+
+      if (session.authenticated && session.address === address) {
+        setAuthenticated(true);
+      } else if (session.authenticated) {
+        // The authenticated session belongs to a different address than the
+        // one Freighter now reports (e.g. the user switched accounts) -
+        // drop the stale session rather than trust it.
+        await signOut();
+      } else {
+        setAuthenticated(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, connected, initialCheckDone, signOut]);
 
   return {
     connected,
@@ -263,7 +353,6 @@ export const useWallet = () => {
     disconnect,
     error,
     connecting,
-    sessionToken,
     authenticated,
     authenticating,
     authError,
