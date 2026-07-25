@@ -1,3 +1,5 @@
+# ?? SUPERSEDED / ABANDONED: This design specification is no longer being implemented. ??
+
 # Marketplace Listing Detail Page - QA & Testing Guide
 
 This document provides a comprehensive testing checklist, QA procedures, and validation criteria for the listing detail page design before implementation.
@@ -560,3 +562,4 @@ After all testing phases are complete:
 **Status**: ✅ QA & Testing Guide Complete  
 **Last Updated**: 2026-02-28  
 **Next Step**: Schedule design review with stakeholders
+

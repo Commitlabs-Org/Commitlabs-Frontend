@@ -1,3 +1,5 @@
+# ?? SUPERSEDED / ABANDONED: This design specification is no longer being implemented. ??
+
 # Marketplace Listing Detail Page - Design Documentation
 
 **Issue**: Design a listing detail page with commitment summary, seller info, trust signals, and purchase CTA states (eligible/ineligible, needs wallet). UI/UX only.
@@ -408,3 +410,4 @@ Ref: https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/[ISSUE_NUMBER]
 
 **Status**: ✅ Design Documentation Complete  
 **Created**: 2026-02-28
+

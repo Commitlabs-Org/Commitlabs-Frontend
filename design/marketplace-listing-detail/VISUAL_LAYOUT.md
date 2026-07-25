@@ -1,3 +1,5 @@
+# ?? SUPERSEDED / ABANDONED: This design specification is no longer being implemented. ??
+
 # Listing Detail Page - Visual Layout & Wireframe Reference
 
 This document provides ASCII wireframes and visual layout specifications for the marketplace listing detail page across all device sizes and states.
@@ -500,3 +502,4 @@ Use 4px base unit (Tailwind default: `space-*`):
 
 **Status**: ✅ Visual Layout Reference Complete  
 **Last Updated**: 2026-02-28
+

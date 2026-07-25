@@ -1,3 +1,5 @@
+# ?? SUPERSEDED / ABANDONED: This design specification is no longer being implemented. ??
+
 # Marketplace Listing Detail Page - Design Completion Summary
 
 **Issue**: Design a listing detail page with commitment summary, seller info, trust signals, and purchase CTA states (eligible/ineligible, needs wallet). UI/UX only.
@@ -517,3 +519,4 @@ Before implementation begins, ensure all stakeholders have approved:
 ---
 
 _For questions or feedback, refer to the comprehensive documentation provided. All design decisions are documented with rationale and implementation guidance._
+

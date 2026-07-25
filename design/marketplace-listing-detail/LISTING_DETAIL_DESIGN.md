@@ -1,3 +1,5 @@
+# ?? SUPERSEDED / ABANDONED: This design specification is no longer being implemented. ??
+
 # Marketplace Listing Detail Page Design
 
 ## Overview
@@ -637,3 +639,4 @@ This design specification covers:
 **Status**: ✅ Design Specification Complete  
 **Date**: 2026-02-28  
 **Approval**: Ready for implementation review
+

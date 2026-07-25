@@ -1,3 +1,5 @@
+# ?? SUPERSEDED / ABANDONED: This design specification is no longer being implemented. ??
+
 # Listing Detail Page - Component Specifications
 
 This document provides detailed component APIs, props interfaces, and interaction patterns for the marketplace listing detail page.
@@ -631,3 +633,4 @@ Create `ListingDetail.module.css` at `src/app/marketplace/[id]/page.module.css`:
 
 **Status**: ✅ Component Specifications Complete  
 **Last Updated**: 2026-02-28
+
