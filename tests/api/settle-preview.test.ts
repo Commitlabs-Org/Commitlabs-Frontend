@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockRequest,
@@ -65,6 +66,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: true,
       reason: null,
       estimatedSettlement: '1050',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: true,
+      },
     });
   });
 
@@ -94,6 +100,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment has not matured yet and cannot be settled.',
       estimatedSettlement: '1050',
+      criteria: {
+        maturity: false,
+        noDispute: true,
+        eligibleState: true,
+      },
     });
   });
 
@@ -122,6 +133,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment has already been settled.',
       estimatedSettlement: '1050',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: false,
+      },
     });
   });
 
@@ -143,6 +159,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment has been violated and cannot be settled.',
       estimatedSettlement: '1000',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: false,
+      },
     });
   });
 
@@ -164,6 +185,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment has already been exited early.',
       estimatedSettlement: '1000',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: false,
+      },
     });
   });
 
@@ -185,6 +211,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment must be active to be settled.',
       estimatedSettlement: '1000',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: false,
+      },
     });
   });
 
@@ -206,6 +237,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment is currently in dispute and cannot be settled.',
       estimatedSettlement: '1000',
+      criteria: {
+        maturity: true,
+        noDispute: false,
+        eligibleState: true,
+      },
     });
   });
 
@@ -299,6 +335,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: false,
       reason: 'Commitment is in an ineligible state for settlement.',
       estimatedSettlement: '1000',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: false,
+      },
     });
   });
 
@@ -321,6 +362,11 @@ describe('GET /api/commitments/[id]/settle/preview', () => {
       eligible: true,
       reason: null,
       estimatedSettlement: '1000',
+      criteria: {
+        maturity: true,
+        noDispute: true,
+        eligibleState: true,
+      },
     });
   });
 });

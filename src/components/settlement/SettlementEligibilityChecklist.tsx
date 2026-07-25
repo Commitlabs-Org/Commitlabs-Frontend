@@ -14,6 +14,11 @@ interface SettlementPreviewResponse {
   eligible: boolean;
   reason: string | null;
   estimatedSettlement: string | number | null;
+  criteria?: {
+    maturity: boolean;
+    noDispute: boolean;
+    eligibleState: boolean;
+  };
 }
 
 interface ChecklistItem {
@@ -84,24 +89,30 @@ export function SettlementEligibilityChecklist({
       return [];
     }
 
+    const criteria = preview.criteria ?? {
+      maturity: preview.eligible,
+      noDispute: preview.eligible,
+      eligibleState: preview.eligible,
+    };
+
     return [
       {
         id: 'maturity',
         label: 'Maturity reached',
-        description: preview.eligible ? 'The commitment is mature enough to settle.' : preview.reason ?? 'Settlement is blocked until maturity.',
-        isComplete: preview.eligible,
+        description: criteria.maturity ? 'The commitment is mature enough to settle.' : preview.reason ?? 'Settlement is blocked until maturity.',
+        isComplete: criteria.maturity,
       },
       {
         id: 'dispute',
         label: 'No active dispute',
-        description: preview.eligible ? 'No dispute is preventing settlement.' : preview.reason ?? 'Settlement is blocked by a dispute state.',
-        isComplete: preview.eligible,
+        description: criteria.noDispute ? 'No dispute is preventing settlement.' : preview.reason ?? 'Settlement is blocked by a dispute state.',
+        isComplete: criteria.noDispute,
       },
       {
         id: 'status',
         label: 'Eligible settlement state',
-        description: preview.eligible ? 'The commitment is in a settlement-ready state.' : preview.reason ?? 'The commitment is not in a settlement-ready state.',
-        isComplete: preview.eligible,
+        description: criteria.eligibleState ? 'The commitment is in a settlement-ready state.' : preview.reason ?? 'The commitment is not in a settlement-ready state.',
+        isComplete: criteria.eligibleState,
       },
     ];
   }, [preview]);

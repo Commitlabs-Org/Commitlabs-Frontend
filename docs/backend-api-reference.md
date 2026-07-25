@@ -269,7 +269,12 @@ curl -X GET http://localhost:3000/api/commitments/abc123/settle/preview
   "data": {
     "eligible": true,
     "reason": null,
-    "estimatedSettlement": "1000.50"
+    "estimatedSettlement": "1000.50",
+    "criteria": {
+      "maturity": true,
+      "noDispute": true,
+      "eligibleState": true
+    }
   }
 }
 ```
@@ -282,7 +287,12 @@ If the commitment is not eligible:
   "data": {
     "eligible": false,
     "reason": "Commitment has not matured yet and cannot be settled.",
-    "estimatedSettlement": "1000.50"
+    "estimatedSettlement": "1000.50",
+    "criteria": {
+      "maturity": false,
+      "noDispute": true,
+      "eligibleState": true
+    }
   }
 }
 ```

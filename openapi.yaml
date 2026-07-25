@@ -393,6 +393,15 @@ paths:
                             nullable: true
                           estimatedSettlement:
                             type: string
+                          criteria:
+                            type: object
+                            properties:
+                              maturity:
+                                type: boolean
+                              noDispute:
+                                type: boolean
+                              eligibleState:
+                                type: boolean
         '404':
           $ref: '#/components/responses/NotFound'
         '429':

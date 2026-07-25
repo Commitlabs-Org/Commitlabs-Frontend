@@ -41,42 +41,62 @@ export const GET = withApiHandler(async (req: NextRequest, { params }, correlati
     throw new NotFoundError('Commitment', { commitmentId });
   }
 
-  let eligible = true;
-  let reason: string | null = null;
-
-  if (commitment.status === 'SETTLED') {
-    eligible = false;
-    reason = 'Commitment has already been settled.';
-  } else if (commitment.status === 'VIOLATED') {
-    eligible = false;
-    reason = 'Commitment has been violated and cannot be settled.';
-  } else if (commitment.status === 'EARLY_EXIT') {
-    eligible = false;
-    reason = 'Commitment has already been exited early.';
-  } else if (commitment.status === 'CREATED') {
-    eligible = false;
-    reason = 'Commitment must be active to be settled.';
-  } else if (commitment.status === 'DISPUTED') {
-    eligible = false;
-    reason = 'Commitment is currently in dispute and cannot be settled.';
-  } else if (commitment.status === 'ACTIVE') {
-    if (commitment.expiresAt) {
-      const expiryTime = new Date(commitment.expiresAt).getTime();
-      const now = Date.now();
-      if (now < expiryTime) {
-        eligible = false;
-        reason = 'Commitment has not matured yet and cannot be settled.';
-      }
+  let maturity = true;
+  let maturityReason: string | null = null;
+  if (commitment.expiresAt) {
+    const expiryTime = new Date(commitment.expiresAt).getTime();
+    const now = Date.now();
+    if (now < expiryTime) {
+      maturity = false;
+      maturityReason = 'Commitment has not matured yet and cannot be settled.';
     }
-  } else {
-    eligible = false;
-    reason = 'Commitment is in an ineligible state for settlement.';
+  }
+
+  let noDispute = true;
+  let disputeReason: string | null = null;
+  if (commitment.status === 'DISPUTED') {
+    noDispute = false;
+    disputeReason = 'Commitment is currently in dispute and cannot be settled.';
+  }
+
+  let eligibleState = true;
+  let stateReason: string | null = null;
+  if (commitment.status === 'SETTLED') {
+    eligibleState = false;
+    stateReason = 'Commitment has already been settled.';
+  } else if (commitment.status === 'VIOLATED') {
+    eligibleState = false;
+    stateReason = 'Commitment has been violated and cannot be settled.';
+  } else if (commitment.status === 'EARLY_EXIT') {
+    eligibleState = false;
+    stateReason = 'Commitment has already been exited early.';
+  } else if (commitment.status === 'CREATED') {
+    eligibleState = false;
+    stateReason = 'Commitment must be active to be settled.';
+  } else if (commitment.status !== 'ACTIVE' && commitment.status !== 'DISPUTED') {
+    eligibleState = false;
+    stateReason = 'Commitment is in an ineligible state for settlement.';
+  }
+
+  const eligible = maturity && noDispute && eligibleState;
+  let reason: string | null = null;
+  if (!eligibleState) {
+    reason = stateReason;
+  } else if (!noDispute) {
+    reason = disputeReason;
+  } else if (!maturity) {
+    reason = maturityReason;
   }
 
   const responseData = {
     eligible,
     reason,
     estimatedSettlement: commitment.currentValue,
+    criteria: {
+      maturity,
+      noDispute,
+      eligibleState,
+    },
   };
 
   return ok(responseData, undefined, 200, correlationId);
