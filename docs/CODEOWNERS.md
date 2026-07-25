@@ -11,6 +11,15 @@ area a pull request touches.
 - The **last matching pattern wins**. A broad fallback (`*`) is declared first,
   and more specific area patterns are declared below it.
 
+## Pattern precedence example
+
+Because "last matching pattern wins", the order of rules matters. For example:
+
+- `contracts/README.md` matches both `*.md` and `/contracts/`. Since `/contracts/`
+  appears later in the file, it wins and routes to `@Commitlabs-Org/contracts`.
+- `README.md` at the repo root only matches `*.md`, so it routes to `@Commitlabs-Org/docs`.
+- `src/components/Button.tsx` only matches `/src/components/`, routing to `@Commitlabs-Org/frontend`.
+
 ## Ownership map
 
 | Area            | Paths                                        | Owner                            |
