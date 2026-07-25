@@ -45,3 +45,17 @@ export {
   JSON_BODY_LIMITS,
 } from "./jsonBodyLimit";
 export type { ParseJsonWithLimitOptions } from "./jsonBodyLimit";
+export {
+  exportTransactionHistory,
+  filterTransactions,
+  fetchTransactionsForOwner,
+  mapHistoryEventToTransaction,
+} from "./services/transactionHistoryExport";
+export type {
+  Transaction,
+  ExportTransactionHistoryOptions,
+  ExportFormat,
+  DateRangeFilter,
+  AmountRangeFilter,
+} from "./services/transactionHistoryExport";
+
