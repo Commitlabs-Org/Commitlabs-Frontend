@@ -1,12 +1,15 @@
 // @vitest-environment happy-dom
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getAddress, signMessage } from '@stellar/freighter-api';
+import { getAddress, signMessage } from '@/lib/freighterAdapter';
 import { useWallet } from '../useWallet';
 
-vi.mock('@stellar/freighter-api', () => ({
+vi.mock('@/lib/freighterAdapter', () => ({
   getAddress: vi.fn(),
+  getNetworkDetails: vi.fn().mockResolvedValue({ networkPassphrase: 'Test SDF Network ; September 2015' }),
   signMessage: vi.fn(),
+  isConnected: vi.fn().mockResolvedValue(true),
+  requestAccess: vi.fn(),
 }));
 
 const mockGetAddress = vi.mocked(getAddress);
@@ -104,7 +107,7 @@ describe('useWallet authentication', () => {
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
 
-    let signInError: any = null;
+    let signInError: Error | null = null;
     await act(async () => {
       try {
         await result.current.signIn();
@@ -132,7 +135,7 @@ describe('useWallet authentication', () => {
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
 
-    let signInError: any = null;
+    let signInError: Error | null = null;
     await act(async () => {
       try {
         await result.current.signIn();
@@ -174,7 +177,7 @@ describe('useWallet authentication', () => {
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
 
-    let signInError: any = null;
+    let signInError: Error | null = null;
     await act(async () => {
       try {
         await result.current.signIn();

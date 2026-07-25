@@ -13,12 +13,10 @@ export default function CommitmentOverviewPage() {
     async function loadCommitments() {
       try {
         const data = await apiGet<{ data: Commitment[] }>('/api/commitments');
-        setCommitments(data.data);
-          if (data && Array.isArray(data.data)) {
-            setCommitments(data.data);
-          } else if (Array.isArray(data)) {
-            setCommitments(data);
-          }
+        if (data && Array.isArray(data.data)) {
+          setCommitments(data.data);
+        } else if (Array.isArray(data)) {
+          setCommitments(data);
         }
       } catch (err) {
         console.error("Failed to load commitments", err);

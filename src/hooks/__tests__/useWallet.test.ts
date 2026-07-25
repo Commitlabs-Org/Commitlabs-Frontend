@@ -1,13 +1,17 @@
 // @vitest-environment happy-dom
 
-import { getAddress } from '@stellar/freighter-api';
+import { getAddress } from '@/lib/freighterAdapter';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useWallet } from '../useWallet';
 
-vi.mock('@stellar/freighter-api', () => ({
+vi.mock('@/lib/freighterAdapter', () => ({
   getAddress: vi.fn(),
+  getNetworkDetails: vi.fn().mockResolvedValue({ networkPassphrase: 'Test SDF Network ; September 2015' }),
+  signMessage: vi.fn(),
+  isConnected: vi.fn().mockResolvedValue(true),
+  requestAccess: vi.fn(),
 }));
 
 const getAddressMock = vi.mocked(getAddress);

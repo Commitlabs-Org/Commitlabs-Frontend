@@ -1,6 +1,11 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import {
+  getAddress,
+  isConnected,
+  requestAccess,
+} from '@/lib/freighterAdapter'
 
 const STORAGE_KEY = 'commitlabs.wallet.address'
 
@@ -27,14 +32,6 @@ declare global {
   }
 }
 
-async function getFreighterModule() {
-  try {
-    return await import('@stellar/freighter-api')
-  } catch {
-    return null
-  }
-}
-
 async function checkWalletConnection(): Promise<boolean | null> {
   const browserApi = typeof window !== 'undefined' ? window.freighterApi : undefined
 
@@ -49,18 +46,8 @@ async function checkWalletConnection(): Promise<boolean | null> {
     return null
   }
 
-  const freighter = await getFreighterModule()
-  if (freighter?.isConnected) {
-    const result = await freighter.isConnected()
-    if (typeof result === 'boolean') {
-      return result
-    }
-    if ('isConnected' in result && typeof result.isConnected === 'boolean') {
-      return result.isConnected
-    }
-  }
-
-  return null
+  const connected = await isConnected()
+  return connected
 }
 
 function readStoredAddress() {
@@ -109,31 +96,20 @@ async function requestWalletAddress(): Promise<string> {
     throw new Error(result?.error ?? 'Unable to read wallet address.')
   }
 
-  const freighter = await getFreighterModule()
-  if (freighter?.requestAccess) {
-    const result = await freighter.requestAccess()
-    if (typeof result === 'string') {
-      return result
-    }
-    if ('address' in result && result.address) {
-      return result.address
-    }
-    if ('error' in result && result.error) {
-      throw new Error(result.error)
-    }
+  const accessResult = await requestAccess()
+  if (accessResult.error) {
+    throw new Error(accessResult.error)
+  }
+  if (accessResult.address) {
+    return accessResult.address
   }
 
-  if (freighter?.getAddress) {
-    const result = await freighter.getAddress()
-    if (typeof result === 'string') {
-      return result
-    }
-    if ('address' in result && result.address) {
-      return result.address
-    }
-    if ('error' in result && result.error) {
-      throw new Error(result.error)
-    }
+  const addressResult = await getAddress()
+  if (addressResult.error) {
+    throw new Error(addressResult.error)
+  }
+  if (addressResult.address) {
+    return addressResult.address
   }
 
   throw new Error('Freighter wallet is not available. Install or unlock Freighter to continue.')

@@ -4,10 +4,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 
 import { WalletAccountMenu } from './WalletAccountMenu';
-import { getAddress } from '@stellar/freighter-api';
+import { getAddress } from '@/lib/freighterAdapter';
 
-vi.mock('@stellar/freighter-api', () => ({
+vi.mock('@/lib/freighterAdapter', () => ({
   getAddress: vi.fn(),
+  getNetworkDetails: vi.fn(),
+  signMessage: vi.fn(),
+  isConnected: vi.fn(),
+  requestAccess: vi.fn(),
 }));
 
 // Mock fetch for API calls

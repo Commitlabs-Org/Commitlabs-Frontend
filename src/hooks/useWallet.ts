@@ -1,4 +1,8 @@
-import { getAddress, getNetworkDetails, signMessage } from "@stellar/freighter-api";
+import {
+  getAddress,
+  getNetworkDetails,
+  signMessage,
+} from "@/lib/freighterAdapter";
 import { useState, useEffect, useCallback } from "react";
 
 const STORED_TOKEN_KEYS = [
