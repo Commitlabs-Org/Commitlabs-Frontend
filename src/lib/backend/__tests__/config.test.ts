@@ -64,6 +64,7 @@ function clearContractEnvVars(): void {
     "COMMITLABS_ENABLE_CHAIN_WRITES",
     "COMMITLABS_FEATURE_ANALYTICS_USER",
     "COMMITLABS_FEATURE_MARKETPLACE",
+    "COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA",
     "COMMITLABS_FEATURE_FLAGS_JSON",
     "VERCEL_ENV",
   ];
@@ -332,6 +333,7 @@ describe("getFeatureFlags", () => {
     const flags = getFeatureFlags();
     expect(flags.analyticsUser).toBe(false);
     expect(flags.marketplace).toBe(false);
+    expect(flags.marketplaceMockData).toBe(true);
   });
 
   it("enables analyticsUser via COMMITLABS_FEATURE_ANALYTICS_USER=1", () => {
@@ -346,15 +348,29 @@ describe("getFeatureFlags", () => {
     expect(getFeatureFlags().marketplace).toBe(true);
   });
 
+  it("enables marketplaceMockData via COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA=1", () => {
+    process.env.COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA = "1";
+    resetEnv();
+    expect(getFeatureFlags().marketplaceMockData).toBe(true);
+  });
+
+  it("disables marketplaceMockData via COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA=false", () => {
+    process.env.COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA = "false";
+    resetEnv();
+    expect(getFeatureFlags().marketplaceMockData).toBe(false);
+  });
+
   it("parses flags from COMMITLABS_FEATURE_FLAGS_JSON", () => {
     process.env.COMMITLABS_FEATURE_FLAGS_JSON = JSON.stringify({
       analyticsUser: true,
       marketplace: false,
+      marketplaceMockData: false,
     });
     resetEnv();
     const flags = getFeatureFlags();
     expect(flags.analyticsUser).toBe(true);
     expect(flags.marketplace).toBe(false);
+    expect(flags.marketplaceMockData).toBe(false);
   });
 
   it("JSON flags take precedence over individual env var flags", () => {

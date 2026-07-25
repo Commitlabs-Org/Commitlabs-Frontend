@@ -54,6 +54,50 @@ describe("t()", () => {
   });
 });
 
+describe("multi-locale support", () => {
+  it("resolves 'es' locale hero keys", () => {
+    expect(t("landing.hero.heading_line1", "es")).toBe("Liquidez como");
+    expect(t("landing.hero.heading_line2", "es")).toBe("compromiso,");
+    expect(t("landing.hero.heading_line3", "es")).toBe("no como suposición.");
+  });
+
+  it("resolves 'es' locale CTA keys", () => {
+    expect(t("landing.hero.cta_create", "es")).toBe("Crear compromiso");
+    expect(t("landing.hero.cta_explore", "es")).toBe("Explorar mercado");
+  });
+
+  it("falls back to 'en' when locale is unknown", () => {
+    // @ts-expect-error – intentionally testing unknown locale
+    expect(t("landing.hero.brand_name", "fr")).toBe("CommitLabs");
+  });
+
+  it("all locales share the same key structure", () => {
+    const enKeys = Object.keys(messages.en);
+    const esKeys = Object.keys(messages.es);
+    expect(esKeys).toEqual(enKeys);
+
+    for (const ns of enKeys) {
+      const enNs = messages.en[ns as keyof typeof messages.en];
+      const esNs = messages.es[ns as keyof typeof messages.es];
+      expect(Object.keys(esNs)).toEqual(Object.keys(enNs));
+    }
+  });
+});
+
+describe("second namespace (common.nav)", () => {
+  it("resolves 'en' common.nav keys", () => {
+    expect(t("common.nav.home")).toBe("Home");
+    expect(t("common.nav.marketplace")).toBe("Marketplace");
+    expect(t("common.nav.docs")).toBe("Docs");
+  });
+
+  it("resolves 'es' common.nav keys", () => {
+    expect(t("common.nav.home", "es")).toBe("Inicio");
+    expect(t("common.nav.marketplace", "es")).toBe("Mercado");
+    expect(t("common.nav.docs", "es")).toBe("Documentación");
+  });
+});
+
 describe("useTranslations()", () => {
   it("returns a translate function", () => {
     const { result } = renderHook(() => useTranslations());
@@ -79,18 +123,25 @@ describe("useTranslations()", () => {
   });
 
   it("updates the translate function when locale changes", () => {
-    let locale: "en" = "en";
+    const locale = "en" as const;
     const { result, rerender } = renderHook(() => useTranslations(locale));
     const first = result.current;
     // locale stays the same – ref should remain stable
     rerender();
     expect(result.current).toBe(first);
   });
+
+  it("resolves 'es' translations via useTranslations hook", () => {
+    const { result } = renderHook(() => useTranslations("es"));
+    expect(result.current("common.nav.home")).toBe("Inicio");
+    expect(result.current("landing.hero.brand_name")).toBe("CommitLabs");
+  });
 });
 
 describe("messages catalog shape", () => {
-  it("has an 'en' locale entry", () => {
+  it("has 'en' and 'es' locale entries", () => {
     expect(messages).toHaveProperty("en");
+    expect(messages).toHaveProperty("es");
   });
 
   it("has a 'landing.hero' namespace with all expected keys", () => {
@@ -106,13 +157,33 @@ describe("messages catalog shape", () => {
     ];
     expectedKeys.forEach((k) => {
       expect(messages.en.landing.hero).toHaveProperty(k);
+      expect(messages.es.landing.hero).toHaveProperty(k);
+    });
+  });
+
+  it("has a 'common.nav' namespace with all expected keys", () => {
+    const expectedKeys = ["home", "marketplace", "docs"];
+    expectedKeys.forEach((k) => {
+      expect(messages.en.common.nav).toHaveProperty(k);
+      expect(messages.es.common.nav).toHaveProperty(k);
     });
   });
 
   it("all hero values are non-empty strings", () => {
-    Object.values(messages.en.landing.hero).forEach((v) => {
-      expect(typeof v).toBe("string");
-      expect(v.length).toBeGreaterThan(0);
-    });
+    for (const locale of Object.keys(messages) as Array<keyof typeof messages>) {
+      Object.values(messages[locale].landing.hero).forEach((v) => {
+        expect(typeof v).toBe("string");
+        expect(v.length).toBeGreaterThan(0);
+      });
+    }
+  });
+
+  it("all common.nav values are non-empty strings", () => {
+    for (const locale of Object.keys(messages) as Array<keyof typeof messages>) {
+      Object.values(messages[locale].common.nav).forEach((v) => {
+        expect(typeof v).toBe("string");
+        expect(v.length).toBeGreaterThan(0);
+      });
+    }
   });
 });

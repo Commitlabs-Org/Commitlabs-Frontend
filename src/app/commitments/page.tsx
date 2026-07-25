@@ -142,7 +142,7 @@ function calculateStatsFromCommitments(commitments: Commitment[]): CommitmentSta
   // Calculate average compliance score
   const avgComplianceScore =
     commitments.length > 0
-      ? Math.round(commitments.reduce((sum, c) => sum + c.complianceScore, 0) / commitments.length)
+      ? Math.round(commitments.reduce((sum, c) => sum + c.complianceScore!, 0) / commitments.length)
       : 0
 
   // Calculate total fees generated (1% of total committed value as placeholder)
@@ -182,7 +182,7 @@ export default function MyCommitments() {
   const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [selectedIdsForExport, setSelectedIdsForExport] = useState<string[]>([])
-  const [isExporting, setIsExporting] = useState(false)
+  const [isExporting, _setIsExporting] = useState(false)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
   const [isLoading, setIsLoading] = useState(true)

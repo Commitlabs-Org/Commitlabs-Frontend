@@ -23,8 +23,8 @@ sequenceDiagram
     User->>Freighter Wallet: Approves signature
     Freighter Wallet-->>Frontend (useWallet): Return signature
     Frontend (useWallet)->>Backend (Auth API): POST /api/auth/verify { address, signature, message }
-    Backend (Auth API)-->>Frontend (useWallet): Return { verified: true, sessionToken }
-    Frontend (useWallet)->>Frontend (useWallet): Save sessionToken & cookie
+    Backend (Auth API)-->>Frontend (useWallet): Set-Cookie: cl_auth_session (HttpOnly); body { verified: true, address }
+    Frontend (useWallet)->>Frontend (useWallet): Mark authenticated (no token held client-side)
 ```
 
 ### 1. Request Nonce
@@ -71,7 +71,14 @@ The backend:
 - Validates that the challenge has not expired.
 - Verifies the signature against the public key (`address`) using Ed25519 verification.
 - Checks that the nonce matches the registered session challenge for the specified address, then deletes (consumes) the nonce.
-- Returns a secure `sessionToken`.
+- Creates a session token and sets it as an HttpOnly cookie (`cl_auth_session`) on the response. The token is never included in the JSON body.
+
+### 4. Check Session
+To learn whether an existing HttpOnly cookie is still valid (e.g. on page load), the frontend calls:
+```
+GET /api/auth/session
+```
+which returns `{ authenticated: boolean, address?: string }`, derived entirely server-side from the cookie. This is the only way the client can observe authentication state, since it cannot read the cookie's value directly.
 
 ---
 
@@ -79,8 +86,8 @@ The backend:
 
 ### 1. Account-Switching Protection
 If a user switches accounts within Freighter, or disconnects their wallet:
-- The hook compares the current connected wallet address against the authenticated address stored during the handshake (`commitlabs.authAddress`).
-- Upon mismatch or disconnection, the active session token, local storage keys, and cookie are instantly cleared to prevent unauthorized state-changing requests.
+- The hook re-checks `/api/auth/session` and compares the server-reported authenticated address against the current connected wallet address.
+- Upon mismatch or disconnection, the hook calls `/api/auth/logout`, which revokes the session and clears the cookie server-side.
 
 ### 2. Plaintext Secrets Handling
 To prevent leaks:
@@ -88,14 +95,12 @@ To prevent leaks:
 - Disconnected wallets clean up all references.
 
 ### 3. Session Token Storage
-Upon successful authentication, the `sessionToken` is written to:
-- State for in-memory hook consumption.
-- LocalStorage and SessionStorage under `commitlabs.sessionToken`, `commitlabs:sessionToken`, and `sessionToken` for backward compatibility with older page exports.
-- A secure `session` cookie:
-  ```typescript
-  document.cookie = `session=${token}; path=/; SameSite=Lax; Secure`;
-  ```
-  This is required for backend route handlers that enforce cookie-based session verification.
+The session token exists **only** as an HttpOnly cookie (`cl_auth_session`), set directly by `/api/auth/verify` via `response.cookies.set(...)` with `httpOnly: true`. It is:
+- Never included in any JSON response body.
+- Never written to `localStorage`, `sessionStorage`, or a JS-readable cookie.
+- Sent automatically by the browser on same-origin requests; the frontend does not need to (and cannot) read or attach it manually.
+
+This closes the XSS-to-token-theft vector that existed when the token was readable from client-side JavaScript.
 
 ### 4. Idempotency & Race Conditions
 - Multiple simultaneous calls to `signIn()` are ignored if a sign-in process is already in progress (`authenticating === true`).

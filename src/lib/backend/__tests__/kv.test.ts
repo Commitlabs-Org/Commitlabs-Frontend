@@ -56,10 +56,10 @@ describe('backend kv adapter', () => {
     const kv = await createMemoryKV();
 
     await kv.set('cache:item', 'cached');
-    await kv.del('cache:item');
+    await kv.delete('cache:item');
 
     await expect(kv.get('cache:item')).resolves.toBeNull();
-    await expect(kv.del('cache:item')).resolves.toBeUndefined();
+    await expect(kv.delete('cache:item')).resolves.toBeUndefined();
   });
 
   it('expires keys after their ttl elapses', async () => {

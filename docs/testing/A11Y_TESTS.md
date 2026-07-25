@@ -8,7 +8,7 @@ Accessibility is a core priority of the Commitlabs project. To prevent regressio
 
 Automated accessibility tests are executed in the Vitest runner.
 
-1. **Test Matchers**: The project registers the axe matcher in [vitest.setup.ts](file:///Users/winnergbolagade/Desktop/drips/Commitlabs-Frontend/tests/setup/vitest.setup.ts):
+1. **Test Matchers**: The project registers the axe matcher in [vitest.setup.ts](../../tests/setup/vitest.setup.ts):
    ```typescript
    import * as axeMatchers from 'vitest-axe/matchers';
    import 'vitest-axe/extend-expect';

@@ -63,7 +63,7 @@ export interface MarketplaceHeaderProps {
   onResultSelect?: (item: CommitmentSearchResult) => void
 }
 
-const DEFAULT_PLACEHOLDER = 'Search commitmentsâ€¦'
+const DEFAULT_PLACEHOLDER = 'Search commitments…'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -78,7 +78,6 @@ export function MarketplaceHeader({
   searchQuery: controlledQuery,
   ownerAddress,
   onResultSelect,
-}: MarketplaceHeaderProps) {
 }: MarketplaceHeaderProps) {
   // ── Sort ───────────────────────────────────────────────────────────────────
   const [sortValue, setSortValue] = useState<SortValue>('popular')
@@ -260,7 +259,7 @@ export function MarketplaceHeader({
               </span>
             )}
 
-            {/* Results listbox â€“ always rendered so aria-controls is valid */}
+            {/* Results listbox – always rendered so aria-controls is valid */}
             <ul
               id={listboxId}
               role="listbox"
@@ -278,6 +277,11 @@ export function MarketplaceHeader({
                 </li>
               ) : (
                 results.map((item, i) => (
+                  // Keyboard selection is already handled by the search input's
+                  // onKeyDown (Enter selects the active option; see handleKeyDown
+                  // above), matching the ARIA combobox/listbox pattern where focus
+                  // stays on the input rather than moving to each option.
+                  // eslint-disable-next-line jsx-a11y/click-events-have-key-events
                   <li
                     key={item.commitmentId}
                     id={`${listboxId}-option-${i}`}

@@ -30,7 +30,9 @@ export function GuidedTour({
       targetSelector={currentStepConfig.targetSelector}
       title={currentStepConfig.title}
       content={currentStepConfig.content}
-      position={currentStepConfig.position}
+      {...(currentStepConfig.position
+        ? { position: currentStepConfig.position }
+        : {})}
       currentStepIndex={currentStepIndex}
       totalSteps={totalSteps}
       onNext={onNext}

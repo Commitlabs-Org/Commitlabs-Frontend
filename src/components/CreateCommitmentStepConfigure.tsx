@@ -481,9 +481,19 @@ export default function CreateCommitmentStepConfigure({
           <button
             type="button"
             className={styles.continueButton}
-            onClick={onNext}
-            disabled={!canAdvance}
+            onClick={(e) => {
+              if (!canAdvance) {
+                e.preventDefault()
+                return
+              }
+              onNext()
+            }}
             aria-disabled={!canAdvance}
+            aria-describedby={!canAdvance ? [
+              (amountError || serverErrors.amount) ? 'amount-error' : null,
+              (durationError || serverErrors.durationDays) ? 'duration-error' : null,
+              (maxLossError || serverErrors.maxLossBps) ? 'maxloss-error' : null,
+            ].filter(Boolean).join(' ') || undefined : undefined}
             data-testid="configure-continue"
           >
             {serverValidating ? 'Validating…' : 'Continue'}

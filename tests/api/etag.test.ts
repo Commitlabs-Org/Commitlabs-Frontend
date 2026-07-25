@@ -8,8 +8,8 @@ describe('ETag utilities', () => {
       const etag = generateETag(data);
       
       expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
-      expect(etag.startsWith('"')).toBe(true);
-      expect(etag.endsWith('"')).toBe(true);
+      expect(etag).toStartWith('"');
+      expect(etag).toEndWith('"');
     });
 
     it('should generate consistent ETags for identical data', () => {

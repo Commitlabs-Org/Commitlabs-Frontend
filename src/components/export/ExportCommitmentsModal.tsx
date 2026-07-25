@@ -24,6 +24,17 @@ export type ExportColumn = (typeof ALL_EXPORT_COLUMNS)[number];
 
 export type ScheduleInterval = 'never' | 'daily' | 'weekly' | 'monthly';
 
+export type ExportDateRange = 'all' | '7d' | '30d' | 'year';
+
+const DATE_RANGE_OPTIONS: { value: ExportDateRange; label: string }[] = [
+  { value: 'all', label: 'All time' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: 'year', label: 'This year' },
+];
+
+export type ExportFormat = 'csv' | 'json';
+
 const SCHEDULE_OPTIONS: { value: ScheduleInterval; label: string }[] = [
   { value: 'never', label: 'No reminder' },
   { value: 'daily', label: 'Daily' },
@@ -179,6 +190,8 @@ export default function ExportCommitmentsModal({
   const [message, setMessage] = useState('');
   const [selectedColumns, setSelectedColumns] = useState<ExportColumn[]>([...ALL_EXPORT_COLUMNS]);
   const [scheduleInterval, setScheduleInterval] = useState<ScheduleInterval>('never');
+  const [dateRange, setDateRange] = useState<ExportDateRange>('all');
+  const [format, setFormat] = useState<ExportFormat>('csv');
 
   // Restore preferences when modal opens
   useEffect(() => {
@@ -188,6 +201,8 @@ export default function ExportCommitmentsModal({
     const prefs = loadExportPreferences();
     setSelectedColumns(prefs.selectedColumns);
     setScheduleInterval(prefs.scheduleInterval);
+    setDateRange('all');
+    setFormat('csv');
   }, [isOpen]);
 
   const toggleColumn = useCallback((column: ExportColumn) => {
@@ -236,6 +251,8 @@ export default function ExportCommitmentsModal({
       const url = new URL(endpoint, window.location.origin);
       url.searchParams.set('ownerAddress', normalizedAddress);
       url.searchParams.set('columns', selectedColumns.join(','));
+      url.searchParams.set('dateRange', dateRange);
+      url.searchParams.set('format', format);
 
       // Add selected IDs if provided
       if (selectedIds && selectedIds.length > 0) {
@@ -273,7 +290,7 @@ export default function ExportCommitmentsModal({
       setStatus('error');
       setMessage('Export failed. Try again in a moment.');
     }
-  }, [endpoint, ownerAddress, sessionToken, selectedColumns, scheduleInterval, noneChecked]);
+  }, [endpoint, ownerAddress, sessionToken, selectedColumns, scheduleInterval, dateRange, format, noneChecked]);
 
   const isLoading = status === 'loading';
 
@@ -333,12 +350,15 @@ export default function ExportCommitmentsModal({
             Date range
             <select
               className="rounded-[12px] border border-white/10 bg-black px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
-              defaultValue="all"
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value as ExportDateRange)}
+              aria-label="Date range"
             >
-              <option value="all">All time</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="year">This year</option>
+              {DATE_RANGE_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -346,7 +366,9 @@ export default function ExportCommitmentsModal({
             Format
             <select
               className="rounded-[12px] border border-white/10 bg-black px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
-              defaultValue="csv"
+              value={format}
+              onChange={(e) => setFormat(e.target.value as ExportFormat)}
+              aria-label="Export format"
             >
               <option value="csv">CSV</option>
               <option value="json" disabled>

@@ -9,10 +9,16 @@ vi.mock('@/lib/backend/rateLimit', () => ({
 vi.mock('@/lib/backend/auth', () => ({
   verifySignatureWithNonce: vi.fn(),
   createSessionToken: vi.fn(),
+  AUTH_COOKIE_NAME: 'cl_auth_session',
+  COOKIE_OPTIONS: {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    path: '/',
+  },
 }));
 
 import { checkRateLimit } from '@/lib/backend/rateLimit';
-import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
+import { verifySignatureWithNonce, createSessionToken, AUTH_COOKIE_NAME } from '@/lib/backend/auth';
 
 const VALID_BODY = {
   address: 'GABC',
@@ -35,7 +41,7 @@ describe('POST /api/auth/verify', () => {
     vi.mocked(createSessionToken).mockReturnValue('session_GABC_1234567890');
   });
 
-  it('returns verified true and sessionToken on success', async () => {
+  it('returns verified true and sets the session as an HttpOnly cookie, never in the body', async () => {
     const res = await POST(makeRequest(VALID_BODY), { params: {} });
     const body = await res.json();
 
@@ -43,8 +49,12 @@ describe('POST /api/auth/verify', () => {
     expect(body.success).toBe(true);
     expect(body.data.verified).toBe(true);
     expect(body.data.address).toBe('GABC');
-    expect(body.data.sessionToken).toBe('session_GABC_1234567890');
+    expect(body.data.sessionToken).toBeUndefined();
     expect(verifySignatureWithNonce).toHaveBeenCalledWith(VALID_BODY);
+
+    const cookie = res.cookies.get(AUTH_COOKIE_NAME);
+    expect(cookie?.value).toBe('session_GABC_1234567890');
+    expect(cookie?.httpOnly).toBe(true);
   });
 
   it('returns 429 when rate limited', async () => {
