@@ -7,6 +7,7 @@ interface RiskProfile {
   name: string;
   description: string;
   maxLossBps: number; // basis points
+  lockDurationDays?: number;
 }
 
 interface SupportedConfig {
@@ -27,20 +28,47 @@ const ID_MAP: Record<string, 'safe' | 'balanced' | 'aggressive'> = {
 
 export default function RiskProfileComparison({ selectedType, onSelectType }: Props) {
   const [profiles, setProfiles] = useState<RiskProfile[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
 
   useEffect(() => {
+    let isMounted = true;
+
     fetch('/api/config/supported')
-      .then((res) => res.json())
-      .then((data: SupportedConfig) => setProfiles(data.riskProfiles))
-      .catch(() => setProfiles([]));
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data: SupportedConfig) => {
+        if (isMounted) {
+          setProfiles(data.riskProfiles);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setProfiles([]);
+          setError('Unable to load risk profiles');
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const buildItems = (profile: RiskProfile) => [
-    `Yield: ${profile.name}`,
-    `Penalty Exposure: ${profile.maxLossBps / 100}% loss`,
-    `Lock Duration: ${profile.id === 'conservative' ? '30d' : profile.id === 'balanced' ? '60d' : '90d'}`,
-  ];
+  const buildItems = (profile: RiskProfile) => {
+    const duration = profile.lockDurationDays ?? 0;
+    const durationLabel = duration > 0 ? `${duration}d` : 'N/A';
+
+    return [
+      `Yield: ${profile.name}`,
+      `Penalty Exposure: ${profile.maxLossBps / 100}% loss`,
+      `Lock Duration: ${durationLabel}`,
+    ];
+  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, idx: number) => {
     if (e.key === 'ArrowRight') {
@@ -64,6 +92,13 @@ export default function RiskProfileComparison({ selectedType, onSelectType }: Pr
       <div aria-live="polite" className={styles.srOnly}>
         {selectedType ? `Selected ${selectedType} profile` : 'No profile selected'}
       </div>
+      {error ? (
+        <div role="alert" className={styles.errorState}>
+          {error}
+        </div>
+      ) : profiles.length === 0 ? (
+        <div className={styles.emptyState}>No risk profiles available.</div>
+      ) : null}
       {profiles.map((profile, idx) => {
         const type = ID_MAP[profile.id];
         const isSelected = selectedType === type;

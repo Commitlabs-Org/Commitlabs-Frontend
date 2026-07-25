@@ -5,9 +5,9 @@ import RiskProfileComparison from './RiskProfileComparison';
 describe('RiskProfileComparison', () => {
   const mockConfig = {
     riskProfiles: [
-      { id: 'conservative', name: 'Conservative', description: 'Low risk', maxLossBps: 1000 },
-      { id: 'balanced', name: 'Balanced', description: 'Medium risk', maxLossBps: 5000 },
-      { id: 'aggressive', name: 'Aggressive', description: 'High risk', maxLossBps: 10000 },
+      { id: 'conservative', name: 'Conservative', description: 'Low risk', maxLossBps: 1000, lockDurationDays: 30 },
+      { id: 'balanced', name: 'Balanced', description: 'Medium risk', maxLossBps: 5000, lockDurationDays: 60 },
+      { id: 'aggressive', name: 'Aggressive', description: 'High risk', maxLossBps: 10000, lockDurationDays: 90 },
     ],
   };
 
@@ -49,5 +49,21 @@ describe('RiskProfileComparison', () => {
     expect(document.activeElement).toBe(secondDiv);
     fireEvent.keyDown(secondDiv, { key: 'Enter' });
     expect(onSelect).toHaveBeenCalledWith('balanced');
+  });
+
+  test('renders the lock duration from the API response', async () => {
+    render(<RiskProfileComparison selectedType={null} onSelectType={jest.fn()} />);
+
+    expect(await screen.findByText('Conservative')).toBeInTheDocument();
+    expect(await screen.findByText('Lock Duration: 30d')).toBeInTheDocument();
+  });
+
+  test('shows an error state when the config request fails', async () => {
+    // @ts-ignore
+    global.fetch = jest.fn().mockRejectedValue(new Error('network error'));
+
+    render(<RiskProfileComparison selectedType={null} onSelectType={jest.fn()} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load risk profiles');
   });
 });
