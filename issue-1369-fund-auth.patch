@@ -1,0 +1,53 @@
+diff --git a/src/app/api/commitments/[id]/fund/route.ts b/src/app/api/commitments/[id]/fund/route.ts
+index 1bdbd36..95be561 100644
+--- a/src/app/api/commitments/[id]/fund/route.ts
++++ b/src/app/api/commitments/[id]/fund/route.ts
+@@ -17,7 +17,7 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
+ import { idempotencyService } from '@/lib/backend/idempotency';
+ 
+ const FundRequestSchema = z.object({
+-  callerAddress: z.string().optional(),
++  callerAddress: z.string().min(1, 'callerAddress is required'),
+ });
+ 
+ const COMMITMENT_FUND_CORS_POLICY = {
+@@ -81,7 +81,10 @@ export const POST = withApiHandler(
+         throw new ConflictError('Only created commitments can be funded');
+       }
+ 
+-      if (callerAddress && callerAddress !== commitment.ownerAddress) {
++      // Issue #1369: callerAddress is required by FundRequestSchema above, so
++      // this check is no longer skippable the way `callerAddress && ...` was
++      // when the field was optional. Every request must prove ownership.
++      if (callerAddress !== commitment.ownerAddress) {
+         throw new ForbiddenError(
+           'Only the commitment owner may fund this commitment',
+           { commitmentId: id },
+diff --git a/tests/api/commitments-fund.test.ts b/tests/api/commitments-fund.test.ts
+index d04463e..1931bd8 100644
+--- a/tests/api/commitments-fund.test.ts
++++ b/tests/api/commitments-fund.test.ts
+@@ -73,6 +73,23 @@ describe('POST /api/commitments/[id]/fund', () => {
+     expect(result.data.error.message).toContain('owner');
+   });
+ 
++  it('rejects funding when callerAddress is omitted entirely (issue #1369)', async () => {
++    const { getCommitmentFromChain } = await import('@/lib/backend/services/contracts');
++    vi.mocked(getCommitmentFromChain).mockResolvedValue({
++      id: 'c-4',
++      ownerAddress: 'GOWNER',
++      status: 'CREATED',
++    } as any);
++
++    const { POST } = await import('@/app/api/commitments/[id]/fund/route');
++    const req = postRequest('http://localhost:3000/api/commitments/c-4/fund', {});
++    const response = await POST(req, createMockRouteContext({ id: 'c-4' }));
++    const result = await parseResponse(response);
++
++    expect(response.status).toBe(400);
++    expect(result.data.error.code).toBe('VALIDATION_ERROR');
++  });
++
+   it('funds a created commitment when the owner submits the request', async () => {
+     const { getCommitmentFromChain, fundEscrowOnChain } = await import('@/lib/backend/services/contracts');
+     vi.mocked(getCommitmentFromChain).mockResolvedValue({

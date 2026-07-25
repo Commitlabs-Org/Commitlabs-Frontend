@@ -73,6 +73,23 @@ describe('POST /api/commitments/[id]/fund', () => {
     expect(result.data.error.message).toContain('owner');
   });
 
+  it('rejects funding when callerAddress is omitted entirely (issue #1369)', async () => {
+    const { getCommitmentFromChain } = await import('@/lib/backend/services/contracts');
+    vi.mocked(getCommitmentFromChain).mockResolvedValue({
+      id: 'c-4',
+      ownerAddress: 'GOWNER',
+      status: 'CREATED',
+    } as any);
+
+    const { POST } = await import('@/app/api/commitments/[id]/fund/route');
+    const req = postRequest('http://localhost:3000/api/commitments/c-4/fund', {});
+    const response = await POST(req, createMockRouteContext({ id: 'c-4' }));
+    const result = await parseResponse(response);
+
+    expect(response.status).toBe(400);
+    expect(result.data.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('funds a created commitment when the owner submits the request', async () => {
     const { getCommitmentFromChain, fundEscrowOnChain } = await import('@/lib/backend/services/contracts');
     vi.mocked(getCommitmentFromChain).mockResolvedValue({
