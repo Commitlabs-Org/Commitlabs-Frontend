@@ -33,6 +33,10 @@
   --color-accent-blue: var(--accent-blue-alt);
   --color-accent-orange: var(--accent-orange);
 
+  --color-risk-safe: var(--risk-safe);
+  --color-risk-balanced: var(--risk-balanced);
+  --color-risk-aggressive: var(--risk-aggressive);
+
   --color-overlay: var(--surface-overlay);
 }
 
@@ -121,6 +125,11 @@
   /* Status variants */
   --status-positive-alt: #00C950;
   --status-danger-alt: #ef4444;
+
+  /* Risk profile colors */
+  --risk-safe: #00C950;
+  --risk-balanced: #51A2FF;
+  --risk-aggressive: #FF8904;
 }
 
 /* Light theme overrides */
@@ -163,6 +172,10 @@
 
   --status-positive-alt: #059669;
   --status-danger-alt: #dc2626;
+
+  --risk-safe: #059669;
+  --risk-balanced: #3b82f6;
+  --risk-aggressive: #d97706;
 }
 
 /* * {

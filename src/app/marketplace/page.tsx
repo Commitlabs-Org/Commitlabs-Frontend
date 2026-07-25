@@ -229,14 +229,14 @@ function ListTypeIcon({ type }: { type: 'Safe' | 'Balanced' | 'Aggressive' }) {
   }
   if (type === 'Balanced') {
     return (
-      <svg width="20" height="20" viewBox="0 0 28 28" fill="none" className="text-[#51A2FF]">
+      <svg width="20" height="20" viewBox="0 0 28 28" fill="none" className="text-risk-balanced">
         <path d="M25.662 8.16504L15.7472 18.0799L9.91493 12.2476L2.33301 19.8295" stroke="currentColor" strokeWidth="2.3329" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M18.6631 8.16504H25.6618V15.1637" stroke="currentColor" strokeWidth="2.3329" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
   return (
-    <svg width="20" height="20" viewBox="0 0 28 28" fill="none" className="text-[#FF8904]">
+    <svg width="20" height="20" viewBox="0 0 28 28" fill="none" className="text-risk-aggressive">
       <path d="M9.91461 16.9137C10.688 16.9137 11.4297 16.6064 11.9766 16.0596C12.5235 15.5127 12.8307 14.771 12.8307 13.9976C12.8307 12.3879 12.2475 11.6647 11.6643 10.4982C10.4138 7.99851 11.403 5.76942 13.9972 3.49951C14.5804 6.41564 16.3301 9.21512 18.663 11.0814C20.9959 12.9478 22.1623 15.164 22.1623 17.4969C22.1623 18.5692 21.9511 19.6309 21.5408 20.6216C21.1305 21.6122 20.529 22.5123 19.7708 23.2705C19.0126 24.0287 18.1125 24.6302 17.1218 25.0405C16.1312 25.4509 15.0694 25.6621 13.9972 25.6621C12.9249 25.6621 11.8632 25.4509 10.8725 25.0405C9.88187 24.6302 8.98175 24.0287 8.22355 23.2705C7.46534 22.5123 6.8639 21.6122 6.45357 20.6216C6.04323 19.6309 5.83203 18.5692 5.83203 17.4969C5.83203 16.152 6.3371 14.8211 6.99848 13.9976C6.99848 14.771 7.30571 15.5127 7.85259 16.0596C8.39947 16.6064 9.1412 16.9137 9.91461 16.9137Z" stroke="currentColor" strokeWidth="2.3329" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
@@ -245,17 +245,17 @@ function ListTypeIcon({ type }: { type: 'Safe' | 'Balanced' | 'Aggressive' }) {
 export function MarketplaceRow({ item }: { item: Listing }) {
   const badgeClass =
     item.type === "Safe"
-      ? "bg-[#0f2a1d] text-[#00C950]"
+      ? "bg-[#0f2a1d] text-risk-safe"
       : item.type === "Balanced"
-        ? "bg-[#122238] text-[#51A2FF]"
-        : "bg-[#2b1c10] text-[#FF8904]"
+        ? "bg-[#122238] text-risk-balanced"
+        : "bg-[#2b1c10] text-risk-aggressive"
 
   const scoreColorClass =
     item.type === "Safe"
-      ? "text-[#00C950]"
+      ? "text-risk-safe"
       : item.type === "Balanced"
-        ? "text-[#51A2FF]"
-        : "text-[#FF8904]"
+        ? "text-risk-balanced"
+        : "text-risk-aggressive"
 
   return (
     <div className="group flex flex-col sm:flex-row sm:items-center justify-between gap-6 rounded-2xl border border-white/10 bg-[#0A0A0A]/90 p-6 sm:p-5 transition-all hover:border-white/20 hover:bg-white/5">
