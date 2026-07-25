@@ -1,9 +1,19 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { z } from 'zod';
 import type { TransactionTimelinePhase } from './TransactionStepTimeline';
 
 const STORAGE_KEY = 'pending_transaction';
+
+export const PendingTransactionSchema = z.object({
+  commitmentId: z.string().min(1),
+  phase: z.enum(['build', 'sign', 'submit', 'confirm']),
+  startedAt: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: 'Invalid ISO date string',
+  }),
+  txHash: z.string().optional(),
+});
 
 export interface PendingTransactionState {
   commitmentId: string;
@@ -33,9 +43,23 @@ export function ResumePendingTransactionBanner({
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) setPending(JSON.parse(raw));
+      if (!raw) {
+        setPending(null);
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      const result = PendingTransactionSchema.safeParse(parsed);
+      if (!result.success) {
+        sessionStorage.removeItem(STORAGE_KEY);
+        setPending(null);
+        return;
+      }
+
+      setPending(result.data);
     } catch {
-      // ignore
+      sessionStorage.removeItem(STORAGE_KEY);
+      setPending(null);
     }
   }, []);
 
@@ -98,7 +122,11 @@ export function ResumePendingTransactionBanner({
 
 ResumePendingTransactionBanner.save = (state: PendingTransactionState) => {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const result = PendingTransactionSchema.safeParse(state);
+    if (!result.success) {
+      return;
+    }
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(result.data));
   } catch {
     // ignore
   }
