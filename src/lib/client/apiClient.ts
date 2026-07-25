@@ -118,14 +118,16 @@ export async function apiRequest<T>(
     clearTimeout(timeoutId);
 
     let payload: unknown;
+    let isJson = true;
     try {
       payload = await response.json();
     } catch {
+      isJson = false;
       payload = null;
     }
 
     if (!response.ok) {
-      if (isErrorEnvelope(payload)) {
+      if (isJson && isErrorEnvelope(payload)) {
         throw new ApiError(
           normalizeApiError(
             {
@@ -140,9 +142,23 @@ export async function apiRequest<T>(
         );
       }
 
+      const contentType = response.headers.get('content-type') || '';
+      const statusText = `${response.status} ${response.statusText || 'Error'}`;
+
+      if (!isJson) {
+        throw new ApiError(
+          normalizeApiError(
+            new Error(
+              `Request failed with status ${statusText} (non-JSON response, content-type: ${contentType})`,
+            ),
+            response.status,
+          ),
+        );
+      }
+
       throw new ApiError(
         normalizeApiError(
-          new Error(`Request failed with status ${response.status}`),
+          new Error(`Request failed with status ${statusText}`),
           response.status,
         ),
       );

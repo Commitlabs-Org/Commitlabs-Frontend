@@ -134,11 +134,18 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
     (lower.includes('rate limit') ? 'RATE_LIMIT_EXCEEDED' : undefined) ||
     'REQUEST_FAILED';
 
+  const passthrough = {
+    details: maybeErrorLike?.details,
+    retryAfterSeconds: maybeErrorLike?.retryAfterSeconds,
+    correlationId: maybeErrorLike?.correlationId,
+  };
+
   if (code === 'NETWORK_ERROR') {
     return {
       code,
       message: 'We could not reach the server. Please try again.',
       status,
+      ...passthrough,
     };
   }
 
@@ -147,6 +154,7 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
       code,
       message: 'The request took too long. Please try again.',
       status,
+      ...passthrough,
     };
   }
 
@@ -155,6 +163,7 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
       code,
       message: 'The requested resource was not found.',
       status,
+      ...passthrough,
     };
   }
 
@@ -163,6 +172,7 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
       code,
       message: 'You are not authorized to perform that action.',
       status,
+      ...passthrough,
     };
   }
 
@@ -171,6 +181,7 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
       code,
       message: 'You do not have permission to do that.',
       status,
+      ...passthrough,
     };
   }
 
@@ -179,6 +190,7 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
       code,
       message: 'Too many requests. Please wait before trying again.',
       status,
+      ...passthrough,
     };
   }
 
@@ -186,5 +198,6 @@ export function normalizeApiError(error: unknown, status?: number): UiApiError {
     code,
     message: inboundMessage,
     status,
+    ...passthrough,
   };
 }
