@@ -127,6 +127,10 @@
 }
 
 .attestationRow {
+  list-style: none;
+}
+
+.attestationButton {
   display: flex;
   align-items: flex-start;
   gap: 14px;
@@ -139,49 +143,50 @@
   text-align: left;
   width: 100%;
   min-height: 44px;
+  color: inherit;
 }
 
-.attestationRow:hover {
+.attestationButton:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.attestationRow:focus-visible {
+.attestationButton:focus-visible {
   outline: 2px solid rgba(15, 240, 252, 0.6);
   outline-offset: 2px;
 }
 
-.attestationRow:active {
+.attestationButton:active {
   transform: translateY(0);
 }
 
 /* Severity-based background colors */
-.attestationRow.ok {
+.attestationButton.ok {
   background: rgba(5, 223, 114, 0.1);
   border: 0.5px solid rgba(5, 223, 114, 0.2);
 }
 
-.attestationRow.ok:hover {
+.attestationButton.ok:hover {
   background: rgba(5, 223, 114, 0.15);
   border-color: rgba(5, 223, 114, 0.3);
 }
 
-.attestationRow.warning {
+.attestationButton.warning {
   background: rgba(255, 138, 4, 0.1);
   border: 0.5px solid rgba(255, 138, 4, 0.2);
 }
 
-.attestationRow.warning:hover {
+.attestationButton.warning:hover {
   background: rgba(255, 138, 4, 0.15);
   border-color: rgba(255, 138, 4, 0.3);
 }
 
-.attestationRow.violation {
+.attestationButton.violation {
   background: rgba(255, 105, 0, 0.1);
   border: 0.5px solid rgba(255, 105, 0, 0.2);
 }
 
-.attestationRow.violation:hover {
+.attestationButton.violation:hover {
   background: rgba(255, 105, 0, 0.15);
   border-color: rgba(255, 105, 0, 0.3);
 }

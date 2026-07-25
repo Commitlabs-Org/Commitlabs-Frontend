@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import styles from './RecentAttestationsPanel.module.css'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useAttestationStream } from '@/hooks/useAttestationStream'
 import {
   buildAttestationCsvContent,
   buildAttestationExportFilename,
@@ -20,7 +21,8 @@ export interface Attestation {
 
 export interface RecentAttestationsPanelProps {
   attestations: Attestation[]
-  commitmentId?: string
+  /** Optional commitment ID to enable real-time SSE streaming of new attestations. */
+  commitmentId?: string | null
   summary: {
     complianceCount: number
     warningCount: number
@@ -28,8 +30,6 @@ export interface RecentAttestationsPanelProps {
   }
   onSelectAttestation: (id: string) => void
   onViewAll: () => void
-  /** Optional commitment ID to enable real-time SSE streaming of new attestations. */
-  commitmentId?: string | null
   /** Set to false to disable streaming even when commitmentId is provided. */
   streamingEnabled?: boolean
 }
@@ -162,26 +162,53 @@ function DownloadIcon() {
 
 export default function RecentAttestationsPanel({
   attestations,
-  commitmentId = '',
-  summary,
+  commitmentId,
   onSelectAttestation,
   onViewAll,
-  commitmentId = null,
   streamingEnabled = true,
 }: RecentAttestationsPanelProps) {
   const [isExporting, setIsExporting] = useState(false)
+  const [displayedAttestations, setDisplayedAttestations] = useState(attestations)
+  const [liveAnnouncement, setLiveAnnouncement] = useState('')
+  const normalizedCommitmentId = commitmentId ?? null
 
-  const handleExportCsv = useCallback(async () => {
-    if (attestations.length === 0) return
+  useEffect(() => {
+    setDisplayedAttestations(attestations)
+  }, [attestations])
+
+  const handleAttestation = useCallback((incomingAttestation: Attestation) => {
+    setDisplayedAttestations((previousAttestations) => {
+      const dedupedAttestations = previousAttestations.filter(
+        (existingAttestation) => existingAttestation.id !== incomingAttestation.id,
+      )
+      return [incomingAttestation, ...dedupedAttestations]
+    })
+    setLiveAnnouncement(`New attestation: ${incomingAttestation.title}`)
+  }, [])
+
+  useAttestationStream({
+    commitmentId: normalizedCommitmentId,
+    enabled: streamingEnabled,
+    onAttestation: handleAttestation,
+  })
+
+  const summaryCounts = {
+    complianceCount: displayedAttestations.filter((attestation) => attestation.severity === 'ok').length,
+    warningCount: displayedAttestations.filter((attestation) => attestation.severity === 'warning').length,
+    violationCount: displayedAttestations.filter((attestation) => attestation.severity === 'violation').length,
+  }
+
+  const handleExportCsv = useCallback(() => {
+    if (displayedAttestations.length === 0) return
     setIsExporting(true)
-    try {
-      const content = buildAttestationCsvContent(attestations)
-      const filename = buildAttestationExportFilename(commitmentId)
-      await downloadCsvContent(content, filename)
-    } finally {
+
+    const content = buildAttestationCsvContent(displayedAttestations)
+    const filename = buildAttestationExportFilename(normalizedCommitmentId ?? '')
+
+    void downloadCsvContent(content, filename).finally(() => {
       setIsExporting(false)
-    }
-  }, [attestations, commitmentId])
+    })
+  }, [displayedAttestations, normalizedCommitmentId])
 
   const getSeverityIcon = (severity: Attestation['severity']) => {
     switch (severity) {
@@ -228,13 +255,13 @@ export default function RecentAttestationsPanel({
             type="button"
             className={styles.exportButton}
             onClick={handleExportCsv}
-            disabled={attestations.length === 0 || isExporting}
+            disabled={displayedAttestations.length === 0 || isExporting}
             aria-label={
-              attestations.length === 0
+              displayedAttestations.length === 0
                 ? 'Export attestations as CSV (no attestations to export)'
                 : 'Export attestations as CSV'
             }
-            aria-disabled={attestations.length === 0 || isExporting}
+            aria-disabled={displayedAttestations.length === 0 || isExporting}
           >
             <DownloadIcon />
             {isExporting ? 'Exporting…' : 'Export CSV'}
@@ -252,55 +279,56 @@ export default function RecentAttestationsPanel({
       </header>
 
       <div className={styles.attestationsList} role="list">
-        {attestations.length === 0 ? (
+        {displayedAttestations.length === 0 ? (
           <div className={styles.emptyState}>
             <EmptyState title="No attestations available" />
           </div>
         ) : (
-          attestations.map((attestation) => (
-            <button
-              key={attestation.id}
-              type="button"
-              className={`${styles.attestationRow} ${getSeverityClass(attestation.severity)}`}
-              onClick={() => onSelectAttestation(attestation.id)}
-              aria-label={`${attestation.severity} attestation: ${attestation.title}`}
-            >
-              <div className={styles.rowLeft} aria-hidden="true">
-                {getSeverityIcon(attestation.severity)}
-              </div>
-              <div className={styles.rowContent}>
-                <h3 className={styles.rowTitle}>{attestation.title}</h3>
-                <p className={styles.rowDescription}>{attestation.description}</p>
-                <p className={styles.rowTxHash}>
-                  TX: {truncateHash(attestation.txHash)}
-                </p>
-              </div>
-              <div className={styles.rowRight}>
-                <span className={styles.rowTimestamp}>
-                  {formatRelativeTime(attestation.timestamp)}
-                </span>
-              </div>
-            </button>
+          displayedAttestations.map((attestation) => (
+            <li key={attestation.id} className={styles.attestationRow}>
+              <button
+                type="button"
+                className={`${styles.attestationButton} ${getSeverityClass(attestation.severity)}`}
+                onClick={() => onSelectAttestation(attestation.id)}
+                aria-label={`${attestation.severity} attestation: ${attestation.title}`}
+              >
+                <div className={styles.rowLeft} aria-hidden="true">
+                  {getSeverityIcon(attestation.severity)}
+                </div>
+                <div className={styles.rowContent}>
+                  <h3 className={styles.rowTitle}>{attestation.title}</h3>
+                  <p className={styles.rowDescription}>{attestation.description}</p>
+                  <p className={styles.rowTxHash}>
+                    TX: {truncateHash(attestation.txHash)}
+                  </p>
+                </div>
+                <div className={styles.rowRight}>
+                  <span className={styles.rowTimestamp}>
+                    {formatRelativeTime(attestation.timestamp)}
+                  </span>
+                </div>
+              </button>
+            </li>
           ))
         )}
       </div>
 
       <footer className={styles.footer}>
         <div className={`${styles.footerColumn} ${styles.footerCompliance}`}>
-          <div className={styles.footerValue} aria-label={`${summary.complianceCount} compliance attestations`}>
-            {summary.complianceCount}
+          <div className={styles.footerValue} aria-label={`${summaryCounts.complianceCount} compliance attestations`}>
+            {summaryCounts.complianceCount}
           </div>
           <div className={styles.footerLabel}>Compliance</div>
         </div>
         <div className={`${styles.footerColumn} ${styles.footerWarning}`}>
-          <div className={styles.footerValue} aria-label={`${summary.warningCount} warning attestations`}>
-            {summary.warningCount}
+          <div className={styles.footerValue} aria-label={`${summaryCounts.warningCount} warning attestations`}>
+            {summaryCounts.warningCount}
           </div>
           <div className={styles.footerLabel}>Warnings</div>
         </div>
         <div className={`${styles.footerColumn} ${styles.footerViolation}`}>
-          <div className={styles.footerValue} aria-label={`${summary.violationCount} violation attestations`}>
-            {summary.violationCount}
+          <div className={styles.footerValue} aria-label={`${summaryCounts.violationCount} violation attestations`}>
+            {summaryCounts.violationCount}
           </div>
           <div className={styles.footerLabel}>Violations</div>
         </div>
