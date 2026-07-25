@@ -28,7 +28,7 @@ export const GET = withApiHandler(async (req: NextRequest) => {
         id: token,
         userAgent: req.headers.get('user-agent') ?? 'Unknown',
         ipAddress: req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'Unknown',
-        createdAt: new Date().toISOString(),
+        createdAt: verification.createdAt!.toISOString(),
         isCurrent: true,
     };
 

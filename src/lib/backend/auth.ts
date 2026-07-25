@@ -299,6 +299,7 @@ export function verifySessionToken(token: string): {
   valid: boolean;
   address?: string;
   csrfToken?: string;
+  createdAt?: Date;
   error?: string;
 } {
   const record = sessionStore.get(token);
@@ -316,6 +317,7 @@ export function verifySessionToken(token: string): {
     valid: true,
     address: record.address,
     csrfToken: record.csrfToken,
+    createdAt: record.createdAt,
   };
 }
 
