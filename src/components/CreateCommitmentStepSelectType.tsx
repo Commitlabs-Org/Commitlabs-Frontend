@@ -1,9 +1,10 @@
 'use client';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { Shield, TrendingUp, Flame, ArrowRight, ChevronLeft, Info, Zap } from 'lucide-react';
 import WizardStepper from './WizardStepper';
 import styles from './CreateCommitmentStepSelectType.module.css';
 import { COMMITMENT_PRESETS, SCRATCH_OPTION_ID, type CommitmentPreset } from './create/commitmentPresets';
+import { fetchProtocolConstants, type ProtocolConstants } from '@/utils/protocol';
 
 interface CommitmentType {
   id: 'safe' | 'balanced' | 'aggressive';
@@ -27,44 +28,83 @@ interface CreateCommitmentStepSelectTypeProps {
   onApplyPreset?: (preset: CommitmentPreset) => void;
 }
 
-const commitmentTypes: CommitmentType[] = [
-  {
-    id: 'safe',
-    title: 'Safe Commitment',
-    icon: Shield,
-    duration: '30 days',
-    durationNote: 'Minimum lock-in: 30 days. Early exit incurs a 2% penalty on your committed amount.',
-    maxLoss: '2%',
-    maxLossNote: 'Your position is automatically closed if losses reach 2% of your committed amount, protecting your principal.',
-    description: 'Lower risk, stable yield with minimal exposure.',
-    badge: 'Recommended',
-    badgeType: 'recommended',
-  },
-  {
-    id: 'balanced',
-    title: 'Balanced Commitment',
-    icon: TrendingUp,
-    duration: '60 days',
-    durationNote: 'Minimum lock-in: 60 days. Early exit incurs a 3% penalty on your committed amount.',
-    maxLoss: '8%',
-    maxLossNote: 'Your position closes automatically at an 8% loss. Suitable for moderate risk tolerance.',
-    description: 'Medium yield potential with controlled risk.',
-    badge: null,
-    badgeType: null,
-  },
-  {
-    id: 'aggressive',
-    title: 'Aggressive Commitment',
-    icon: Flame,
-    duration: '90 days',
-    durationNote: 'Minimum lock-in: 90 days. Early exit incurs a 5% penalty on your committed amount.',
-    maxLoss: 'No protection',
-    maxLossNote: 'No automatic stop-loss. Your full committed amount is at risk. Only suitable for experienced users.',
-    description: 'Highest yield potential with no loss protection.',
-    badge: '⚠ High Risk',
-    badgeType: 'risk',
-  },
-];
+// ── Per-type configuration constants (used as fallback while protocol constants are loading / on error) ──
+const DURATION_DAYS: Record<CommitmentType['id'], number> = {
+  safe: 30,
+  balanced: 60,
+  aggressive: 90,
+};
+
+const MAX_LOSS_PERCENT: Record<CommitmentType['id'], number | null> = {
+  safe: 2,
+  balanced: 8,
+  aggressive: null, // no protection
+};
+
+const FALLBACK_PENALTY_PERCENT: Record<CommitmentType['id'], number> = {
+  safe: 2,
+  balanced: 3,
+  aggressive: 5,
+};
+
+// ── Derive display values from protocol constants (with hardcoded fallback) ──
+function getPenaltyPercentForType(
+  type: CommitmentType['id'],
+  constants: ProtocolConstants | null,
+): number {
+  if (constants?.penalties) {
+    const tier = constants.penalties.find(
+      (p) => p.type.toLowerCase() === type,
+    );
+    if (tier) return tier.earlyExitPenaltyPercent;
+  }
+  return FALLBACK_PENALTY_PERCENT[type];
+}
+
+function buildCommitmentTypes(constants: ProtocolConstants | null): CommitmentType[] {
+  const safePenalty = getPenaltyPercentForType('safe', constants);
+  const balancedPenalty = getPenaltyPercentForType('balanced', constants);
+  const aggressivePenalty = getPenaltyPercentForType('aggressive', constants);
+
+  return [
+    {
+      id: 'safe',
+      title: 'Safe Commitment',
+      icon: Shield,
+      duration: `${DURATION_DAYS.safe} days`,
+      durationNote: `Minimum lock-in: ${DURATION_DAYS.safe} days. Early exit incurs a ${safePenalty}% penalty on your committed amount.`,
+      maxLoss: `${MAX_LOSS_PERCENT.safe}%`,
+      maxLossNote: `Your position is automatically closed if losses reach ${MAX_LOSS_PERCENT.safe}% of your committed amount, protecting your principal.`,
+      description: 'Lower risk, stable yield with minimal exposure.',
+      badge: 'Recommended',
+      badgeType: 'recommended',
+    },
+    {
+      id: 'balanced',
+      title: 'Balanced Commitment',
+      icon: TrendingUp,
+      duration: `${DURATION_DAYS.balanced} days`,
+      durationNote: `Minimum lock-in: ${DURATION_DAYS.balanced} days. Early exit incurs a ${balancedPenalty}% penalty on your committed amount.`,
+      maxLoss: `${MAX_LOSS_PERCENT.balanced}%`,
+      maxLossNote: `Your position closes automatically at an ${MAX_LOSS_PERCENT.balanced}% loss. Suitable for moderate risk tolerance.`,
+      description: 'Medium yield potential with controlled risk.',
+      badge: null,
+      badgeType: null,
+    },
+    {
+      id: 'aggressive',
+      title: 'Aggressive Commitment',
+      icon: Flame,
+      duration: `${DURATION_DAYS.aggressive} days`,
+      durationNote: `Minimum lock-in: ${DURATION_DAYS.aggressive} days. Early exit incurs a ${aggressivePenalty}% penalty on your committed amount.`,
+      maxLoss: 'No protection',
+      maxLossNote: 'No automatic stop-loss. Your full committed amount is at risk. Only suitable for experienced users.',
+      description: 'Highest yield potential with no loss protection.',
+      badge: '⚠ High Risk',
+      badgeType: 'risk',
+    },
+  ];
+}
 
 export default function CreateCommitmentStepSelectType({
   selectedType,
@@ -75,10 +115,24 @@ export default function CreateCommitmentStepSelectType({
   onApplyPreset,
 }: CreateCommitmentStepSelectTypeProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const [protocolConstants, setProtocolConstants] = useState<ProtocolConstants | null>(null);
+
+  useEffect(() => {
+    fetchProtocolConstants()
+      .then(setProtocolConstants)
+      .catch(() => {
+        /* Fall back to hardcoded defaults silently */
+      });
+  }, []);
 
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
+
+  const commitmentTypes = useMemo(
+    () => buildCommitmentTypes(protocolConstants),
+    [protocolConstants],
+  );
 
   useEffect(() => {
     if (initialFocusField) {

@@ -239,12 +239,6 @@ export default function MyCommitments() {
       if (tier) {
         penaltyPercent = tier.earlyExitPenaltyPercent
       }
-    } else {
-      // Fallback local calculations in case loading or error
-      const lowerType = commitmentForEarlyExit.type.toLowerCase()
-      if (lowerType === 'safe') penaltyPercent = 2
-      else if (lowerType === 'balanced') penaltyPercent = 3
-      else if (lowerType === 'aggressive') penaltyPercent = 5
     }
 
     return getEarlyExitValues(
