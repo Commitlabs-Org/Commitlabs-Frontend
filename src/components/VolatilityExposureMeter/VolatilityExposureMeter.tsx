@@ -15,16 +15,23 @@ export interface VolatilityExposureMeterProps {
    * Should be ordered oldest → newest; at least 2 values required to render.
    */
   historyData?: number[]
+  /** Custom low/medium zone boundaries (0–100). Defaults to 33/66. */
+  zoneThresholds?: { lowMax: number; mediumMax: number }
 }
+
+const DEFAULT_ZONE_THRESHOLDS = { lowMax: 33, mediumMax: 66 }
 
 function clamp(value: number): number {
   if (typeof value !== 'number' || Number.isNaN(value)) return 0
   return Math.max(0, Math.min(100, value))
 }
 
-function exposureLevel(percent: number): 'low' | 'medium' | 'high' {
-  if (percent <= 33) return 'low'
-  if (percent <= 66) return 'medium'
+function exposureLevel(
+  percent: number,
+  thresholds: { lowMax: number; mediumMax: number },
+): 'low' | 'medium' | 'high' {
+  if (percent <= thresholds.lowMax) return 'low'
+  if (percent <= thresholds.mediumMax) return 'medium'
   return 'high'
 }
 
@@ -72,9 +79,10 @@ export default function VolatilityExposureMeter({
   insufficientData = false,
   description,
   historyData,
+  zoneThresholds = DEFAULT_ZONE_THRESHOLDS,
 }: VolatilityExposureMeterProps) {
   const percent = clamp(valuePercent)
-  const level = exposureLevel(percent)
+  const level = exposureLevel(percent, zoneThresholds)
   const levelLabel = level === 'low' ? 'Low' : level === 'medium' ? 'Moderate' : 'Elevated'
   const ariaLabel = `Volatility exposure: ${percent}%, ${level} range.`
   const valueText = insufficientData
