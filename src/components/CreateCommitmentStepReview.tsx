@@ -15,7 +15,14 @@ import WizardStepper from "./WizardStepper";
 import styles from "./CreateCommitmentStepReview.module.css";
 import { useWallet } from "@/hooks/useWallet";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import ValidationSummary, { ValidationErrorItem } from "./create/ValidationSummary";
+import ValidationSummary, {
+  ValidationErrorItem,
+  ValidateApiErrorItem,
+} from "./create/ValidationSummary";
+
+/** Placeholder owner address sent to the validate endpoint when no wallet is connected. */
+const PLACEHOLDER_STELLAR_ADDRESS =
+  "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 interface CreateCommitmentStepReviewProps {
   typeLabel: string;
@@ -58,7 +65,7 @@ export default function CreateCommitmentStepReview({
   const { connected, address, connect } = useWallet();
   const { isOnline } = useOnlineStatus();
   const [validationErrors, setValidationErrors] = useState<ValidationErrorItem[]>([]);
-  const [isValidating, setIsValidating] = useState(false);
+  const [_isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -107,7 +114,7 @@ export default function CreateCommitmentStepReview({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            ownerAddress: address || "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            ownerAddress: address || PLACEHOLDER_STELLAR_ADDRESS,
             asset,
             amount: amount || "0",
             durationDays,
@@ -118,7 +125,7 @@ export default function CreateCommitmentStepReview({
         if (response.ok && active) {
           const data = await response.json();
           if (!data.valid && data.errors) {
-            data.errors.forEach((err: any, index: number) => {
+            data.errors.forEach((err: ValidateApiErrorItem, index: number) => {
               if (err.field === "ownerAddress") {
                 if (!errors.some((e) => e.field === "review-connect-wallet")) {
                   errors.push({

@@ -11,6 +11,19 @@ export interface ValidationErrorItem {
   field: string;
 }
 
+/**
+ * Shape of each error object returned by the /api/commitments/validate endpoint.
+ * Mirrors the backend `ValidationWarning` type that the route serialises to JSON.
+ */
+export interface ValidateApiErrorItem {
+  /** Backend warning/error code (e.g. "VALIDATION_ERROR"). */
+  code?: string;
+  /** Human-readable error description. */
+  message?: string;
+  /** Dot-path of the field that failed validation (e.g. "ownerAddress"). */
+  field?: string;
+}
+
 interface ValidationSummaryProps {
   errors: ValidationErrorItem[];
   onJumpToError: (step: 1 | 2 | 3, field: string) => void;
