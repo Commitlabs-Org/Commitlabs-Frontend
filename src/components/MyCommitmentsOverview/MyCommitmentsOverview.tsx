@@ -4,14 +4,10 @@ import React from 'react';
 import MyCommitmentsStats from '../MyCommitmentsStats/MyCommitmentsStats';
 import MyCommitmentsFilters from '../MyCommitmentsFilters/MyCommitmentsFilters';
 import { SortOption } from '@/utils/sortCommitments';
+import type { CommitmentStats } from '@/types/commitment';
 
 interface MyCommitmentsOverviewProps {
-  stats: {
-    totalActive: number;
-    totalCommittedValue: string;
-    averageComplianceScore: string;
-    totalFeesGenerated: string;
-  };
+  stats: CommitmentStats;
   search: {
     searchQuery: string;
     onSearchChange: (value: string) => void;
@@ -33,21 +29,16 @@ const MyCommitmentsOverview: React.FC<MyCommitmentsOverviewProps> = ({
 }) => {
   return (
     <div style={{ width: '100%' }}>
-      <MyCommitmentsStats
-        totalActive={stats.totalActive}
-        totalCommittedValue={stats.totalCommittedValue}
-        averageComplianceScore={stats.averageComplianceScore}
-        totalFeesGenerated={stats.totalFeesGenerated}
-      />
+      <MyCommitmentsStats {...stats} />
       <MyCommitmentsFilters
         searchQuery={search.searchQuery}
         onSearchChange={search.onSearchChange}
         status={filters.status}
         type={filters.type}
-        sortBy={filters.sortBy}
         onStatusChange={filters.onStatusChange}
         onTypeChange={filters.onTypeChange}
-        onSortByChange={filters.onSortByChange}
+        {...(filters.sortBy !== undefined ? { sortBy: filters.sortBy } : {})}
+        {...(filters.onSortByChange !== undefined ? { onSortByChange: filters.onSortByChange } : {})}
       />
     </div>
   );

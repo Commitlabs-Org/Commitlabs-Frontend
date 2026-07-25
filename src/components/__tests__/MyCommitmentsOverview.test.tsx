@@ -6,16 +6,16 @@ import { describe, it, expect, vi } from 'vitest';
 import MyCommitmentsOverview from '../MyCommitmentsOverview/MyCommitmentsOverview';
 
 vi.mock('../MyCommitmentsStats/MyCommitmentsStats', () => ({
-  default: ({ totalActive, totalCommittedValue, averageComplianceScore, totalFeesGenerated }: {
+  default: ({ totalActive, totalCommittedValue, avgComplianceScore, totalFeesGenerated }: {
     totalActive: number;
     totalCommittedValue: string;
-    averageComplianceScore: string;
+    avgComplianceScore: number;
     totalFeesGenerated: string;
   }) => (
     <div data-testid="stats">
       <span data-testid="stat-active">{totalActive}</span>
       <span data-testid="stat-value">{totalCommittedValue}</span>
-      <span data-testid="stat-compliance">{averageComplianceScore}</span>
+      <span data-testid="stat-compliance">{avgComplianceScore}</span>
       <span data-testid="stat-fees">{totalFeesGenerated}</span>
     </div>
   ),
@@ -27,15 +27,19 @@ vi.mock('../MyCommitmentsFilters/MyCommitmentsFilters', () => ({
     onSearchChange,
     status,
     type,
+    sortBy,
     onStatusChange,
     onTypeChange,
+    onSortByChange,
   }: {
     searchQuery: string;
     onSearchChange: (v: string) => void;
     status: string;
     type: string;
+    sortBy?: string;
     onStatusChange: (v: string) => void;
     onTypeChange: (v: string) => void;
+    onSortByChange?: (v: string) => void;
   }) => (
     <div data-testid="filters">
       <input
@@ -62,6 +66,13 @@ vi.mock('../MyCommitmentsFilters/MyCommitmentsFilters', () => ({
         <option value="">All</option>
         <option value="Balanced">Balanced</option>
       </select>
+      <span data-testid="sort-by">{sortBy ?? ''}</span>
+      <button
+        data-testid="sort-by-button"
+        onClick={() => onSortByChange?.('Oldest')}
+      >
+        change sort
+      </button>
     </div>
   ),
 }));
@@ -70,7 +81,7 @@ const DEFAULT_PROPS = {
   stats: {
     totalActive: 7,
     totalCommittedValue: '$125,000',
-    averageComplianceScore: '94.2%',
+    avgComplianceScore: 94.2,
     totalFeesGenerated: '$1,280',
   },
   search: {
@@ -96,9 +107,9 @@ describe('MyCommitmentsOverview — aggregation', () => {
     expect(screen.getByTestId('stat-value')).toHaveTextContent('$125,000');
   });
 
-  it('passes averageComplianceScore to the stats component', () => {
+  it('passes avgComplianceScore to the stats component', () => {
     render(<MyCommitmentsOverview {...DEFAULT_PROPS} />);
-    expect(screen.getByTestId('stat-compliance')).toHaveTextContent('94.2%');
+    expect(screen.getByTestId('stat-compliance')).toHaveTextContent('94.2');
   });
 
   it('passes totalFeesGenerated to the stats component', () => {
@@ -157,5 +168,24 @@ describe('MyCommitmentsOverview — grid wiring', () => {
     );
     fireEvent.change(screen.getByTestId('type-filter'), { target: { value: 'Balanced' } });
     expect(onTypeChange).toHaveBeenCalledWith('Balanced');
+  });
+
+  it('renders without a sortBy/onSortByChange pair without leaking an undefined prop', () => {
+    render(<MyCommitmentsOverview {...DEFAULT_PROPS} />);
+    expect(screen.getByTestId('sort-by')).toHaveTextContent('');
+  });
+
+  it('forwards sortBy and onSortByChange when provided', () => {
+    const onSortByChange = vi.fn();
+    render(
+      <MyCommitmentsOverview
+        {...DEFAULT_PROPS}
+        filters={{ ...DEFAULT_PROPS.filters, sortBy: 'Newest', onSortByChange }}
+      />,
+    );
+    expect(screen.getByTestId('sort-by')).toHaveTextContent('Newest');
+
+    fireEvent.click(screen.getByTestId('sort-by-button'));
+    expect(onSortByChange).toHaveBeenCalledWith('Oldest');
   });
 });
