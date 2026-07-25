@@ -66,4 +66,12 @@ describe('routeCoverage', () => {
 
     expect([...parseOpenApiPaths(sample)]).toEqual(['/api/ready']);
   });
+
+  it('finds a known-documented route from the real repo-root openapi.yaml', () => {
+    const { readFileSync } = require('node:fs');
+    const { resolve } = require('node:path');
+    const content = readFileSync(resolve(__dirname, '../openapi.yaml'), 'utf8');
+    const paths = parseOpenApiPaths(content);
+    expect(paths.has('/api/health')).toBe(true);
+  });
 });

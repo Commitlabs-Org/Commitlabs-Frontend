@@ -23,7 +23,6 @@
     "test:e2e": "playwright test",
     "test:contracts:deploy": "node contracts/scripts/deploy-testnet.smoke.mjs",
     "seed:mock": "tsx scripts/seed-backend-mock.ts",
-    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -70,6 +69,7 @@
     "happy-dom": "^20.7.0",
     "husky": "^9.1.7",
     "ioredis": "^5.11.0",
+    "js-yaml": "^5.2.2",
     "jsdom": "^29.1.1",
     "knip": "^6.23.0",
     "lint-staged": "^15.2.10",
