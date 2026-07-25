@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
-import { verifySignatureWithNonce, createSessionToken } from '@/lib/backend/auth';
+import { verifySignatureWithNonce, createSessionToken, AUTH_COOKIE_NAME, COOKIE_OPTIONS } from '@/lib/backend/auth';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
@@ -46,17 +46,22 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
 
   const sessionToken = createSessionToken(validation.data.address);
 
-  return ok(
+  const response = ok(
     {
       verified: true,
       address: verificationResult.address,
       message: 'Signature verified successfully',
-      sessionToken,
     },
     undefined,
     200,
     correlationId,
   );
+
+  // Session lives exclusively in an HttpOnly cookie; the token itself is
+  // never exposed to client-side JavaScript.
+  response.cookies.set(AUTH_COOKIE_NAME, sessionToken, COOKIE_OPTIONS);
+
+  return response;
 }, { cors: AUTH_VERIFY_CORS_POLICY });
 
 const _405 = methodNotAllowed(['POST']);

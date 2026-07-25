@@ -32,6 +32,17 @@ export interface SignatureVerificationResult {
 const NONCE_TTL_SECONDS = 5 * 60;
 const SESSION_TTL = 24 * 60 * 60 * 1000;
 
+/** HttpOnly cookie holding the opaque wallet-auth session token. */
+export const AUTH_COOKIE_NAME = "cl_auth_session";
+
+export const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: SESSION_TTL / 1000,
+};
+
 /**
  * Env vars checked (in priority order) when deriving the default domain.
  *
