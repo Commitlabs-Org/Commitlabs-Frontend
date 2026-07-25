@@ -75,14 +75,14 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
       : status === "Early Exit"
       ? "bg-[rgba(245,158,11,0.1)] text-[#ff8904] font-roboto"
       : "bg-[rgba(239,68,68,0.1)] text-[#ef4444] font-roboto";
-  const isPositive = changePercent >= 0;
+  const isPositive = changePercent! >= 0;
 
   // Dynamic colors
   const durationColorClass =
     "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
 
   const complianceColorClass =
-    complianceScore > 80
+    complianceScore! > 80
       ? "bg-[#05DF72]"
       : "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
 
@@ -142,7 +142,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
         <div className="flex items-center gap-2 text-[14px]">
           <span className="text-[#94A3B8]">Current Value:</span>
           <span style={{ fontWeight: 600, fontFamily: "Roboto Mono" }}>
-            {currentValue} {asset}
+            {currentValue!} {asset}
           </span>
           <span
             className={isPositive ? "text-[#05DF72]" : "text-[#EF4444]"}
@@ -160,7 +160,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
               />
             )}
             {isPositive ? "+" : ""}
-            {changePercent.toFixed(2)}%
+            {changePercent!.toFixed(2)}%
           </span>
         </div>
       </div>
@@ -179,20 +179,20 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
               Duration Progress
             </span>
             <span className="text-white font-medium font-roboto">
-              <MaturityCountdown maturityTimestamp={new Date(expiryDate).getTime()} />
+              <MaturityCountdown maturityTimestamp={new Date(expiryDate!).getTime()} />
             </span>
           </div>
           <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
             <div
               className={`h-full rounded-full ${durationColorClass}`}
-              style={{ width: `${durationProgress}%` }}
+              style={{ width: `${durationProgress!}%` }}
             />
           </div>
           <span
             className="text-[#94A3B8] font-roboto"
             style={{ fontSize: "12px", marginTop: "-4px" }}
           >
-            {durationProgress}%
+            {durationProgress!}%
           </span>
         </div>
 
@@ -208,12 +208,12 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             >
               Compliance Score
             </span>
-            <span className="text-white font-semibold">{complianceScore}%</span>
+            <span className="text-white font-semibold">{complianceScore!}%</span>
           </div>
           <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
             <div
               className={`h-full rounded-full ${complianceColorClass}`}
-              style={{ width: `${complianceScore}%` }}
+              style={{ width: `${complianceScore!}%` }}
             />
           </div>
         </div>
@@ -228,7 +228,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             Max Loss
           </span>
           <span className="text-[16px] font-semibold font-roboto">
-            {maxLoss}
+            {maxLoss!}
           </span>
         </div>
         <div className="flex h-full w-full flex-col gap-[3.99px] rounded-[10px] bg-[#FFFFFF05] px-3 py-3">
@@ -239,7 +239,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             Current Drawdown
           </span>
           <span className="text-[16px] font-semibold font-roboto">
-            {currentDrawdown}
+            {currentDrawdown!}
           </span>
         </div>
       </div>
@@ -252,7 +252,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
           >
             Created
           </span>
-          <span className="text-white font-roboto">{createdDate}</span>
+          <span className="text-white font-roboto">{createdDate!}</span>
         </div>
         <div className="flex flex-col gap-1 items-end">
           <span
@@ -261,7 +261,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
           >
             Expires
           </span>
-          <span className="text-white font-roboto">{expiryDate}</span>
+          <span className="text-white font-roboto">{expiryDate!}</span>
         </div>
       </div>
 

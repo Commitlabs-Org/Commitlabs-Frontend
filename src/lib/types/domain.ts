@@ -27,11 +27,26 @@ export interface Commitment {
   expiresAt?: string;
 }
 
+export type TrendDirection = 'up' | 'down' | 'neutral';
+
+export interface StatTrend {
+  value: number;
+  direction: TrendDirection;
+  period?: string;
+}
+
 export interface CommitmentStats {
   totalActive: number;
   totalCommittedValue: string;
   avgComplianceScore: number;
   totalFeesGenerated: string;
+  /** Optional per-metric trend indicators */
+  trends?: {
+    totalActive?: StatTrend;
+    totalCommittedValue?: StatTrend;
+    avgComplianceScore?: StatTrend;
+    totalFeesGenerated?: StatTrend;
+  };
 }
 
 export const ATTESTATION_TYPES = [
