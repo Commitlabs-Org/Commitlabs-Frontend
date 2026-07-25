@@ -40,7 +40,7 @@ export function ThemeToggle() {
 
   const current = theme ?? 'system'
   const nextIndex = (themes.indexOf(current as typeof themes[number]) + 1) % themes.length
-  const nextTheme = themes[nextIndex]
+  const nextTheme = themes[nextIndex] ?? 'system'
   const Icon = icons[current as keyof typeof icons] ?? Monitor
 
   return (
