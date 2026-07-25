@@ -1,3 +1,5 @@
+import { ERROR_CODE_REGISTRY } from "../lib/backend/errorCodes";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ApiErrorResponse {
@@ -23,13 +25,18 @@ export interface UiApiError {
 // ─── Error Factories ──────────────────────────────────────────────────────────
 
 
+/**
+ * Creates an ApiErrorResponse for 429 Rate Limit Exceeded.
+ * Default message and status code are sourced from ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS.
+ */
 export function rateLimitError(retryAfter = 60, details?: string): ApiErrorResponse {
+    const registryEntry = ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS;
     return {
         success: false,
         error: {
-        code: 429,
+        code: registryEntry.statusCode,
         type: "RATE_LIMIT_EXCEEDED",
-        message: "Too many requests. Please wait before trying again.",
+        message: registryEntry.meaning,
         retryAfter,
         ...(details && process.env.NODE_ENV === "development" ? { details } : {}),
         },
@@ -37,39 +44,54 @@ export function rateLimitError(retryAfter = 60, details?: string): ApiErrorRespo
 }
 
 
+/**
+ * Creates an ApiErrorResponse for 500 Internal Server Error.
+ * Default message and status code are sourced from ERROR_CODE_REGISTRY.INTERNAL_ERROR.
+ */
 export function internalServerError(details?: string): ApiErrorResponse {
+    const registryEntry = ERROR_CODE_REGISTRY.INTERNAL_ERROR;
     return {
         success: false,
         error: {
-        code: 500,
+        code: registryEntry.statusCode,
         type: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred. Please try again later.",
+        message: registryEntry.meaning,
         ...(details && process.env.NODE_ENV === "development" ? { details } : {}),
         },
     };
 }
 
 
+/**
+ * Creates an ApiErrorResponse for 502 Bad Gateway.
+ * Default message and status code are sourced from ERROR_CODE_REGISTRY.BAD_GATEWAY.
+ */
 export function badGatewayError(details?: string): ApiErrorResponse {
+    const registryEntry = ERROR_CODE_REGISTRY.BAD_GATEWAY;
     return {
         success: false,
         error: {
-        code: 502,
+        code: registryEntry.statusCode,
         type: "BAD_GATEWAY",
-        message: "An upstream service returned an invalid response. Please try again later.",
+        message: registryEntry.meaning,
         ...(details && process.env.NODE_ENV === "development" ? { details } : {}),
         },
     };
 }
 
 
+/**
+ * Creates an ApiErrorResponse for 503 Service Unavailable.
+ * Default message and status code are sourced from ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.
+ */
 export function serviceUnavailableError(retryAfter = 30, details?: string): ApiErrorResponse {
+    const registryEntry = ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE;
     return {
         success: false,
         error: {
-        code: 503,
+        code: registryEntry.statusCode,
         type: "SERVICE_UNAVAILABLE",
-        message: "The service is temporarily unavailable. Please try again later.",
+        message: registryEntry.meaning,
         retryAfter,
         ...(details && process.env.NODE_ENV === "development" ? { details } : {}),
         },
@@ -77,13 +99,18 @@ export function serviceUnavailableError(retryAfter = 30, details?: string): ApiE
 }
 
 
+/**
+ * Creates an ApiErrorResponse for 504 Gateway Timeout.
+ * Default message and status code are sourced from ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT.
+ */
 export function gatewayTimeoutError(details?: string): ApiErrorResponse {
+    const registryEntry = ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT;
     return {
         success: false,
         error: {
-        code: 504,
+        code: registryEntry.statusCode,
         type: "GATEWAY_TIMEOUT",
-        message: "The request timed out. Please try again.",
+        message: registryEntry.meaning,
         ...(details && process.env.NODE_ENV === "development" ? { details } : {}),
         },
     };

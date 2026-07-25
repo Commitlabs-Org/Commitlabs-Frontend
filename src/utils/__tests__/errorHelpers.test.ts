@@ -9,11 +9,46 @@ import {
   getErrorHeaders,
   normalizeApiError,
 } from "@/utils/errorHelpers";
+import { ERROR_CODE_REGISTRY } from "@/lib/backend/errorCodes";
 
 const originalEnv = process.env.NODE_ENV;
 
 afterEach(() => {
   process.env.NODE_ENV = originalEnv;
+});
+
+// ── ERROR_CODE_REGISTRY Consistency ──────────────────────────────────────────
+
+describe("ERROR_CODE_REGISTRY consistency", () => {
+  it("sources default message and status code for rateLimitError from ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS", () => {
+    const result = rateLimitError();
+    expect(result.error.code).toBe(ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS.statusCode);
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS.meaning);
+  });
+
+  it("sources default message and status code for internalServerError from ERROR_CODE_REGISTRY.INTERNAL_ERROR", () => {
+    const result = internalServerError();
+    expect(result.error.code).toBe(ERROR_CODE_REGISTRY.INTERNAL_ERROR.statusCode);
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.INTERNAL_ERROR.meaning);
+  });
+
+  it("sources default message and status code for badGatewayError from ERROR_CODE_REGISTRY.BAD_GATEWAY", () => {
+    const result = badGatewayError();
+    expect(result.error.code).toBe(ERROR_CODE_REGISTRY.BAD_GATEWAY.statusCode);
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.BAD_GATEWAY.meaning);
+  });
+
+  it("sources default message and status code for serviceUnavailableError from ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE", () => {
+    const result = serviceUnavailableError();
+    expect(result.error.code).toBe(ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.statusCode);
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.meaning);
+  });
+
+  it("sources default message and status code for gatewayTimeoutError from ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT", () => {
+    const result = gatewayTimeoutError();
+    expect(result.error.code).toBe(ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT.statusCode);
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT.meaning);
+  });
 });
 
 // ── rateLimitError ────────────────────────────────────────────────────────────
@@ -24,9 +59,7 @@ describe("rateLimitError", () => {
     expect(result.success).toBe(false);
     expect(result.error.code).toBe(429);
     expect(result.error.type).toBe("RATE_LIMIT_EXCEEDED");
-    expect(result.error.message).toBe(
-      "Too many requests. Please wait before trying again."
-    );
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS.meaning);
   });
 
   it("defaults retryAfter to 60", () => {
@@ -66,9 +99,7 @@ describe("internalServerError", () => {
     expect(result.success).toBe(false);
     expect(result.error.code).toBe(500);
     expect(result.error.type).toBe("INTERNAL_SERVER_ERROR");
-    expect(result.error.message).toBe(
-      "An unexpected error occurred. Please try again later."
-    );
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.INTERNAL_ERROR.meaning);
   });
 
   it("includes details in development when provided", () => {
@@ -98,9 +129,7 @@ describe("badGatewayError", () => {
     expect(result.success).toBe(false);
     expect(result.error.code).toBe(502);
     expect(result.error.type).toBe("BAD_GATEWAY");
-    expect(result.error.message).toBe(
-      "An upstream service returned an invalid response. Please try again later."
-    );
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.BAD_GATEWAY.meaning);
   });
 
   it("includes details in development when provided", () => {
@@ -124,9 +153,7 @@ describe("serviceUnavailableError", () => {
     expect(result.success).toBe(false);
     expect(result.error.code).toBe(503);
     expect(result.error.type).toBe("SERVICE_UNAVAILABLE");
-    expect(result.error.message).toBe(
-      "The service is temporarily unavailable. Please try again later."
-    );
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.meaning);
   });
 
   it("defaults retryAfter to 30", () => {
@@ -160,9 +187,7 @@ describe("gatewayTimeoutError", () => {
     expect(result.success).toBe(false);
     expect(result.error.code).toBe(504);
     expect(result.error.type).toBe("GATEWAY_TIMEOUT");
-    expect(result.error.message).toBe(
-      "The request timed out. Please try again."
-    );
+    expect(result.error.message).toBe(ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT.meaning);
   });
 
   it("includes details in development when provided", () => {
@@ -215,18 +240,18 @@ describe("resolveServerError", () => {
     [
       502,
       "BAD_GATEWAY",
-      "An upstream service returned an invalid response. Please try again later.",
+      ERROR_CODE_REGISTRY.BAD_GATEWAY.meaning,
     ],
     [
       503,
       "SERVICE_UNAVAILABLE",
-      "The service is temporarily unavailable. Please try again later.",
+      ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.meaning,
     ],
-    [504, "GATEWAY_TIMEOUT", "The request timed out. Please try again."],
+    [504, "GATEWAY_TIMEOUT", ERROR_CODE_REGISTRY.GATEWAY_TIMEOUT.meaning],
     [
       599,
       "INTERNAL_SERVER_ERROR",
-      "An unexpected error occurred. Please try again later.",
+      ERROR_CODE_REGISTRY.INTERNAL_ERROR.meaning,
     ],
   ])(
     "maps status %i to the expected user-facing %s message",
