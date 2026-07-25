@@ -10,6 +10,7 @@ import { WalletConnectButton } from "@/components/WalletConnectButton";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
 import { useCommandPalette } from "@/hooks/useCommandPalette";
 import { WalletAccountMenu } from "@/components/wallet/WalletAccountMenu";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 export const Navigation: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -146,6 +147,7 @@ export const Navigation: React.FC = () => {
           </button>
           <HelpDrawer />
           <ThemeToggle />
+          <LocaleSwitcher />
           <WalletConnectButton />
           <WalletAccountMenu />
           {/* Mobile menu button */}

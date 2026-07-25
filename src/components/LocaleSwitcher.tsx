@@ -48,15 +48,16 @@ export function LocaleSwitcher({ onChange }: LocaleSwitcherProps) {
   const locales = Object.keys(LOCALE_LABELS) as Locale[];
 
   return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+    <label className="inline-flex items-center gap-1">
       <span className="sr-only">Language</span>
       <select
         aria-label="Select language"
         onChange={handleChange}
         value={locale}
+        className="appearance-none bg-transparent border border-[rgba(0,212,255,0.2)] rounded-[10px] px-3 py-[0.45rem] text-[12px] text-white/70 cursor-pointer transition-colors duration-200 hover:border-[rgba(0,212,255,0.45)] hover:text-white/70 focus-visible:border-[rgba(0,212,255,0.6)] focus-visible:outline-none"
       >
         {locales.map((l) => (
-          <option key={l} value={l}>
+          <option key={l} value={l} className="bg-[#0a0a0a] text-white">
             {LOCALE_LABELS[l]}
           </option>
         ))}
