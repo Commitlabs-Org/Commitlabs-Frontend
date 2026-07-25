@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { withApiHandler } from '../../src/lib/backend/withApiHandler';
 import { generateETag } from '../../src/lib/backend/etag';
@@ -6,13 +6,13 @@ import { generateETag } from '../../src/lib/backend/etag';
 // Mock dependencies
 vi.mock('../../src/lib/backend/apiResponse', () => ({
   getCorrelationId: () => 'test-correlation-id',
-  fail: (code: string, message: string, details?: unknown, status?: number, retryAfter?: number, correlationId?: string) => {
+  fail: (code: string, message: string, details?: unknown, status?: number, _retryAfter?: number, _correlationId?: string) => {
     return new NextResponse(JSON.stringify({ code, message, details }), { status: status || 500 });
   },
 }));
 
 vi.mock('../../src/lib/backend/cors', () => ({
-  applyCorsPolicy: (req: any, response: Response) => response,
+  applyCorsPolicy: (_req: NextRequest, response: Response) => response,
   enforceCorsRequestPolicy: () => {},
 }));
 
@@ -53,7 +53,7 @@ describe('withApiHandler - ETag Integration', () => {
 
       expect(response.status).toBe(304);
       expect(response.headers.get('ETag')).toBe(expectedETag);
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate');
+      expect(response.headers.get('Cache-Control')).toBe('private, max-age=0, must-revalidate');
     });
 
     it('should return 200 with new data when If-None-Match does not match', async () => {
@@ -247,7 +247,7 @@ describe('withApiHandler - ETag Integration', () => {
       expect(response.headers.has('x-request-id')).toBe(true);
     });
 
-    it('should include Cache-Control header with ETag', async () => {
+    it('should include Cache-Control header with ETag defaulting to private', async () => {
       const testData = { id: 1 };
 
       const handler = withApiHandler(async () => {
@@ -257,7 +257,7 @@ describe('withApiHandler - ETag Integration', () => {
       const req = new NextRequest('http://localhost/api/test');
       const response = await handler(req, { params: {} });
 
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate');
+      expect(response.headers.get('Cache-Control')).toBe('private, max-age=0, must-revalidate');
     });
 
     it('should handle empty array responses', async () => {
@@ -340,6 +340,86 @@ describe('withApiHandler - ETag Integration', () => {
 
       expect(response.status).toBe(500);
       expect(response.headers.has('ETag')).toBe(false);
+    });
+  });
+
+  describe('ETag with cachePrivacy option', () => {
+    it('should emit private Cache-Control by default (no cachePrivacy specified)', async () => {
+      const testData = { wallet: '0xabc', balance: 100 };
+
+      const handler = withApiHandler(async () => {
+        return NextResponse.json(testData, { status: 200 });
+      }, { enableETag: true });
+
+      const req = new NextRequest('http://localhost/api/wallet/balance');
+      const response = await handler(req, { params: {} });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('private, max-age=0, must-revalidate');
+    });
+
+    it('should emit private Cache-Control when cachePrivacy is explicitly set to private', async () => {
+      const testData = { wallet: '0xabc', preferences: { theme: 'dark' } };
+
+      const handler = withApiHandler(async () => {
+        return NextResponse.json(testData, { status: 200 });
+      }, { enableETag: true, cachePrivacy: 'private' });
+
+      const req = new NextRequest('http://localhost/api/wallet/preferences');
+      const response = await handler(req, { params: {} });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('private, max-age=0, must-revalidate');
+    });
+
+    it('should emit public Cache-Control when cachePrivacy is set to public', async () => {
+      const testData = { rates: { USDC: 1.0, XLM: 0.12 } };
+
+      const handler = withApiHandler(async () => {
+        return NextResponse.json(testData, { status: 200 });
+      }, { enableETag: true, cachePrivacy: 'public' });
+
+      const req = new NextRequest('http://localhost/api/rates');
+      const response = await handler(req, { params: {} });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate');
+    });
+
+    it('should carry private Cache-Control through to a 304 response by default', async () => {
+      const testData = { wallet: '0xabc', commitments: [{ id: 1 }] };
+      const currentETag = generateETag(testData);
+
+      const handler = withApiHandler(async () => {
+        return NextResponse.json(testData, { status: 200 });
+      }, { enableETag: true });
+
+      const req = new NextRequest('http://localhost/api/wallet/commitments', {
+        headers: { 'If-None-Match': currentETag },
+      });
+
+      const response = await handler(req, { params: {} });
+
+      expect(response.status).toBe(304);
+      expect(response.headers.get('Cache-Control')).toBe('private, max-age=0, must-revalidate');
+    });
+
+    it('should carry public Cache-Control through to a 304 response when cachePrivacy is public', async () => {
+      const testData = { rates: { USDC: 1.0, XLM: 0.12 } };
+      const currentETag = generateETag(testData);
+
+      const handler = withApiHandler(async () => {
+        return NextResponse.json(testData, { status: 200 });
+      }, { enableETag: true, cachePrivacy: 'public' });
+
+      const req = new NextRequest('http://localhost/api/rates', {
+        headers: { 'If-None-Match': currentETag },
+      });
+
+      const response = await handler(req, { params: {} });
+
+      expect(response.status).toBe(304);
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, must-revalidate');
     });
   });
 
