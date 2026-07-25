@@ -52,7 +52,7 @@ export default function Home() {
         <ExperienceSection />
       </main>
       <Footer />
-      <ModalTester />
+      {process.env.NODE_ENV !== 'production' && <ModalTester />}
     </div>
   );
 }
