@@ -168,6 +168,7 @@ describe("POST /api/seed route", () => {
     const res = await POST(req);
     const result = await parseResponse(res);
     expect(result.status).toBe(404);
+    expect(result.data.success).toBe(false);
   });
 
   it("returns 404 when SEED_ROUTE_ENABLED is not set", async () => {
@@ -177,6 +178,7 @@ describe("POST /api/seed route", () => {
     const res = await POST(req);
     const result = await parseResponse(res);
     expect(result.status).toBe(404);
+    expect(result.data.success).toBe(false);
   });
 
   it("returns 404 when SEED_ROUTE_ENABLED=false", async () => {
@@ -186,6 +188,7 @@ describe("POST /api/seed route", () => {
     const res = await POST(req);
     const result = await parseResponse(res);
     expect(result.status).toBe(404);
+    expect(result.data.success).toBe(false);
   });
 
   it("returns 403 when secret is required but wrong header supplied", async () => {
@@ -202,6 +205,7 @@ describe("POST /api/seed route", () => {
     const res = await POST(req);
     const result = await parseResponse(res);
     expect(result.status).toBe(403);
+    expect(result.data.success).toBe(false);
   });
 
   it("returns 403 when secret is required but no header supplied", async () => {
@@ -215,6 +219,7 @@ describe("POST /api/seed route", () => {
     const res = await POST(req);
     const result = await parseResponse(res);
     expect(result.status).toBe(403);
+    expect(result.data.success).toBe(false);
   });
 
   it("returns 200 in development with flag set and no secret configured", async () => {
@@ -258,6 +263,7 @@ describe("POST /api/seed route", () => {
     const res = await POST(req);
     const result = await parseResponse(res);
     expect(result.status).toBe(500);
-    expect(result.data.data.message).toMatch(/write error/);
+    expect(result.data.success).toBe(false);
+    expect(result.data.error.message).toMatch(/write error/);
   });
 });

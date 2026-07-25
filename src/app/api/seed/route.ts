@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { ForbiddenError, InternalError, NotFoundError } from '@/lib/backend/errors';
 import { isSeedAllowed, seedMockData } from '@/lib/backend/seed';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 
@@ -12,7 +13,9 @@ export const OPTIONS = createCorsOptionsHandler(SEED_CORS_POLICY);
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
   if (!isSeedAllowed()) {
-    return ok({ message: 'Not Found' }, 404, undefined, correlationId);
+    // Issue #1372: throw so withApiHandler builds a `success: false`
+    // envelope via fail(), instead of ok()'s `success: true` for a 404.
+    throw new NotFoundError('Route');
   }
 
   const secret = req.headers.get('x-seed-secret');
@@ -20,10 +23,10 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
 
   if (!result.seeded) {
     if (result.message === 'Invalid seed secret.') {
-      return ok({ message: result.message }, 403, undefined, correlationId);
+      throw new ForbiddenError(result.message);
     }
 
-    return ok({ message: result.message }, 500, undefined, correlationId);
+    throw new InternalError(result.message);
   }
 
   return ok({ message: result.message }, 200, undefined, correlationId);
