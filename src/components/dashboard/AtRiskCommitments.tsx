@@ -23,9 +23,31 @@ interface AtRiskCommitmentsProps {
   commitments?: Commitment[];
   /** Optional label describing the active time range, e.g. "30 D" or "All". */
   rangeLabel?: string;
+  /**
+   * Partial override of {@link DEFAULT_AT_RISK_THRESHOLDS}. Values missing here fall
+   * back to the component defaults, so callers can tune a single axis without
+   * specifying the other.
+   *
+   * Note: this prop seeds the widget's initial state only. Subsequent changes
+   * to `thresholds` after mount will not re-render the widget — users editing
+   * the thresholds live should use the in-widget "Configure Thresholds" panel
+   * (which fires {@link onThresholdsChange}) or remount with a new `key`.
+   */
+  thresholds?: Partial<AtRiskThresholds>;
+  /**
+   * Invoked with the merged, fully-resolved threshold set after the user clicks
+   * "Apply" in the settings panel. Receives the new value as a complete
+   * {@link AtRiskThresholds} object (not a partial override).
+   */
+  onThresholdsChange?: (thresholds: AtRiskThresholds) => void;
 }
 
-export function AtRiskCommitments({ commitments = [], rangeLabel }: AtRiskCommitmentsProps) {
+export function AtRiskCommitments({
+  commitments = [],
+  rangeLabel,
+  thresholds: thresholdsProp = {},
+  onThresholdsChange,
+}: AtRiskCommitmentsProps) {
   const [atRisk, setAtRisk] = useState<AtRiskCommitment[]>([]);
   const [loading, setLoading] = useState(true);
   const [thresholds, setThresholds] = useState<AtRiskThresholds>({

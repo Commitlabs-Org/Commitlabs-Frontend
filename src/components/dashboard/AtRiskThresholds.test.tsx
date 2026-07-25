@@ -215,4 +215,63 @@ describe('AtRiskCommitments threshold controls', () => {
       expect(screen.getByText('Needs Attention')).toBeInTheDocument();
     });
   });
+
+  // ─── Regression ────────────────────────────────────────────────────────────
+  // Issue: AtRiskCommitments previously referenced `thresholdsProp` and
+  // `onThresholdsChange` without declaring them in AtRiskCommitmentsProps or
+  // destructuring them from props, causing a ReferenceError at render time
+  // anywhere the widget was mounted. This single test exercises the full
+  // custom-thresholds + callback-fires path so any regression that hides
+  // either prop will crash here.
+  it('regression: mounts with custom thresholds AND fires onThresholdsChange on apply', async () => {
+    const onThresholdsChange = jest.fn();
+    render(
+      <AtRiskCommitments
+        commitments={[base]}
+        // partial override — only one axis; the other should fall back to default
+        thresholds={{ complianceScoreThreshold: 85 }}
+        onThresholdsChange={onThresholdsChange}
+      />
+    );
+
+    // (1) Mount succeeds — proves the component no longer crashes with a
+    //     ReferenceError on thresholdsProp / onThresholdsChange.
+    await waitFor(() =>
+      expect(screen.getByText('Configure Thresholds')).toBeInTheDocument()
+    );
+
+    // (2) Custom threshold is honored as the initial value: base has
+    //     complianceScore 80, so a default of 70 would render healthy. With
+    //     a stricter 85 the commitment must immediately be at risk.
+    await waitFor(() =>
+      expect(screen.getByText('Needs Attention')).toBeInTheDocument()
+    );
+
+    // (3) Settings panel reflects the partial override — compliance input
+    //     shows 85, days input falls back to the default (7).
+    fireEvent.click(screen.getByText('Configure Thresholds'));
+    expect(screen.getByLabelText('Compliance score below (0–100)')).toHaveValue(
+      85
+    );
+    expect(
+      screen.getByLabelText('Days remaining at or below (0–365)')
+    ).toHaveValue(7);
+
+    // (4) Adjusting the days axis (leaving compliance unchanged) and clicking
+    //     Apply must invoke onThresholdsChange with the fully-merged defaults,
+    //     not the partial override previously passed in.
+    fireEvent.change(
+      screen.getByLabelText('Days remaining at or below (0–365)'),
+      { target: { value: '30' } }
+    );
+    fireEvent.click(screen.getByText('Apply'));
+
+    await waitFor(() => {
+      expect(onThresholdsChange).toHaveBeenCalledTimes(1);
+    });
+    expect(onThresholdsChange).toHaveBeenCalledWith({
+      complianceScoreThreshold: 85, // preserved from initial override
+      daysRemainingThreshold: 30, // just applied
+    });
+  });
 });
