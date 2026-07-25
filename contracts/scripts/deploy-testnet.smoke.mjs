@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const repoRoot = process.cwd()
-const bashPath = 'C:/Program Files/Git/bin/bash.exe'
+const bashPath = process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash'
 const scriptPath = 'contracts/scripts/deploy-testnet.sh'
 
 function toMsysPath(windowsPath) {
@@ -34,6 +34,9 @@ function run() {
         COMMITLABS_ADMIN_ADDRESS: 'GBQ6M5OBU64ATKSRH4OKW2IFQCB5R6Q73F4VMK6KQ37C5G6GQ6FJTYA3',
         COMMITLABS_TOKEN_CONTRACT_ID: 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4',
         COMMITLABS_FEE_RECIPIENT_ADDRESS: 'GC3C4X5R7N2X7CII7SPRD4U6ZLKZKAJZDW6N4Q4QAV3FJ7Q3N7GJ5P6L',
+        COMMITLABS_SAFE_DEFAULT_PENALTY_BPS: '200',
+        COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS: '300',
+        COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS: '500',
         COMMITLABS_ENV_FILE: toMsysPath(envFile),
       },
     })
@@ -44,6 +47,22 @@ function run() {
         'NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT=CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4',
       ),
       'dry-run output did not include NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT',
+    )
+    assert(
+      success.stderr.includes('initialize') && success.stderr.includes('--admin'),
+      'dry-run output did not include the initialize invoke command',
+    )
+    assert(
+      /--safe_default_penalty_bps\s+200/.test(success.stderr),
+      'dry-run initialize invoke did not include --safe_default_penalty_bps',
+    )
+    assert(
+      /--balanced_default_penalty_bps\s+300/.test(success.stderr),
+      'dry-run initialize invoke did not include --balanced_default_penalty_bps',
+    )
+    assert(
+      /--aggressive_default_penalty_bps\s+500/.test(success.stderr),
+      'dry-run initialize invoke did not include --aggressive_default_penalty_bps',
     )
 
     const writtenEnv = readFileSync(envFile, 'utf8')
