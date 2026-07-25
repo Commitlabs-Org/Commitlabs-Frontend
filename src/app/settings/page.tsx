@@ -8,6 +8,7 @@ import { AppShellLayout } from '@/components/shell/AppShellLayout'
 import { AccountWalletSection } from '@/components/settings/AccountWalletSection'
 import { ActiveSessionsSection } from '@/components/settings/ActiveSessionsSection'
 import type { ActiveSession } from '@/components/settings/ActiveSessionsSection'
+import { DataPrivacySection } from '@/components/settings/DataPrivacySection'
 import {
   ShieldAlert,
   Clock,
@@ -17,7 +18,6 @@ import {
   RotateCcw
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DataPrivacySection } from '@/components/settings/DataPrivacySection';
 
 export default function SettingsPage() {
   const [sessions, setSessions] = useState<ActiveSession[]>([])
