@@ -63,4 +63,36 @@ describe('usePaginatedListings', () => {
     });
     expect(result.current.hasMore).toBe(false);
   });
+
+  it('surfaces error distinctly from hasMore === false on fetch failure', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
+
+    const { result } = renderHook(() =>
+      usePaginatedListings({}, 9)
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.error).toBe('Network failure');
+    expect(result.current.listings).toEqual([]);
+  });
+
+  it('has null error on a successful fetch', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ cards: [{ id: '1' }], total: 1 }),
+    } as Response);
+
+    const { result } = renderHook(() =>
+      usePaginatedListings({}, 9)
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.error).toBeNull();
+  });
 });

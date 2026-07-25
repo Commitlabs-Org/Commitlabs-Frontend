@@ -23,6 +23,7 @@ export function usePaginatedListings(
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [prevParams, setPrevParams] = useState(serializedParams);
 
   // Synchronously reset pagination state during render when query parameters change
@@ -31,6 +32,7 @@ export function usePaginatedListings(
     setPage(1);
     setListings([]);
     setHasMore(true);
+    setError(null);
   }
 
   useEffect(() => {
@@ -66,10 +68,13 @@ export function usePaginatedListings(
           return [...prev, ...filteredNewCards];
         });
         setHasMore(newCards.length === pageSize);
+        setError(null);
       } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
         console.error(e);
         if (active) {
           setHasMore(false);
+          setError(msg);
         }
       } finally {
         if (active) {
@@ -91,5 +96,9 @@ export function usePaginatedListings(
     }
   }, [isLoading, hasMore, disabled]);
 
-  return { listings, isLoading, hasMore, loadMore };
+  /**
+   * Error message from the most recent failed fetch, or `null` if the last
+   * fetch succeeded or no fetch has been attempted yet.
+   */
+  return { listings, isLoading, hasMore, loadMore, error };
 }
