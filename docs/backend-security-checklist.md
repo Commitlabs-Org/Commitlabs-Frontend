@@ -150,9 +150,16 @@ npm audit
 ## 12. Rate Limiting
 
 - [ ] Write-heavy routes (`POST /api/commitments`, `POST /api/commitments/[id]/fund`, `POST /api/commitments/[id]/settle`, `POST /api/commitments/[id]/early-exit`) are protected by per-IP rate limiting
+- [ ] Auth routes (`POST /api/auth/nonce`, `POST /api/auth/verify`) use the tighter auth-route limits, not the default bucket
 - [ ] Rate limits are applied via `checkRateLimit(ip, routeId)` using `getClientIp` for key derivation
 - [ ] 429 responses include a `Retry-After` header populated from `getRateLimitWindowSeconds(routeId)`
-- [ ] Rate limit thresholds are configurable via env vars (`RATE_LIMIT_WRITE_MAX_REQUESTS`, `RATE_LIMIT_WRITE_WINDOW_SECONDS`, etc.) — not hardcoded
+- [ ] All per-route rate limit thresholds are configurable via env vars — not hardcoded. The full set of variables is:
+  - Auth: `RATE_LIMIT_AUTH_NONCE_MAX_REQUESTS`, `RATE_LIMIT_AUTH_NONCE_WINDOW_SECONDS`
+  - Auth: `RATE_LIMIT_AUTH_VERIFY_MAX_REQUESTS`, `RATE_LIMIT_AUTH_VERIFY_WINDOW_SECONDS`
+  - Per-address nonce: `RATE_LIMIT_NONCE_ADDRESS_MAX_REQUESTS`, `RATE_LIMIT_NONCE_ADDRESS_WINDOW_SECONDS`
+  - Write routes: `RATE_LIMIT_WRITE_MAX_REQUESTS`, `RATE_LIMIT_WRITE_WINDOW_SECONDS`
+  - Default bucket: `RATE_LIMIT_DEFAULT_MAX_REQUESTS`, `RATE_LIMIT_DEFAULT_WINDOW_SECONDS`
+  - See [docs/backend-rate-limiting.md](./backend-rate-limiting.md) for defaults and security rationale.
 - [ ] The rate limiter fails open on KV errors (does not block legitimate traffic during Redis outages)
 - [ ] In production, `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set so limits are shared across serverless instances
 - [ ] New write routes added to the API have a corresponding named entry in `rateLimit.ts` LIMITS (not relying on the default)
