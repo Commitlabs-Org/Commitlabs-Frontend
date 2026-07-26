@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error to console (client-side pattern)
     console.error('[ErrorBoundary] Caught an error:', error);
     console.error('[ErrorBoundary] Error info:', errorInfo);
@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
   }
 
-  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+  override componentDidUpdate(prevProps: ErrorBoundaryProps): void {
     const { resetKeys } = this.props;
     const { hasError } = this.state;
 
@@ -89,13 +89,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     });
   };
 
-  componentDidMount(): void {
+  override componentDidMount(): void {
     if (this.state.hasError && this.resetButtonRef.current) {
       this.resetButtonRef.current.focus();
     }
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError) {
       // Use custom fallback if provided
       if (this.props.fallback) {
