@@ -239,17 +239,21 @@
 
 .statsContainer {
   margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.statBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .statRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.65rem;
-}
-
-.statRow:last-child {
-  margin-bottom: 0;
 }
 
 .statLabel {
@@ -267,6 +271,26 @@
 .statValueRisk {
   color: #f97316;
   font-weight: 500;
+}
+
+/* Constraint explanatory copy */
+.constraintNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: rgba(153, 161, 175, 0.75);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.constraintNoteRisk {
+  color: rgba(249, 115, 22, 0.8);
+}
+
+.noteIcon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 
 .description {
@@ -354,4 +378,54 @@
   color: #99A1AF;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* Preset / Template Picker */
+.presetsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  justify-content: center;
+}
+
+.presetBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.625rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d1d5db;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 13rem;
+  max-width: 18rem;
+}
+
+.presetBtn:hover {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: rgba(20, 184, 166, 0.07);
+}
+
+.presetBtnSelected {
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.12);
+  color: #ffffff;
+}
+
+.presetLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.presetDesc {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  line-height: 1.4;
 }

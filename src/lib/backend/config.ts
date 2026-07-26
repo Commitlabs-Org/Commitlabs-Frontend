@@ -1,6 +1,8 @@
 // Versioned contract configuration accessor
 // Provides a centralized, typed, and validated way to access contract configs
 
+import { getValidatedEnv } from "./env";
+
 export interface ContractEntry {
   address: string;
   network?: string;
@@ -12,21 +14,19 @@ export type ContractsConfig = Record<
   Record<string, ContractEntry | undefined>
 >;
 
-const LEGACY_ENV_MAPPING = {
-  commitmentNFT: "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT",
-  commitmentCore: "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT",
-  attestationEngine: "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT",
-};
-
 function buildFromLegacyEnv(): ContractsConfig | null {
-  const anySet = Object.values(LEGACY_ENV_MAPPING).some(
-    (k) => !!process.env[k],
-  );
-  if (!anySet) return null;
-
+  const env = getValidatedEnv() as Record<string, string | undefined>;
+  
   const v1: Record<string, ContractEntry | undefined> = {};
-  for (const [key, envName] of Object.entries(LEGACY_ENV_MAPPING)) {
-    const addr = process.env[envName] || "";
+  
+  const mapping: Record<string, string[]> = {
+    commitmentNFT: ["COMMITMENT_NFT_CONTRACT", "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT"],
+    commitmentCore: ["COMMITMENT_CORE_CONTRACT", "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT"],
+    attestationEngine: ["ATTESTATION_ENGINE_CONTRACT", "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT"],
+  };
+
+  for (const [key, envNames] of Object.entries(mapping)) {
+    const addr = (envNames[0] ? env[envNames[0]] : undefined) || (envNames[1] ? env[envNames[1]] : undefined) || "";
     if (addr) v1[key] = { address: addr };
   }
 
@@ -34,8 +34,8 @@ function buildFromLegacyEnv(): ContractsConfig | null {
 }
 
 function parseJsonEnv(): ContractsConfig | null {
-  const raw =
-    process.env.NEXT_PUBLIC_CONTRACTS_JSON || process.env.CONTRACTS_JSON;
+  const env = getValidatedEnv();
+  const raw = env.NEXT_PUBLIC_CONTRACTS_JSON ?? env.CONTRACTS_JSON;
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -74,10 +74,16 @@ export function loadContractsConfig(): ContractsConfig {
   return cachedConfig;
 }
 
+/** Clears the module-level config cache. For tests only. */
+export function _resetEnvCache(): void {
+  cachedConfig = null;
+}
+
 export function getActiveContractVersion(): string {
+  const env = getValidatedEnv();
   return (
-    process.env.NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION ||
-    process.env.ACTIVE_CONTRACT_VERSION ||
+    env.NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION ??
+    env.ACTIVE_CONTRACT_VERSION ??
     "v1"
   );
 }
@@ -145,6 +151,7 @@ export type Environment = "development" | "preview" | "production";
  * @property contractAddresses - Addresses of deployed Soroban smart contracts
  * @property environment - Current environment (development | preview | production)
  * @property chainWritesEnabled - Whether on-chain write operations are enabled (env: COMMITLABS_ENABLE_CHAIN_WRITES)
+ * @property activeVersion - The active version of the contracts being used
  */
 export interface BackendConfig {
   sorobanRpcUrl: string;
@@ -152,6 +159,7 @@ export interface BackendConfig {
   contractAddresses: ContractAddresses;
   environment: Environment;
   chainWritesEnabled: boolean;
+  activeVersion: string;
 }
 
 /**
@@ -159,28 +167,22 @@ export interface BackendConfig {
  * @returns The current environment: 'development', 'preview', or 'production'
  */
 function getEnvironment(): Environment {
-  const vercelEnv = process.env.VERCEL_ENV;
-  if (vercelEnv === "production") return "production";
-  if (vercelEnv === "preview") return "preview";
-
-  const nodeEnv = process.env.NODE_ENV;
-  if (nodeEnv === "production") return "production";
-  if (nodeEnv === "test") return "development";
-
+  const env = getValidatedEnv();
+  if (env.VERCEL_ENV === "production") return "production";
+  if (env.VERCEL_ENV === "preview") return "preview";
+  if (env.NODE_ENV === "production") return "production";
+  if (env.NODE_ENV === "test") return "development";
   return "development";
 }
 
-/**
- * Checks if the current environment is a test environment.
- * @returns true if NODE_ENV is 'test'
- */
 function isTestEnvironment(): boolean {
-  return process.env.NODE_ENV === "test";
+  return getValidatedEnv().NODE_ENV === "test";
 }
 
 export interface BackendFeatureFlags {
     analyticsUser: boolean;
     marketplace: boolean;
+    marketplaceMockData: boolean;
 }
 
 type FeatureFlagKey = keyof BackendFeatureFlags;
@@ -193,7 +195,7 @@ function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boo
 }
 
 function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
-    const raw = process.env.COMMITLABS_FEATURE_FLAGS_JSON;
+    const raw = getValidatedEnv().COMMITLABS_FEATURE_FLAGS_JSON;
     if (!raw) return {};
 
     try {
@@ -206,6 +208,10 @@ function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
             marketplace:
                 typeof parsed.marketplace === 'boolean'
                     ? parsed.marketplace
+                    : undefined,
+            marketplaceMockData:
+                typeof parsed.marketplaceMockData === 'boolean'
+                    ? parsed.marketplaceMockData
                     : undefined
         };
     } catch (err) {
@@ -217,14 +223,18 @@ function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
 
 export function getFeatureFlags(): BackendFeatureFlags {
     const fromJson = parseFeatureFlagsJson();
+    const env = getValidatedEnv();
 
     return {
         analyticsUser:
             fromJson.analyticsUser ??
-            parseBooleanFlag(process.env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
+            parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
         marketplace:
             fromJson.marketplace ??
-            parseBooleanFlag(process.env.COMMITLABS_FEATURE_MARKETPLACE, false)
+            parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE, false),
+        marketplaceMockData:
+            fromJson.marketplaceMockData ??
+            parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA, true),
     };
 }
 
@@ -233,34 +243,11 @@ export function isFeatureEnabled(feature: FeatureFlagKey): boolean {
 }
 
 /**
- * Validates that a required configuration value is present.
- * Throws a clear error if the value is missing in non-test environments.
- *
- * @param value - The configuration value to validate
- * @param name - The name of the configuration field (for error messages)
- * @param envVars - The environment variable names that can provide this value
- * @throws Error if the value is missing and not in test environment
- */
-function validateRequired(
-  value: string,
-  name: string,
-  envVars: string[],
-): void {
-  if (!value && !isTestEnvironment()) {
-    throw new Error(
-      `Missing required configuration: ${name}. ` +
-        `Set one of the following environment variables: ${envVars.join(", ")}`,
-    );
-  }
-}
-
-/**
  * Returns the backend configuration for API routes and server-side code.
- * This function provides a centralized, typed, and validated way to access
- * environment variables and network settings.
+ * All values are sourced from the Zod-validated environment (see env.ts).
  *
  * In non-test environments, this function will throw a clear error if any
- * required configuration values are missing.
+ * required contract-address configuration values are missing.
  *
  * @returns BackendConfig object with all configuration values
  * @throws Error if required configuration values are missing (in non-test envs)
@@ -275,54 +262,99 @@ function validateRequired(
  * ```
  */
 export function getBackendConfig(): BackendConfig {
+  const env = getValidatedEnv();
+
   const sorobanRpcUrl =
-    process.env.SOROBAN_RPC_URL ??
-    process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
+    env.SOROBAN_RPC_URL ??
+    env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
     "https://soroban-testnet.stellar.org:443";
 
   const networkPassphrase =
-    process.env.SOROBAN_NETWORK_PASSPHRASE ??
-    process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
+    env.SOROBAN_NETWORK_PASSPHRASE ??
+    env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
     "Test SDF Network ; September 2015";
 
-  const commitmentNFT =
-    process.env.COMMITMENT_NFT_CONTRACT ??
-    process.env.NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT ??
-    "";
+  // Resolve contract addresses via versioned config
+  const activeVersion = getActiveContractVersion();
+  const contracts = getActiveContracts();
 
-  const commitmentCore =
-    process.env.COMMITMENT_CORE_CONTRACT ??
-    process.env.NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT ??
-    "";
+  const contractAddresses: ContractAddresses = {
+    commitmentNFT: contracts.commitmentNFT?.address || "",
+    commitmentCore: contracts.commitmentCore?.address || "",
+    attestationEngine: contracts.attestationEngine?.address || "",
+  };
 
-  const attestationEngine =
-    process.env.ATTESTATION_ENGINE_CONTRACT ??
-    process.env.NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT ??
-    "";
-
-  // Validate required values in non-test environments
-  validateRequired(commitmentNFT, "commitmentNFT", [
-    "COMMITMENT_NFT_CONTRACT",
-    "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT",
-  ]);
-  validateRequired(commitmentCore, "commitmentCore", [
-    "COMMITMENT_CORE_CONTRACT",
-    "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT",
-  ]);
-  validateRequired(attestationEngine, "attestationEngine", [
-    "ATTESTATION_ENGINE_CONTRACT",
-    "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT",
-  ]);
+  if (!isTestEnvironment()) {
+    if (!contractAddresses.commitmentNFT)
+      throw new Error(
+        `Missing required configuration: commitmentNFT in version "${activeVersion}"`,
+      );
+    if (!contractAddresses.commitmentCore)
+      throw new Error(
+        `Missing required configuration: commitmentCore in version "${activeVersion}"`,
+      );
+    if (!contractAddresses.attestationEngine)
+      throw new Error(
+        `Missing required configuration: attestationEngine in version "${activeVersion}"`,
+      );
+  }
 
   return {
     sorobanRpcUrl,
     networkPassphrase,
-    contractAddresses: {
-      commitmentNFT,
-      commitmentCore,
-      attestationEngine,
-    },
+    contractAddresses,
     environment: getEnvironment(),
-    chainWritesEnabled: process.env.COMMITLABS_ENABLE_CHAIN_WRITES === "true",
+    chainWritesEnabled: env.COMMITLABS_ENABLE_CHAIN_WRITES === "true",
+    activeVersion,
+  };
+}
+
+// ─── Supported Assets and Risk Profiles ─────────────────────────────────────
+
+export interface SupportedAsset {
+  code: string;
+  name: string;
+  decimals: number;
+}
+
+export interface RiskProfile {
+  id: string;
+  name: string;
+  description: string;
+  maxLossBps: number;
+}
+
+export interface ParameterBounds {
+  durationDays: { min: number; max: number };
+  amount: { min: number; max: number };
+}
+
+export interface SupportedConfig {
+  assets: SupportedAsset[];
+  riskProfiles: RiskProfile[];
+  bounds: ParameterBounds;
+}
+
+export const PARAMETER_BOUNDS: ParameterBounds = {
+  durationDays: { min: 1, max: 365 },
+  amount: { min: 0.001, max: 1000000 },
+};
+
+export const RISK_PROFILES: RiskProfile[] = [
+  { id: "conservative", name: "Conservative", description: "Strict capital preservation", maxLossBps: 1000 },
+  { id: "balanced", name: "Balanced", description: "Moderate drawdowns allowed", maxLossBps: 5000 },
+  { id: "aggressive", name: "Aggressive", description: "High loss tolerance", maxLossBps: 10000 },
+];
+
+export const SUPPORTED_ASSETS: SupportedAsset[] = [
+  { code: "XLM", name: "Stellar Lumens", decimals: 7 },
+  { code: "USDC", name: "USD Coin", decimals: 7 },
+];
+
+export function getSupportedConfig(): SupportedConfig {
+  return {
+    assets: SUPPORTED_ASSETS,
+    riskProfiles: RISK_PROFILES,
+    bounds: PARAMETER_BOUNDS,
   };
 }

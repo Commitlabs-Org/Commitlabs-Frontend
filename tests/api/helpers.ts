@@ -36,6 +36,10 @@ export function createMockRequest(
   return new NextRequest(url, requestInit)
 }
 
+export function createMockRouteContext(params: Record<string, string> = {}) {
+  return { params }
+}
+
 /**
  * Test helper to parse NextResponse for assertions
  */

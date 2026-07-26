@@ -1,35 +1,40 @@
-import { describe, it, expect } from 'vitest'
-import { GET } from '@/app/api/health/route'
-import { createMockRequest, parseResponse } from './helpers'
+import { describe, it, expect } from "vitest";
+import { GET, POST } from "@/app/api/health/route";
+import { createMockRequest, parseResponse } from "./helpers";
 
-describe('GET /api/health', () => {
-  it('should return a 200 status with health status', async () => {
-    const request = createMockRequest('http://localhost:3000/api/health')
-    const response = await GET(request)
-    const result = await parseResponse(response)
+describe("GET /api/health", () => {
+  it("returns a stable 200 JSON payload", async () => {
+    const request = createMockRequest("http://localhost:3000/api/health");
+    const response = await GET(request, { params: {} }, "test-correlation-id");
+    const result = await parseResponse(response);
 
-    expect(result.status).toBe(200)
-    expect(result.data).toHaveProperty('status', 'healthy')
-    expect(result.data).toHaveProperty('timestamp')
-    expect(result.data).toHaveProperty('version')
-  })
+    expect(result.status).toBe(200);
+    expect(result.headers.get("content-type")).toContain("application/json");
+    expect(result.data).toMatchObject({
+      success: true,
+      data: {
+        status: "healthy",
+        version: "0.1.0",
+      },
+    });
+    expect(typeof result.data.data.uptime).toBe("number");
+    expect(result.data.data.uptime).toBeGreaterThanOrEqual(0);
+  });
 
-  it('should return ISO timestamp in response', async () => {
-    const request = createMockRequest('http://localhost:3000/api/health')
-    const response = await GET(request)
-    const result = await parseResponse(response)
+  it("rejects unsupported methods", async () => {
+    const request = createMockRequest("http://localhost:3000/api/health", {
+      method: "POST",
+    });
+    const response = await POST(request);
+    const result = await parseResponse(response);
 
-    // Verify timestamp is valid ISO string
-    const timestamp = new Date(result.data.timestamp)
-    expect(timestamp).toBeInstanceOf(Date)
-    expect(timestamp.toString()).not.toBe('Invalid Date')
-  })
-
-  it('should return version in response', async () => {
-    const request = createMockRequest('http://localhost:3000/api/health')
-    const response = await GET(request)
-    const result = await parseResponse(response)
-
-    expect(result.data.version).toMatch(/^\d+\.\d+\.\d+$/)
-  })
-})
+    expect(result.status).toBe(405);
+    expect(result.headers.get("allow")).toBe("GET");
+    expect(result.data).toMatchObject({
+      success: false,
+      error: {
+        code: "METHOD_NOT_ALLOWED",
+      },
+    });
+  });
+});

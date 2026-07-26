@@ -1,0 +1,43 @@
+# .github/workflows/deadcode.yml
+# Reports unused files, exports, and dependencies with knip.
+#
+# Report-only (non-blocking) for now: there is an existing backlog of orphaned
+# modules and unused exports. This job surfaces the report on every PR/push
+# without blocking merges. Once the backlog is triaged, drop `continue-on-error`
+# (and/or tighten knip.json) to make it a gate. See docs/DEAD_CODE_SCAN.md.
+
+name: Dead Code Scan
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  knip:
+    name: knip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Non-blocking while the dead-code backlog is triaged. Flip to a hard
+      # failure (drop continue-on-error) once `npm run deadcode` is clean.
+      - name: Run knip
+        run: npm run deadcode
+        continue-on-error: true

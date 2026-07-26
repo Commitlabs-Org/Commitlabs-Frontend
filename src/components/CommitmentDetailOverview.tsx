@@ -1,4 +1,6 @@
 import React from "react";
+import { TrustBadge, TrustLevel } from "./TrustBadge";
+import { ReputationDisplay } from "./ReputationDisplay";
 
 export interface CommitmentDetailOverviewProps {
   commitmentTypeLabel: string;
@@ -17,6 +19,12 @@ export interface CommitmentDetailOverviewProps {
   maxLossThreshold: string;
   currentDrawdown: string;
   feesGenerated: string;
+  sellerTrustLevel?: TrustLevel;
+  sellerReputation?: {
+    score: number;
+    totalCommitments: number;
+    successRate: number;
+  };
 }
 
 function clamp(value: number, min = 0, max = 100) {
@@ -46,6 +54,8 @@ export function CommitmentDetailOverview({
   maxLossThreshold,
   currentDrawdown,
   feesGenerated,
+  sellerTrustLevel = 'unverified',
+  sellerReputation,
 }: CommitmentDetailOverviewProps) {
   const percentComplete = clamp(durationPercentComplete);
   const compliance = clamp(complianceScore);
@@ -83,6 +93,7 @@ export function CommitmentDetailOverview({
               </svg>
               {commitmentTypeLabel}
             </span>
+            <TrustBadge level={sellerTrustLevel} />
           </div>
 
           <div className="space-y-2">
@@ -248,6 +259,15 @@ export function CommitmentDetailOverview({
               </p>
             </div>
           </div>
+
+          {sellerReputation && (
+            <ReputationDisplay
+              score={sellerReputation.score}
+              totalCommitments={sellerReputation.totalCommitments}
+              successRate={sellerReputation.successRate}
+              className="mt-2"
+            />
+          )}
         </div>
       </div>
     </section>

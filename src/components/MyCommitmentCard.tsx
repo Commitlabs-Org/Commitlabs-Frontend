@@ -1,5 +1,8 @@
 import React from "react";
 import { Commitment } from "@/types/commitment";
+import { MaturityCountdown } from './MaturityCountdown';
+import type { MarketplaceListing } from "@/types/marketplace";
+import RelistPriceEditor from './marketplace/RelistPriceEditor';
 import Link from "next/link";
 import {
   SafeIcon,
@@ -9,20 +12,32 @@ import {
   FileTextIcon,
   AlertIcon,
 } from "./icons/CommitmentIcons";
-import { TrendingUp as Increase, TrendingDown as Decrease } from "lucide-react";
+import { TrendingUp as Increase, TrendingDown as Decrease, Tag } from "lucide-react";
 
 interface MyCommitmentCardProps {
   commitment: Commitment;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  listing?: MarketplaceListing;
+  sellerAddress?: string;
   onDetails?: (id: string) => void;
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
+  onListForSale?: (id: string) => void;
+  onListingPriceUpdated?: (id: string, newPrice: string) => void;
 }
 
 const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   commitment,
+  isSelected = false,
+  onSelect = () => {},
+  listing,
+  sellerAddress,
   onDetails,
   onAttestations,
   onEarlyExit,
+  onListForSale,
+  onListingPriceUpdated,
 }) => {
   const {
     id,
@@ -33,7 +48,6 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
     currentValue,
     changePercent,
     durationProgress,
-    daysRemaining,
     complianceScore,
     maxLoss,
     currentDrawdown,
@@ -61,19 +75,37 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
       : status === "Early Exit"
       ? "bg-[rgba(245,158,11,0.1)] text-[#ff8904] font-roboto"
       : "bg-[rgba(239,68,68,0.1)] text-[#ef4444] font-roboto";
-  const isPositive = changePercent >= 0;
+  const isPositive = changePercent! >= 0;
 
   // Dynamic colors
   const durationColorClass =
     "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
 
   const complianceColorClass =
-    complianceScore > 80
+    complianceScore! > 80
       ? "bg-[#05DF72]"
       : "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
 
   return (
-    <div className="relative flex flex-col gap-5 rounded-[16px] border border-white/10 bg-[rgba(13,13,13,0.8)] p-6 text-white backdrop-blur-[10px] overflow-hidden transition-[transform,border-color] duration-200 ease-[ease] hover:border-[rgba(15,240,252,0.3)]">
+    <div 
+      className={`relative flex flex-col gap-5 rounded-[16px] border bg-[rgba(13,13,13,0.8)] p-6 text-white backdrop-blur-[10px] overflow-hidden transition-[transform,border-color] duration-200 ease-[ease] ${
+        isSelected 
+          ? 'border-[#0FF0FC]/50 ring-2 ring-[#0FF0FC]/20' 
+          : 'border-white/10 hover:border-[rgba(15,240,252,0.3)]'
+      }`}
+    >
+      {/* Selection checkbox */}
+      <div className="absolute top-4 right-4 z-10">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelect}
+          onClick={(e) => e.stopPropagation()}
+          className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#0FF0FC] focus:ring-2 focus:ring-[#0FF0FC] focus:ring-offset-0 focus:ring-offset-[#0a0a0a] cursor-pointer"
+          aria-label={`Select commitment ${id}`}
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <div
           className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${typeBadgeClass}`}
@@ -101,7 +133,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
         <div className="flex items-baseline gap-2 text-[32px] font-bold font-roboto">
           {amount}{" "}
           <span
-            className="text-[16px] font-medium text-[#666]"
+            className="text-[16px] font-medium text-[#8892a0]"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
             {asset}
@@ -110,7 +142,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
         <div className="flex items-center gap-2 text-[14px]">
           <span className="text-[#94A3B8]">Current Value:</span>
           <span style={{ fontWeight: 600, fontFamily: "Roboto Mono" }}>
-            {currentValue} {asset}
+            {currentValue!} {asset}
           </span>
           <span
             className={isPositive ? "text-[#05DF72]" : "text-[#EF4444]"}
@@ -128,7 +160,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
               />
             )}
             {isPositive ? "+" : ""}
-            {changePercent.toFixed(2)}%
+            {changePercent!.toFixed(2)}%
           </span>
         </div>
       </div>
@@ -147,20 +179,20 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
               Duration Progress
             </span>
             <span className="text-white font-medium font-roboto">
-              {daysRemaining} days left
+              <MaturityCountdown maturityTimestamp={new Date(expiryDate!).getTime()} />
             </span>
           </div>
           <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
             <div
               className={`h-full rounded-full ${durationColorClass}`}
-              style={{ width: `${durationProgress}%` }}
+              style={{ width: `${durationProgress!}%` }}
             />
           </div>
           <span
             className="text-[#94A3B8] font-roboto"
             style={{ fontSize: "12px", marginTop: "-4px" }}
           >
-            {durationProgress}%
+            {durationProgress!}%
           </span>
         </div>
 
@@ -176,12 +208,12 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             >
               Compliance Score
             </span>
-            <span className="text-white font-semibold">{complianceScore}%</span>
+            <span className="text-white font-semibold">{complianceScore!}%</span>
           </div>
           <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
             <div
               className={`h-full rounded-full ${complianceColorClass}`}
-              style={{ width: `${complianceScore}%` }}
+              style={{ width: `${complianceScore!}%` }}
             />
           </div>
         </div>
@@ -196,7 +228,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             Max Loss
           </span>
           <span className="text-[16px] font-semibold font-roboto">
-            {maxLoss}
+            {maxLoss!}
           </span>
         </div>
         <div className="flex h-full w-full flex-col gap-[3.99px] rounded-[10px] bg-[#FFFFFF05] px-3 py-3">
@@ -207,7 +239,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
             Current Drawdown
           </span>
           <span className="text-[16px] font-semibold font-roboto">
-            {currentDrawdown}
+            {currentDrawdown!}
           </span>
         </div>
       </div>
@@ -220,7 +252,7 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
           >
             Created
           </span>
-          <span className="text-white font-roboto">{createdDate}</span>
+          <span className="text-white font-roboto">{createdDate!}</span>
         </div>
         <div className="flex flex-col gap-1 items-end">
           <span
@@ -229,9 +261,20 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
           >
             Expires
           </span>
-          <span className="text-white font-roboto">{expiryDate}</span>
+          <span className="text-white font-roboto">{expiryDate!}</span>
         </div>
       </div>
+
+      {listing && sellerAddress && (
+        <div className="rounded-[10px] border border-white/5 bg-[#FFFFFF05] px-3 py-2.5">
+          <RelistPriceEditor
+            listing={listing}
+            sellerAddress={sellerAddress}
+            commitmentAsset={asset}
+            onPriceUpdated={(newPrice) => onListingPriceUpdated?.(id, newPrice)}
+          />
+        </div>
+      )}
 
       <div className="mt-2 flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-3">
@@ -250,6 +293,15 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
         </div>
         {status === "Active" && (
           <button
+            className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[rgba(15,240,252,0.2)] bg-[rgba(15,240,252,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#0FF0FC] transition-all duration-200 ease-[ease] hover:bg-[rgba(15,240,252,0.1)]"
+            onClick={() => onListForSale?.(id)}
+            aria-label={`List ${id} for sale on the marketplace`}
+          >
+            <Tag size={16} /> List for sale
+          </button>
+        )}
+        {status === "Active" && (
+          <button
             className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#ff8904] transition-all duration-200 ease-[ease] hover:bg-[rgba(245,158,11,0.1)]"
             onClick={() => onEarlyExit?.(id)}
           >
@@ -261,4 +313,4 @@ const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
   );
 };
 
-export default MyCommitmentCard;
+export default React.memo(MyCommitmentCard);

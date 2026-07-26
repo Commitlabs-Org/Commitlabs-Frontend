@@ -1,18 +1,64 @@
+// Navigation component with wallet integration
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
+
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { WalletConnectButton } from "@/components/WalletConnectButton";
+import { HelpDrawer } from "@/components/help/HelpDrawer";
+import { useCommandPalette } from "@/hooks/useCommandPalette";
+import { WalletAccountMenu } from "@/components/wallet/WalletAccountMenu";
 
 export const Navigation: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { open: openPalette } = useCommandPalette();
+
+  const navRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    // Restore focus to the toggle button when the menu is closed
+    toggleRef.current?.focus();
+  }, []);
 
   const handleToggle = () => {
-    setMenuOpen((open) => !open);
+    setMenuOpen((open) => {
+      const opening = !open;
+      if (opening) {
+        // Move focus to the first focusable link once the menu is visible.
+        // rAF ensures the inert attribute is removed before we attempt focus.
+        requestAnimationFrame(() => {
+          const firstLink = navRef.current?.querySelector<HTMLElement>(
+            "a, button, [tabindex]:not([tabindex='-1'])",
+          );
+          firstLink?.focus();
+        });
+      } else {
+        toggleRef.current?.focus();
+      }
+      return opening;
+    });
   };
 
   const handleNavClick = () => {
     setMenuOpen(false);
   };
+
+  // Close on Escape and restore focus to the toggle button
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMenu();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen, closeMenu]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-[rgba(0,212,255,0.15)] bg-[#0a0a0a] backdrop-blur-lg">
@@ -34,8 +80,13 @@ export const Navigation: React.FC = () => {
         </Link>
 
         <nav
+          ref={navRef}
           id="primary-navigation"
           aria-label="Primary"
+          // inert removes all children from tab order and the accessibility tree
+          // when the mobile menu is collapsed. The CSS animation is preserved for
+          // the open state; inert handles the accessibility side.
+          {...(!menuOpen ? { inert: "" } : {})}
           className={[
             "flex items-center justify-center gap-8",
             "max-[900px]:absolute max-[900px]:top-full max-[900px]:left-0 max-[900px]:right-0 max-[900px]:bg-[#0a0a0a] max-[900px]:flex-col max-[900px]:pt-5 max-[900px]:px-8 max-[900px]:pb-6 max-[900px]:gap-4 max-[900px]:border-b max-[900px]:border-[rgba(0,212,255,0.2)] max-[900px]:-translate-y-[10px] max-[900px]:opacity-0 max-[900px]:pointer-events-none max-[900px]:transition-[opacity,transform] max-[900px]:duration-300 max-[900px]:ease-[ease]",
@@ -47,7 +98,6 @@ export const Navigation: React.FC = () => {
           <a
             href="#features"
             className="font-['Inter',sans-serif] text-[14px] font-normal leading-5 text-white/75 transition-[color,text-shadow] duration-300 ease-[ease] hover:text-white hover:[text-shadow:0_0_12px_rgba(0,212,255,0.5)] focus-visible:text-white focus-visible:[text-shadow:0_0_12px_rgba(0,212,255,0.5)]"
-            aria-current="page"
             onClick={handleNavClick}
           >
             Features
@@ -67,6 +117,13 @@ export const Navigation: React.FC = () => {
             Benefits
           </a>
           <Link
+            href="/settings"
+            className="font-['Inter',sans-serif] text-[14px] font-normal leading-5 text-white/75 transition-[color,text-shadow] duration-300 ease-[ease] hover:text-white hover:[text-shadow:0_0_12px_rgba(0,212,255,0.5)] focus-visible:text-white focus-visible:[text-shadow:0_0_12px_rgba(0,212,255,0.5)]"
+            onClick={handleNavClick}
+          >
+            Settings
+          </Link>
+          <Link
             href="/create"
             className="hidden w-auto justify-center mt-[0.4rem] rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] px-6 py-[0.7rem] font-roboto text-[14px] font-medium leading-5 text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus-visible:shadow-[0_0_22px_rgba(0,212,255,0.7)] focus-visible:-translate-y-px max-[900px]:inline-flex max-[600px]:px-[1.1rem] max-[600px]:py-[0.6rem] max-[600px]:text-[0.9rem]"
             onClick={handleNavClick}
@@ -76,14 +133,24 @@ export const Navigation: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3 justify-self-end">
-          <Link
-            href="/create"
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-[14px] border border-[rgba(0,212,255,0.6)] bg-[rgba(5,10,14,0.9)] w-[133.5px] h-[45px] px-[20.56px] py-[13.89px] font-roboto text-[14px] font-medium leading-5 text-white shadow-[0_0_14px_rgba(0,212,255,0.45)] transition-[box-shadow,transform] duration-300 ease-[ease] hover:shadow-[0_0_22px_rgba(0,212,255,0.7)] hover:-translate-y-px focus-visible:shadow-[0_0_22px_rgba(0,212,255,0.7)] focus-visible:-translate-y-px max-[900px]:hidden max-[600px]:px-[1.1rem] max-[600px]:py-[0.6rem] max-[600px]:text-[0.9rem]"
-          >
-            Get Started
-          </Link>
-
           <button
+            type="button"
+            onClick={openPalette}
+            aria-label="Open command palette (Ctrl+K)"
+            title="Search (Ctrl+K)"
+            className="hidden sm:inline-flex items-center gap-2 px-3 py-[0.45rem] rounded-[10px] border border-[rgba(0,212,255,0.2)] bg-[rgba(255,255,255,0.03)] text-white/40 text-[12px] transition-colors duration-200 hover:border-[rgba(0,212,255,0.45)] hover:text-white/70 focus-visible:border-[rgba(0,212,255,0.6)] focus-visible:outline-none"
+          >
+            <Search size={13} aria-hidden="true" />
+            <span>Search</span>
+            <kbd className="ml-1 text-[10px] text-white/20">⌘K</kbd>
+          </button>
+          <HelpDrawer />
+          <ThemeToggle />
+          <WalletConnectButton />
+          <WalletAccountMenu />
+          {/* Mobile menu button */}
+          <button
+            ref={toggleRef}
             type="button"
             className="hidden items-center justify-center flex-col cursor-pointer bg-transparent border border-[rgba(0,212,255,0.3)] rounded-[10px] p-[0.6rem] max-[900px]:inline-flex"
             onClick={handleToggle}

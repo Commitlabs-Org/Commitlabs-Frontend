@@ -1,0 +1,93 @@
+.stepper {
+  margin-bottom: 2.5rem;
+}
+
+.track {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.stepGroup {
+  display: flex;
+  align-items: flex-start;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.circle {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(30, 30, 30, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.circle.active {
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+  border-color: #00d4aa;
+  color: #fff;
+  box-shadow: 0 0 18px rgba(0, 212, 170, 0.4);
+}
+
+.circle.completed {
+  background: #00d4aa;
+  border-color: #00d4aa;
+  color: #fff;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
+.labelActive {
+  color: #00d4aa;
+}
+
+.labelCompleted {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.connector {
+  width: 5rem;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 1.25rem 0.25rem 0;
+  transition: background 0.3s ease;
+  flex-shrink: 0;
+}
+
+.connectorCompleted {
+  background: #00d4aa;
+}
+
+@media (max-width: 480px) {
+  .connector {
+    width: 2.5rem;
+  }
+
+  .circle {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8rem;
+  }
+
+  .label {
+    font-size: 0.65rem;
+  }
+}

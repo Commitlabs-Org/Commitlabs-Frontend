@@ -2,13 +2,23 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useToast } from '@/components/toast/ToastProvider'
 import MyCommitmentsHeader from '@/components/MyCommitmentsHeader'
 import MyCommitmentsStats from '@/components/MyCommitmentsStats/MyCommitmentsStats'
 import MyCommitmentsFilters from '@/components/MyCommitmentsFilters/MyCommitmentsFilters'
 import MyCommitmentsGrid from '@/components/MyCommitmentsGrid'
+import MyCommitmentsGridSkeleton from '@/components/MyCommitmentsGridSkeleton'
 import CommitmentEarlyExitModal from '@/components/CommitmentEarlyExitModal/CommitmentEarlyExitModal'
+import ExportCommitmentsModal from '@/components/export/ExportCommitmentsModal'
+import ListForSaleModal from '@/components/modals/ListForSaleModal'
+import { useWallet } from '@/hooks/useWallet'
 import { Commitment, CommitmentStats } from '@/types/commitment'
 import { listCommitments } from '@/lib/backend/mocks/contracts'
+import { fetchProtocolConstants, ProtocolConstants } from '@/utils/protocol'
+import { getValidatedClientEnv } from '@/lib/clientEnv'
+import { AppShellLayout } from '@/components/shell/AppShellLayout'
+import { sortCommitments, SortOption } from '@/utils/sortCommitments'
+import { OnboardingChecklist } from '@/components/OnboardingChecklist'
 
 const mockCommitments: Commitment[] = [
   {
@@ -109,16 +119,45 @@ const mockCommitments: Commitment[] = [
   },
 ]
 
-const mockStats: CommitmentStats = {
-  totalActive: 3,
-  totalCommittedValue: '$461,850',
-  avgComplianceScore: 86,
-  totalFeesGenerated: '$1,250',
+function calculateStatsFromCommitments(commitments: Commitment[]): CommitmentStats {
+  if (commitments.length === 0) {
+    return {
+      totalActive: 0,
+      totalCommittedValue: '$0',
+      avgComplianceScore: 0,
+      totalFeesGenerated: '$0',
+    }
+  }
+
+  // Count active commitments
+  const activeCommitments = commitments.filter((c) => c.status === 'Active')
+  const totalActive = activeCommitments.length
+
+  // Sum all committed values
+  const totalCommittedValue = commitments.reduce((sum, c) => {
+    const amount = Number(c.amount.replace(/,/g, ''))
+    return sum + amount
+  }, 0)
+
+  // Calculate average compliance score
+  const avgComplianceScore =
+    commitments.length > 0
+      ? Math.round(commitments.reduce((sum, c) => sum + c.complianceScore!, 0) / commitments.length)
+      : 0
+
+  // Calculate total fees generated (1% of total committed value as placeholder)
+  const totalFeesGeneratedAmount = Math.round(totalCommittedValue * 0.01)
+
+  return {
+    totalActive,
+    totalCommittedValue: `$${totalCommittedValue.toLocaleString()}`,
+    avgComplianceScore,
+    totalFeesGenerated: `$${totalFeesGeneratedAmount.toLocaleString()}`,
+  }
 }
 
-function getEarlyExitValues(originalAmount: string, asset: string) {
+function getEarlyExitValues(originalAmount: string, asset: string, penaltyPercent: number) {
   const amount = Number(originalAmount.replace(/,/g, ''))
-  const penaltyPercent = 10
   const penaltyAmount = (amount * (penaltyPercent / 100)).toFixed(0)
   const netReceive = (amount - Number(penaltyAmount)).toFixed(0)
   return {
@@ -130,52 +169,96 @@ function getEarlyExitValues(originalAmount: string, asset: string) {
 
 export default function MyCommitments() {
   const router = useRouter()
+  const toast = useToast()
+  const { address } = useWallet()
 
   // State
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [typeFilter, setTypeFilter] = useState('All')
-  const [sortBy, setSortBy] = useState('Newest')
+  const [sortBy, setSortBy] = useState<SortOption>('Newest')
 
   const [earlyExitCommitmentId, setEarlyExitCommitmentId] = useState<string | null>(null)
+  const [listingCommitmentId, setListingCommitmentId] = useState<string | null>(null)
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const [selectedIdsForExport, setSelectedIdsForExport] = useState<string[]>([])
+  const [isExporting, _setIsExporting] = useState(false)
   const [hasAcknowledged, setHasAcknowledged] = useState(false)
   const [commitmentsList, setCommitmentsList] = useState<Commitment[]>(mockCommitments)
+  const [isLoading, setIsLoading] = useState(true)
+  const [protocolConstants, setProtocolConstants] = useState<ProtocolConstants | null>(null)
+  const [, setIsLoadingConstants] = useState(true)
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_USE_MOCKS === 'true') {
-      listCommitments().then(setCommitmentsList)
+    fetchProtocolConstants()
+      .then(setProtocolConstants)
+      .catch((err) => console.error('Failed to fetch protocol constants:', err))
+      .finally(() => setIsLoadingConstants(false))
+  }, [])
+
+  useEffect(() => {
+    const clientEnv = getValidatedClientEnv()
+    if (clientEnv.NEXT_PUBLIC_USE_MOCKS === 'true') {
+      setIsLoading(true)
+      listCommitments()
+        .then(setCommitmentsList)
+        .finally(() => setIsLoading(false))
+    } else {
+      // Simulate loading for demo purposes
+      const timer = setTimeout(() => {
+        setIsLoading(false)
+      }, 1000)
+      return () => clearTimeout(timer)
     }
   }, [])
 
   // Derived State
   const filteredCommitments = useMemo(() => {
-    const filtered = mockCommitments.filter((c) => {
+    const filtered = commitmentsList.filter((c) => {
       const matchesSearch = c.id.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesStatus = statusFilter === 'All' || c.status.toLowerCase() === statusFilter.toLowerCase()
       const matchesType = typeFilter === 'All' || c.type.toLowerCase() === typeFilter.toLowerCase()
       return matchesSearch && matchesStatus && matchesType
     })
 
-    // Basic Sorting Logic
-    if (sortBy === 'ValueHighLow') {
-      filtered.sort((a, b) => Number(b.amount.replace(/,/g, '')) - Number(a.amount.replace(/,/g, '')))
-    } else if (sortBy === 'ValueLowHigh') {
-      filtered.sort((a, b) => Number(a.amount.replace(/,/g, '')) - Number(b.amount.replace(/,/g, '')))
-    } else if (sortBy === 'Newest') {
-      filtered.sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
-    } else if (sortBy === 'Oldest') {
-      filtered.sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime())
-    }
-
-    return filtered
-  }, [searchQuery, statusFilter, typeFilter, sortBy])
+    return sortCommitments(filtered, sortBy)
+  }, [commitmentsList, searchQuery, statusFilter, typeFilter, sortBy])
 
   const commitmentForEarlyExit = commitmentsList.find((c) => c.id === earlyExitCommitmentId)
+  const commitmentForListing = listingCommitmentId
+    ? commitmentsList.find((c) => c.id === listingCommitmentId) ?? null
+    : null
   const earlyExitSummary = useMemo(() => {
-    return commitmentForEarlyExit
-      ? getEarlyExitValues(commitmentForEarlyExit.amount, commitmentForEarlyExit.asset)
-      : null
-  }, [commitmentForEarlyExit])
+    if (!commitmentForEarlyExit) return null
+
+    let penaltyPercent = 10
+    if (protocolConstants?.penalties) {
+      const tier = protocolConstants.penalties.find(
+        (p) => p.type.toLowerCase() === commitmentForEarlyExit.type.toLowerCase()
+      )
+      if (tier) {
+        penaltyPercent = tier.earlyExitPenaltyPercent
+      }
+    } else {
+      // Fallback local calculations in case loading or error
+      const lowerType = commitmentForEarlyExit.type.toLowerCase()
+      if (lowerType === 'safe') penaltyPercent = 2
+      else if (lowerType === 'balanced') penaltyPercent = 3
+      else if (lowerType === 'aggressive') penaltyPercent = 5
+    }
+
+    return getEarlyExitValues(
+      commitmentForEarlyExit.amount,
+      commitmentForEarlyExit.asset,
+      penaltyPercent
+    )
+  }, [commitmentForEarlyExit, protocolConstants])
+
+  // Calculate stats from commitmentsList
+  const calculatedStats = useMemo(
+    () => calculateStatsFromCommitments(commitmentsList),
+    [commitmentsList]
+  )
 
   // Callbacks
   const openEarlyExitModal = useCallback((id: string) => {
@@ -183,48 +266,129 @@ export default function MyCommitments() {
     setHasAcknowledged(false)
   }, [])
 
+  const openListForSaleModal = useCallback((id: string) => {
+    setListingCommitmentId(id)
+  }, [])
+
+  const closeListForSaleModal = useCallback(() => {
+    setListingCommitmentId(null)
+  }, [])
+
+  const handleListForSaleSuccess = useCallback((listingId: string) => {
+    if (!listingCommitmentId) return
+    const committed = commitmentsList.find((c) => c.id === listingCommitmentId)
+    if (!committed) return
+    toast.success({
+      title: listingId
+        ? `${committed.id} is now listed on the marketplace as ${listingId}. Buyers will see it in the listings grid.`
+        : `${committed.id} is now listed on the marketplace. Buyers will see it in the listings grid.`
+    })
+  }, [commitmentsList, listingCommitmentId, toast])
+
+  const handleExportSelected = useCallback((ids: string[]) => {
+    setSelectedIdsForExport(ids)
+    setIsExportOpen(true)
+  }, [])
+
+  // Stable callbacks so the memoized MyCommitmentCard only re-renders when its
+  // own commitment changes, not on every filter/sort that re-runs this page.
+  const handleViewDetails = useCallback(
+    (id: string) => router.push(`/commitments/${id}`),
+    [router]
+  )
+
+  const handleViewAttestations = useCallback(
+    (id: string) => router.push(`/commitments/${id}`),
+    [router]
+  )
+
   const closeEarlyExitModal = useCallback(() => {
     setEarlyExitCommitmentId(null)
     setHasAcknowledged(false)
   }, [])
 
   const handleConfirmEarlyExit = useCallback(() => {
-    if (!earlyExitCommitmentId) return
+    if (!earlyExitCommitmentId || !earlyExitSummary) return
+
+    const committed = commitmentsList.find((c) => c.id === earlyExitCommitmentId)
+    if (!committed) return
+
+    setCommitmentsList((current) =>
+      current.map((commitment) =>
+        commitment.id === earlyExitCommitmentId
+          ? { ...commitment, status: 'Early Exit' }
+          : commitment
+      )
+    )
+
+    toast.success({
+      title: 'Early exit confirmed',
+      description: `${committed.id} was moved to Early Exit. ${earlyExitSummary.penaltyPercent} penalty applied; you will receive ${earlyExitSummary.netReceiveAmount}.`,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setCommitmentsList((current) =>
+            current.map((commitment) =>
+              commitment.id === committed.id
+                ? { ...commitment, status: committed.status }
+                : commitment
+            )
+          )
+        },
+      },
+    })
+
     closeEarlyExitModal()
-  }, [earlyExitCommitmentId, closeEarlyExitModal])
+  }, [earlyExitCommitmentId, earlyExitSummary, commitmentsList, closeEarlyExitModal, toast])
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <MyCommitmentsHeader
-        onBack={() => router.push('/')}
-        onCreateNew={() => router.push('/create')}
-      />
+    <AppShellLayout>
+      <main id="main-content" className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <MyCommitmentsHeader
+          onBack={() => router.push('/')}
+          onCreateNew={() => router.push('/create')}
+          onExport={() => setIsExportOpen(true)}
+        />
 
       <div className="w-full flex-1 px-22 py-8 max-[1024px]:px-8 max-[640px]:px-4">
-        <MyCommitmentsStats
-          totalActive={mockStats.totalActive}
-          totalCommittedValue={mockStats.totalCommittedValue}
-          averageComplianceScore={`${mockStats.avgComplianceScore}%`}
-          totalFeesGenerated={mockStats.totalFeesGenerated}
-        />
+        {isLoading ? (
+          <MyCommitmentsGridSkeleton
+            showStats={true}
+            showFilters={true}
+            cardCount={6}
+          />
+        ) : (
+          <>
+            <OnboardingChecklist />
+            <MyCommitmentsStats
+              totalActive={calculatedStats.totalActive}
+              totalCommittedValue={calculatedStats.totalCommittedValue}
+              avgComplianceScore={calculatedStats.avgComplianceScore}
+              totalFeesGenerated={calculatedStats.totalFeesGenerated}
+            />
 
-        <MyCommitmentsFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          status={statusFilter}
-          onStatusChange={setStatusFilter}
-          type={typeFilter}
-          onTypeChange={setTypeFilter}
-          sortBy={sortBy}
-          onSortByChange={setSortBy}
-        />
+            <MyCommitmentsFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              status={statusFilter}
+              onStatusChange={setStatusFilter}
+              type={typeFilter}
+              onTypeChange={setTypeFilter}
+              sortBy={sortBy}
+              onSortByChange={setSortBy}
+            />
 
-        <MyCommitmentsGrid
-          commitments={filteredCommitments}
-          onDetails={(id) => router.push(`/commitments/${id}`)}
-          onAttestations={(id) => console.log('Attestations for', id)}
-          onEarlyExit={openEarlyExitModal}
-        />
+            <MyCommitmentsGrid
+              commitments={filteredCommitments}
+              onDetails={handleViewDetails}
+              onAttestations={handleViewAttestations}
+              onEarlyExit={openEarlyExitModal}
+              onListForSale={openListForSaleModal}
+              onExportSelected={handleExportSelected}
+              isExporting={isExporting}
+            />
+          </>
+        )}
       </div>
 
       {commitmentForEarlyExit && earlyExitSummary && (
@@ -242,6 +406,28 @@ export default function MyCommitments() {
           onClose={closeEarlyExitModal}
         />
       )}
+
+      <ExportCommitmentsModal
+        isOpen={isExportOpen}
+        onClose={() => {
+          setIsExportOpen(false)
+          setSelectedIdsForExport([])
+        }}
+        ownerAddress={address}
+        selectedIds={selectedIdsForExport}
+      />
+
+      {commitmentForListing && (
+        <ListForSaleModal
+          isOpen={true}
+          commitmentId={commitmentForListing.id}
+          asset={commitmentForListing.asset}
+          sellerAddress={address}
+          onClose={closeListForSaleModal}
+          onSuccess={handleListForSaleSuccess}
+        />
+      )}
     </main>
+    </AppShellLayout>
   )
 }

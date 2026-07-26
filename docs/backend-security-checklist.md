@@ -147,6 +147,41 @@ npm audit
 
 ---
 
+## 12. Rate Limiting
+
+- [ ] Write-heavy routes (`POST /api/commitments`, `POST /api/commitments/[id]/fund`, `POST /api/commitments/[id]/settle`, `POST /api/commitments/[id]/early-exit`) are protected by per-IP rate limiting
+- [ ] Rate limits are applied via `checkRateLimit(ip, routeId)` using `getClientIp` for key derivation
+- [ ] 429 responses include a `Retry-After` header populated from `getRateLimitWindowSeconds(routeId)`
+- [ ] Rate limit thresholds are configurable via env vars (`RATE_LIMIT_WRITE_MAX_REQUESTS`, `RATE_LIMIT_WRITE_WINDOW_SECONDS`, etc.) — not hardcoded
+- [ ] The rate limiter fails open on KV errors (does not block legitimate traffic during Redis outages)
+- [ ] In production, `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set so limits are shared across serverless instances
+- [ ] New write routes added to the API have a corresponding named entry in `rateLimit.ts` LIMITS (not relying on the default)
+
+---
+
+## Dependency Audit Gate
+
+Pull requests are scanned for known-vulnerable dependencies by the
+[`security-audit`](../.github/workflows/security-audit.yml) workflow:
+
+- **`npm audit --omit=dev --audit-level=high`** fails CI when a **high or
+  critical** advisory affects a **production** dependency. Dev-only advisories
+  do not block the build.
+- **`dependency-review-action`** runs on PRs and flags dependency changes that
+  introduce advisories at `high` severity or above. It requires a committed
+  lockfile to diff against.
+
+### Triaging / waiving findings
+
+1. Prefer upgrading to a patched version (`npm update <pkg>` or bump the range).
+2. If no fix exists and the advisory is not exploitable in our usage, document
+   the rationale in the PR and track it as a follow-up issue.
+3. As a last resort, scope a temporary waiver narrowly (e.g. raise the
+   `audit-level` only for the affected job) and link the tracking issue so it is
+   revisited.
+
+---
+
 ## Severity Guide
 
 Use this when flagging issues during review:

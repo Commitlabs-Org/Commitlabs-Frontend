@@ -1,0 +1,35 @@
+# EditorConfig is awesome: https://editorconfig.org
+# Top-most EditorConfig file
+root = true
+
+# Defaults for all files
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# TypeScript / JavaScript / React
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+indent_style = space
+indent_size = 2
+
+# Styles
+[*.{css,scss}]
+indent_style = space
+indent_size = 2
+
+# Data / config
+[*.{json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown: keep trailing whitespace (two trailing spaces = hard line break)
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefiles require real tabs
+[Makefile]
+indent_style = tab

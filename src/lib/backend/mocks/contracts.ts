@@ -38,7 +38,7 @@ const mockCommitments: Commitment[] = [
 
 export async function createCommitment(commitment: Partial<Commitment>): Promise<Commitment> {
   const newCommitment: Commitment = {
-    id: Math.random().toString(36).substring(7),
+     id: crypto.randomUUID(),
     type: commitment.type || 'Safe',
     status: 'Active',
     asset: commitment.asset || 'USDC',

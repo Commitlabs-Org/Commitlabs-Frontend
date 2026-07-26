@@ -2,71 +2,59 @@
 
 import React from 'react';
 import { TrendingUp, DollarSign, Award, Coins } from 'lucide-react';
+import { KPICard } from '@/components/KPICard';
+import type { CommitmentStats, StatTrend } from '@/types/commitment';
+import type { KPIDelta } from '@/components/KPICard';
 import styles from './MyCommitmentsStats.module.css';
-import { clsx } from 'clsx';
 
-interface MetricCardProps {
-    icon: React.ReactNode;
-    value: string | number;
-    label: string;
-    variant: 'teal' | 'green' | 'blue' | 'purple';
+function toDelta(trend?: StatTrend): KPIDelta | undefined {
+  if (!trend) return undefined;
+  return { value: trend.value, direction: trend.direction, period: trend.period };
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ icon, value, label, variant }) => {
-    return (
-        <div className={clsx(styles.card, styles[variant])}>
-            <div className={styles.iconWrapper}>
-                {icon}
-            </div>
-            <div className={styles.content}>
-                <div className={styles.value}>{value}</div>
-                <div className={styles.label}>{label}</div>
-            </div>
-        </div>
-    );
-};
-
-interface MyCommitmentsStatsProps {
-    totalActive: number;
-    totalCommittedValue: string;
-    averageComplianceScore: string;
-    totalFeesGenerated: string;
-}
+interface MyCommitmentsStatsProps extends CommitmentStats {}
 
 const MyCommitmentsStats: React.FC<MyCommitmentsStatsProps> = ({
-    totalActive,
-    totalCommittedValue,
-    averageComplianceScore,
-    totalFeesGenerated,
-}) => {
-    return (
-        <div className={styles.statsGrid}>
-            <MetricCard
-                variant="teal"
-                icon={<TrendingUp size={20} />}
-                value={totalActive}
-                label="Total Active Commitments"
-            />
-            <MetricCard
-                variant="green"
-                icon={<DollarSign size={20} />}
-                value={totalCommittedValue}
-                label="Total Committed Value"
-            />
-            <MetricCard
-                variant="blue"
-                icon={<Award size={20} />}
-                value={averageComplianceScore}
-                label="Average Compliance Score"
-            />
-            <MetricCard
-                variant="purple"
-                icon={<Coins size={20} />}
-                value={totalFeesGenerated}
-                label="Total Fees Generated"
-            />
-        </div>
-    );
-};
+  totalActive,
+  totalCommittedValue,
+  avgComplianceScore,
+  totalFeesGenerated,
+  trends,
+}) => (
+  <div className={styles.statsGrid} role="region" aria-label="Commitment statistics">
+    <KPICard
+      label="Total Active Commitments"
+      value={totalActive}
+      format="count"
+      variant="teal"
+      icon={TrendingUp}
+      delta={toDelta(trends?.totalActive)}
+    />
+    <KPICard
+      label="Total Committed Value"
+      value={totalCommittedValue}
+      format="currency"
+      variant="green"
+      icon={DollarSign}
+      delta={toDelta(trends?.totalCommittedValue)}
+    />
+    <KPICard
+      label="Average Compliance Score"
+      value={avgComplianceScore}
+      format="percentage"
+      variant="blue"
+      icon={Award}
+      delta={toDelta(trends?.avgComplianceScore)}
+    />
+    <KPICard
+      label="Total Fees Generated"
+      value={totalFeesGenerated}
+      format="currency"
+      variant="purple"
+      icon={Coins}
+      delta={toDelta(trends?.totalFeesGenerated)}
+    />
+  </div>
+);
 
 export default MyCommitmentsStats;

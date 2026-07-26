@@ -1,5 +1,6 @@
 import React from "react";
 import { Info } from "lucide-react";
+import GlossaryTerm from "./GlossaryTerm";
 
 interface Constraint {
   id: string;
@@ -43,7 +44,9 @@ export default function CommitmentDetailAllocationConstraints({
             <strong className="text-[#0ff0fc] font-semibold opacity-90 mr-1">
               On-chain enforcement:
             </strong>
-            {noteText.replace(/^On-chain enforcement:\s*/i, "")}
+            {noteText.replace(/^On-chain enforcement:\s*/i, "").split(/(attestations?)/i).map((part, i) => 
+              /attestations?/i.test(part) ? <GlossaryTerm key={i} termKey="attestation">{part}</GlossaryTerm> : part
+            )}
           </p>
         </div>
       </div>

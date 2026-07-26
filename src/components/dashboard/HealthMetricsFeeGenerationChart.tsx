@@ -14,10 +14,11 @@ import {
 } from 'recharts';
 
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
+import type { CommitmentExposureResult } from '@/utils/exposure';
 
 interface HealthMetricsFeeGenerationChartProps {
     data: Array<{ date: string; feeAmount: number }>;
-    volatilityPercent?: number;
+    exposure?: CommitmentExposureResult;
 }
 
 interface TooltipPayload {
@@ -32,11 +33,12 @@ interface TooltipPayload {
 
 const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
     if (active && payload && payload.length) {
+        const entry = payload[0];
         return (
             <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg">
                 <p className="text-[#99a1af] text-sm mb-1">{label}</p>
                 <p className="text-[#0ff0fc] text-sm font-medium">
-                    Fees: ${payload[0].value.toLocaleString()}
+                    Fees: ${(entry?.value ?? 0).toLocaleString()}
                 </p>
             </div>
         );
@@ -46,7 +48,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
 
 export const HealthMetricsFeeGenerationChart: React.FC<HealthMetricsFeeGenerationChartProps> = ({
     data,
-    volatilityPercent,
+    exposure,
 }) => {
     return (
         <>
@@ -74,15 +76,15 @@ export const HealthMetricsFeeGenerationChart: React.FC<HealthMetricsFeeGeneratio
                         />
                         <XAxis
                             dataKey="date"
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             dy={10}
                         />
                         <YAxis
-                            stroke="#666"
-                            tick={{ fill: '#666', fontSize: 12 }}
+                            stroke="#8892a0"
+                            tick={{ fill: '#8892a0', fontSize: 12 }}
                             tickLine={false}
                             axisLine={false}
                             tickFormatter={(value) => `${value}`}
@@ -125,10 +127,12 @@ export const HealthMetricsFeeGenerationChart: React.FC<HealthMetricsFeeGeneratio
                 </div>
             </div>
 
-            {volatilityPercent !== undefined && (
+            {exposure && (
                 <div className="mt-4">
                     <VolatilityExposureMeter
-                        valuePercent={volatilityPercent}
+                        insufficientData={exposure.status === 'insufficient_data'}
+                        valuePercent={exposure.exposurePercent}
+                        zoneThresholds={exposure.zoneThresholds}
                         description="Current exposure to volatile assets based on allocation and market conditions."
                     />
                 </div>
