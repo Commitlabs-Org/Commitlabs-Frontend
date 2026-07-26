@@ -10,6 +10,11 @@ import { MotionProvider } from "@/components/MotionProvider"
 import { WebVitalsReporter } from "@/components/perf/WebVitalsReporter"
 import { AppShellConnectionStatus } from '@/components/shell/AppShellConnectionStatus'
 import { WalletProvider } from '@/components/auth/WalletProvider'
+import { getSiteUrl } from '@/lib/site'
+
+// Single source of truth for the canonical site origin. See src/lib/site.ts
+// for the resolution order (NEXT_PUBLIC_SITE_URL → SITE_URL → APP_URL → ...).
+const siteUrl = getSiteUrl()
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,10 +36,11 @@ export const metadata: Metadata = {
   authors: [{ name: 'CommitLabs' }],
   creator: 'CommitLabs',
   publisher: 'CommitLabs',
+  metadataBase: new URL(siteUrl),
   openGraph: {
     title: 'CommitLabs - Liquidity as a Commitment',
     description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-    url: 'https://commitlabs.com',
+    url: siteUrl,
     siteName: 'CommitLabs',
     images: [
       {
@@ -91,11 +97,11 @@ export default function RootLayout({
               '@type': 'WebSite',
               name: 'CommitLabs',
               description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-              url: 'https://commitlabs.com',
+              url: siteUrl,
               publisher: {
                 '@type': 'Organization',
                 name: 'CommitLabs',
-                url: 'https://commitlabs.com',
+                url: siteUrl,
               },
             }),
           }}

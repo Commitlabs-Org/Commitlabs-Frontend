@@ -1,32 +1,34 @@
-import { MetadataRoute } from 'next'
-
-const BASE_URL = 'https://commitlabs.com'
+import type { MetadataRoute } from 'next';
+import { getSiteUrl } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = getSiteUrl();
+  const lastModified = new Date();
+
   return [
     {
-      url: BASE_URL,
-      lastModified: new Date(),
+      url: baseUrl,
+      lastModified,
       changeFrequency: 'yearly',
       priority: 1,
     },
     {
-      url: `${BASE_URL}/marketplace`,
-      lastModified: new Date(),
+      url: `${baseUrl}/create`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/commitments`,
+      lastModified,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: `${BASE_URL}/transaction-error`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.1,
+      url: `${baseUrl}/marketplace`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
-    {
-      url: `${BASE_URL}/network-error`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.1,
-    },
-  ]
+  ];
 }
