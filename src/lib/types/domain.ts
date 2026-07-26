@@ -3,9 +3,26 @@
  * Used across backend API and frontend.
  */
 
+import { CommitmentStatus as SharedCommitmentStatus, CommitmentType as SharedCommitmentType } from './shared';
+
+/**
+ * Legacy domain types - maintained for backward compatibility.
+ * New code should use the shared enums from './shared'.
+ * @deprecated Use CommitmentStatus enum from './shared' instead.
+ */
 export type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
+/**
+ * Legacy domain types - maintained for backward compatibility.
+ * New code should use the shared enums from './shared'.
+ * @deprecated Use CommitmentStatus enum from './shared' instead.
+ */
 export type CommitmentStatus = 'Active' | 'Settled' | 'Violated' | 'Early Exit';
+
+/**
+ * Re-export shared enums for convenience
+ */
+export { SharedCommitmentStatus, SharedCommitmentType };
 
 export interface Commitment {
   id: string;

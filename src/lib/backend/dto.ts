@@ -1,5 +1,19 @@
-export type CommitmentTypeDto = 'safe' | 'balanced' | 'aggressive';
-export type CommitmentStatusDto = 'active' | 'settled' | 'violated' | 'early_exit';
+import { CommitmentStatus, CommitmentType } from '../types/shared';
+
+/**
+ * Legacy DTO types - maintained for backward compatibility.
+ * New code should use the shared enums from '../types/shared'.
+ * @deprecated Use CommitmentStatus enum from '../types/shared' instead.
+ */
+export type CommitmentStatusDto = CommitmentStatus;
+
+/**
+ * Legacy DTO types - maintained for backward compatibility.
+ * New code should use the shared enums from '../types/shared'.
+ * @deprecated Use CommitmentType enum from '../types/shared' instead.
+ */
+export type CommitmentTypeDto = CommitmentType;
+
 export type AttestationVerdictDto = 'pass' | 'fail' | 'unknown';
 
 export interface ChainCommitmentModel {
@@ -48,23 +62,24 @@ export interface AttestationDto {
     details?: unknown;
 }
 
-function toCommitmentType(value: string): CommitmentTypeDto {
+function toCommitmentType(value: string): CommitmentType {
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'safe' || normalized === 'balanced' || normalized === 'aggressive') {
-        return normalized;
+    if (normalized === CommitmentType.SAFE || normalized === CommitmentType.BALANCED || normalized === CommitmentType.AGGRESSIVE) {
+        return normalized as CommitmentType;
     }
-    return 'balanced';
+    return CommitmentType.BALANCED;
 }
 
-function toCommitmentStatus(value?: string): CommitmentStatusDto {
+function toCommitmentStatus(value?: string): CommitmentStatus {
     const normalized = value?.trim().toLowerCase();
-    if (normalized === 'active' || normalized === 'settled' || normalized === 'violated') {
-        return normalized;
+    if (normalized === CommitmentStatus.ACTIVE || normalized === CommitmentStatus.SETTLED || normalized === CommitmentStatus.VIOLATED) {
+        return normalized as CommitmentStatus;
     }
+    // Handle legacy formats for early_exit (space, dash, underscore)
     if (normalized === 'early exit' || normalized === 'early_exit' || normalized === 'early-exit') {
-        return 'early_exit';
+        return CommitmentStatus.EARLY_EXIT;
     }
-    return 'active';
+    return CommitmentStatus.ACTIVE;
 }
 
 function toAttestationVerdict(value?: string): AttestationVerdictDto {
