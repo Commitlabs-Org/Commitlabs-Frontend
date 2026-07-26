@@ -1,6 +1,47 @@
+from argparse import ArgumentParser
+from difflib import unified_diff
 from pathlib import Path
 
 repo_root = Path(__file__).resolve().parent.parent
+
+
+def build_diff(old_text: str, new_text: str, relative_path: str) -> str:
+    return "".join(
+        unified_diff(
+            old_text.splitlines(),
+            new_text.splitlines(),
+            fromfile=f"a/{relative_path}",
+            tofile=f"b/{relative_path}",
+            lineterm="",
+        )
+    )
+
+
+def write_file(relative_path: str, content: str, *, force: bool) -> bool:
+    path = repo_root / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if path.exists():
+        existing = path.read_text(encoding="utf-8")
+        if existing == content:
+            print(f"No change needed for {relative_path}")
+            return False
+
+        print(f"Dry run: would update {relative_path}")
+        diff = build_diff(existing, content, relative_path)
+        if diff:
+            print(diff)
+
+        if not force:
+            return False
+    elif not force:
+        print(f"Dry run: would create {relative_path}")
+        return False
+
+    path.write_text(content, encoding="utf-8")
+    print(f"Updated {relative_path}")
+    return True
+
 
 files = {
     'src/app/api/marketplace/listings/route.ts': """import { NextRequest, NextResponse } from 'next/server';
@@ -936,8 +977,33 @@ describe('Marketplace listings API', () => {
 """,
 }
 
-for relative_path, content in files.items():
-    path = repo_root / relative_path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding='utf-8')
-    print(f'Updated {relative_path}')
+def main() -> None:
+    parser = ArgumentParser(
+        description=(
+            "One-time helper for patching backend API route files. "
+            "By default this script performs a dry run and prints a diff; "
+            "use --force to apply the embedded content."
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Write the embedded file contents to disk. Without this flag the script only shows a dry-run diff.",
+    )
+    args = parser.parse_args()
+
+    changed = False
+    for relative_path, content in files.items():
+        if write_file(relative_path, content, force=args.force):
+            changed = True
+
+    if not args.force:
+        print("Dry run complete. Re-run with --force to overwrite files.")
+    elif changed:
+        print("Patch applied.")
+    else:
+        print("No files needed changes.")
+
+
+if __name__ == "__main__":
+    main()
