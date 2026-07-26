@@ -145,11 +145,16 @@ export default function CommitmentHealthMetrics({
   );
 
   // Export menu always exports the full (unfiltered) dataset, not just the active range.
+  // Map from the permissive TimeSeriesPoint[] to the exact shapes HealthMetricsExportData requires.
   const exportData: HealthMetricsExportData = {
-    complianceData,
-    drawdownData,
-    valueHistoryData,
-    feeGenerationData,
+    complianceData: complianceData.map((p) => ({ date: p.date, complianceScore: p.complianceScore ?? 0 })),
+    drawdownData: drawdownData.map((p) => ({ date: p.date, drawdownPercent: p.drawdownPercent ?? 0 })),
+    valueHistoryData: valueHistoryData.map((p) => ({
+      date: p.date,
+      currentValue: p.currentValue ?? 0,
+      ...(p.initialAmount !== undefined ? { initialAmount: p.initialAmount } : {}),
+    })),
+    feeGenerationData: feeGenerationData.map((p) => ({ date: p.date, feeAmount: p.feeAmount ?? 0 })),
   };
 
   const hasBenchmark = benchmarkData && benchmarkData.length > 0;
@@ -216,12 +221,16 @@ export default function CommitmentHealthMetrics({
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
               <HealthMetricsValueHistoryChart
-                data={filteredValueHistory as Array<{ date: string; currentValue: number; initialAmount?: number }>}
-                volatilityPercent={volatilityPercent}
-                lifecycleEvents={lifecycleEvents}
-                exposure={exposure}
-                benchmarkData={benchmarkData}
-                benchmarkLabel={benchmarkLabel}
+                data={filteredValueHistory.map((p) => ({
+                  date: p.date,
+                  currentValue: p.currentValue ?? 0,
+                  ...(p.initialAmount !== undefined ? { initialAmount: p.initialAmount } : {}),
+                }))}
+                {...(volatilityPercent !== undefined ? { volatilityPercent } : {})}
+                {...(lifecycleEvents !== undefined ? { lifecycleEvents } : {})}
+                {...(exposure !== undefined ? { exposure } : {})}
+                {...(benchmarkData !== undefined ? { benchmarkData } : {})}
+                {...(benchmarkLabel !== undefined ? { benchmarkLabel } : {})}
               />
             )}
           </div>
@@ -240,11 +249,14 @@ export default function CommitmentHealthMetrics({
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
               <HealthMetricsDrawdownChart
-                data={filteredDrawdownHistory as Array<{ date: string; drawdownPercent: number }>}
-                thresholdPercent={thresholdPercent}
-                volatilityPercent={volatilityPercent}
-                lifecycleEvents={lifecycleEvents}
-                exposure={exposure}
+                data={filteredDrawdownHistory.map((p) => ({
+                  date: p.date,
+                  drawdownPercent: p.drawdownPercent ?? 0,
+                }))}
+                {...(thresholdPercent !== undefined ? { thresholdPercent } : {})}
+                {...(volatilityPercent !== undefined ? { volatilityPercent } : {})}
+                {...(lifecycleEvents !== undefined ? { lifecycleEvents } : {})}
+                {...(exposure !== undefined ? { exposure } : {})}
               />
             )}
           </div>
@@ -263,9 +275,11 @@ export default function CommitmentHealthMetrics({
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
               <HealthMetricsFeeGenerationChart
-                data={filteredFeeGenerationHistory as Array<{ date: string; feeAmount: number }>}
-                volatilityPercent={volatilityPercent}
-                exposure={exposure}
+                data={filteredFeeGenerationHistory.map((p) => ({
+                  date: p.date,
+                  feeAmount: p.feeAmount ?? 0,
+                }))}
+                {...(exposure !== undefined ? { exposure } : {})}
               />
             )}
           </div>
@@ -284,7 +298,10 @@ export default function CommitmentHealthMetrics({
               <EmptyChart rangeLabel={rangeLabel} />
             ) : (
               <HealthMetricsComplianceChart
-                data={filteredComplianceHistory as Array<{ date: string; complianceScore: number }>}
+                data={filteredComplianceHistory.map((p) => ({
+                  date: p.date,
+                  complianceScore: p.complianceScore ?? 0,
+                }))}
               />
             )}
           </div>
