@@ -69,7 +69,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       id: toast.id,
       severity: toast.severity,
       title: toast.title,
-      description: toast.description,
+      ...(toast.description !== undefined && { description: toast.description }),
       createdAt: toast.createdAt,
       dismissedAt: Date.now(),
       read: false,
@@ -143,10 +143,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         id,
         severity,
         title: options.title,
-        description: options.description,
         duration,
         createdAt: Date.now(),
-        action: options.action,
+        ...(options.description !== undefined && { description: options.description }),
+        ...(options.action !== undefined && { action: options.action }),
       };
 
       setToasts((prev) => {
