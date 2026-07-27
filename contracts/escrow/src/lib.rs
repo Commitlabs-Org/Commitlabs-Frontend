@@ -61,22 +61,16 @@ pub enum DataKey {
     OwnerIndex(Address),
     /// Protocol fee recipient.
     FeeRecipient,
-    /// Yield pool balance used to pay matured release yield.
+    /// On-chain yield pool balance used to pay matured release yield.
     YieldPool,
-    /// Contract pause flag to halt write operations.
+    /// Contract pause flag used to halt write operations and for emergency halts.
     Paused,
-    /// Attestation history for a commitment.
+    /// Historical attestation records keyed by commitment id.
     Attestations(u64),
     /// Dispute record for a commitment, keyed by commitment id.
     Dispute(u64),
     /// Default penalty in basis points for each RiskProfile.
     DefaultPenalty(RiskProfile),
-    /// Contract pause flag used for emergency write halts.
-    Paused,
-    /// On-chain yield pool balance used to pay matured commitment yield.
-    YieldPool,
-    /// Historical attestation records keyed by commitment id.
-    Attestations(u64),
     /// Configurable penalty-free grace period before maturity, in seconds.
     GracePeriodSeconds,
     /// Compliance score threshold that auto-freezes funded commitments.
