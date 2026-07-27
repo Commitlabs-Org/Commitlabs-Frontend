@@ -5,13 +5,14 @@ import { verifySignatureWithNonce, createSessionToken, AUTH_COOKIE_NAME, COOKIE_
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { TooManyRequestsError, ValidationError, UnauthorizedError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
+import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 
 const VerifyRequestSchema = z.object({
-  address: z.string().min(1, 'Address is required'),
-  signature: z.string().min(1, 'Signature is required'),
-  message: z.string().min(1, 'Message is required'),
+  address: z.string().min(1, 'Address is required').max(128, 'Address is too long'),
+  signature: z.string().min(1, 'Signature is required').max(1024, 'Signature is too long'),
+  message: z.string().min(1, 'Message is required').max(2048, 'Message is too long'),
 });
 
 const AUTH_VERIFY_CORS_POLICY = {
@@ -27,12 +28,9 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
     throw new TooManyRequestsError('Rate limit exceeded. Please try again later.');
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    throw new ValidationError('Invalid JSON in request body');
-  }
+  const body = await parseJsonWithLimit(req, {
+    limitBytes: JSON_BODY_LIMITS.authVerify,
+  });
 
   const validation = VerifyRequestSchema.safeParse(body);
   if (!validation.success) {
