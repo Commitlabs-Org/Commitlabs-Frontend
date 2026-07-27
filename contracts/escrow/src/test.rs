@@ -496,18 +496,6 @@ fn refund_emits_stable_indexable_event() {
     let f = setup();
     let owner = Address::generate(&f.env);
     fund_owner(&f, &owner, 1_000);
-    // Use a duration that will overflow when added to current timestamp
-    let res = f.client.try_create_commitment(
-        &owner,
-        &f.asset,
-        &1_000,
-        &RiskProfile::Safe,
-        &10u32,
-        &2000u32,
-        &Map::new(&f.env),
-    );
-    assert_eq!(res, Err(Ok(Error::InvalidDuration)));
-}
 
     let id = f.client.create_commitment(
         &owner,
@@ -539,12 +527,6 @@ fn refund_emits_stable_indexable_event() {
     );
     assert_eq!(f.token.balance(&f.fee_recipient), 50);
 }
-
-#[test]
-fn dispute_emits_stable_indexable_event() {
-    let f = setup();
-    let owner = Address::generate(&f.env);
-    fund_owner(&f, &owner, 1_000);
 
 #[test]
 fn owner_index_tracks_commitments() {
