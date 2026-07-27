@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import ProtectedRouteLayout from '@/components/auth/ProtectedRouteLayout'
 
 export const metadata: Metadata = {
   title: 'Settings — CommitLabs',
@@ -35,5 +36,5 @@ export default function SettingsLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return <ProtectedRouteLayout>{children}</ProtectedRouteLayout>
 }

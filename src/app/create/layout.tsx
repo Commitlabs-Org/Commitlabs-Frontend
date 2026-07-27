@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import ProtectedRouteLayout from '@/components/auth/ProtectedRouteLayout'
 
 export const metadata: Metadata = {
   title: 'Create Commitment — CommitLabs',
@@ -35,5 +36,5 @@ export default function CreateLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return <ProtectedRouteLayout>{children}</ProtectedRouteLayout>
 }
