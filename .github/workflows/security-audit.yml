@@ -1,0 +1,50 @@
+# .github/workflows/security-audit.yml
+# Scans dependencies for known vulnerabilities on PRs and pushes.
+#   - npm audit: fails the build on high/critical advisories in production deps.
+#   - dependency-review: flags risky dependency changes introduced by a PR.
+
+name: Security Audit
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit (prod deps)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      # Requires a lockfile so the audit is reproducible.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    # Dependency review only runs on pull requests.
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

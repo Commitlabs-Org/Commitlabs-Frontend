@@ -25,18 +25,18 @@ use soroban_sdk::{
 // Configuration constants for escrow contract
 // Configuration constants for escrow contract
 // Number of seconds in a day used for maturity calculation.
-const SECONDS_PER_DAY: u64 = 86_400;
+pub const SECONDS_PER_DAY: u64 = 86_400;
 
 /// Upper bound for commitment amount enforced by `create_commitment`.
 /// Aligns with backend `CommitmentLimits.max_amount`.
-const MAX_AMOUNT: i128 = 1_000_000_000_000;
+pub const MAX_AMOUNT: i128 = 1_000_000_000_000;
 
 /// Upper bound for commitment duration (in days) enforced by `create_commitment`.
 /// Aligns with backend `CommitmentLimits.max_duration_days`.
-const MAX_DURATION_DAYS: u32 = 365;
+pub const MAX_DURATION_DAYS: u32 = 365;
 
 /// Upper bound for penalty basis points (10_000 = 100%).
-const MAX_PENALTY_BPS: u32 = 10_000;
+pub const MAX_PENALTY_BPS: u32 = 10_000;
 
 /// Bound full-record owner reads so a single query does not exceed Soroban
 /// simulation/result size limits.
