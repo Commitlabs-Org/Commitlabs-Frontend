@@ -4,6 +4,7 @@ First off, thank you for considering contributing to CommitLabs! It's people lik
 
 Before diving into the code, please read through our [Developer Guide](./DEVELOPER_GUIDE.md) for comprehensive instructions on local setup, coding standards, and system architecture.
 
+
 ## Branching
 1. Fork the repository and clone it locally.
 2. Ensure your fork is synced with the upstream `master` branch.
