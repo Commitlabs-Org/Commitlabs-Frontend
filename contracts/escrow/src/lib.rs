@@ -298,6 +298,7 @@ pub struct ResolveDisputeEventData {
 pub struct EscrowContract;
 
 #[contractimpl]
+#[allow(deprecated)] // `Events::publish` is deprecated in favor of the #[contractevent] macro; existing contract continues to use publish for off-chain indexer compatibility (see contracts/README.md)
 impl EscrowContract {
     /// One-time initialization. Sets the admin, the escrow token, fee recipient,
     /// and default penalty rates for each risk profile. Default penalties should
@@ -412,7 +413,6 @@ impl EscrowContract {
     ///
     /// # Returns
     /// `true` if paused, `false` otherwise
-    #[allow(dead_code, deprecated)]
     pub fn is_paused(env: Env) -> bool {
         env.storage()
             .instance()

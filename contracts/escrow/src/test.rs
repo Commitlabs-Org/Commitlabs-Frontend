@@ -33,9 +33,12 @@ fn assert_contract_event<T>(
         if topics.len() < 3 {
             continue;
         }
-        let event_id: u64 = topics.get(2).unwrap().into_val(env);
-        let event_owner: Address = topics.get(1).unwrap().into_val(env);
+        // Topic order published by `publish_commitment_event`:
+        //   (Symbol::new(env, name), c.id, c.owner.clone())
+        // so topics[0] = name, topics[1] = id, topics[2] = owner.
         let event_name: Symbol = topics.get(0).unwrap().into_val(env);
+        let event_id: u64 = topics.get(1).unwrap().into_val(env);
+        let event_owner: Address = topics.get(2).unwrap().into_val(env);
         if event_name != expected_name
             || event_id != id
             || event_owner != *owner
