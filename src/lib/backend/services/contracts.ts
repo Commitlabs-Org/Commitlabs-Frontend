@@ -1114,6 +1114,107 @@ export async function fundEscrowOnChain(
   }
 }
 
+export interface TransferOwnershipParams {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+}
+
+export interface TransferOwnershipResult {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+  txHash?: string;
+}
+
+/**
+ * Transfers marketplace ownership of a funded commitment to a new owner,
+ * bridging to the on-chain `transfer_ownership` method (see
+ * `contracts/escrow/src/lib.rs`). Named `transferOwnership` (rather than the
+ * `...OnChain` suffix used elsewhere in this file) to match the import used
+ * by the marketplace purchase route.
+ *
+ * # Preconditions
+ * - Commitment must be in `FUNDED` state on-chain.
+ * - `fromAddress` must match the commitment's current owner.
+ */
+export async function transferOwnership(
+  params: TransferOwnershipParams,
+  loggingContext?: LoggingContext,
+): Promise<TransferOwnershipResult> {
+  try {
+    if (!params.commitmentId) {
+      throw new BackendError({
+        code: "BAD_REQUEST",
+        message: "Missing commitment id for ownership transfer.",
+        status: 400,
+      });
+    }
+
+    validateOwnerAddress(params.fromAddress);
+    validateOwnerAddress(params.toAddress);
+
+    const commitment = await getCommitmentFromChain(
+      params.commitmentId,
+      loggingContext,
+    );
+
+    if (!commitment) {
+      throw new BackendError({
+        code: "NOT_FOUND",
+        message: "Commitment not found.",
+        status: 404,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    if (commitment.ownerAddress && commitment.ownerAddress !== params.fromAddress) {
+      throw new BackendError({
+        code: "FORBIDDEN",
+        message: "Only the current owner may transfer this commitment's ownership.",
+        status: 403,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    const invocation = await invokeContractMethod(
+      getContractId("commitmentCore"),
+      "transfer_ownership",
+      [params.commitmentId, new Address(params.toAddress).toScVal()],
+      "write",
+    );
+
+    // Increment successful actions counter on successful ownership transfer
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+
+    void cache.delete(CacheKey.commitment(params.commitmentId));
+    void cache.delete(CacheKey.userCommitments(params.fromAddress));
+    void cache.delete(CacheKey.userCommitments(params.toAddress));
+
+    return {
+      commitmentId: params.commitmentId,
+      fromAddress: params.fromAddress,
+      toAddress: params.toAddress,
+      txHash: invocation.txHash,
+    };
+  } catch (error) {
+    // Increment chain failures counter on blockchain operation failures
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+
+    throw normalizeBackendError(error, {
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to transfer commitment ownership on chain.",
+      status: 502,
+      details: {
+        method: "transfer_ownership",
+        commitmentId: params.commitmentId,
+      },
+    });
+  }
+}
+
 export async function earlyExitCommitmentOnChain(
   params: EarlyExitCommitmentOnChainParams,
   loggingContext?: LoggingContext,
