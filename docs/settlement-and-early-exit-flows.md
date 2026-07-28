@@ -41,6 +41,10 @@ The ineligible state is intentionally specific. `getSettlementIneligibleReasonCo
     "txHash": "abc123...",
     "reference": "TODO_CHAIN_CALL_SETTLE_COMMITMENT",
     "settledAt": "2026-02-26T11:30:00.000Z"
+  },
+  "meta": {
+    "correlationId": "abc123...",
+    "timestamp": "2026-02-26T11:30:00.000Z"
   }
 }
 ```
