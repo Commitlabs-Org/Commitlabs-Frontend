@@ -1068,12 +1068,6 @@ impl EscrowContract {
             }
             c.status = EscrowStatus::Released;
             paid = payout;
-            
-            // Effects: Update state before interactions to prevent reentrancy
-            Self::save(&env, &c);
-            
-            // Interactions: External token transfer
-            token.transfer(&contract, &c.owner, &payout);
         } else {
             let (penalty, refund_amount) = Self::compute_refund_amount(c.amount, c.penalty_bps)?;
             c.status = EscrowStatus::Refunded;

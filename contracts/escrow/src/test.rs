@@ -1074,3 +1074,51 @@ fn owner_index_ttl_tracks_the_latest_commitment_maturity() {
         .as_contract(&f.contract_id, || f.env.storage().persistent().get_ttl(&DataKey::OwnerIndex(owner)));
     assert_eq!(owner_index_ttl, expected_ttl);
 }
+
+#[test]
+fn resolve_dispute_release_pays_owner_once() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Balanced, &30, &300, &Map::new(&f.env));
+    f.client.fund_escrow(&id);
+
+    let reason = String::from_str(&f.env, "value mismatch");
+    f.client.dispute(&id, &owner, &reason);
+
+    let balance_before = f.token.balance(&owner);
+    f.client.resolve_dispute(&id, &true);
+    let balance_after = f.token.balance(&owner);
+
+    assert_eq!(balance_after - balance_before, 1_000);
+    assert_eq!(f.token.balance(&f.fee_recipient), 0);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Released);
+}
+
+#[test]
+fn resolve_dispute_refund_sends_penalty_to_fee_recipient() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    let id = f
+        .client
+        .create_commitment(&owner, &f.asset, &1_000, &RiskProfile::Aggressive, &30, &500, &Map::new(&f.env));
+    f.client.fund_escrow(&id);
+
+    let reason = String::from_str(&f.env, "terms violated");
+    f.client.dispute(&id, &owner, &reason);
+
+    let owner_before = f.token.balance(&owner);
+    let fee_before = f.token.balance(&f.fee_recipient);
+    f.client.resolve_dispute(&id, &false);
+    let owner_after = f.token.balance(&owner);
+    let fee_after = f.token.balance(&f.fee_recipient);
+
+    assert_eq!(owner_after - owner_before, 950);
+    assert_eq!(fee_after - fee_before, 50);
+    assert_eq!(f.client.get_commitment(&id).status, EscrowStatus::Refunded);
+}
