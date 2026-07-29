@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://commitlabs.com/sitemap.xml

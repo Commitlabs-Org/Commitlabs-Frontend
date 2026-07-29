@@ -433,6 +433,68 @@ class MarketplaceService {
     return this.loadListing(listingId);
   }
 
+  async completePurchase(
+    listingId: string,
+    buyerAddress: string,
+  ): Promise<MarketplaceListing> {
+    logInfo(undefined, "[MarketplaceService] Completing purchase", {
+      listingId,
+      buyerAddress,
+    });
+
+    const listing = await this.getListing(listingId);
+
+    if (!listing) {
+      throw new NotFoundError("Listing", { listingId });
+    }
+
+    if (listing.sellerAddress === buyerAddress) {
+      throw new ValidationError("Buyer cannot be the same as the seller.", {
+        listingId,
+      });
+    }
+
+    if (listing.status !== "Active") {
+      throw new ConflictError("Only active listings can be purchased.", {
+        listingId,
+        currentStatus: listing.status,
+      });
+    }
+
+    try {
+      const purchasedListing: MarketplaceListing = {
+        ...listing,
+        status: "Sold",
+        updatedAt: new Date().toISOString(),
+      };
+
+      await this.storage.set(getListingStorageKey(listingId), purchasedListing);
+
+      // Invalidate all cached listing queries — the set has changed.
+      await cache.invalidate(LISTINGS_PREFIX);
+      logInfo(
+        undefined,
+        "[cache] invalidated marketplace-listings after purchase",
+        { listingId },
+      );
+
+      // Invalidate marketplace stats as the set of active listings changed.
+      await cache.delete(CacheKey.marketplaceStats());
+      logInfo(undefined, "[cache] invalidated marketplace-stats after purchase", {
+        listingId,
+      });
+
+      logInfo(undefined, "[MarketplaceService] Listing purchased", {
+        listingId,
+        buyerAddress,
+      });
+
+      return purchasedListing;
+    } catch (error) {
+      throw normalizeStorageError(error);
+    }
+  }
+
   async getFeaturedListings(): Promise<MarketplacePublicListing[]> {
     if (!isFeatureEnabled("marketplaceMockData")) {
       throw new InternalError(

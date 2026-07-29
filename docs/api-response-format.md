@@ -4,23 +4,25 @@
 
 All API routes in this project return a consistent JSON envelope so that the frontend and any consumers can handle responses uniformly.
 
+> **Canonical reference:** For the full response contract (including correlation IDs, metadata, testing patterns, and migration guide), see [unified-api-response-contract.md](./unified-api-response-contract.md).
+
 ---
 
 ## Success shape
 
 ```json
 {
-  "ok": true,
+  "success": true,
   "data": { ... },
   "meta": { "total": 42, "page": 1 }
 }
 ```
 
-| Field  | Type                      | Always present | Description                              |
-|--------|---------------------------|----------------|------------------------------------------|
-| `ok`   | `true`                    | ✅              | Discriminant — always `true` on success  |
-| `data` | `T`                       | ✅              | The response payload                     |
-| `meta` | `Record<string, unknown>` | ❌              | Optional pagination / extra context      |
+| Field     | Type                      | Always present | Description                              |
+|-----------|---------------------------|----------------|------------------------------------------|
+| `success` | `true`                    | ✅              | Discriminant — always `true` on success  |
+| `data`    | `T`                       | ✅              | The response payload                     |
+| `meta`    | `Record<string, unknown>` | ❌              | Optional pagination / extra context      |
 
 ---
 
@@ -28,7 +30,7 @@ All API routes in this project return a consistent JSON envelope so that the fro
 
 ```json
 {
-  "ok": false,
+  "success": false,
   "error": {
     "code": "NOT_FOUND",
     "message": "Commitment not found.",
@@ -39,7 +41,7 @@ All API routes in this project return a consistent JSON envelope so that the fro
 
 | Field           | Type      | Always present | Description                                      |
 |-----------------|-----------|----------------|--------------------------------------------------|
-| `ok`            | `false`   | ✅              | Discriminant — always `false` on error           |
+| `success`       | `false`   | ✅              | Discriminant — always `false` on error           |
 | `error.code`    | `string`  | ✅              | Short machine-readable code (see table below)    |
 | `error.message` | `string`  | ✅              | Human-readable message safe for UI display       |
 | `error.details` | `unknown` | ❌              | Extra context (never expose sensitive data here) |
@@ -128,12 +130,14 @@ import { ok } from '@/lib/backend/apiResponse';
 
 // Simple success
 return ok({ status: 'healthy' });
-// → { ok: true, data: { status: 'healthy' } }
+// → { success: true, data: { status: 'healthy' } }
 
 // With meta (e.g. pagination)
 return ok(items, { total: 100, page: 2, pageSize: 20 });
-// → { ok: true, data: [...], meta: { total: 100, page: 2, pageSize: 20 } }
+// → { success: true, data: [...], meta: { total: 100, page: 2, pageSize: 20 } }
 ```
+
+> **Note:** The `ok()` helper function produces a response with `"success": true` in the JSON body. The function name `ok` and the JSON field name `success` are intentionally different — the function name is a convenience shorthand, while `success` is the canonical discriminant field in the response envelope.
 
 ### Returning an error response
 
@@ -141,7 +145,7 @@ return ok(items, { total: 100, page: 2, pageSize: 20 });
 import { fail } from '@/lib/backend/apiResponse';
 
 return fail('NOT_FOUND', 'Commitment not found.', undefined, 404);
-// → { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
+// → { success: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
 ```
 
 ### Using typed error classes (recommended)
@@ -157,7 +161,7 @@ export const GET = withApiHandler(async (req) => {
     const commitment = await findCommitment(id);
     if (!commitment) {
         throw new NotFoundError('Commitment');
-        // → 404: { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
+        // → 404: { success: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
     }
     return ok(commitment);
 });
@@ -185,7 +189,7 @@ import { ok } from '@/lib/backend/apiResponse';
 
 export const GET = withApiHandler(async () => {
     return ok({ status: 'healthy' });
-    // GET /api/health → 200 { ok: true, data: { status: 'healthy' } }
+    // GET /api/health → 200 { success: true, data: { status: 'healthy' } }
 });
 ```
 
@@ -195,7 +199,7 @@ export const GET = withApiHandler(async () => {
 
 A shared client-side fetch wrapper (`src/lib/apiClient.ts`) is available to make API requests with built-in:
 - **Request Timeout**: Aborts automatically after a timeout (default 5000ms).
-- **Consistent Envelope Parsing**: Automatically unwraps `{ ok: true, data: T }` envelopes or parses standard error envelopes.
+- **Consistent Envelope Parsing**: Automatically unwraps `{ success: true, data: T }` envelopes or parses standard error envelopes.
 - **Typed Errors**: Throws a subclass of `Error` called `ApiError` containing the API-returned error code, message, and details.
 
 ### Basic Usage

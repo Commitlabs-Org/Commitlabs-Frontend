@@ -7,8 +7,6 @@
  * @see errorCodes.ts for the centralized error code registry and documentation
  */
 
-import { ERROR_CODE_REGISTRY } from "./errorCodes";
-
 // ─── Base API error ───────────────────────────────────────────────────────────
 
 export class ApiError extends Error {

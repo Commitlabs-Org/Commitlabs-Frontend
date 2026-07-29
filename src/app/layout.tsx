@@ -1,30 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import ScrollToTopButton from '@/components/landing-page/ui/ScrollToTop'
-import { ThemeProvider } from '@/components/theme/ThemeProvider'
-import { ToastProvider } from '@/components/toast/ToastProvider'
-import { CommandPaletteProvider } from '@/components/CommandPalette'
-import { NetworkMismatchBanner } from '@/components/wallet/NetworkMismatchBanner'
-import { Inter, Roboto_Mono } from 'next/font/google'
-import { MotionProvider } from "@/components/MotionProvider"
-import { WebVitalsReporter } from "@/components/perf/WebVitalsReporter"
-import { AppShellConnectionStatus } from '@/components/shell/AppShellConnectionStatus'
-import { WalletProvider } from '@/components/auth/WalletProvider'
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-})
-
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  display: 'swap',
-  variable: '--font-roboto',
-})
+import ScrollToTopButton from "@/components/landing-page/ui/ScrollToTop"
+import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'CommitLabs - Liquidity as a Commitment',
   description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
   keywords: 'liquidity, commitment, blockchain, DeFi, NFT, Stellar, Soroban',
@@ -34,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'CommitLabs - Liquidity as a Commitment',
     description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-    url: 'https://commitlabs.com',
+    url: `${SITE_URL}/`,
     siteName: 'CommitLabs',
     images: [
       {
@@ -87,17 +67,17 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'WebSite',
-              name: 'CommitLabs',
-              description: 'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-              url: 'https://commitlabs.com',
-              publisher: {
-                '@type': 'Organization',
-                name: 'CommitLabs',
-                url: 'https://commitlabs.com',
-              },
-            }),
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "CommitLabs",
+              "description": "Transform passive liquidity into enforceable, attestable, and composable on-chain commitments",
+              "url": `${SITE_URL}/`,
+              "publisher": {
+                "@type": "Organization",
+                "name": "CommitLabs",
+                "url": `${SITE_URL}/`
+              }
+            })
           }}
         />
       </head>

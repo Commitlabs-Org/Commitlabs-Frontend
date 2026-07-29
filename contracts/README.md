@@ -131,6 +131,9 @@ Required environment variables:
 | `COMMITLABS_ADMIN_ADDRESS` | Admin `G...` address passed to `initialize`. |
 | `COMMITLABS_TOKEN_CONTRACT_ID` | Token `C...` contract id passed to `initialize`. |
 | `COMMITLABS_FEE_RECIPIENT_ADDRESS` | Fee recipient `G...` address passed to `initialize`. |
+| `COMMITLABS_SAFE_DEFAULT_PENALTY_BPS` | Default early-exit penalty (0-10000 bps) for `RiskProfile::Safe`, passed to `initialize`. |
+| `COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS` | Default early-exit penalty (0-10000 bps) for `RiskProfile::Balanced`, passed to `initialize`. |
+| `COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS` | Default early-exit penalty (0-10000 bps) for `RiskProfile::Aggressive`, passed to `initialize`. |
 
 Optional overrides include `STELLAR_RPC_URL`, `STELLAR_NETWORK_PASSPHRASE`, `COMMITLABS_ENV_FILE`, `COMMITLABS_CONTRACT_MANIFEST`, `COMMITLABS_CONTRACT_PACKAGE`, `COMMITLABS_WASM_PATH`, `COMMITLABS_CONTRACT_ALIAS`, and `DRY_RUN`.
 
@@ -142,6 +145,9 @@ STELLAR_ACCOUNT=deployer \
 COMMITLABS_ADMIN_ADDRESS=G... \
 COMMITLABS_TOKEN_CONTRACT_ID=C... \
 COMMITLABS_FEE_RECIPIENT_ADDRESS=G... \
+COMMITLABS_SAFE_DEFAULT_PENALTY_BPS=200 \
+COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS=300 \
+COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS=500 \
 ./contracts/scripts/deploy-testnet.sh
 ```
 
@@ -152,6 +158,9 @@ STELLAR_ACCOUNT=deployer \
 COMMITLABS_ADMIN_ADDRESS=G... \
 COMMITLABS_TOKEN_CONTRACT_ID=C... \
 COMMITLABS_FEE_RECIPIENT_ADDRESS=G... \
+COMMITLABS_SAFE_DEFAULT_PENALTY_BPS=200 \
+COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS=300 \
+COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS=500 \
 ./contracts/scripts/deploy-testnet.sh
 ```
 

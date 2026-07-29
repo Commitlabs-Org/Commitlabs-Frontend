@@ -224,6 +224,8 @@ This document includes available routes, required parameters, and example reques
 
 We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) and check out the **[Documentation Index (docs/README.md)](docs/README.md)** for details on all available documentation, coding standards, naming conventions, and testing guidelines.
 
+One-off maintenance helpers that write backend route files are intentionally guarded. The script at [scripts/patch_backend_api.py](scripts/patch_backend_api.py) is meant for targeted migration or recovery work only; it now defaults to a dry run and requires the --force flag before it overwrites any file.
+
 To standardize submissions and streamline reviews, we use structured templates:
 - **Bug Reports**: Use the [Bug Report Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-bug&projects=&template=bug_report.yml) to report issues.
 - **Feature Requests**: Use the [Feature Request Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-feature&projects=&template=feature_request.yml) to suggest enhancements.

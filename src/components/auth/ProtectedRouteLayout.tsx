@@ -1,12 +1,26 @@
-'use client'
+'use client';
 
-import React from 'react'
-import RequireWallet from '@/components/auth/RequireWallet'
+import { ReactNode } from 'react';
+import { RequireWallet } from './RequireWallet';
 
 interface ProtectedRouteLayoutProps {
-  children: React.ReactNode
+  children: ReactNode;
+  redirectTo?: string;
 }
 
-export default function ProtectedRouteLayout({ children }: ProtectedRouteLayoutProps) {
-  return <RequireWallet>{children}</RequireWallet>
+/**
+ * ProtectedRouteLayout - Layout wrapper that protects routes with wallet auth
+ * 
+ * This component wraps route layouts to ensure the user has a connected wallet
+ * before accessing the protected page content.
+ */
+export function ProtectedRouteLayout({ 
+  children, 
+  redirectTo = '/' 
+}: ProtectedRouteLayoutProps) {
+  return (
+    <RequireWallet redirectTo={redirectTo}>
+      {children}
+    </RequireWallet>
+  );
 }

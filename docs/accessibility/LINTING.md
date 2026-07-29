@@ -27,3 +27,16 @@ Run the accessibility lint check locally with:
 
 - Inline eslint suppressions are only used when a UI pattern genuinely requires a targeted exception and the reason is documented in the code.
 - The goal is to keep the app accessible for keyboard, screen-reader, and assistive-technology users while preventing regressions in reusable UI components.
+
+## Enabled `jsx-a11y` rules
+
+This repository extends `plugin:jsx-a11y/recommended` in `.eslintrc.json`, which enables rules such as:
+
+- `jsx-a11y/alt-text`
+- `jsx-a11y/anchor-is-valid`
+- `jsx-a11y/click-events-have-key-events`
+- `jsx-a11y/no-static-element-interactions`
+- `jsx-a11y/label-has-associated-control`
+- `jsx-a11y/aria-props`
+- `jsx-a11y/aria-unsupported-elements`
+- `jsx-a11y/no-noninteractive-tabindex`

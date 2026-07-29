@@ -17,7 +17,7 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "ok": true,
+  "success": true,
   "data": {
     "nonce": "a39ae240bfa1af0fee7c610cc37a6fa2",
     "message": "Sign in to CommitLabs: a39ae240bfa1af0fee7c610cc37a6fa2",
@@ -41,7 +41,7 @@ Content-Type: application/json
 **Success Response:**
 ```json
 {
-  "ok": true,
+  "success": true,
   "data": {
     "verified": true,
     "address": "GD5TIP5CKNSV7QZP2FGV6BOB7ZHQG4T4S5R6K4YZJ2MJJQ6XZM4XJQ5Z",

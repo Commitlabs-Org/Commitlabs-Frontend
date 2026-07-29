@@ -146,7 +146,7 @@ describe('assertMutationCsrf', () => {
   });
 
   it('throws when the CSRF token belongs to a different session cookie', () => {
-    const { sessionId: sessionA, csrfToken: tokenA } = createBrowserSession();
+    const { csrfToken: tokenA } = createBrowserSession();
     const { sessionId: sessionB } = createBrowserSession();
 
     expect(() =>

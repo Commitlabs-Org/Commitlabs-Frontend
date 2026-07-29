@@ -42,6 +42,15 @@
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                },
+                {
+                  "u32": 200
+                },
+                {
+                  "u32": 300
+                },
+                {
+                  "u32": 500
                 }
               ]
             }
@@ -102,6 +111,9 @@
                 },
                 {
                   "u32": 10000
+                },
+                {
+                  "map": []
                 }
               ]
             }
@@ -171,9 +183,7 @@
           "sub_invocations": []
         }
       ]
-    ],
-    [],
-    []
+    ]
   ],
   "ledger": {
     "protocol_version": 23,
@@ -351,6 +361,14 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "accrued_yield"
+                      },
+                      "val": {
+                        "i128": "8"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "amount"
                       },
                       "val": {
@@ -399,6 +417,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "metadata"
+                      },
+                      "val": {
+                        "map": []
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "owner"
                       },
                       "val": {
@@ -443,7 +469,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518500
         ]
       ],
       [
@@ -492,7 +518,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518500
         ]
       ],
       [
@@ -534,12 +560,81 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "DefaultPenalty"
+                            },
+                            {
+                              "vec": [
+                                {
+                                  "symbol": "Aggressive"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 500
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "DefaultPenalty"
+                            },
+                            {
+                              "vec": [
+                                {
+                                  "symbol": "Balanced"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 300
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "DefaultPenalty"
+                            },
+                            {
+                              "vec": [
+                                {
+                                  "symbol": "Safe"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 200
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "FeeRecipient"
                             }
                           ]
                         },
                         "val": {
                           "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "GracePeriodSeconds"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u64": "0"
                         }
                       },
                       {
@@ -1020,5 +1115,135 @@
       ]
     ]
   },
-  "events": []
+  "events": [
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "CCABDO7UZXYE4W6GVSEGSNNZTKSLFQGKXXQTH6OX7M7GKZ4Z6CUJNGZN",
+        "type_": "contract",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "transfer"
+              },
+              {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
+              },
+              {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+              },
+              {
+                "string": "aaa:GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJXFF"
+              }
+            ],
+            "data": {
+              "i128": "1000"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "CCABDO7UZXYE4W6GVSEGSNNZTKSLFQGKXXQTH6OX7M7GKZ4Z6CUJNGZN",
+        "type_": "contract",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "transfer"
+              },
+              {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
+              },
+              {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+              },
+              {
+                "string": "aaa:GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJXFF"
+              }
+            ],
+            "data": {
+              "i128": "0"
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM",
+        "type_": "contract",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "refund"
+              },
+              {
+                "u64": "0"
+              },
+              {
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+              }
+            ],
+            "data": {
+              "map": [
+                {
+                  "key": {
+                    "symbol": "amount"
+                  },
+                  "val": {
+                    "i128": "1000"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "asset"
+                  },
+                  "val": {
+                    "address": "CCABDO7UZXYE4W6GVSEGSNNZTKSLFQGKXXQTH6OX7M7GKZ4Z6CUJNGZN"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "penalty"
+                  },
+                  "val": {
+                    "i128": "1000"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "refunded_amount"
+                  },
+                  "val": {
+                    "i128": "0"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "risk"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "symbol": "Aggressive"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    }
+  ]
 }

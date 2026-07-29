@@ -73,4 +73,28 @@ describe('next.config.js', () => {
     expect(headers.length).toBeGreaterThan(0);
     expect(headers[0].source).toBe('/(.*)');
   });
+
+  it('does not suppress TypeScript build errors', () => {
+    const config = loadConfig();
+    expect(config.typescript).toBeDefined();
+    expect(config.typescript.ignoreBuildErrors).toBe(false);
+  });
+
+  it('does not suppress ESLint during builds', () => {
+    const config = loadConfig();
+    expect(config.eslint).toBeDefined();
+    expect(config.eslint.ignoreDuringBuilds).toBe(false);
+  });
+
+  it('does not allow arbitrary remote image hosts via wildcard', () => {
+    const config = loadConfig();
+    expect(config.images).toBeDefined();
+    expect(config.images.remotePatterns).toBeDefined();
+    expect(Array.isArray(config.images.remotePatterns)).toBe(true);
+
+    const hasWildcard = config.images.remotePatterns.some(
+      (pattern: { hostname: string }) => pattern.hostname === '**',
+    );
+    expect(hasWildcard).toBe(false);
+  });
 });

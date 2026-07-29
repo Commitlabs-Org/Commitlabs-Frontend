@@ -49,7 +49,7 @@ export function classifyAtRiskCommitments(
         }
       }
 
-      return { ...c, riskCategories };
+      return { ...c, riskCategories: Array.from(new Set(riskCategories)) };
     })
     .filter((c) => c.riskCategories.length > 0);
 }

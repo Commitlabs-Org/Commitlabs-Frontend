@@ -181,6 +181,7 @@ function isTestEnvironment(): boolean {
 
 export interface BackendFeatureFlags {
     analyticsUser: boolean;
+    analyticsProtocol: boolean;
     marketplace: boolean;
     marketplaceMockData: boolean;
 }
@@ -204,6 +205,10 @@ function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
             analyticsUser:
                 typeof parsed.analyticsUser === 'boolean'
                     ? parsed.analyticsUser
+                    : undefined,
+            analyticsProtocol:
+                typeof parsed.analyticsProtocol === 'boolean'
+                    ? parsed.analyticsProtocol
                     : undefined,
             marketplace:
                 typeof parsed.marketplace === 'boolean'
@@ -229,6 +234,9 @@ export function getFeatureFlags(): BackendFeatureFlags {
         analyticsUser:
             fromJson.analyticsUser ??
             parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
+        analyticsProtocol:
+            fromJson.analyticsProtocol ??
+            parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_PROTOCOL, false),
         marketplace:
             fromJson.marketplace ??
             parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE, false),
@@ -322,6 +330,7 @@ export interface RiskProfile {
   name: string;
   description: string;
   maxLossBps: number;
+  lockDurationDays?: number;
 }
 
 export interface ParameterBounds {
@@ -341,9 +350,9 @@ export const PARAMETER_BOUNDS: ParameterBounds = {
 };
 
 export const RISK_PROFILES: RiskProfile[] = [
-  { id: "conservative", name: "Conservative", description: "Strict capital preservation", maxLossBps: 1000 },
-  { id: "balanced", name: "Balanced", description: "Moderate drawdowns allowed", maxLossBps: 5000 },
-  { id: "aggressive", name: "Aggressive", description: "High loss tolerance", maxLossBps: 10000 },
+  { id: "conservative", name: "Conservative", description: "Strict capital preservation", maxLossBps: 1000, lockDurationDays: 30 },
+  { id: "balanced", name: "Balanced", description: "Moderate drawdowns allowed", maxLossBps: 5000, lockDurationDays: 60 },
+  { id: "aggressive", name: "Aggressive", description: "High loss tolerance", maxLossBps: 10000, lockDurationDays: 90 },
 ];
 
 export const SUPPORTED_ASSETS: SupportedAsset[] = [

@@ -12,46 +12,19 @@ vi.mock('@stellar/freighter-api', () => ({
 const mockGetAddress = vi.mocked(getAddress);
 const mockSignMessage = vi.mocked(signMessage);
 
-function jsonResponse(ok: boolean, body: any): Response {
-  return { ok, json: async () => body } as Response;
-}
-
-/**
- * Dispatches mocked fetch calls by URL instead of relying on call order,
- * since the hook now issues an automatic GET /api/auth/session check
- * whenever the connected address changes (not just during signIn/signOut).
- */
-function createFetchMock(overrides: {
-  session?: () => Response;
-  nonce?: () => Response;
-  verify?: () => Response;
-  logout?: () => Response;
-}) {
-  return vi.fn(async (url: string) => {
-    if (url === '/api/auth/session') {
-      return (overrides.session ?? (() => jsonResponse(true, { authenticated: false })))();
-    }
-    if (url === '/api/auth/nonce') {
-      return (overrides.nonce ?? (() => jsonResponse(false, {})))();
-    }
-    if (url === '/api/auth/verify') {
-      return (overrides.verify ?? (() => jsonResponse(false, {})))();
-    }
-    if (url === '/api/auth/logout') {
-      return (overrides.logout ?? (() => jsonResponse(true, {})))();
-    }
-    throw new Error(`Unhandled fetch to ${url}`);
-  });
-}
-
 describe('useWallet authentication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAddress.mockReset();
     mockSignMessage.mockReset();
+    vi.stubGlobal('fetch', vi.fn());
     window.localStorage.clear();
     window.sessionStorage.clear();
-    document.cookie = '';
+    // Clear cookies cleanly
+    document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    
+    // Default mock response to avoid unhandled TypeErrors in the background
     mockSignMessage.mockResolvedValue({ signedMessage: 'mock_signature' });
   });
 
@@ -62,19 +35,32 @@ describe('useWallet authentication', () => {
   it('successful authentication flow (happy path)', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () =>
-        jsonResponse(true, {
-          success: true,
-          data: { nonce: 'test_nonce', message: 'Sign in to CommitLabs: test_nonce' },
-        }),
-      verify: () =>
-        jsonResponse(true, {
-          success: true,
-          data: { verified: true, address: 'GCONNECTED' },
-        }),
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          nonce: 'test_nonce',
+          message: 'Sign in to CommitLabs: test_nonce',
+        },
+      }),
+    } as Response);
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          verified: true,
+          sessionToken: 'session_mockToken_123',
+        },
+      }),
+    } as Response);
+
+    mockSignMessage.mockResolvedValueOnce({
+      signedMessage: 'mock_signature',
     });
-    vi.stubGlobal('fetch', mockFetch);
 
     const { result } = renderHook(() => useWallet());
 
@@ -94,24 +80,28 @@ describe('useWallet authentication', () => {
 
     expect(result.current.authenticating).toBe(false);
     expect(result.current.authenticated).toBe(true);
+    expect(result.current.sessionToken).toBe('session_mockToken_123');
     expect(result.current.authError).toBeNull();
 
-    // The session lives exclusively in the server-set HttpOnly cookie.
-    // The client must never write the token anywhere itself.
-    expect(window.localStorage.length).toBe(0);
-    expect(window.sessionStorage.length).toBe(0);
-    expect(document.cookie).toBe('');
+    expect(window.localStorage.getItem('sessionToken')).toBe('session_mockToken_123');
+    expect(window.localStorage.getItem('commitlabs.authAddress')).toBe('GCONNECTED');
+    expect(document.cookie).toContain('session=session_mockToken_123');
   });
 
   it('handles user-rejected signature', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
 
-    mockSignMessage.mockResolvedValueOnce({ error: 'User rejected signature' });
+    mockSignMessage.mockResolvedValueOnce({
+      error: 'User rejected signature',
+    });
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
@@ -129,16 +119,17 @@ describe('useWallet authentication', () => {
     expect(signInError.message).toBe('User rejected signature');
 
     expect(result.current.authenticated).toBe(false);
+    expect(result.current.sessionToken).toBeNull();
     expect(result.current.authError).toBe('User rejected signature');
   });
 
   it('handles nonce fetch failure', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(false, {}),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+    } as Response);
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
@@ -156,20 +147,31 @@ describe('useWallet authentication', () => {
     expect(signInError.message).toBe('Failed to fetch authentication nonce.');
 
     expect(result.current.authenticated).toBe(false);
+    expect(result.current.sessionToken).toBeNull();
     expect(result.current.authError).toBe('Failed to fetch authentication nonce.');
   });
 
   it('handles signature verification failure', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }),
-      verify: () =>
-        jsonResponse(false, { error: { message: 'Invalid signature supplied' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
 
-    mockSignMessage.mockResolvedValueOnce({ signedMessage: 'sig' });
+    mockSignMessage.mockResolvedValueOnce({
+      signedMessage: 'sig',
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({
+        error: { message: 'Invalid signature supplied' },
+      }),
+    } as Response);
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
@@ -187,19 +189,26 @@ describe('useWallet authentication', () => {
     expect(signInError.message).toBe('Invalid signature supplied');
 
     expect(result.current.authenticated).toBe(false);
+    expect(result.current.sessionToken).toBeNull();
     expect(result.current.authError).toBe('Invalid signature supplied');
   });
 
   it('re-fetches the address when signIn starts without a connected wallet', async () => {
-    mockGetAddress
-      .mockResolvedValueOnce({ error: 'User rejected request' })
-      .mockResolvedValueOnce({ address: 'GCONNECTED' });
+    mockGetAddress.mockResolvedValueOnce({ error: 'User rejected request' }).mockResolvedValueOnce({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }),
-      verify: () => jsonResponse(true, { data: { verified: true, address: 'GCONNECTED' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { verified: true, sessionToken: 'token' },
+      }),
+    } as Response);
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.error).toContain('rejected'));
@@ -212,13 +221,16 @@ describe('useWallet authentication', () => {
     expect(result.current.address).toBe('GCONNECTED');
   });
 
-  it('reports missing nonce challenge messages', async () => {
+  it('handles missing nonce message and no signature response', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n' },
+      }),
+    } as Response);
 
     mockSignMessage.mockResolvedValueOnce(undefined as unknown as { signedMessage: string });
 
@@ -240,7 +252,6 @@ describe('useWallet authentication', () => {
 
   it('surfaces a generic fallback error for unknown Freighter failures', async () => {
     mockGetAddress.mockRejectedValue(new Error('mystery wallet failure'));
-    vi.stubGlobal('fetch', createFetchMock({}));
 
     const { result } = renderHook(() => useWallet());
 
@@ -250,7 +261,6 @@ describe('useWallet authentication', () => {
 
   it('reports getAddress errors during signIn as authentication errors', async () => {
     mockGetAddress.mockResolvedValue({ error: 'Freighter is locked' });
-    vi.stubGlobal('fetch', createFetchMock({}));
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.error).toContain('Freighter'));
@@ -271,7 +281,6 @@ describe('useWallet authentication', () => {
 
   it('reports missing wallet addresses during signIn', async () => {
     mockGetAddress.mockResolvedValueOnce({}).mockResolvedValueOnce({});
-    vi.stubGlobal('fetch', createFetchMock({}));
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(getAddress).toHaveBeenCalled());
@@ -292,10 +301,13 @@ describe('useWallet authentication', () => {
   it('reports missing signature responses from Freighter', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
 
     mockSignMessage.mockResolvedValueOnce(undefined as unknown as { signedMessage: string });
 
@@ -318,10 +330,13 @@ describe('useWallet authentication', () => {
   it('reports missing signedMessage payloads during signIn', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
 
     mockSignMessage.mockResolvedValueOnce({} as { signedMessage: string });
 
@@ -341,14 +356,25 @@ describe('useWallet authentication', () => {
     expect(signInError.message).toContain('rejected');
   });
 
-  it('treats a verify response with verified: false as a failed handshake', async () => {
+  it('handles verification responses without a session token', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      nonce: () => jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }),
-      verify: () => jsonResponse(true, { data: { verified: false } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
+
+    mockSignMessage.mockResolvedValue({ signedMessage: 'sig' });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { verified: true, sessionToken: '' },
+      }),
+    } as Response);
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
@@ -363,41 +389,40 @@ describe('useWallet authentication', () => {
     });
 
     expect(signInError).not.toBeNull();
-    expect(signInError.message).toContain('Verification failed');
-    expect(result.current.authenticated).toBe(false);
+    expect(signInError.message).toContain('Session token');
   });
 
-  it('successful sign-out clears authenticated state', async () => {
+  it('successful sign-out clears storage, cookies, and state', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    const mockFetch = createFetchMock({
-      session: () => jsonResponse(true, { authenticated: true, address: 'GCONNECTED' }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    window.localStorage.setItem('sessionToken', 'session_active_123');
+    window.localStorage.setItem('commitlabs.authAddress', 'GCONNECTED');
+    document.cookie = 'session=session_active_123';
+
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+    } as Response);
 
     const { result } = renderHook(() => useWallet());
-    await waitFor(() => expect(result.current.authenticated).toBe(true));
+    await waitFor(() => expect(result.current.sessionToken).toBe('session_active_123'));
+    expect(result.current.authenticated).toBe(true);
 
     await act(async () => {
       await result.current.signOut();
     });
 
     expect(result.current.authenticated).toBe(false);
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });
-
-    // No client-visible token anywhere to clean up.
-    expect(window.localStorage.length).toBe(0);
-    expect(window.sessionStorage.length).toBe(0);
-    expect(document.cookie).toBe('');
+    expect(result.current.sessionToken).toBeNull();
+    expect(window.localStorage.getItem('sessionToken')).toBeNull();
+    expect(document.cookie).not.toContain('session=session_active_123');
   });
 
   it('automatic sign-out on address mismatch or disconnect (account-switching safety)', async () => {
     mockGetAddress.mockResolvedValueOnce({ address: 'GCONNECTED_1' });
-
-    const mockFetch = createFetchMock({
-      session: () => jsonResponse(true, { authenticated: true, address: 'GCONNECTED_1' }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    window.localStorage.setItem('sessionToken', 'session_active_123');
+    window.localStorage.setItem('commitlabs.authAddress', 'GCONNECTED_1');
+    document.cookie = 'session=session_active_123';
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
@@ -412,30 +437,30 @@ describe('useWallet authentication', () => {
 
     await waitFor(() => expect(result.current.address).toBe('GCONNECTED_2'));
     await waitFor(() => expect(result.current.authenticated).toBe(false));
-
-    // The session for GCONNECTED_1 no longer matches the wallet's reported
-    // address, so the hook must have called logout to drop it.
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });
+    expect(result.current.sessionToken).toBeNull();
+    expect(window.localStorage.getItem('sessionToken')).toBeNull();
   });
 
   it('prevent parallel signIn calls if already authenticating', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
-    let resolveNonce: (value: Response) => void;
-    const noncePromise = new Promise<Response>((resolve) => {
-      resolveNonce = resolve;
-    });
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => new Promise(resolve => setTimeout(() => resolve({
+        data: { nonce: 'n', message: 'msg' },
+      }), 50)),
+    } as Response);
 
-    const mockFetch = createFetchMock({
-      nonce: () => noncePromise,
-      verify: () => jsonResponse(true, { data: { verified: true, address: 'GCONNECTED' } }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { verified: true, sessionToken: 'token' },
+      }),
+    } as Response);
 
     const { result } = renderHook(() => useWallet());
     await waitFor(() => expect(result.current.connected).toBe(true));
-
-    const nonceCallsBefore = mockFetch.mock.calls.filter((c) => c[0] === '/api/auth/nonce').length;
 
     let signInPromise1: Promise<void>;
     act(() => {
@@ -449,13 +474,10 @@ describe('useWallet authentication', () => {
       signInPromise2 = result.current.signIn();
     });
 
-    resolveNonce!(jsonResponse(true, { data: { nonce: 'n', message: 'msg' } }));
-
     await act(async () => {
       await Promise.all([signInPromise1, signInPromise2]);
     });
 
-    const nonceCallsAfter = mockFetch.mock.calls.filter((c) => c[0] === '/api/auth/nonce').length;
-    expect(nonceCallsAfter - nonceCallsBefore).toBe(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

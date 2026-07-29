@@ -67,6 +67,9 @@ const CommitmentSearchQuerySchema = z.object({
   /** Filter by asset code (e.g. "XLM", "USDC"). Case-insensitive match. */
   asset: z.string().optional(),
 
+  /** Free-text search by commitment ID. Case-insensitive substring match. */
+  commitmentId: z.string().optional(),
+
   /**
    * Filter by commitment status.
    * Accepted values: CREATED, ACTIVE, SETTLED, VIOLATED, EARLY_EXIT.
@@ -218,7 +221,7 @@ export const GET = withApiHandler(
       );
     }
 
-    const { ownerAddress, asset, status, riskType, minCompliance } =
+    const { ownerAddress, asset, commitmentId, status, riskType, minCompliance } =
       queryResult.data;
 
     // 3. Parse pagination & sort via pagination.ts helpers
@@ -242,6 +245,7 @@ export const GET = withApiHandler(
     // 4. Build cache key and check cache
     const cacheKey = buildSearchCacheKey(ownerAddress, {
       asset,
+      commitmentId,
       status,
       riskType,
       minCompliance,
@@ -290,6 +294,13 @@ export const GET = withApiHandler(
       items = items.filter((c) => c.asset.toUpperCase() === normalizedAsset);
     }
 
+    if (commitmentId) {
+      const normalizedQuery = commitmentId.toUpperCase();
+      items = items.filter((c) =>
+        c.commitmentId.toUpperCase().includes(normalizedQuery),
+      );
+    }
+
     if (status) {
       items = items.filter((c) => c.status === status);
     }
@@ -318,6 +329,7 @@ export const GET = withApiHandler(
       meta: result.meta,
       filters: {
         asset: asset ?? null,
+        commitmentId: commitmentId ?? null,
         status: status ?? null,
         riskType: riskType ?? null,
         minCompliance: minCompliance ?? null,

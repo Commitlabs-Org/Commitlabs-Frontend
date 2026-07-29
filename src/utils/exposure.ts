@@ -1,4 +1,9 @@
-import type { CommitmentLimits } from '@/utils/protocol';
+/**
+ * Commitment exposure types and helpers used by Health Metrics charts.
+ *
+ * Kept free of protocol-module imports so chart consumers can type `exposure`
+ * props without pulling unrelated dependencies.
+ */
 
 export const EXPOSURE_ZONE_THRESHOLDS = {
   lowMax: 33,
@@ -36,7 +41,6 @@ export interface CommitmentExposureResult {
 
 const DRAWDOWN_WEIGHT = 0.6;
 const VOLATILITY_WEIGHT = 0.4;
-/** Scales mean absolute return (0–1) to a 0–100 exposure contribution. */
 const VOLATILITY_RETURN_SCALE = 20;
 const DEFAULT_PROTOCOL_MAX_LOSS_CEILING = 100;
 
@@ -79,6 +83,13 @@ function computeVolatilityExposurePercent(
 ): number | null {
   if (values.length < 2) return null;
 
+  // Guard against a zero/negative/non-finite ceiling — without this the
+  // scale factor below divides by zero and produces NaN/Infinity, which
+  // would otherwise leak into the chart as an invalid exposure percent.
+  if (!Number.isFinite(protocolMaxLossPercentCeiling) || protocolMaxLossPercentCeiling <= 0) {
+    return null;
+  }
+
   const returns: number[] = [];
   for (let i = 1; i < values.length; i += 1) {
     const previous = values[i - 1];
@@ -101,9 +112,7 @@ function combineExposure(
   volatilityExposure: number | null,
 ): number | null {
   if (drawdownExposure !== null && volatilityExposure !== null) {
-    return (
-      DRAWDOWN_WEIGHT * drawdownExposure + VOLATILITY_WEIGHT * volatilityExposure
-    );
+    return DRAWDOWN_WEIGHT * drawdownExposure + VOLATILITY_WEIGHT * volatilityExposure;
   }
   if (drawdownExposure !== null) return drawdownExposure;
   if (volatilityExposure !== null) return volatilityExposure;
@@ -112,7 +121,7 @@ function combineExposure(
 
 export function computeCommitmentExposure(
   input: CommitmentExposureInput,
-  commitmentLimits?: Pick<CommitmentLimits, 'maxLossPercentCeiling'>,
+  commitmentLimits?: { maxLossPercentCeiling?: number },
 ): CommitmentExposureResult {
   const zoneThresholds = EXPOSURE_ZONE_THRESHOLDS;
   const ceiling =
@@ -143,9 +152,7 @@ export function computeCommitmentExposure(
       ?.map((point) => point.currentValue)
       .filter((value) => Number.isFinite(value)) ?? [];
   const volatilityExposure =
-    values.length >= 2
-      ? computeVolatilityExposurePercent(values, ceiling)
-      : null;
+    values.length >= 2 ? computeVolatilityExposurePercent(values, ceiling) : null;
 
   const exposurePercent = combineExposure(drawdownExposure, volatilityExposure);
 

@@ -45,3 +45,5 @@ graph TD
 - The tests verify:
   1. The hook fetches the first page of listings and appends subsequent pages upon `loadMore()` triggers.
   2. The hook terminates and sets `hasMore: false` once a page returning fewer items than the page size is received.
+  3. On fetch failure, the hook surfaces the error message via the `error` field distinctly from `hasMore: false`, so callers can distinguish a failed request from a genuine end-of-results state.
+  4. On a successful fetch, the `error` field is `null`.
