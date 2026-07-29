@@ -1,5 +1,6 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ok } from "@/lib/backend/apiResponse";
+import { isFeatureEnabled } from "@/lib/backend/config";
 import { TooManyRequestsError } from "@/lib/backend/errors";
 import { checkRateLimit } from "@/lib/backend/rateLimit";
 import { withApiHandler } from "@/lib/backend/withApiHandler";
@@ -22,6 +23,13 @@ import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
  * Cache-Control: public, s-maxage=60, stale-while-revalidate=30
  */
 export const GET = withApiHandler(async (req: NextRequest) => {
+  if (!isFeatureEnabled('marketplace')) {
+    return NextResponse.json(
+      { error: { code: 'NOT_FOUND', message: 'Marketplace feature is disabled.', details: { feature: 'marketplace' } } },
+      { status: 404 },
+    );
+  }
+
   const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
   const isAllowed = await checkRateLimit(ip, "api/marketplace/stats");
 

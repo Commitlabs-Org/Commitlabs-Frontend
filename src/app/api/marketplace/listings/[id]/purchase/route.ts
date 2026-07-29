@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
@@ -11,6 +11,7 @@ import {
   ValidationError,
 } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
+import { isFeatureEnabled } from '@/lib/backend/config';
 import { transferOwnership } from '@/lib/backend/services/contracts';
 import { marketplaceService } from '@/lib/backend/services/marketplace';
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
@@ -28,6 +29,13 @@ export const OPTIONS = createCorsOptionsHandler(MARKETPLACE_PURCHASE_CORS_POLICY
 
 export const POST = withApiHandler(
   async (req: NextRequest, { params }, correlationId) => {
+    if (!isFeatureEnabled('marketplace')) {
+      return NextResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Marketplace feature is disabled.', details: { feature: 'marketplace' } } },
+        { status: 404 },
+      );
+    }
+
     assertMutationCsrf(req);
 
     const ip = getClientIp(req);

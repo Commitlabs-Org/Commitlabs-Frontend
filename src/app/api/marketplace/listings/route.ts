@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { isFeatureEnabled } from '@/lib/backend/config';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
@@ -113,6 +114,13 @@ function parseQuery(searchParams: URLSearchParams): ParseResult {
 }
 
 export const GET = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  if (!isFeatureEnabled('marketplace')) {
+    return NextResponse.json(
+      { error: { code: 'NOT_FOUND', message: 'Marketplace feature is disabled.', details: { feature: 'marketplace' } } },
+      { status: 404 },
+    );
+  }
+
   const ip = getClientIp(req);
   if (!(await checkRateLimit(ip, 'api/marketplace/listings'))) {
     throw new TooManyRequestsError();
@@ -130,6 +138,13 @@ export const GET = withApiHandler(async (req: NextRequest, _context, correlation
 }, { cors: MARKETPLACE_LISTINGS_CORS_POLICY, enableETag: true });
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  if (!isFeatureEnabled('marketplace')) {
+    return NextResponse.json(
+      { error: { code: 'NOT_FOUND', message: 'Marketplace feature is disabled.', details: { feature: 'marketplace' } } },
+      { status: 404 },
+    );
+  }
+
   assertMutationCsrf(req);
 
   const ip = getClientIp(req);
