@@ -9,3 +9,4 @@ import { MaturityCountdown } from '@/components/MaturityCountdown';
 
 // Pass the target timestamp in milliseconds
 <MaturityCountdown maturityTimestamp={1719681000000} />
+```
