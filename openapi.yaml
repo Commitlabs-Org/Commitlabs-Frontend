@@ -25,7 +25,7 @@ components:
     SuccessEnvelope:
       type: object
       properties:
-        ok:
+        success:
           type: boolean
           example: true
         data:
@@ -38,7 +38,7 @@ components:
     ErrorEnvelope:
       type: object
       properties:
-        ok:
+        success:
           type: boolean
           example: false
         error:
@@ -63,7 +63,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
           example:
-            ok: false
+            success: false
             error:
               code: "VALIDATION_ERROR"
               message: "Invalid parameters provided."

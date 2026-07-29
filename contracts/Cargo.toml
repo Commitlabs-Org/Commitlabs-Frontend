@@ -11,6 +11,11 @@ repository = "https://github.com/Commitlabs-Org/Commitlabs-Frontend"
 [workspace.dependencies]
 soroban-sdk = "23"
 
+[workspace.lints.rust]
+# soroban-sdk::Events::publish is deprecated in favour of #[contractevent];
+# allow until the full SDK migration is completed.
+deprecated = "allow"
+
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
@@ -20,6 +25,14 @@ missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 must_use_candidate = "allow"
 wildcard_imports = "allow"
+# Soroban contractimpl functions must take Env and Address by value (SDK requirement)
+needless_pass_by_value = "allow"
+# Pedantic doc-backtick lint fires on crate-level prose docs
+doc_markdown = "allow"
+# Soroban/no_std: Vec::len() comparisons are intentional
+len_zero = "allow"
+# create_commitment is a public Soroban API; its signature is fixed by the interface
+too_many_arguments = "allow"
 
 [profile.release]
 opt-level = "z"

@@ -4,10 +4,12 @@ First off, thank you for considering contributing to CommitLabs! It's people lik
 
 Before diving into the code, please read through our [Developer Guide](./DEVELOPER_GUIDE.md) for comprehensive instructions on local setup, coding standards, and system architecture.
 
+
 ## Branching
 1. Fork the repository and clone it locally.
 2. Ensure your fork is synced with the upstream `master` branch.
 3. Create a feature branch off of `master` using standard prefixes: `feat/<description>`, `fix/<description>`, `docs/<description>`, or `test/<description>`.
+
 
 ## Editor Configuration
 This repository ships an [`.editorconfig`](./.editorconfig) at the root to keep whitespace, charset, and line endings consistent across editors. Most editors support it natively or via a plugin. It enforces UTF-8, LF line endings, 2-space indentation, a final newline, and trailing-whitespace trimming (Markdown excepted, so hard line breaks are preserved). These rules are aligned with the ESLint config to avoid formatting-only diffs.

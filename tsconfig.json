@@ -39,9 +39,6 @@
         "./src/*"
       ]
     },
-    "incremental": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
     "isolatedModules": true
   },
   "include": [
