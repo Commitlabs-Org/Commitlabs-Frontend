@@ -708,7 +708,7 @@ export async function createCommitmentOnChain(
 
     // Increment successful actions counter on successful commitment creation
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.userCommitments(params.ownerAddress));
 
@@ -716,7 +716,7 @@ export async function createCommitmentOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -757,7 +757,7 @@ export async function getCommitmentFromChain(
 
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     const commitment = {
       ...parseChainCommitment(invocation.value),
@@ -769,7 +769,7 @@ export async function getCommitmentFromChain(
     // Increment chain failures counter on blockchain operation failures.
     // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -816,7 +816,7 @@ export async function getUserCommitmentsFromChain(
         await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
         // Increment successful actions counter on successful chain read
         const countersAdapter = getCountersAdapter();
-        void countersAdapter.incrementSuccessfulActions();
+        await countersAdapter.incrementSuccessfulActions();
         return commitments;
       }
     } catch (error) {
@@ -841,13 +841,13 @@ export async function getUserCommitmentsFromChain(
     await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
+    await countersAdapter.incrementSuccessfulActions();
     return commitments;
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures.
     // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
+    await countersAdapter.incrementChainFailures();
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -894,7 +894,7 @@ export async function recordAttestationOnChain(
 
     // Increment successful actions counter on successful attestation recording
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (cachedCommitment?.ownerAddress) {
@@ -911,7 +911,7 @@ export async function recordAttestationOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -990,7 +990,7 @@ export async function settleCommitmentOnChain(
 
     // Increment successful actions counter on successful settlement
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -1013,7 +1013,7 @@ export async function settleCommitmentOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -1085,7 +1085,7 @@ export async function fundEscrowOnChain(
     );
 
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
+    await countersAdapter.incrementSuccessfulActions();
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -1100,7 +1100,7 @@ export async function fundEscrowOnChain(
     };
   } catch (error) {
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
+    await countersAdapter.incrementChainFailures();
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
