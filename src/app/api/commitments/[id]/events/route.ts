@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/backend/requireAuth';
 import { NotFoundError } from '@/lib/backend/errors';
-import { getCommitmentFromChain, ChainCommitmentStatus } from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { getCommitmentFromChain } from '@/lib/backend/services/contracts';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { CommitmentStatus } from '@/types/commitment';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
 
 const DEFAULT_POLL_INTERVAL = 5000;
-const DEFAULT_KEEPALIVE_INTERVAL = 20000;
+const DEFAULT_KEEPALIVE_INTERVAL = 30000;
+const MIN_INTERVAL = 1000;
 
 const EVENTS_CORS_POLICY = {
   GET: { access: 'first-party' },
@@ -15,7 +17,7 @@ const EVENTS_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(EVENTS_CORS_POLICY);
 
-function mapStatus(status: ChainCommitmentStatus): CommitmentStatus | 'Unknown' {
+function mapStatus(status: any): CommitmentStatus | 'Unknown' {
   switch (status) {
     case 'ACTIVE':
       return 'Active';
@@ -30,17 +32,29 @@ function mapStatus(status: ChainCommitmentStatus): CommitmentStatus | 'Unknown' 
   }
 }
 
+const validateInterval = (value: string | undefined, defaultValue: number) => {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < MIN_INTERVAL) return defaultValue;
+  return parsed;
+};
+
 export const GET = withApiHandler(async (
   req: NextRequest,
-  context: { params: Record<string, string> },
+  context: { params: { id: string } },
 ) => {
   requireAuth(req);
+  
+  const ip = req.headers.get('x-forwarded-for') ?? 'anonymous';
+  if (!(await checkRateLimit(ip, 'api/commitments/events'))) {
+    return new Response('Too many requests', { status: 429 });
+  }
+
   const commitmentId = context.params.id;
   if (!commitmentId) {
     throw new NotFoundError('Commitment');
   }
 
-  // 2. Initial state fetch (throws 404 if commitment not found)
   let initialCommitment;
   try {
     initialCommitment = await getCommitmentFromChain(commitmentId);
@@ -52,7 +66,6 @@ export const GET = withApiHandler(async (
     throw new NotFoundError('Commitment', { commitmentId });
   }
 
-  // 3. Setup Response Stream
   const encoder = new TextEncoder();
   let pollIntervalId: NodeJS.Timeout | null = null;
   let keepaliveIntervalId: NodeJS.Timeout | null = null;
@@ -62,7 +75,6 @@ export const GET = withApiHandler(async (
     async start(controller) {
       let lastStatus = mapStatus(initialCommitment.status);
 
-      // Emit initial snapshot event
       const snapshotPayload = {
         commitmentId,
         status: lastStatus,
@@ -82,12 +94,10 @@ export const GET = withApiHandler(async (
         }
       };
 
-      // Modern Abort Listener for client disconnects
       req.signal.addEventListener('abort', () => {
         cleanup();
       });
 
-      // Poll Tick (uses cache automatically, invalidated by writes)
       const checkStatus = async () => {
         if (isClosed) return;
         try {
@@ -109,11 +119,9 @@ export const GET = withApiHandler(async (
             controller.enqueue(encoder.encode(`event: status_change\ndata: ${JSON.stringify(transitionPayload)}\n\n`));
           }
         } catch {
-          // Prevent temporary network/cache glitches from dropping the stream
         }
       };
 
-      // Heartbeat Timer
       const sendKeepalive = () => {
         if (isClosed) return;
         try {
@@ -123,13 +131,8 @@ export const GET = withApiHandler(async (
         }
       };
 
-      const pollIntervalMs = process.env.SSE_POLL_INTERVAL_MS
-        ? parseInt(process.env.SSE_POLL_INTERVAL_MS, 10)
-        : DEFAULT_POLL_INTERVAL;
-
-      const keepaliveIntervalMs = process.env.SSE_KEEPALIVE_INTERVAL_MS
-        ? parseInt(process.env.SSE_KEEPALIVE_INTERVAL_MS, 10)
-        : DEFAULT_KEEPALIVE_INTERVAL;
+      const pollIntervalMs = validateInterval(process.env.SSE_POLL_INTERVAL_MS, DEFAULT_POLL_INTERVAL);
+      const keepaliveIntervalMs = validateInterval(process.env.SSE_KEEPALIVE_INTERVAL_MS, DEFAULT_KEEPALIVE_INTERVAL);
 
       pollIntervalId = setInterval(checkStatus, pollIntervalMs);
       keepaliveIntervalId = setInterval(sendKeepalive, keepaliveIntervalMs);

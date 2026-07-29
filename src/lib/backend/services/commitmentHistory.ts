@@ -69,13 +69,13 @@ function buildAttestationEvents(
 
 function buildTerminalEvent(
   commitment: ChainCommitment,
+  proxyOccurredAt: string,
 ): EarlyExitEvent | SettlementEvent | null {
   if (commitment.status === 'EARLY_EXIT') {
     const event: EarlyExitEvent = {
       eventId: `early_exit:${commitment.id}`,
       kind: 'early_exit',
-      // Use expiresAt as a proxy timestamp until the indexer provides the real one
-      occurredAt: commitment.expiresAt ?? new Date().toISOString(),
+      occurredAt: proxyOccurredAt,
       payload: {
         exitedBy: commitment.ownerAddress,
       },
@@ -87,7 +87,7 @@ function buildTerminalEvent(
     const event: SettlementEvent = {
       eventId: `settlement:${commitment.id}`,
       kind: 'settlement',
-      occurredAt: commitment.expiresAt ?? new Date().toISOString(),
+      occurredAt: proxyOccurredAt,
       payload: {
         settlementAmount: commitment.feeEarned,
         finalStatus: 'SETTLED',
@@ -97,6 +97,35 @@ function buildTerminalEvent(
   }
 
   return null;
+}
+
+/**
+ * Computes the proxy `occurredAt` for a terminal (early_exit/settlement) event.
+ *
+ * The real terminal timestamp isn't yet indexed, so we fall back to
+ * `commitment.expiresAt`. But a terminal event is, by definition, the last
+ * thing that happens to a commitment — it must never sort before an event that
+ * demonstrably occurred later (e.g. a late compliance attestation observed
+ * after `expiresAt`). We therefore clamp the proxy to the latest timestamp
+ * among the already-built events, guaranteeing the terminal event sorts last.
+ */
+function terminalProxyTimestamp(
+  commitment: ChainCommitment,
+  precedingEvents: HistoryEvent[],
+): string {
+  const expiresAt = commitment.expiresAt ?? new Date().toISOString();
+  const latestPrecedingMs = precedingEvents.reduce(
+    (max, e) => Math.max(max, new Date(e.occurredAt).getTime()),
+    Number.NEGATIVE_INFINITY,
+  );
+
+  if (
+    Number.isFinite(latestPrecedingMs) &&
+    latestPrecedingMs > new Date(expiresAt).getTime()
+  ) {
+    return new Date(latestPrecedingMs).toISOString();
+  }
+  return expiresAt;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +154,10 @@ export async function getCommitmentHistory(
     ...buildAttestationEvents(commitment.id, attestations),
   ];
 
-  const terminal = buildTerminalEvent(commitment);
+  const terminal = buildTerminalEvent(
+    commitment,
+    terminalProxyTimestamp(commitment, events),
+  );
   if (terminal) events.push(terminal);
 
   // Sort chronologically (oldest first)

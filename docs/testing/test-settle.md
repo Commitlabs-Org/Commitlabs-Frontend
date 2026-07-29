@@ -19,7 +19,7 @@ Settles a matured commitment and returns the final funds to the owner.
 ### Success Response (200)
 ```json
 {
-  "ok": true,
+  "success": true,
   "data": {
     "commitmentId": "test-id",
     "settlementAmount": "1000.50",
@@ -27,6 +27,10 @@ Settles a matured commitment and returns the final funds to the owner.
     "txHash": "abc123...",
     "reference": "TODO_CHAIN_CALL_SETTLE_COMMITMENT",
     "settledAt": "2026-02-26T11:30:00.000Z"
+  },
+  "meta": {
+    "correlationId": "abc123...",
+    "timestamp": "2026-02-26T11:30:00.000Z"
   }
 }
 ```
@@ -36,7 +40,7 @@ Settles a matured commitment and returns the final funds to the owner.
 #### 400 - Bad Request (Non-mature commitment)
 ```json
 {
-  "ok": false,
+  "success": false,
   "error": {
     "code": "BAD_REQUEST",
     "message": "Commitment has not matured yet and cannot be settled."
@@ -47,7 +51,7 @@ Settles a matured commitment and returns the final funds to the owner.
 #### 409 - Conflict (Already settled)
 ```json
 {
-  "ok": false,
+  "success": false,
   "error": {
     "code": "CONFLICT", 
     "message": "Commitment has already been settled."
@@ -58,7 +62,7 @@ Settles a matured commitment and returns the final funds to the owner.
 #### 404 - Not Found
 ```json
 {
-  "ok": false,
+  "success": false,
   "error": {
     "code": "NOT_FOUND",
     "message": "Commitment not found."

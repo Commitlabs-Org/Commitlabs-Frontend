@@ -23,12 +23,14 @@
     "test:e2e": "playwright test",
     "test:contracts:deploy": "node contracts/scripts/deploy-testnet.smoke.mjs",
     "seed:mock": "tsx scripts/seed-backend-mock.ts",
-    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
+    ],
+    "docs/**/*.{md,mdx}": [
+      "node scripts/check-docs-file-urls.mjs"
     ]
   },
   "dependencies": {
@@ -52,7 +54,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
-    "@next/bundle-analyzer": "^16.2.9",
+    "@next/bundle-analyzer": "^14.0.0",
     "@playwright/test": "^1.61.1",
     "@size-limit/file": "^12.1.0",
     "@testing-library/dom": "^10.4.1",
@@ -70,6 +72,7 @@
     "happy-dom": "^20.7.0",
     "husky": "^9.1.7",
     "ioredis": "^5.11.0",
+    "js-yaml": "^5.2.2",
     "jsdom": "^29.1.1",
     "knip": "^6.23.0",
     "lint-staged": "^15.2.10",

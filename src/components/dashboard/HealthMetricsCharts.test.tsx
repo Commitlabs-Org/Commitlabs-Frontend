@@ -37,7 +37,7 @@ vi.mock('recharts', () => {
   };
 });
 
-vi.mock('@/lib/a11y/useReducedMotion', () => ({ useReducedMotion: () => false }));
+vi.mock('../../lib/a11y/useReducedMotion', () => ({ useReducedMotion: () => false }));
 
 import { HealthMetricsValueHistoryChart } from './HealthMetricsValueHistoryChart';
 import { HealthMetricsDrawdownChart } from './HealthMetricsDrawdownChart';

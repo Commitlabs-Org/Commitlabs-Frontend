@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { fail, ok, methodNotAllowed } from "@/lib/backend/apiResponse";
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { TooManyRequestsError, ValidationError } from "@/lib/backend/errors";
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from "@/lib/backend/jsonBodyLimit";
@@ -82,6 +83,8 @@ export const GET = withApiHandler(async (req: NextRequest, _context, correlation
 }, { cors: COMMITMENTS_CORS_POLICY, enableETag: true });
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  assertMutationCsrf(req);
+
   const ip = getClientIp(req);
   // Use the dedicated write-route key so tighter limits apply
   if (!(await checkRateLimit(ip, "api/commitments/create"))) {
@@ -108,9 +111,6 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
     validateSupportedAsset(asset, "asset");
   } catch {
     throw new ValidationError("Asset is not supported. Supported assets: XLM, USDC.");
-  }
-  if (!ownerAddress || typeof ownerAddress !== "string") {
-    return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400, correlationId);
   }
   try {
     validateStellarAddress(ownerAddress, "ownerAddress");

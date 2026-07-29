@@ -50,6 +50,7 @@ export const POST = withApiHandler(async (req: NextRequest, { params }, correlat
   }
 
     const callerAddress = validation.data.callerAddress;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const commitment: any = await getCommitmentFromChain(id, { requestId: correlationId });
 
   if (!commitment) {

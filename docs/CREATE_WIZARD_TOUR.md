@@ -11,11 +11,11 @@ The guided tour is built with a modular, highly testable structure:
    - Fetches and stores the "seen" flag off-chain via the `GET / PUT /api/user/preferences` user-preferences API.
    - Falls back to `localStorage` when no wallet is connected.
    - Triggers step transitions automatically when moving across wizard steps.
-   - Location: [useGuidedTour.ts](file:///home/sudodave/Commitlabs-Frontend/src/hooks/useGuidedTour.ts)
+   - Location: [useGuidedTour.ts](../src/hooks/useGuidedTour.ts)
 
 2. **`GuidedTour` (Container Component)**
    - A declarative wrapper component that receives tour status and configuration, rendering the active step.
-   - Location: [GuidedTour.tsx](file:///home/sudodave/Commitlabs-Frontend/src/components/onboarding/GuidedTour.tsx)
+   - Location: [GuidedTour.tsx](../src/components/onboarding/GuidedTour.tsx)
 
 3. **`TourStep` (UI component)**
    - Tracks target selectors in the DOM and anchors tooltips dynamically (handles window resizes, scrolling, viewport constraints).
@@ -23,7 +23,7 @@ The guided tour is built with a modular, highly testable structure:
    - Focus traps keyboard navigation inside the tooltip (loops focus between controls).
    - Listens to global keyboard keys (`Escape` to skip/dismiss, `ArrowLeft` / `ArrowRight` for back/next navigation).
    - Respects `prefers-reduced-motion` to disable transitions for users with motion sensitivities.
-   - Location: [TourStep.tsx](file:///home/sudodave/Commitlabs-Frontend/src/components/onboarding/TourStep.tsx)
+   - Location: [TourStep.tsx](../src/components/onboarding/TourStep.tsx)
 
 ## Step Flow
 

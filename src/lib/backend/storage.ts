@@ -13,6 +13,8 @@ export interface StorageAdapter {
   set<T>(key: string, value: T, options?: StorageSetOptions): Promise<void>;
   delete(key: string): Promise<void>;
   increment(key: string, options?: StorageIncrementOptions): Promise<number>;
+  getdel<T>(key: string): Promise<T | null>;
+  expire(key: string, seconds: number): Promise<void>;
 }
 
 interface MemoryStorageEntry {
@@ -30,6 +32,7 @@ export interface KeyValueClient {
   delete(key: string): Promise<void>;
   increment(key: string, amount?: number): Promise<number>;
   expire?(key: string, ttlSeconds: number): Promise<void>;
+  getdel?(key: string): Promise<string | null | undefined>;
 }
 
 export type StorageProvider = 'memory' | 'redis' | 'kv';
@@ -37,6 +40,68 @@ export type StorageProvider = 'memory' | 'redis' | 'kv';
 export interface CreateStorageOptions {
   provider?: StorageProvider;
   client?: KeyValueClient;
+}
+
+class UpstashKeyValueClient implements KeyValueClient {
+  constructor(
+    private readonly url: string,
+    private readonly token: string,
+  ) {}
+
+  private async command(args: unknown[]) {
+    const response = await fetch(`${this.url}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(args),
+    });
+
+    if (!response.ok) {
+      throw new Error(`KV Store Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.result;
+  }
+
+  async get(key: string): Promise<string | null | undefined> {
+    const result = await this.command(['GET', key]);
+    return result === null ? null : (result as string);
+  }
+
+  async set(
+    key: string,
+    value: string,
+    options?: { ttlSeconds?: number },
+  ): Promise<void> {
+    if (options?.ttlSeconds) {
+      await this.command(['SET', key, value, 'EX', options.ttlSeconds]);
+    } else {
+      await this.command(['SET', key, value]);
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.command(['DEL', key]);
+  }
+
+  async increment(key: string, amount?: number): Promise<number> {
+    if (amount !== undefined && amount !== 1) {
+      return (await this.command(['INCRBY', key, amount])) as number;
+    }
+    return (await this.command(['INCR', key])) as number;
+  }
+
+  async expire(key: string, ttlSeconds: number): Promise<void> {
+    await this.command(['EXPIRE', key, ttlSeconds]);
+  }
+
+  async getdel(key: string): Promise<string | null | undefined> {
+    const result = await this.command(['GETDEL', key]);
+    return result === null ? null : (result as string);
+  }
 }
 
 export class MemoryStorageAdapter implements StorageAdapter {
@@ -94,6 +159,21 @@ export class MemoryStorageAdapter implements StorageAdapter {
     });
 
     return nextValue;
+  }
+
+  async getdel<T>(key: string): Promise<T | null> {
+    const val = await this.get<T>(key);
+    if (val !== null) {
+      this.store.delete(key);
+    }
+    return val;
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    const entry = this.store.get(key);
+    if (entry) {
+      entry.expiresAt = Date.now() + seconds * 1000;
+    }
   }
 
   reset(): void {
@@ -176,6 +256,41 @@ export class KeyValueStorageAdapter implements StorageAdapter {
       throw this.normalizeError('increment', error);
     }
   }
+
+  async getdel<T>(key: string): Promise<T | null> {
+    try {
+      if (this.client.getdel) {
+        const raw = await this.client.getdel(key);
+        if (raw === null || raw === undefined) {
+          return null;
+        }
+        return JSON.parse(raw) as T;
+      }
+      const val = await this.get<T>(key);
+      if (val !== null) {
+        await this.delete(key);
+      }
+      return val;
+    } catch (error) {
+      throw this.normalizeError('getdel', error);
+    }
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    try {
+      if (this.client.expire) {
+        await this.client.expire(key, seconds);
+      } else {
+        logWarn(
+          undefined,
+          '[Storage] expire requested but provider does not support it',
+          { key },
+        );
+      }
+    } catch (error) {
+      throw this.normalizeError('expire', error);
+    }
+  }
 }
 
 function resolveProvider(provider?: StorageProvider): StorageProvider {
@@ -189,6 +304,10 @@ function resolveProvider(provider?: StorageProvider): StorageProvider {
     return configured;
   }
 
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return 'kv';
+  }
+
   return 'memory';
 }
 
@@ -200,8 +319,17 @@ export function createStorageAdapter(
   const provider = resolveProvider(options.provider);
 
   if (provider === 'redis' || provider === 'kv') {
-    if (options.client) {
-      return new KeyValueStorageAdapter(options.client);
+    let client = options.client;
+    if (!client) {
+      const url = process.env.UPSTASH_REDIS_REST_URL;
+      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+      if (url && token) {
+        client = new UpstashKeyValueClient(url, token);
+      }
+    }
+
+    if (client) {
+      return new KeyValueStorageAdapter(client);
     }
 
     logWarn(

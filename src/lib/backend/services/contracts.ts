@@ -159,6 +159,114 @@ interface ContractInvocationResult {
  */
 const ANALYTICS_SCALE = 100;
 
+// --- Retry helper types & implementation ----------------------------------
+export interface RetryOptions {
+  maxAttempts: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+  maxTotalBackoffMs: number;
+  backoffMultiplier: number;
+  isRetryable: (err: unknown) => boolean;
+  random?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+  onRetry?: (info: { attempt: number; delayMs: number; error: unknown }) => void;
+}
+
+/**
+ * Bounded exponential backoff with optional jitter.
+ * Calls `op(attempt)` where attempt is 1-based. Throws the final error
+ * when retries are exhausted or when budget would be exceeded.
+ */
+export async function retryWithBackoff<T>(
+  op: (attempt: number) => Promise<T>,
+  options: RetryOptions,
+): Promise<T> {
+  const {
+    maxAttempts,
+    baseDelayMs,
+    maxDelayMs,
+    maxTotalBackoffMs,
+    backoffMultiplier,
+    isRetryable,
+    random = () => Math.random(),
+    sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)),
+    onRetry,
+  } = options;
+
+  let totalBackoff = 0;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await op(attempt);
+    } catch (err) {
+      const isLast = attempt >= maxAttempts;
+      if (!isRetryable(err) || isLast) {
+        throw err;
+      }
+
+      // Ceiling for this attempt's backoff (based on attempt index)
+      const rawCeiling = baseDelayMs * Math.pow(backoffMultiplier, attempt - 1);
+      const ceiling = Math.min(rawCeiling, maxDelayMs);
+
+      // jitter between ceiling/2 and ceiling
+      const delay = Math.round(ceiling / 2 + (random() ?? 0) * (ceiling / 2));
+
+      // If adding this delay would exceed budget, stop retrying and rethrow
+      if (maxTotalBackoffMs !== undefined && totalBackoff + delay > maxTotalBackoffMs) {
+        throw err;
+      }
+
+      onRetry?.({ attempt, delayMs: delay, error: err });
+      await sleep(delay);
+      totalBackoff += delay;
+      // continue to next attempt
+    }
+  }
+
+  // Should never reach here, but satisfy TS
+  throw new Error('retryWithBackoff: exhausted retries');
+}
+
+/**
+ * Classifier for whether a contract/RPC error is retryable for idempotent reads.
+ */
+export function isRetryableContractError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('deadline')) return true;
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) return true;
+  if (msg.includes('not found') || msg.includes('404')) return false;
+  if (msg.includes('invalid') || msg.includes('malformed')) return false;
+
+  // BackendError handling
+  if (error instanceof BackendError) {
+    const status = (error as BackendError).status;
+    if ([429, 503, 504].includes(status)) return true;
+    return false;
+  }
+
+  // Fallback: treat generic network/gateway failures as retryable
+  if (msg.includes('socket hang up') || msg.includes('econnreset') || msg.includes('connection reset')) return true;
+  if (/5\d\d/.test(msg)) return true; // 5xx
+
+  return false;
+}
+
+/**
+ * Guard that forbids retrying write-mode invocations after the first attempt.
+ */
+export function assertRetrySafe(mode: ContractCallMode, attempt: number): void {
+  if (mode === 'read') return;
+  if (mode === 'write' && attempt === 1) return;
+
+  throw new BackendError({
+    code: 'BLOCKCHAIN_CALL_FAILED',
+    message: 'A write-mode contract invocation must never be retried.',
+    status: 500,
+  });
+}
+
+
 function getRpcUrl(): string {
   return getBackendConfig().sorobanRpcUrl;
 }
@@ -580,7 +688,7 @@ function validateOwnerAddress(ownerAddress: string): void {
 
 export async function createCommitmentOnChain(
   params: CreateCommitmentOnChainParams,
-  loggingContext?: LoggingContext,
+  _loggingContext?: LoggingContext,
 ): Promise<CreateCommitmentOnChainResult> {
   try {
     validateOwnerAddress(params.ownerAddress);
@@ -600,7 +708,7 @@ export async function createCommitmentOnChain(
 
     // Increment successful actions counter on successful commitment creation
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.userCommitments(params.ownerAddress));
 
@@ -608,7 +716,7 @@ export async function createCommitmentOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -649,7 +757,7 @@ export async function getCommitmentFromChain(
 
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     const commitment = {
       ...parseChainCommitment(invocation.value),
@@ -661,7 +769,7 @@ export async function getCommitmentFromChain(
     // Increment chain failures counter on blockchain operation failures.
     // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -708,7 +816,7 @@ export async function getUserCommitmentsFromChain(
         await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
         // Increment successful actions counter on successful chain read
         const countersAdapter = getCountersAdapter();
-        void countersAdapter.incrementSuccessfulActions();
+        await countersAdapter.incrementSuccessfulActions();
         return commitments;
       }
     } catch (error) {
@@ -733,13 +841,13 @@ export async function getUserCommitmentsFromChain(
     await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
+    await countersAdapter.incrementSuccessfulActions();
     return commitments;
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures.
     // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
+    await countersAdapter.incrementChainFailures();
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -786,7 +894,7 @@ export async function recordAttestationOnChain(
 
     // Increment successful actions counter on successful attestation recording
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (cachedCommitment?.ownerAddress) {
@@ -796,14 +904,14 @@ export async function recordAttestationOnChain(
     }
 
     // Add logging context to payload if needed
-    const eventPayload = { ...params, requestId: loggingContext?.requestId };
+    const _eventPayload = { ...params, requestId: loggingContext?.requestId };
     // (Potentially emit an event here)
 
     return parseAttestationResult(invocation.value, invocation.txHash);
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -882,7 +990,7 @@ export async function settleCommitmentOnChain(
 
     // Increment successful actions counter on successful settlement
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -905,7 +1013,7 @@ export async function settleCommitmentOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -977,7 +1085,7 @@ export async function fundEscrowOnChain(
     );
 
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
+    await countersAdapter.incrementSuccessfulActions();
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -992,7 +1100,7 @@ export async function fundEscrowOnChain(
     };
   } catch (error) {
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
+    await countersAdapter.incrementChainFailures();
 
     throw normalizeBackendError(error, {
       code: "BLOCKCHAIN_CALL_FAILED",
@@ -1000,6 +1108,107 @@ export async function fundEscrowOnChain(
       status: 502,
       details: {
         method: "fund_escrow",
+        commitmentId: params.commitmentId,
+      },
+    });
+  }
+}
+
+export interface TransferOwnershipParams {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+}
+
+export interface TransferOwnershipResult {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+  txHash?: string;
+}
+
+/**
+ * Transfers marketplace ownership of a funded commitment to a new owner,
+ * bridging to the on-chain `transfer_ownership` method (see
+ * `contracts/escrow/src/lib.rs`). Named `transferOwnership` (rather than the
+ * `...OnChain` suffix used elsewhere in this file) to match the import used
+ * by the marketplace purchase route.
+ *
+ * # Preconditions
+ * - Commitment must be in `FUNDED` state on-chain.
+ * - `fromAddress` must match the commitment's current owner.
+ */
+export async function transferOwnership(
+  params: TransferOwnershipParams,
+  loggingContext?: LoggingContext,
+): Promise<TransferOwnershipResult> {
+  try {
+    if (!params.commitmentId) {
+      throw new BackendError({
+        code: "BAD_REQUEST",
+        message: "Missing commitment id for ownership transfer.",
+        status: 400,
+      });
+    }
+
+    validateOwnerAddress(params.fromAddress);
+    validateOwnerAddress(params.toAddress);
+
+    const commitment = await getCommitmentFromChain(
+      params.commitmentId,
+      loggingContext,
+    );
+
+    if (!commitment) {
+      throw new BackendError({
+        code: "NOT_FOUND",
+        message: "Commitment not found.",
+        status: 404,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    if (commitment.ownerAddress && commitment.ownerAddress !== params.fromAddress) {
+      throw new BackendError({
+        code: "FORBIDDEN",
+        message: "Only the current owner may transfer this commitment's ownership.",
+        status: 403,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    const invocation = await invokeContractMethod(
+      getContractId("commitmentCore"),
+      "transfer_ownership",
+      [params.commitmentId, new Address(params.toAddress).toScVal()],
+      "write",
+    );
+
+    // Increment successful actions counter on successful ownership transfer
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+
+    void cache.delete(CacheKey.commitment(params.commitmentId));
+    void cache.delete(CacheKey.userCommitments(params.fromAddress));
+    void cache.delete(CacheKey.userCommitments(params.toAddress));
+
+    return {
+      commitmentId: params.commitmentId,
+      fromAddress: params.fromAddress,
+      toAddress: params.toAddress,
+      txHash: invocation.txHash,
+    };
+  } catch (error) {
+    // Increment chain failures counter on blockchain operation failures
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+
+    throw normalizeBackendError(error, {
+      code: "BLOCKCHAIN_CALL_FAILED",
+      message: "Unable to transfer commitment ownership on chain.",
+      status: 502,
+      details: {
+        method: "transfer_ownership",
         commitmentId: params.commitmentId,
       },
     });

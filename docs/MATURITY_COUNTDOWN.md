@@ -5,7 +5,8 @@ The `MaturityCountdown` component calculates and displays the remaining time unt
 
 ## Usage
 ```tsx
-import { MaturityCountdown } from 'src/components/MaturityCountdown';
+import { MaturityCountdown } from '@/components/MaturityCountdown';
 
 // Pass the target timestamp in milliseconds
 <MaturityCountdown maturityTimestamp={1719681000000} />
+```

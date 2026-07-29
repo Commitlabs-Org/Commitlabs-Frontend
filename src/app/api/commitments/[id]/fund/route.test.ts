@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST, OPTIONS, GET, PUT, PATCH, DELETE } from './route';
-import { ConflictError, CsrfValidationError } from '@/lib/backend/errors';
+import { CsrfValidationError } from '@/lib/backend/errors';
 
 vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn(),
@@ -27,7 +27,6 @@ import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLim
 import { fundEscrowOnChain, getCommitmentFromChain } from '@/lib/backend/services/contracts';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { idempotencyService } from '@/lib/backend/idempotency';
-import { NextResponse } from 'next/server';
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 const mockGetRateLimitWindowSeconds = vi.mocked(getRateLimitWindowSeconds);

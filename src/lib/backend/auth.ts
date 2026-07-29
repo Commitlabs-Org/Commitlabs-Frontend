@@ -32,6 +32,39 @@ export interface SignatureVerificationResult {
 const NONCE_TTL_SECONDS = 5 * 60;
 const SESSION_TTL = 24 * 60 * 60 * 1000;
 
+/** HttpOnly cookie holding the opaque wallet-auth session token. */
+export const AUTH_COOKIE_NAME = "cl_auth_session";
+
+export const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: SESSION_TTL / 1000,
+};
+
+/**
+ * Env vars checked (in priority order) when deriving the default domain.
+ *
+ * Intentionally duplicates the key set advertised by `cors.ts`'s CORS policy
+ * so the auth challenge signs the origin the user actually sees in the URL
+ * bar. The list is intentionally NOT imported from `cors.ts` to keep the
+ * auth module independent of the request-pipeline module — if you add a new
+ * origin env var, update both lists.
+ */
+const DOMAIN_ENV_KEYS = [
+  "NEXT_PUBLIC_SITE_URL",
+  "NEXT_PUBLIC_APP_URL",
+  "SITE_URL",
+  "APP_URL",
+  "VERCEL_PROJECT_PRODUCTION_URL",
+  "VERCEL_URL",
+] as const;
+
+const DEFAULT_FALLBACK_DOMAIN = "commitlabs.org";
+
+let _cachedDefaultDomain: string | null = null;
+
 const sessionStore = new Map<string, SessionRecord>();
 
 export function generateNonce(): string {
@@ -126,7 +159,7 @@ export async function verifySignatureWithNonce(
         return { valid: false, error: "Invalid V2 message format" };
       }
 
-      if (domainMatch[1].trim() !== "commitlabs.org") {
+      if (domainMatch[1].trim() !== getDefaultDomain()) {
         return { valid: false, error: "Domain mismatch" };
       }
 
@@ -177,9 +210,79 @@ export async function verifySignatureWithNonce(
   }
 }
 
+/**
+ * Resolve the canonical domain used in the anti-phishing `Domain:` field of
+ * the V2 challenge message.
+ *
+ * Resolution order (first hit wins):
+ *   1. NEXT_PUBLIC_SITE_URL
+ *   2. NEXT_PUBLIC_APP_URL
+ *   3. SITE_URL
+ *   4. APP_URL
+ *   5. VERCEL_PROJECT_PRODUCTION_URL
+ *   6. VERCEL_URL
+ *   ... fallback to "commitlabs.org".
+ *
+ * Values are parsed with `new URL()` so the result is always a well-formed
+ * hostname (protocol, port, path, query, and basic shape are stripped). If a
+ * value does not parse, we silently fall through to the next entry instead of
+ * throwing — this keeps the helper safe even if one env var is misconfigured.
+ *
+ * The result is cached after the first successful call so request hot paths
+ * don't pay the `URL` parsing cost on every challenge. Tests can use
+ * `_resetDomainCache()` to force a re-resolve against stubbed env values.
+ */
+export function getDefaultDomain(): string {
+  if (_cachedDefaultDomain !== null) {
+    return _cachedDefaultDomain;
+  }
+
+  for (const key of DOMAIN_ENV_KEYS) {
+    const raw = process.env[key];
+    if (!raw) continue;
+
+    const candidate = raw.trim();
+    if (!candidate) continue;
+
+    try {
+      const withProtocol =
+        candidate.startsWith("http://") || candidate.startsWith("https://")
+          ? candidate
+          : `https://${candidate}`;
+      const hostname = new URL(withProtocol).hostname;
+      // RFC 3986 reg-name allows sub-delims like `!`, so the WHATWG URL
+      // parser happily accepts strings like `"!!!"` as a hostname. For an
+      // anti-phishing `Domain:` field that's worthless. Allow only DNS-label
+      // characters OR a properly-shaped IPv6 literal in brackets.
+      //
+      // Note: `_` (RFC 2181 underscore labels such as `_dmarc.example.com`)
+      // is intentionally excluded — production public hostnames never need
+      // it and accepting it only widens the attack surface for an
+      // anti-phishing field.
+      if (
+        hostname &&
+        /^([a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])$/.test(hostname)
+      ) {
+        _cachedDefaultDomain = hostname;
+        return _cachedDefaultDomain;
+      }
+    } catch {
+      // Invalid URL — try the next env var.
+    }
+  }
+
+  _cachedDefaultDomain = DEFAULT_FALLBACK_DOMAIN;
+  return _cachedDefaultDomain;
+}
+
+/** Clears the cached default domain. Used by tests to pick up stubbed env. */
+export function _resetDomainCache(): void {
+  _cachedDefaultDomain = null;
+}
+
 export function generateChallengeMessage(
   nonce: string,
-  domain = "commitlabs.org",
+  domain: string = getDefaultDomain(),
 ): string {
   const issuedAt = new Date().toISOString();
   const expiresAt = new Date(Date.now() + NONCE_TTL_SECONDS * 1000).toISOString();
@@ -207,6 +310,7 @@ export function verifySessionToken(token: string): {
   valid: boolean;
   address?: string;
   csrfToken?: string;
+  createdAt?: Date;
   error?: string;
 } {
   const record = sessionStore.get(token);
@@ -224,6 +328,7 @@ export function verifySessionToken(token: string): {
     valid: true,
     address: record.address,
     csrfToken: record.csrfToken,
+    createdAt: record.createdAt,
   };
 }
 

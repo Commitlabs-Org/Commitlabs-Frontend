@@ -1,25 +1,50 @@
-import type { MarketplaceCardProps } from './MarketplaceCard';
-import { MarketplaceCard } from './MarketplaceCard';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { usePaginatedListings } from '@/hooks/usePaginatedListings';
-import { useEffect, useRef } from 'react';
+import { memo, useMemo, useEffect, useRef } from 'react'
+import type { MarketplaceCardProps } from './MarketplaceCard'
+import { MarketplaceCard } from './MarketplaceCard'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { usePaginatedListings } from '@/hooks/usePaginatedListings'
 
 export interface MarketplaceGridProps {
   /** Optional pre‑loaded items – if omitted the component fetches via the hook */
-  items?: MarketplaceCardProps[];
-  isComparePinned?: (id: string) => boolean;
-  isCompareFull?: boolean;
-  onCompareToggle?: (listing: MarketplaceCardProps) => void;
+  items?: MarketplaceCardProps[]
+  isComparePinned?: (id: string) => boolean
+  isCompareFull?: boolean
+  onCompareToggle?: (listing: MarketplaceCardProps) => void
+  onView?: (id: string) => void
   /** Additional query parameters for filtering/sorting */
-  queryParams?: Record<string, any>;
+  queryParams?: Record<string, any>
+  /** Optional comparator applied before rendering. Stabilize with useCallback. */
+  sortFn?: (a: MarketplaceCardProps, b: MarketplaceCardProps) => number
+  /** Optional predicate applied before rendering. Stabilize with useCallback. */
+  filterFn?: (item: MarketplaceCardProps) => boolean
 }
 
-export function MarketplaceGrid({
+// VIRTUALIZATION THRESHOLD — engage CSS content-visibility windowing only
+// when the list is large enough to justify the overhead.
+const VIRTUALIZE_THRESHOLD = 50
+
+/**
+ * MarketplaceGrid
+ *
+ * Performance notes:
+ *   - `filterFn` / `sortFn` props are applied via `useMemo` so the derived
+ *     list is only recomputed when `items`, `filterFn`, or `sortFn` change.
+ *   - `MarketplaceCard` is already wrapped in `React.memo`, so only cards
+ *     with changed props are re-rendered during filter/sort updates.
+ *   - For lists larger than VIRTUALIZE_THRESHOLD the grid applies CSS
+ *     `content-visibility: auto` per card — a zero-dependency windowing
+ *     approach that lets the browser skip layout/paint for off-screen items
+ *     while preserving DOM presence for accessibility and SSR compatibility.
+ */
+export const MarketplaceGrid = memo(function MarketplaceGrid({
   items,
   isComparePinned,
   isCompareFull = false,
   onCompareToggle,
+  onView,
   queryParams = {},
+  sortFn,
+  filterFn,
 }: MarketplaceGridProps) {
   // Use the pagination hook when no items are supplied.
   // We disable the hook when pre-loaded items are supplied.
@@ -28,7 +53,19 @@ export function MarketplaceGrid({
     9,
     !!items
   );
-  const displayedItems = items ?? listings;
+  const rawItems = items ?? listings;
+
+  // Memoize derived list — only recomputes when items / predicates change.
+  const displayedItems = useMemo(() => {
+    let result = rawItems
+    if (filterFn) {
+      result = result.filter(filterFn)
+    }
+    if (sortFn) {
+      result = [...result].sort(sortFn)
+    }
+    return result
+  }, [rawItems, filterFn, sortFn])
 
   // IntersectionObserver for infinite scroll (sentinel element)
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -57,18 +94,27 @@ export function MarketplaceGrid({
     );
   }
 
+  const isLargeList = displayedItems.length > VIRTUALIZE_THRESHOLD
+
   return (
     <section className="mt-6" aria-label="Marketplace listings">
       <ul className="list-none p-0 m-0 grid grid-cols-3 gap-6 max-[1024px]:grid-cols-2 max-[720px]:grid-cols-1">
         {displayedItems.map((item) => {
-          const compareSelected = isComparePinned?.(item.id) ?? false;
+          const compareSelected = isComparePinned?.(item.id) ?? false
           return (
-            <li key={item.id} className="min-h-[280px]">
+            <li
+              key={item.id}
+              className="min-h-[280px]"
+              // content-visibility: auto defers rendering of off-screen list
+              // items; contain-intrinsic-size prevents scroll-bar jank.
+              style={isLargeList ? { contentVisibility: 'auto', containIntrinsicSize: '0 320px' } : undefined}
+            >
               <MarketplaceCard
                 {...item}
                 compareSelected={compareSelected}
                 compareDisabled={isCompareFull && !compareSelected}
                 onCompareToggle={onCompareToggle ? () => onCompareToggle(item) : undefined}
+                onView={onView}
               />
             </li>
           );
@@ -95,5 +141,5 @@ export function MarketplaceGrid({
         {!items && <div ref={sentinelRef} className="hidden" />}
       </ul>
     </section>
-  );
-}
+  )
+})

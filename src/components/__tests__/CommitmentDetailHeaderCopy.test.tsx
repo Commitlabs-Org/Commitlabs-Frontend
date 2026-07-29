@@ -80,6 +80,30 @@ describe('CommitmentDetailHeader copy and explorer actions', () => {
     expect(link.rel).toContain('noreferrer');
   });
 
+  it('defaults to the public network when explorerNetwork is not provided', () => {
+    renderHeader();
+
+    const link = screen.getByRole('link', {
+      name: 'Open commitment in Stellar explorer',
+    }) as HTMLAnchorElement;
+
+    expect(link.href).toBe(
+      `https://stellar.expert/explorer/public/contract/${validContractId}`,
+    );
+  });
+
+  it('builds a public-network explorer link when explorerNetwork is "public"', () => {
+    renderHeader({ explorerNetwork: 'public' });
+
+    const link = screen.getByRole('link', {
+      name: 'Open commitment in Stellar explorer',
+    }) as HTMLAnchorElement;
+
+    expect(link.href).toBe(
+      `https://stellar.expert/explorer/public/contract/${validContractId}`,
+    );
+  });
+
   it('does not render an explorer link for an invalid commitment id', () => {
     renderHeader({ commitmentId: 'CMT-001' });
 

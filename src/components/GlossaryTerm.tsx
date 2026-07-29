@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { glossary } from '../lib/glossary';

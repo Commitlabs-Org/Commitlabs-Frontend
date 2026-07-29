@@ -10,7 +10,7 @@ import {
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import {
   getUserCommitmentsFromChain,
-  type Commitment,
+  type ChainCommitment,
 } from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 
@@ -31,7 +31,7 @@ const ALL_CSV_HEADERS = [
 type CsvHeader = (typeof ALL_CSV_HEADERS)[number];
 
 /** Map each header label to the commitment field that supplies its value. */
-const HEADER_TO_FIELD: Record<CsvHeader, (c: Commitment) => unknown> = {
+const HEADER_TO_FIELD: Record<CsvHeader, (c: ChainCommitment) => unknown> = {
   'Commitment ID': (c) => c.id,
   'Owner': (c) => c.ownerAddress,
   'Asset': (c) => c.asset,
@@ -75,7 +75,7 @@ function normalizeAddress(address: string): string {
  * between iterations.
  */
 function* commitmentsToRows(
-  commitments: Iterable<Commitment>,
+  commitments: Iterable<ChainCommitment>,
   headers: readonly CsvHeader[],
 ): Generator<CsvRow> {
   for (const commitment of commitments) {
@@ -96,6 +96,64 @@ function resolveRequestedHeaders(columnsParam: string | null): CsvHeader[] {
     (ALL_CSV_HEADERS as readonly string[]).includes(c),
   );
   return valid.length > 0 ? valid : [...ALL_CSV_HEADERS];
+}
+
+const SUPPORTED_EXPORT_FORMATS = ['csv'] as const;
+type ExportFormat = (typeof SUPPORTED_EXPORT_FORMATS)[number];
+
+/**
+ * Only CSV is implemented server-side today. Any other value (e.g. the
+ * "JSON soon" option surfaced but disabled in the UI) is rejected rather
+ * than silently downgraded to CSV.
+ */
+function resolveExportFormat(formatParam: string | null): ExportFormat {
+  if (!formatParam || formatParam === 'csv') return 'csv';
+
+  throw new BadRequestError(`Unsupported export format: ${formatParam}. Only "csv" is available.`);
+}
+
+const DATE_RANGES = ['all', '7d', '30d', 'year'] as const;
+type DateRange = (typeof DATE_RANGES)[number];
+
+function resolveDateRange(dateRangeParam: string | null): DateRange {
+  if (!dateRangeParam) return 'all';
+  return (DATE_RANGES as readonly string[]).includes(dateRangeParam)
+    ? (dateRangeParam as DateRange)
+    : 'all';
+}
+
+/** Cutoff instant a commitment's `createdAt` must be on-or-after to match `range`. */
+function dateRangeCutoff(range: DateRange, now: Date): Date | null {
+  switch (range) {
+    case '7d':
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case '30d':
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case 'year':
+      return new Date(now.getFullYear(), 0, 1);
+    case 'all':
+      return null;
+  }
+}
+
+/**
+ * Filters commitments to those created on-or-after the range's cutoff.
+ * Commitments with a missing/unparseable `createdAt` are excluded from any
+ * range narrower than "all", since their membership can't be confirmed.
+ */
+function filterByDateRange(
+  commitments: ChainCommitment[],
+  range: DateRange,
+  now: Date = new Date(),
+): ChainCommitment[] {
+  const cutoff = dateRangeCutoff(range, now);
+  if (!cutoff) return commitments;
+
+  return commitments.filter((c) => {
+    if (!c.createdAt) return false;
+    const createdAt = new Date(c.createdAt);
+    return !Number.isNaN(createdAt.getTime()) && createdAt >= cutoff;
+  });
 }
 
 export const GET = withApiHandler(async (req: NextRequest) => {
@@ -124,12 +182,14 @@ export const GET = withApiHandler(async (req: NextRequest) => {
   }
 
   const headers = resolveRequestedHeaders(searchParams.get('columns'));
+  resolveExportFormat(searchParams.get('format'));
+  const dateRange = resolveDateRange(searchParams.get('dateRange'));
 
   // Fetch happens before streaming starts so any failure here is caught by
   // `withApiHandler` and surfaced as a JSON error response, not a truncated
   // CSV. When `getUserCommitmentsFromChain` becomes streamable, swap the
   // generator argument for the async iterable directly.
-  const commitments = await getUserCommitmentsFromChain(ownerAddress);
+  const commitments = filterByDateRange(await getUserCommitmentsFromChain(ownerAddress), dateRange);
   const stream = createCsvStream(headers, commitmentsToRows(commitments, headers));
 
   return new NextResponse(stream, {

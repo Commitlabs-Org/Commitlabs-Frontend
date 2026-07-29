@@ -18,6 +18,8 @@ import { openExplorerUrl } from '@/utils/explorerLinks';
 import { computeCommitmentExposure } from '@/utils/exposure';
 import { CommitmentStatusProvider, useCommitmentStatus } from '@/context/CommitmentStatusContext';
 import { useShareLink } from '@/hooks/useShareLink';
+import { useToast } from '@/components/toast/ToastProvider';
+import { getAppExplorerNetwork } from './explorerNetwork';
 
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
@@ -152,7 +154,6 @@ export default function CommitmentDetailPage({
     const maxLossLabel = `${commitment.maxLoss}%`
     const commitmentTypeLabel = commitment.type
     const earlyExitPenaltyLabel = `${commitment.earlyExitPenaltyPercent ?? 3}%`
-    const { canEarlyExit } = commitment
 
     const exposure = computeCommitmentExposure({
         valueHistory: MOCK_VALUE_HISTORY_DATA,
@@ -165,21 +166,22 @@ export default function CommitmentDetailPage({
     const [disputeModalOpen, setDisputeModalOpen] = useState(false);
 
     const attestationsRef = useRef<HTMLDivElement>(null);
+    const { success: showSuccess, error: showError } = useToast();
 
     const handleCopy = async (text: string, label: string) => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
                 await navigator.clipboard.writeText(text);
-                alert(`${label} Copied!`); 
-            } catch (err) {
-                console.error('Failed to copy!', err);
+                showSuccess({ title: `${label} Copied`, description: `${label} has been copied to your clipboard.` });
+            } catch (_err) {
+                showError({ title: 'Copy Failed', description: 'Unable to copy to clipboard. Please try again.' });
             }
         }
     };
 
-    const handleViewDetails = () => console.log('View Details clicked');
+    const handleViewDetails = () => showSuccess({ title: 'Coming Soon', description: 'NFT detail view is not yet available.' });
     const handleViewExplorer = () => openExplorerUrl('contract', MOCK_NFT_DATA.contractAddress, 'testnet');
-    const handleTransfer = () => console.log('Transfer clicked');
+    const handleTransfer = () => showSuccess({ title: 'Coming Soon', description: 'NFT transfer is not yet available.' });
 
     const handleViewAttestations = useCallback(() => {
         attestationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -209,8 +211,8 @@ export default function CommitmentDetailPage({
     }, []);
 
     const handleSettle = useCallback(() => {
-        console.log('Settle clicked for commitment', commitment.id);
-    }, [commitment.id]);
+        showSuccess({ title: 'Coming Soon', description: 'Settlement is not yet available.' });
+    }, [showSuccess]);
 
     return (
         <CommitmentStatusProvider commitmentId={commitment.id}>
@@ -353,6 +355,7 @@ function CommitmentDetailHeaderWithStatus({
             statusVariant={statusVariant}
             onBack={() => router.push('/commitments')}
             onShare={shareLink}
+            explorerNetwork={getAppExplorerNetwork()}
         />
     );
 }

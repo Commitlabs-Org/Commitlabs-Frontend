@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, {
   useCallback,
@@ -12,7 +12,6 @@ import Image from 'next/image'
 import { AlertCircle, ArrowLeft, Loader2, Search } from 'lucide-react'
 import styles from './MarketplaceHeader.module.css';
 import { apiGet, apiFetch } from '@/lib/apiClient';
-import { MarketStatsBanner } from './MarketStatsBanner';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,6 +28,12 @@ export interface CommitmentSearchResult {
   currentValue: string
   createdAt: string
   expiresAt: string
+}
+
+interface MarketplaceStats {
+  activeListings: number
+  averageYield: number
+  medianPrice: number
 }
 
 const SORT_OPTIONS = [
@@ -62,7 +67,7 @@ export interface MarketplaceHeaderProps {
   onResultSelect?: (item: CommitmentSearchResult) => void
 }
 
-const DEFAULT_PLACEHOLDER = 'Search commitmentsâ€¦'
+const DEFAULT_PLACEHOLDER = 'Search commitments…'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -76,10 +81,19 @@ export function MarketplaceHeader({
   createHref = '/create',
   searchQuery: controlledQuery,
 }: MarketplaceHeaderProps) {
-  // ── Sort ───────────────────────────────────────────────────────────────────
+  const [stats, setStats] = useState<MarketplaceStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [sortValue, setSortValue] = useState<SortValue>('popular');
+  const [query, setQuery] = useState(controlledQuery ?? '');
+  ownerAddress,
+  onResultSelect,
+}: MarketplaceHeaderProps) {
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const [stats, setStats] = useState<MarketplaceStats | null>(null)
+  const [statsError, setStatsError] = useState<string | null>(null)
   const [sortValue, setSortValue] = useState<SortValue>('popular')
 
-  // â”€â”€ Typeahead â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Typeahead ──────────────────────────────────────────────────────────────
   const [query, setQuery] = useState(controlledQuery ?? '')
   const [results, setResults] = useState<CommitmentSearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -91,6 +105,23 @@ export function MarketplaceHeader({
   const inputRef = useRef<HTMLInputElement>(null)
   const uid = useId()
   const listboxId = `${uid}-listbox`
+
+  // ── Fetch stats on mount ───────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+    const fetchStats = async () => {
+      try {
+        const data = await apiGet<MarketplaceStats>('/api/marketplace/stats');
+        if (!cancelled) setStats(data);
+      } catch (e) {
+        if (!cancelled) setStatsError((e as Error).message)
+      }
+    }
+    fetchStats()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // ── Debounced typeahead search ─────────────────────────────────────────────
   useEffect(() => {
@@ -116,7 +147,8 @@ export function MarketplaceHeader({
 
       const params = new URLSearchParams({
         ownerAddress: ownerAddress ?? 'marketplace',
-        asset: trimmed,
+        commitmentId: trimmed,
+        pageSize: '5',
       })
 
       apiFetch<{ data?: CommitmentSearchResult[] }>(`/api/commitments/search?${params}`, { signal: controller.signal })
@@ -140,14 +172,14 @@ export function MarketplaceHeader({
     return () => clearTimeout(timerId)
   }, [query, searchDebounceMs, ownerAddress, onSearchChange])
 
-  // â”€â”€ Keyboard navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Keyboard navigation ────────────────────────────────────────────────────
   const handleSelect = useCallback(
     (item: CommitmentSearchResult) => {
-      setQuery(item.asset)
+      setQuery(item.commitmentId)
       setIsDropdownOpen(false)
       setActiveIndex(-1)
       onResultSelect?.(item)
-      onSearchChange?.(item.asset)
+      onSearchChange?.(item.commitmentId)
     },
     [onResultSelect, onSearchChange],
   )
@@ -192,7 +224,7 @@ export function MarketplaceHeader({
   const activeDescendant =
     activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
 
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <header className={styles.root} role="banner">
       <div className={styles.inner}>
@@ -213,7 +245,7 @@ export function MarketplaceHeader({
 
         {/* Right: controls */}
         <div className={styles.controlsBlock}>
-          {/* â”€â”€ Typeahead combobox â”€â”€ */}
+          {/* ── Typeahead combobox ── */}
           <div className={styles.searchWrap}>
             <label htmlFor="marketplace-search" className={styles.srOnly}>
               Search commitments
@@ -250,7 +282,7 @@ export function MarketplaceHeader({
               </span>
             )}
 
-            {/* Results listbox â€“ always rendered so aria-controls is valid */}
+            {/* Results listbox – always rendered so aria-controls is valid */}
             <ul
               id={listboxId}
               role="listbox"
@@ -277,9 +309,9 @@ export function MarketplaceHeader({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSelect(item)}
                   >
-                    <span className={styles.dropdownItemAsset}>{item.asset}</span>
+                    <span className={styles.dropdownItemAsset}>{item.commitmentId}</span>
                     <span className={styles.dropdownItemMeta}>
-                      {item.riskType} Â· {item.amount}
+                      {item.asset} · {item.riskType} · {item.amount}
                     </span>
                   </li>
                 ))
@@ -296,9 +328,18 @@ export function MarketplaceHeader({
           </div>
 
           {/* ── Stats summary ── */}
-          <MarketStatsBanner />
+          {stats && (
+            <div className={styles.statsSummary} aria-live="polite">
+              <span className={styles.statItem}>Listings: {stats.activeListings}</span>
+              <span className={styles.statItem}>Avg Yield: {stats.averageYield}%</span>
+              <span className={styles.statItem}>Median Price: ${stats.medianPrice}</span>
+            </div>
+          )}
+          {statsError && (
+            <div className={styles.error}>Error: {statsError}</div>
+          )}
 
-          {/* â”€â”€ Sort control â”€â”€ */}
+          {/* ── Sort control ── */}
           <div className={styles.sortControl}>
             <label htmlFor="marketplace-sort" className={styles.srOnly}>
               Sort marketplace
@@ -318,7 +359,7 @@ export function MarketplaceHeader({
             </select>
           </div>
 
-          {/* â”€â”€ Create button â”€â”€ */}
+          {/* ── Create button ── */}
           <Link
             href={createHref}
             className={styles.createButton}

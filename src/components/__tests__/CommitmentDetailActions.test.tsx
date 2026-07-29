@@ -9,20 +9,25 @@ import { CommitmentDetailActions } from '@/components/CommitmentDetailActions';
 
 const fetchMock = vi.fn();
 
-function renderActions(
-  overrides: Partial<{
-    canEarlyExit: boolean;
-    onEarlyExit: () => void;
-    onViewAttestations: () => void;
-    onExportData: () => void;
-    onReportIssue: () => void;
-    earlyExitDisabledReason: string;
-    commitmentId: string;
-    onSettle: () => void;
-    settleDisabledReason: string;
-  }> = {},
-) {
-  const props = {
+interface ActionsOverrides {
+  canEarlyExit?: boolean;
+  onEarlyExit?: () => void;
+  onViewAttestations?: () => void;
+  onExportData?: () => void;
+  onReportIssue?: () => void;
+  earlyExitDisabledReason?: string;
+  // Explicit `| undefined` lets tests opt a key out of the merged props entirely
+  // (see the filtering below), exercising the same "omit rather than pass
+  // undefined" pattern CommitmentDetailActions itself uses under
+  // exactOptionalPropertyTypes.
+  commitmentId?: string | undefined;
+  onSettle?: (() => void) | undefined;
+  settleDisabledReason?: string | undefined;
+  previewRefreshTrigger?: string | number | undefined;
+}
+
+function renderActions(overrides: ActionsOverrides = {}) {
+  const merged = {
     canEarlyExit: true,
     onEarlyExit: vi.fn(),
     onViewAttestations: vi.fn(),
@@ -34,6 +39,12 @@ function renderActions(
     settleDisabledReason: 'Settlement is unavailable until maturity',
     ...overrides,
   };
+
+  // Omit keys explicitly overridden to `undefined` instead of passing them
+  // through, matching how a real caller would build props.
+  const props = Object.fromEntries(
+    Object.entries(merged).filter(([, value]) => value !== undefined),
+  ) as unknown as React.ComponentProps<typeof CommitmentDetailActions>;
 
   const view = render(<CommitmentDetailActions {...props} />);
   return { props, ...view };
@@ -201,6 +212,58 @@ describe('CommitmentDetailActions', () => {
     buttons.forEach((button) => {
       expect(button.className).toContain('focus-visible:ring-2');
       expect(button.className).toContain('focus-visible:ring-[#0FF0FC]');
+    });
+  });
+
+  describe('optional settlement checklist props', () => {
+    it('renders the settlement checklist with only commitmentId, omitting onSettle/settleDisabledReason/previewRefreshTrigger entirely', async () => {
+      render(
+        <CommitmentDetailActions
+          canEarlyExit={true}
+          onEarlyExit={vi.fn()}
+          onViewAttestations={vi.fn()}
+          onExportData={vi.fn()}
+          onReportIssue={vi.fn()}
+          commitmentId="1"
+        />,
+      );
+
+      expect(await screen.findByText('Settlement preview')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Settle' })).toBeNull();
+    });
+
+    it('does not render a Settle button when onSettle is not provided', async () => {
+      renderActions({ onSettle: undefined });
+
+      expect(await screen.findByText('Settlement preview')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Settle' })).toBeNull();
+    });
+
+    it('renders a Settle button when onSettle is provided', async () => {
+      renderActions({ onSettle: vi.fn() });
+
+      expect(await screen.findByRole('button', { name: 'Settle' })).toBeTruthy();
+    });
+
+    it('does not render a disabled-reason note when settleDisabledReason is not provided', async () => {
+      renderActions({ settleDisabledReason: undefined });
+
+      expect(await screen.findByText('Settlement preview')).toBeTruthy();
+      expect(screen.queryByRole('note')).toBeNull();
+    });
+
+    it('renders the disabled-reason note when settleDisabledReason is provided', async () => {
+      renderActions({ settleDisabledReason: 'Settlement is unavailable until maturity' });
+
+      expect(await screen.findByRole('note')).toHaveTextContent(
+        'Settlement is unavailable until maturity',
+      );
+    });
+
+    it('does not render the settlement checklist section when commitmentId is not provided', () => {
+      renderActions({ commitmentId: undefined });
+
+      expect(screen.queryByText('Settlement preview')).toBeNull();
     });
   });
 });

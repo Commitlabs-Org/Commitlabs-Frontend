@@ -126,4 +126,16 @@ describe('classifyAtRiskCommitments', () => {
     expect(soonResult.riskCategories[0]).toBe('maturing_soon');
     expect(actionResult.riskCategories[0]).toBe('action_required');
   });
+
+  it('does not duplicate action_required when commitment is both Violated and past 80% drawdown threshold', () => {
+    const commitment: Commitment = {
+      ...base,
+      status: 'Violated',
+      currentDrawdown: '85',
+      maxLoss: '100',
+    };
+    const [result] = classifyAtRiskCommitments([commitment], null);
+    expect(result.riskCategories).toHaveLength(1);
+    expect(result.riskCategories[0]).toBe('action_required');
+  });
 });

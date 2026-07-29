@@ -185,14 +185,14 @@ This project includes a reusable helper to attach standard security headers to H
 1. Import the helper:
 
    ```typescript
-   import { attachSecurityHeaders } from "@/utils/response";
+   import { attachSecurityHeaders } from "@/lib/backend/apiResponse";
    ```
 
 2. Wrap your response object before returning it in a route handler:
 
    ```typescript
    import { NextResponse } from "next/server";
-   import { attachSecurityHeaders } from "@/utils/response";
+   import { attachSecurityHeaders } from "@/lib/backend/apiResponse";
 
    export async function GET() {
      const response = NextResponse.json({ data: "secure content" });
@@ -209,7 +209,7 @@ This project includes a reusable helper to attach standard security headers to H
   ```
 
 - **Disabling/Modifying Headers:**
-  The `attachSecurityHeaders` function returns the modified `Response` object. You can further modify headers on the returned object if needed, or update the `src/utils/response.ts` file to change default behaviors globally.
+  The `attachSecurityHeaders` function returns the modified `Response` object. You can further modify headers on the returned object if needed, or update the `src/lib/backend/apiResponse.ts` file to change default behaviors globally.
 
 ## 📡 API Reference
 
@@ -223,6 +223,8 @@ This document includes available routes, required parameters, and example reques
 ## 🤝 Contributing
 
 We welcome contributions to CommitLabs! Before you start, please read our [Developer Guide](./DEVELOPER_GUIDE.md) and check out the **[Documentation Index (docs/README.md)](docs/README.md)** for details on all available documentation, coding standards, naming conventions, and testing guidelines.
+
+One-off maintenance helpers that write backend route files are intentionally guarded. The script at [scripts/patch_backend_api.py](scripts/patch_backend_api.py) is meant for targeted migration or recovery work only; it now defaults to a dry run and requires the --force flag before it overwrites any file.
 
 To standardize submissions and streamline reviews, we use structured templates:
 - **Bug Reports**: Use the [Bug Report Form](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues/new?assignees=&labels=type-bug&projects=&template=bug_report.yml) to report issues.
@@ -263,3 +265,4 @@ We welcome contributions! Please review our community guidelines before getting 
 3. Make and test your updates following the project guidelines.
 4. Commit and push your changes to your fork.
 5. Open a Pull Request with a clear description.
+

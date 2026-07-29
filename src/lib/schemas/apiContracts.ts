@@ -8,6 +8,8 @@ export const ErrorBodySchema = z.object({
     code: z.string().min(1),
     message: z.string().min(1),
     details: z.unknown().optional(),
+    retryAfterSeconds: z.number().optional(),
+    correlationId: z.string().optional(),
   }),
 });
 
@@ -148,6 +150,35 @@ export const AttestationPostResponseSchema = OkBodySchema(
     attestation: AttestationSummarySchema,
     txReference: z.string().nullable(),
   }),
+);
+
+export const ProtocolConstantsSchema = z.object({
+  protocolVersion: z.string().min(1),
+  network: z.string().min(1),
+  fees: z.object({
+    networkBaseFeeStroops: z.number().int().nonnegative(),
+    platformFeePercent: z.number().finite(),
+  }),
+  penalties: z.array(
+    z.object({
+      type: z.string().min(1),
+      earlyExitPenaltyPercent: z.number().finite(),
+      description: z.string().min(1),
+    }),
+  ),
+  commitmentLimits: z.object({
+    minAmountXlm: z.number().finite(),
+    maxAmountXlm: z.number().finite(),
+    minDurationDays: z.number().int().nonnegative(),
+    maxDurationDays: z.number().int().nonnegative(),
+    maxLossPercentCeiling: z.number().finite(),
+    earlyExitGracePeriodDays: z.number().int().nonnegative(),
+  }),
+  cachedAt: z.string().datetime(),
+});
+
+export const ProtocolConstantsResponseSchema = OkBodySchema(
+  ProtocolConstantsSchema,
 );
 
 // ─── Early-exit request validation ──────────────────────────────────────────

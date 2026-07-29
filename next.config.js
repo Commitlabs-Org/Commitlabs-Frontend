@@ -7,10 +7,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
@@ -25,10 +25,13 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
+      { protocol: 'https', hostname: '**.ipfs.io' },
+      { protocol: 'https', hostname: '**.ipfs.dweb.link' },
+      { protocol: 'https', hostname: '**.cf-ipfs.com' },
+      { protocol: 'https', hostname: '**.nftstorage.link' },
+      { protocol: 'https', hostname: 'arweave.net' },
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: '**.cloudfront.net' },
     ],
   },
   async headers() {

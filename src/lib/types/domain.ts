@@ -3,14 +3,32 @@
  * Used across backend API and frontend.
  */
 
+import { CommitmentStatus as SharedCommitmentStatus, CommitmentType as SharedCommitmentType } from './shared';
+
+/**
+ * Legacy domain types - maintained for backward compatibility.
+ * New code should use the shared enums from './shared'.
+ * @deprecated Use CommitmentStatus enum from './shared' instead.
+ */
 export type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
+/**
+ * Legacy domain types - maintained for backward compatibility.
+ * New code should use the shared enums from './shared'.
+ * @deprecated Use CommitmentStatus enum from './shared' instead.
+ */
 export type CommitmentStatus = 'Active' | 'Settled' | 'Violated' | 'Early Exit';
+
+/**
+ * Re-export shared enums for convenience
+ */
+export { SharedCommitmentStatus, SharedCommitmentType };
 
 export interface Commitment {
   id: string;
   type: CommitmentType;
   status: CommitmentStatus;
+  ownerAddress?: string;
   asset: string;
   amount: string;
   currentValue?: string;
@@ -26,11 +44,26 @@ export interface Commitment {
   expiresAt?: string;
 }
 
+export type TrendDirection = 'up' | 'down' | 'neutral';
+
+export interface StatTrend {
+  value: number;
+  direction: TrendDirection;
+  period?: string;
+}
+
 export interface CommitmentStats {
   totalActive: number;
   totalCommittedValue: string;
   avgComplianceScore: number;
   totalFeesGenerated: string;
+  /** Optional per-metric trend indicators */
+  trends?: {
+    totalActive?: StatTrend;
+    totalCommittedValue?: StatTrend;
+    avgComplianceScore?: StatTrend;
+    totalFeesGenerated?: StatTrend;
+  };
 }
 
 export const ATTESTATION_TYPES = [
@@ -50,8 +83,10 @@ export interface Attestation {
   id: string;
   commitmentId: string;
   kind?: string;
+  status?: string;
   verdict?: AttestationVerdict;
   observedAt: string;
+  timestamp?: string;
   title?: string;
   description?: string;
   txHash?: string;

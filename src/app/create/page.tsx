@@ -14,6 +14,8 @@ import ResumeDraftPrompt from "@/components/create/ResumeDraftPrompt";
 import { useGuidedTour } from "@/hooks/useGuidedTour";
 import { GuidedTour } from "@/components/onboarding/GuidedTour";
 import { HelpCircle } from "lucide-react";
+import { usePrefillFromCommitment } from "@/hooks/usePrefillFromCommitment";
+import { type CommitmentPreset } from "@/components/create/commitmentPresets";
 
 type CommitmentType = "safe" | "balanced" | "aggressive";
 
@@ -31,6 +33,7 @@ export default function CreateCommitment() {
   const router = useRouter();
   const { address: ownerAddress } = useWallet();
   const { draft, saveDraft, clearDraft } = useDraftPersistence();
+  const prefill = usePrefillFromCommitment();
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [step, setStep] = useState(1);
   const [initialFocusField, setInitialFocusField] = useState<string | null>(null);
@@ -76,6 +79,34 @@ export default function CreateCommitment() {
       setShowResumePrompt(true);
     }
   }, [draft]);
+
+  // When a source commitment is loaded via ?sourceId=, prefill the wizard fields
+  // and skip straight to step 2 so the user can review / adjust the copied parameters.
+  // Identity-bound fields (id, ownership, on-chain state) are NOT copied — only
+  // configurable parameters that the user is free to edit.
+  useEffect(() => {
+    if (!prefill) return;
+    setSelectedType(prefill.commitmentType);
+    setCommitmentType(prefill.commitmentType);
+    setAmount(prefill.amount);
+    setAsset(prefill.asset);
+    setDurationDays(prefill.durationDays);
+    setMaxLossPercent(prefill.maxLossPercent);
+    // Skip type-selection step — type is already chosen from the source.
+    setStep(2);
+    setShowResumePrompt(false);
+  }, [prefill]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("startTour") === "true") {
+        startTour();
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, [startTour]);
 
   const handleResumeDraft = () => {
     if (draft) {
@@ -180,6 +211,13 @@ export default function CreateCommitment() {
     setCommitmentType(type);
   };
 
+  const handleApplyPreset = (preset: CommitmentPreset) => {
+    setSelectedType(preset.type);
+    setCommitmentType(preset.type);
+    setDurationDays(preset.durationDays);
+    setMaxLossPercent(preset.maxLossPercent);
+  };
+
   const handleNextStep = () => {
     if (step < 3) {
       setStep(step + 1);
@@ -202,6 +240,9 @@ export default function CreateCommitment() {
       setIsSubmitting(false);
       const newCommitmentId = generateCommitmentId();
       setCommitmentId(newCommitmentId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("commitlabs:created-commitment", "true");
+      }
       setShowSuccessModal(true);
       clearDraft();
     }, 2000);
@@ -256,6 +297,18 @@ export default function CreateCommitment() {
   return (
     <AppShellLayout>
       <main id="main-content" className="flex flex-col flex-1 relative">
+        {/* Duplicate-mode banner: shown when the wizard was opened from an existing commitment */}
+        {prefill && (
+          <div
+            role="status"
+            aria-live="polite"
+            data-testid="duplicate-prefill-banner"
+            className="mx-auto mb-4 max-w-2xl rounded-xl border border-[rgba(0,212,255,0.3)] bg-[rgba(0,212,255,0.05)] px-5 py-3 text-sm text-[#0ff0fc]"
+          >
+            Duplicating from an existing commitment — all fields are pre-filled and fully editable.
+          </div>
+        )}
+
         {showResumePrompt && draft && (
           <ResumeDraftPrompt
             draft={draft}
@@ -270,6 +323,7 @@ export default function CreateCommitment() {
             onSelectType={handleSelectType}
             onNext={handleNextStep}
             onBack={handleBack}
+            onApplyPreset={handleApplyPreset}
             {...(initialFocusField ? { initialFocusField } : {})}
           />
         )}

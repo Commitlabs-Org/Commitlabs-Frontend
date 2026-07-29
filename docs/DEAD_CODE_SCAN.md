@@ -1,10 +1,11 @@
 # Dead Code Scan (knip)
 
 The project uses [knip](https://knip.dev) to find **unused files, exports, and
-dependencies**. The tree has accumulated orphaned and duplicated modules (e.g. a
-stray `src/components/MarketplaceHeader.tsx` alongside the used
-`src/components/MarketplaceHeader/MarketplaceHeader.tsx`, and a duplicate
-`MyCommitments` variant); this scan makes that visible so it can be removed
+dependencies**. The tree has accumulated orphaned and duplicated modules (e.g.
+the misspelled `src/components/dashboard/useHealthMetrixRange.ts` carrying the
+real implementation behind its correctly named `useHealthMetricsRange.ts`
+re-export shim, and orphaned components like `src/components/CommitmentForm.tsx`
+with no importers); this scan makes that visible so it can be removed
 deliberately.
 
 ## Running it
@@ -33,17 +34,18 @@ npx knip --reporter json   # machine-readable output
 
 The CI job [`deadcode.yml`](../../.github/workflows/deadcode.yml) runs
 `npm run deadcode` with `continue-on-error: true`. It **reports** on every PR/push
-but does not block merges, because there is an existing backlog (≈14 unused
-files and ≈100 unused exports at introduction).
+but does not block merges, because there is an existing backlog (20 unused
+files and 97 unused exports, plus 80 unused exported types, as of the July
+2026 re-run).
 
 ## How to read and act on the report
 
 knip groups findings; triage each group differently:
 
 - **Unused files** — usually safe to delete, but first confirm the file is not a
-  dynamic import, a documented example, or a not-yet-wired feature. The known
-  duplicates (`MarketplaceHeader.tsx`, `MyCommitmentsOverview`) are good first
-  removals.
+  dynamic import, a documented example, or a not-yet-wired feature. Orphans with
+  no importers (`CommitmentForm.tsx`, `CompareCommitmentsTray.tsx`) are good
+  first removals.
 - **Unused exports** — either delete the export, or stop exporting it (make it
   module-private) if it's only used internally. Watch for exports kept
   intentionally as a public API surface.

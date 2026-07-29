@@ -145,6 +145,8 @@ Key points:
 
 ## 🔄 Contribution Workflow
 
+For one-off backend API patching, use [scripts/patch_backend_api.py](scripts/patch_backend_api.py). It is intended only for targeted migration or recovery work and now defaults to a dry run that prints the diff; add --force if you explicitly want it to write files to disk.
+
 1.  **Fork & Clone**: Fork the repository and clone it locally.
 2.  **Branch**: Create a feature branch (`git checkout -b feature/my-feature`).
 3.  **Develop**: Write code following the standards above.
