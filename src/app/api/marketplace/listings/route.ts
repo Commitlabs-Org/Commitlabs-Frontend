@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
+import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
 import {
   getMarketplaceSortKeys,
   isMarketplaceSortBy,
@@ -111,7 +113,8 @@ function parseQuery(searchParams: URLSearchParams): ParseResult {
 }
 
 export const GET = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  if (!(await checkRateLimit('anonymous', 'api/marketplace/listings'))) {
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(ip, 'api/marketplace/listings'))) {
     throw new TooManyRequestsError();
   }
 
@@ -127,6 +130,17 @@ export const GET = withApiHandler(async (req: NextRequest, _context, correlation
 }, { cors: MARKETPLACE_LISTINGS_CORS_POLICY, enableETag: true });
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  assertMutationCsrf(req);
+
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(ip, 'api/marketplace/listings/create'))) {
+    throw new TooManyRequestsError(
+      'Too many requests. Please try again later.',
+      undefined,
+      getRateLimitWindowSeconds('api/marketplace/listings/create'),
+    );
+  }
+
   const body = await parseJsonWithLimit(req, {
     limitBytes: JSON_BODY_LIMITS.marketplaceListingsCreate,
   });

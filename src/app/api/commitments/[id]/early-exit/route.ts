@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { ApiError, BackendError, ConflictError, TooManyRequestsError, ForbiddenError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
@@ -28,6 +29,8 @@ function rethrowContractError(error: unknown): never {
 }
 
 export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  assertMutationCsrf(req);
+
   const ip = getClientIp(req);
   if (!(await checkRateLimit(ip, 'api/commitments/early-exit'))) {
     throw new TooManyRequestsError(

@@ -14,6 +14,16 @@ type RouteHandler = (
 interface ApiHandlerOptions {
   cors?: CorsRoutePolicy;
   enableETag?: boolean;
+  /**
+   * Controls the Cache-Control privacy directive emitted on ETag responses.
+   * Use 'public' only for routes whose data is identical for all users (e.g.
+   * static reference data). Routes returning user-specific data (wallet lists,
+   * preferences, etc.) must use 'private' so shared caches/CDNs cannot serve
+   * one user's response to another.
+   *
+   * Defaults to 'private'.
+   */
+  cachePrivacy?: "public" | "private";
 }
 
 function finalizeResponse(
@@ -57,18 +67,20 @@ export function withApiHandler(
         if (data) {
           const etag = generateETag(data);
           const ifNoneMatch = req.headers.get("if-none-match");
+          const privacy = options.cachePrivacy ?? "private";
+          const cacheControl = `${privacy}, max-age=0, must-revalidate`;
           
           if (etagMatches(ifNoneMatch, etag)) {
             // Return 304 Not Modified
             const notModifiedResponse = new NextResponse(null, { status: 304 });
             notModifiedResponse.headers.set("ETag", etag);
-            notModifiedResponse.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+            notModifiedResponse.headers.set("Cache-Control", cacheControl);
             return finalizeResponse(req, notModifiedResponse, correlationId, options.cors);
           }
           
           // Add ETag to successful response
           response.headers.set("ETag", etag);
-          response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+          response.headers.set("Cache-Control", cacheControl);
         }
       }
       

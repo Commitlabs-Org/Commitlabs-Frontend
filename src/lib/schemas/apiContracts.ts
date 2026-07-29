@@ -8,6 +8,8 @@ export const ErrorBodySchema = z.object({
     code: z.string().min(1),
     message: z.string().min(1),
     details: z.unknown().optional(),
+    retryAfterSeconds: z.number().optional(),
+    correlationId: z.string().optional(),
   }),
 });
 

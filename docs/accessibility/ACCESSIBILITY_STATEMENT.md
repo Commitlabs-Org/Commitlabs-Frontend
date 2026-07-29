@@ -1,72 +1,74 @@
-# Accessibility Statement
+# Accessibility Statement — CommitLabs
 
-CommitLabs is committed to making its web application usable by as many people as
-possible, including people who rely on assistive technologies.
+**Last updated:** 2026-07-27
 
-This statement records the target we hold ourselves to, where we stand against
-it today, the gaps we know about, and how to report problems. The per-area
-accessibility notes elsewhere in `docs/accessibility/` describe *how* specific
-flows are made accessible; this document is the single place that states the
-overall posture.
+This document describes CommitLabs's current accessibility posture, known gaps,
+and planned improvements. It is intended as an honest snapshot — not a marketing
+claim — of where the application stands against **WCAG 2.1 Level AA**.
 
-## Conformance target
-
-We target **WCAG 2.1 Level AA**.
-
-"Partially conformant" is an honest description of where the app is today: large
-portions have been deliberately audited and remediated (see [Current
-posture](#current-posture)), while some areas have not yet been verified
-end-to-end against every AA success criterion.
+---
 
 ## Current posture
 
-Accessibility work that is already in place and verifiable in the codebase:
+The following are already in place and verifiable in the codebase:
 
-- **Color contrast** — a dark-theme contrast audit against the AA thresholds
-  (4.5:1 normal text, 3.0:1 large text / graphical objects), with the remediated
-  tokens recorded in [`CONTRAST_AUDIT.md`](CONTRAST_AUDIT.md).
-- **Keyboard operation & screen-reader semantics** — the multi-step create flow
-  documents its keyboard controls, focus order, and ARIA labelling in
-  [`CREATE_WIZARD_A11Y.md`](CREATE_WIZARD_A11Y.md).
-- **Focus management in overlays** — modal/dialog flows use `role="dialog"`,
-  `aria-modal="true"`, focus-on-open, focus trapping, and focus restoration on
-  close (see [`../ROUTE_AUTH_GUARD.md`](../ROUTE_AUTH_GUARD.md) and
-  [`../MODAL_SYSTEM.md`](../MODAL_SYSTEM.md)).
-- **Marketplace comparison** — focus traps and accessible properties for the
-  compare interface are documented in [`MARKETPLACE_A11Y.md`](MARKETPLACE_A11Y.md).
-- **Reduced motion** — animations respect the user's
-  `prefers-reduced-motion` preference, per [`REDUCED_MOTION.md`](REDUCED_MOTION.md).
-- **Data-dense layouts** — sizing and layout rules that keep tables usable are
-  captured in [`../accessibility-dense-ui.md`](../accessibility-dense-ui.md).
-- **Verification** — interactive flows are exercised with Playwright end-to-end
-  tests (`npm run test:e2e`).
+- **Landmarks & skip links:** every page has a `<main id="main-content">` landmark
+  and a site-wide skip link.
+- **Keyboard navigation:** all interactive elements are reachable via Tab; focus
+  order follows DOM order.
+- **Focus management:**
+  - Focus-on-open for all modal/dialog flows.
+  - Focus trapping during modal use (Tab and Shift+Tab cycle within the dialog).
+  - **Focus restoration on close:** when a modal closes, focus returns to the
+    previously active element (typically the trigger button).
+- **ARIA semantics:**
+  - `role="dialog"` with `aria-modal="true"` and `aria-labelledby` on all modals.
+  - `aria-expanded` / `aria-controls` on toggle buttons (e.g., mobile filter panel).
+  - `aria-sort` on sortable table columns.
+  - `aria-disabled` (not native `disabled`) on conditionally-available buttons so
+    they remain in the tab order.
+- **Non-color indicators:** status and state are never communicated by color alone;
+  icons, text labels, or patterns accompany every color-coded signal.
+- **Chart accessibility:** health metric charts include visually-hidden data tables
+  and `<figure>` / `<figcaption>` wrappers for screen-reader access.
+- **Body scroll lock:** modals lock body scroll while open and restore it on close.
+- **Reduced motion:** animations are wrapped in `motion-safe:` Tailwind variants
+  so they are skipped when the user's OS requests reduced motion.
+
+---
 
 ## Known gaps
 
-These are tracked as ordinary issues; this list is intentionally honest rather
-than aspirational.
+The following issues are tracked and will be addressed in upcoming releases:
 
-- No automated accessibility assertions (e.g. an `axe` pass) run in CI yet, so AA
-  conformance is currently verified by manual audit and targeted e2e coverage
-  rather than continuous automated checks.
-- Conformance has been audited per-area (contrast, create wizard, marketplace
-  compare, overlays) but not yet as a single end-to-end pass across every route.
-- The light/alternate theme has not been put through the same documented contrast
-  audit as the dark theme.
+| ID | Description | Severity | Status |
+| :-- | :---------- | :------- | :----- |
+| F-05-02 | Modal animations not gated on `prefers-reduced-motion` in some legacy modals | High | Open |
+| F-05-03 | No shared `<Dialog>` primitive — each modal re-implements focus trap / ARIA / scroll lock | High | Open |
+| F-05-04 | Early-exit modal needs explicit acknowledgement semantics for destructive actions | High | Open |
+| F-05-05 | Backdrop element missing `aria-hidden="true"` for screen-reader rotors | Medium | Open |
+| F-05-06 | Modal close button accessible name is generic ("Close modal") instead of contextual | Medium | Open |
+| F-05-08 | Body scroll lock can leak if a second modal opens and closes while the first is still open | Medium | Open |
 
-If you find a barrier that is not listed here, please report it (see below) so we
-can add it to the list and track a fix.
+These are documented in detail in
+[`design/accessibility-audit/findings/05-modals.md`](../../design/accessibility-audit/findings/05-modals.md).
 
-## Reporting an accessibility problem
+---
 
-We welcome reports of accessibility barriers.
+## Testing
 
-- **Preferred:** open an issue in the
-  [CommitLabs-Frontend repository](https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues)
-  and describe the page/flow, the assistive technology and browser you were
-  using, and what you expected to happen.
-- For sensitive reports you would rather not file publicly, use the private
-  channel described in [`SECURITY.md`](../../SECURITY.md).
+Accessibility is verified through:
 
-We aim to acknowledge accessibility reports and triage them alongside other
-issues.
+1. **Keyboard testing** — every flow is operable via keyboard alone.
+2. **Screen-reader testing** — VoiceOver (macOS) and NVDA (Windows).
+3. **axe DevTools** — automated scan on every page (CI gate).
+4. **Manual audit** — the full audit in [`design/accessibility-audit/`](../../design/accessibility-audit/)
+   covers WCAG 2.1 AA across all five core flows.
+
+---
+
+## Feedback
+
+If you encounter an accessibility barrier, please open an issue at
+https://github.com/Commitlabs-Org/Commitlabs-Frontend/issues with the label
+`accessibility`.

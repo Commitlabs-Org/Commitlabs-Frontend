@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, NotFoundError, ConflictError } from '@/lib/backend/errors';
+import { TooManyRequestsError, ValidationError, NotFoundError, ConflictError, InternalError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { openDisputeOnChain } from '@/lib/backend/services/contracts';
 import { logDisputeOpened } from '@/lib/backend/logger';
@@ -11,7 +11,7 @@ import { recordAuditEvent } from '@/lib/backend/auditLog';
 
 const DisputeRequestSchema = z.object({
     reason: z.string().min(1, 'Dispute reason is required').max(500),
-    evidence: z.string().optional(),
+    evidence: z.string().max(500).optional(),
     callerAddress: z.string().optional(),
 });
 

@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=20.0.0 <21.0.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
@@ -28,6 +28,9 @@
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
+    ],
+    "docs/**/*.{md,mdx}": [
+      "node scripts/check-docs-file-urls.mjs"
     ]
   },
   "dependencies": {
@@ -69,6 +72,7 @@
     "happy-dom": "^20.7.0",
     "husky": "^9.1.7",
     "ioredis": "^5.11.0",
+    "js-yaml": "^5.2.2",
     "jsdom": "^29.1.1",
     "knip": "^6.23.0",
     "lint-staged": "^15.2.10",

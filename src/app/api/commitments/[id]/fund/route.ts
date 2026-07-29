@@ -17,7 +17,7 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { idempotencyService } from '@/lib/backend/idempotency';
 
 const FundRequestSchema = z.object({
-  callerAddress: z.string().optional(),
+  callerAddress: z.string().min(1, 'callerAddress is required'),
 });
 
 const COMMITMENT_FUND_CORS_POLICY = {
@@ -81,7 +81,10 @@ export const POST = withApiHandler(
         throw new ConflictError('Only created commitments can be funded');
       }
 
-      if (callerAddress && callerAddress !== commitment.ownerAddress) {
+      // Issue #1369: callerAddress is required by FundRequestSchema above, so
+      // this check is no longer skippable the way `callerAddress && ...` was
+      // when the field was optional. Every request must prove ownership.
+      if (callerAddress !== commitment.ownerAddress) {
         throw new ForbiddenError(
           'Only the commitment owner may fund this commitment',
           { commitmentId: id },

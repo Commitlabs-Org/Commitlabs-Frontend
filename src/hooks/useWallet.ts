@@ -1,5 +1,5 @@
 import { getAddress, getNetworkDetails, signMessage } from "@stellar/freighter-api";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const WALLET_TIMEOUT_MS = 10000;
 
@@ -74,29 +74,59 @@ const withWalletTimeout = async <T,>(promise: Promise<T>, fallbackMessage: strin
   });
 };
 
-interface SessionCheckResult {
-  authenticated: boolean;
-  address?: string;
-}
+const STORED_TOKEN_KEYS = [
+  "commitlabs.sessionToken",
+  "commitlabs:sessionToken",
+  "sessionToken",
+];
 
-/**
- * Asks the server whether the HttpOnly session cookie (set by
- * /api/auth/verify) is still valid. The session token itself is never
- * readable from client-side JavaScript.
- */
-const checkSession = async (): Promise<SessionCheckResult> => {
-  try {
-    const res = await fetch("/api/auth/session");
-    if (!res.ok) return { authenticated: false };
-    const json = await res.json();
-    const data = json.data || json;
-    if (data.authenticated && data.address) {
-      return { authenticated: true, address: data.address };
-    }
-    return { authenticated: false };
-  } catch {
-    return { authenticated: false };
+const getStoredToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  for (const key of STORED_TOKEN_KEYS) {
+    const val = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
+    if (val?.trim()) return val.trim();
   }
+  // Try reading from cookies
+  const cookies = document.cookie.split(";");
+  for (const c of cookies) {
+    const [name, val] = c.trim().split("=");
+    if (name === "session" && val) return decodeURIComponent(val);
+  }
+  return null;
+};
+
+const getStoredAddress = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem("commitlabs.authAddress") ?? window.localStorage.getItem("commitlabs.authAddress");
+};
+
+const saveSession = (token: string, addr: string) => {
+  if (typeof window === "undefined") return;
+  for (const key of STORED_TOKEN_KEYS) {
+    window.localStorage.setItem(key, token);
+    window.sessionStorage.setItem(key, token);
+  }
+  window.localStorage.setItem("commitlabs.authAddress", addr);
+  window.sessionStorage.setItem("commitlabs.authAddress", addr);
+
+  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `session=${encodeURIComponent(token)}; path=/; SameSite=Lax${secureFlag}`;
+};
+
+const clearSession = () => {
+  if (typeof window === "undefined") return;
+  for (const key of STORED_TOKEN_KEYS) {
+    window.localStorage.removeItem(key);
+    window.sessionStorage.removeItem(key);
+  }
+  window.localStorage.removeItem("commitlabs.authAddress");
+  window.sessionStorage.removeItem("commitlabs.authAddress");
+
+  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
+  // Fallbacks for testing environments or strict cookie parsers
+  document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  document.cookie = "session=; max-age=0";
 };
 
 /**
@@ -111,18 +141,9 @@ export const useWallet = () => {
   const [walletNetwork, setWalletNetwork] = useState<string | null>(null);
 
   // Authentication State
-  const [authenticated, setAuthenticated] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(() => getStoredToken());
   const [authenticating, setAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-
-  // signIn() sometimes has to set `address`/`connected` itself (when it
-  // starts without an already-connected wallet), which would otherwise
-  // re-trigger the "sync auth state with server" effect below concurrently
-  // with signIn's own in-progress nonce/verify flow - racing its
-  // checkSession() call against signIn's own setAuthenticated(true) once it
-  // completes. signIn is authoritative for its own outcome, so it flips this
-  // flag to tell that effect to skip the redundant round-trip once.
-  const skipNextAuthSyncRef = useRef(false);
 
   const fetchAddress = useCallback(async () => {
     setConnecting(true);
@@ -173,11 +194,18 @@ export const useWallet = () => {
 
   const signOut = useCallback(async () => {
     try {
-      // The HttpOnly session cookie is sent automatically; the server reads
-      // it to know which session to revoke.
-      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      const storedToken = getStoredToken();
+      if (storedToken) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${storedToken}`,
+          },
+        }).catch(() => {});
+      }
     } finally {
-      setAuthenticated(false);
+      clearSession();
+      setSessionToken(null);
       setAuthError(null);
     }
   }, []);
@@ -208,7 +236,6 @@ export const useWallet = () => {
           throw new Error("Unable to retrieve address from Freighter.");
         }
         currentAddress = result.address;
-        skipNextAuthSyncRef.current = true;
         setAddress(currentAddress);
         setConnected(true);
         setError(null);
@@ -272,22 +299,22 @@ export const useWallet = () => {
 
       const verifyData = await verifyRes.json();
       const vData = verifyData.data || verifyData;
-      const { verified } = vData;
+      const { verified, sessionToken: token } = vData;
 
-      if (!verified) {
-        throw new Error("Verification failed.");
+      if (!verified || !token) {
+        throw new Error("Verification failed: Session token not received.");
       }
 
-      // The server has set the HttpOnly session cookie on this response;
-      // there is no token for the client to hold onto.
-      setAuthenticated(true);
+      saveSession(token, currentAddress);
+      setSessionToken(token);
       setAuthError(null);
       setError(null);
     } catch (e) {
       const msg = (e as Error).message || "Authentication handshake failed.";
       setAuthError(msg);
       setError(msg);
-      setAuthenticated(false);
+      clearSession();
+      setSessionToken(null);
       setConnected(false);
       setAddress("");
       setWalletNetwork(null);
@@ -302,49 +329,28 @@ export const useWallet = () => {
     fetchAddress();
   }, [fetchAddress]);
 
-  // Sync auth state with the server once the Freighter connection check
-  // completes, or whenever the connected address changes. The session lives
-  // exclusively in the HttpOnly cookie, so the only way to know if it's
-  // still valid is to ask the server.
-  //
-  // Skipped once when signIn() itself just set `connected`/`address` (see
-  // skipNextAuthSyncRef above) - signIn already determines the authoritative
-  // outcome via its own nonce/verify flow, so a redundant checkSession() call
-  // here would race against signIn's own setAuthenticated(true) and could
-  // clobber it depending on which one resolves last.
+  // Sync session state once connection check completes or when address/connected changes
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (!initialCheckDone) return;
-    if (skipNextAuthSyncRef.current) {
-      skipNextAuthSyncRef.current = false;
-      return;
-    }
-    let cancelled = false;
 
-    (async () => {
-      if (!connected || !address) {
-        if (!cancelled) setAuthenticated(false);
-        return;
-      }
+    const storedToken = getStoredToken();
+    const storedAddress = getStoredAddress();
 
-      const session = await checkSession();
-      if (cancelled) return;
-
-      if (session.authenticated && session.address === address) {
-        setAuthenticated(true);
-      } else if (session.authenticated) {
-        // The authenticated session belongs to a different address than the
-        // one Freighter now reports (e.g. the user switched accounts) -
-        // drop the stale session rather than trust it.
-        await signOut();
+    if (connected && address) {
+      if (storedToken && storedAddress === address) {
+        setSessionToken(storedToken);
       } else {
-        setAuthenticated(false);
+        clearSession();
+        setSessionToken(null);
       }
-    })();
+    } else {
+      clearSession();
+      setSessionToken(null);
+    }
+  }, [address, connected, initialCheckDone]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [address, connected, initialCheckDone, signOut]);
+  const authenticated = !!sessionToken;
 
   return {
     connected,
@@ -353,6 +359,7 @@ export const useWallet = () => {
     disconnect,
     error,
     connecting,
+    sessionToken,
     authenticated,
     authenticating,
     authError,

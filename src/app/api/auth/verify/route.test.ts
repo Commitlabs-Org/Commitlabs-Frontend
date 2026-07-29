@@ -105,6 +105,44 @@ describe('POST /api/auth/verify', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('returns 413 when payload exceeds JSON_BODY_LIMITS.authVerify size', async () => {
+    const oversizedBody = {
+      address: 'GABC',
+      signature: 'sig123',
+      message: 'x'.repeat(5 * 1024), // 5 KiB string > 4 KiB limit
+    };
+
+    const res = await POST(makeRequest(oversizedBody), { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(413);
+    expect(body.error.code).toBe('PAYLOAD_TOO_LARGE');
+  });
+
+  it('returns 400 when address exceeds max length', async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, address: 'G'.repeat(129) }), { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when signature exceeds max length', async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, signature: 's'.repeat(1025) }), { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when message exceeds max length', async () => {
+    const res = await POST(makeRequest({ ...VALID_BODY, message: 'm'.repeat(2049) }), { params: {} });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('returns 401 on invalid signature', async () => {
     vi.mocked(verifySignatureWithNonce).mockReturnValue({ valid: false, error: 'Invalid signature' });
 

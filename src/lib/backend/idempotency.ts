@@ -76,9 +76,18 @@ export class InMemoryKVStore implements KVStore {
 // Global instance for in-memory store
 const globalStore = new InMemoryKVStore();
 
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+
 // Periodically clean up
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => globalStore.cleanup(), 60 * 1000); // every minute
+if (typeof setInterval !== 'undefined' && cleanupIntervalId === null) {
+  cleanupIntervalId = setInterval(() => globalStore.cleanup(), 60 * 1000); // every minute
+}
+
+export function clearCleanupInterval(): void {
+  if (cleanupIntervalId !== null) {
+    clearInterval(cleanupIntervalId);
+    cleanupIntervalId = null;
+  }
 }
 
 export class IdempotencyService {

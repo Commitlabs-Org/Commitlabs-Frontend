@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, ConflictError, ForbiddenError } from '@/lib/backend/errors';
+import { TooManyRequestsError, ValidationError, ConflictError, ForbiddenError, InternalError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { resolveDisputeOnChain } from '@/lib/backend/services/contracts';
 import { logDisputeResolved } from '@/lib/backend/logger';

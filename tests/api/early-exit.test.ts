@@ -10,9 +10,32 @@ vi.mock("@/lib/backend/requireAuth", () => ({
   requireAuth: vi.fn(),
 }));
 
+vi.mock("@/lib/backend/csrf", () => ({
+  assertMutationCsrf: vi.fn(),
+}));
+
 vi.mock("@/lib/backend/rateLimit", () => ({
   checkRateLimit: vi.fn(),
   getRateLimitWindowSeconds: vi.fn(() => 60),
+}));
+
+vi.mock("@/lib/backend/logger", () => ({
+  logEarlyExit: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+}));
+
+vi.mock("@/lib/backend/idempotency", () => ({
+  idempotencyService: {
+    getRecord: vi.fn(),
+    start: vi.fn(),
+    complete: vi.fn(),
+    fail: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/backend/getClientIp", () => ({
+  getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
 vi.mock("@/lib/backend/services/contracts", () => ({
@@ -24,8 +47,9 @@ vi.mock("@/lib/backend/services/contracts", () => ({
 import { POST as postHandler } from "@/app/api/commitments/[id]/early-exit/route";
 import type { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/backend/requireAuth";
+import { assertMutationCsrf } from "@/lib/backend/csrf";
 import { checkRateLimit } from "@/lib/backend/rateLimit";
-import { BackendError } from "@/lib/backend/errors";
+import { BackendError, CsrfValidationError } from "@/lib/backend/errors";
 import {
   earlyExitCommitmentOnChain,
   getCommitmentFromChain,
@@ -33,6 +57,7 @@ import {
 
 // Get mocked versions
 const mockedRequireAuth = vi.mocked(requireAuth);
+const mockedAssertMutationCsrf = vi.mocked(assertMutationCsrf);
 const mockedCheckRateLimit = vi.mocked(checkRateLimit);
 const mockedEarlyExitCommitmentOnChain = vi.mocked(earlyExitCommitmentOnChain);
 const mockedGetCommitmentFromChain = vi.mocked(getCommitmentFromChain);
@@ -50,10 +75,11 @@ const COMMITMENT_ID = "cm_123456";
 describe("POST /api/commitments/[id]/early-exit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedAssertMutationCsrf.mockReset();
     mockedCheckRateLimit.mockResolvedValue(true);
     mockedRequireAuth.mockReturnValue({
       user: { address: VALID_ADDRESS, csrfToken: "csrf-token" },
-    } as any);
+    } as unknown as ReturnType<typeof requireAuth>);
     mockedGetCommitmentFromChain.mockResolvedValue({
       id: COMMITMENT_ID,
       ownerAddress: VALID_ADDRESS,
@@ -72,6 +98,28 @@ describe("POST /api/commitments/[id]/early-exit", () => {
       txHash: "abc123",
       reference: undefined,
     });
+  });
+
+  it("returns 403 when CSRF token is missing or invalid", async () => {
+    mockedAssertMutationCsrf.mockImplementation(() => {
+      throw new CsrfValidationError("Missing CSRF token.", {
+        reason: "missing_header",
+      });
+    });
+
+    const response = await POST(
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
+        {
+          method: "POST",
+          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
+        },
+      ),
+      createMockRouteContext({ id: COMMITMENT_ID }),
+    );
+    const result = await parseResponse(response);
+    expect(result.status).toBe(403);
+    expect(result.data.error.code).toBe("CSRF_INVALID");
   });
 
   it("validates request body - missing reason", async () => {
