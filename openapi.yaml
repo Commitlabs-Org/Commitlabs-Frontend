@@ -25,7 +25,7 @@ components:
     SuccessEnvelope:
       type: object
       properties:
-        ok:
+        success:
           type: boolean
           example: true
         data:
@@ -38,7 +38,7 @@ components:
     ErrorEnvelope:
       type: object
       properties:
-        ok:
+        success:
           type: boolean
           example: false
         error:
@@ -63,10 +63,10 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
           example:
-            ok: false
+            success: false
             error:
-              code: "VALIDATION_ERROR"
-              message: "Invalid parameters provided."
+              code: 'VALIDATION_ERROR'
+              message: 'Invalid parameters provided.'
     Unauthorized:
       description: Authentication failed or missing.
       content:
@@ -163,7 +163,7 @@ paths:
               properties:
                 asset:
                   type: string
-                  example: "XLM"
+                  example: 'XLM'
                 amount:
                   type: number
                   example: 100
@@ -314,7 +314,7 @@ paths:
               properties:
                 callerAddress:
                   type: string
-                  example: "GOWNER..."
+                  example: 'GOWNER...'
       responses:
         '200':
           description: Commitment funded successfully.
@@ -425,7 +425,7 @@ paths:
               properties:
                 reason:
                   type: string
-                  example: "user-request"
+                  example: 'user-request'
       responses:
         '200':
           description: Early exit processed.
@@ -456,7 +456,7 @@ paths:
               properties:
                 buyerAddress:
                   type: string
-                  example: "GBUYERADDRESS..."
+                  example: 'GBUYERADDRESS...'
       responses:
         '200':
           description: Preflight result.
@@ -601,7 +601,7 @@ paths:
                   type: string
                 status:
                   type: string
-                  example: "valid"
+                  example: 'valid'
       responses:
         '200':
           description: Attestation logged.
@@ -621,6 +621,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
 
+  /api/analytics/protocol:
+    get:
+      summary: Protocol-wide analytics
+      description: Returns aggregate protocol-wide analytics (total/active/settled/violated commitments, TVL, fees, compliance). Requires the analyticsProtocol feature flag.
+      responses:
+        '200':
+          description: Protocol analytics retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          description: Protocol analytics endpoint is disabled.
+    options:
+      summary: Analytics protocol CORS preflight
+      responses:
+        '204':
+          description: CORS preflight response.
+
   /api/analytics/user:
     options:
       summary: Analytics user CORS preflight
@@ -638,7 +657,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
-
 
   /api/auth/csrf:
     get:

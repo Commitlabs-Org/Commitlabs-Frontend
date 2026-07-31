@@ -6,7 +6,7 @@
 /**
  * Canonical commitment status values.
  * Used as the single source of truth across the application.
- * 
+ *
  * Mapping to other representations:
  * - Domain (legacy): 'Active' -> 'active', 'Settled' -> 'settled', 'Violated' -> 'violated', 'Early Exit' -> 'early_exit'
  * - DTO (API): lowercase snake_case matches this enum
@@ -21,7 +21,7 @@ export enum CommitmentStatus {
 /**
  * Canonical commitment type values.
  * Used as the single source of truth across the application.
- * 
+ *
  * Mapping to other representations:
  * - Domain (legacy): Title Case -> lowercase snake_case
  * - DTO (API): lowercase snake_case matches this enum
@@ -42,16 +42,16 @@ export type CommitmentTypeType = CommitmentType;
  * Mapping functions for legacy domain representation (Title Case with spaces)
  */
 export const DOMAIN_STATUS_MAPPING: Record<string, CommitmentStatus> = {
-  'Active': CommitmentStatus.ACTIVE,
-  'Settled': CommitmentStatus.SETTLED,
-  'Violated': CommitmentStatus.VIOLATED,
+  Active: CommitmentStatus.ACTIVE,
+  Settled: CommitmentStatus.SETTLED,
+  Violated: CommitmentStatus.VIOLATED,
   'Early Exit': CommitmentStatus.EARLY_EXIT,
 };
 
 export const DOMAIN_TYPE_MAPPING: Record<string, CommitmentType> = {
-  'Safe': CommitmentType.SAFE,
-  'Balanced': CommitmentType.BALANCED,
-  'Aggressive': CommitmentType.AGGRESSIVE,
+  Safe: CommitmentType.SAFE,
+  Balanced: CommitmentType.BALANCED,
+  Aggressive: CommitmentType.AGGRESSIVE,
 };
 
 /**

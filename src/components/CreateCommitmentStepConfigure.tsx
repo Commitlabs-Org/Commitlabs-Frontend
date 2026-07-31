@@ -192,7 +192,7 @@ export default function CreateCommitmentStepConfigure({
           </p>
         </div>
 
-        <form className={styles.form} onSubmit={handleSubmit} aria-label="Commitment configuration form" noValidate>
+        <form id="commitment-configure-form" className={styles.form} onSubmit={handleSubmit} aria-label="Commitment configuration form" noValidate>
           {/* Commitment Amount */}
           <div className={styles.formGroup}>
             <label htmlFor="amount" className={styles.label}>
@@ -475,7 +475,7 @@ export default function CreateCommitmentStepConfigure({
               All parameters are enforced on-chain and cannot be changed after creation. Early exits will incur the penalty shown above.
             </span>
           </div>
-        </div>
+        </form>
 
         <div className={styles.footerActions}>
           <button type="button" className={styles.footerBackButton} onClick={onBack}>
@@ -483,6 +483,7 @@ export default function CreateCommitmentStepConfigure({
           </button>
           <button
             type="submit"
+            form="commitment-configure-form"
             className={styles.continueButton}
             disabled={!canAdvance}
             aria-disabled={!canAdvance}

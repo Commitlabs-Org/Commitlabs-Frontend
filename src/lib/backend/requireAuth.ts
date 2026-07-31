@@ -3,7 +3,9 @@ import { verifySessionToken } from './auth';
 import { ForbiddenError, UnauthorizedError } from './errors';
 
 const ADMIN_ADDRESSES = new Set(
-  process.env.ADMIN_ADDRESSES?.split(',').map((address) => address.trim()).filter(Boolean) ?? [],
+  process.env.ADMIN_ADDRESSES?.split(',')
+    .map((address) => address.trim())
+    .filter(Boolean) ?? [],
 );
 
 export interface VerifiedAuth {

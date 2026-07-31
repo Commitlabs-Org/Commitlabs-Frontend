@@ -1,4 +1,5 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
-  "javascript.tsdk": "node_modules/typescript/lib"
+  "javascript.tsdk": "node_modules/typescript/lib",
+  "wake.compiler.solc.remappings": []
 }

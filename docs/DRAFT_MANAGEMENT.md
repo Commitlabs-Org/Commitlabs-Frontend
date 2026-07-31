@@ -14,18 +14,18 @@ automatically on load so they never accumulate forever.
 import { useDraftPersistence } from '@/hooks/useDraftPersistence';
 
 const {
-  draft,         // DraftState | null — the draft for the bound draftId (or null)
-  drafts,        // DraftMap — Record<string, NamedDraft> of all live drafts
-  allDrafts,     // NamedDraft[] — sorted newest-updated first
-  saveDraft,     // (data: DraftState, id?: string) => void — debounced 500 ms
-  clearDraft,    // (id?: string) => void — remove one draft
-  clearAllDrafts,// () => void — remove all drafts
-  resumeDraft,   // (id?: string) => DraftState | null
+  draft, // DraftState | null — the draft for the bound draftId (or null)
+  drafts, // DraftMap — Record<string, NamedDraft> of all live drafts
+  allDrafts, // NamedDraft[] — sorted newest-updated first
+  saveDraft, // (data: DraftState, id?: string) => void — debounced 500 ms
+  clearDraft, // (id?: string) => void — remove one draft
+  clearAllDrafts, // () => void — remove all drafts
+  resumeDraft, // (id?: string) => DraftState | null
 } = useDraftPersistence('my-draft-id');
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter | Type                  | Description                                                                                                |
+| --------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `draftId` | `string \| undefined` | Optional. Binds the hook to a specific draft so that `draft` and `resumeDraft()` operate on it by default. |
 
 ### Types
@@ -44,8 +44,8 @@ interface DraftState {
 interface NamedDraft {
   id: string;
   data: DraftState;
-  createdAt: number;  // Unix ms
-  updatedAt: number;  // Unix ms
+  createdAt: number; // Unix ms
+  updatedAt: number; // Unix ms
 }
 
 type DraftMap = Record<string, NamedDraft>;
@@ -53,10 +53,10 @@ type DraftMap = Record<string, NamedDraft>;
 
 ### Storage keys
 
-| Key | Purpose |
-|-----|---------|
-| `commitlabs-create-drafts` | Multi-draft map (current) |
-| `commitlabs-create-draft` | Legacy single-draft key (migrated on first load, then removed) |
+| Key                        | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `commitlabs-create-drafts` | Multi-draft map (current)                                      |
+| `commitlabs-create-draft`  | Legacy single-draft key (migrated on first load, then removed) |
 
 ## Features
 

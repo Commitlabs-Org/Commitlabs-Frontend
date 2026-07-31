@@ -49,10 +49,7 @@ describe('addressBook — load()', () => {
   });
 
   it('returns an empty array when stored value is the wrong shape', () => {
-    window.localStorage.setItem(
-      ADDRESS_BOOK_STORAGE_KEY,
-      JSON.stringify({ id: 'oops' }),
-    );
+    window.localStorage.setItem(ADDRESS_BOOK_STORAGE_KEY, JSON.stringify({ id: 'oops' }));
     expect(load()).toEqual([]);
   });
 
@@ -107,9 +104,7 @@ describe('addressBook — add()', () => {
     expect(() => add(VALID_KEY_A as unknown as string, 123 as unknown as string)).toThrow(
       /label must be a string/,
     );
-    expect(() => add(123 as unknown as string, 'x')).toThrow(
-      /address must be a string/,
-    );
+    expect(() => add(123 as unknown as string, 'x')).toThrow(/address must be a string/);
   });
 });
 
@@ -134,9 +129,7 @@ describe('addressBook — update()', () => {
 
   it('rejects an invalid replacement address', () => {
     const entry = add(VALID_KEY_A, 'Treasury');
-    expect(() =>
-      update(entry.id, { address: 'NOT-A-VALID-STRKEY' }),
-    ).toThrow(/Stellar StrKey/);
+    expect(() => update(entry.id, { address: 'NOT-A-VALID-STRKEY' })).toThrow(/Stellar StrKey/);
   });
 });
 

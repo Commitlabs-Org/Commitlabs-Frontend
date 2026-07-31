@@ -16,9 +16,7 @@ const DEFAULT_PROPS = {
   onViewCommitments: vi.fn(),
 };
 
-function renderModal(
-  overrides: Partial<React.ComponentProps<typeof PurchaseSuccessModal>> = {},
-) {
+function renderModal(overrides: Partial<React.ComponentProps<typeof PurchaseSuccessModal>> = {}) {
   const props = { ...DEFAULT_PROPS, ...overrides };
   const view = render(<PurchaseSuccessModal {...props} />);
   return { props, ...view };
@@ -172,10 +170,7 @@ describe('PurchaseSuccessModal', () => {
 
   it('dialog is labelled by heading id', () => {
     renderModal();
-    expect(screen.getByRole('dialog')).toHaveAttribute(
-      'aria-labelledby',
-      'purchase-success-title',
-    );
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'purchase-success-title');
   });
 
   it('dialog is described by description id', () => {

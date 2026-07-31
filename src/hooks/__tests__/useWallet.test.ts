@@ -35,7 +35,9 @@ describe('useWallet', () => {
     getAddressMock
       .mockResolvedValueOnce({ error: 'User rejected request' })
       .mockResolvedValueOnce({ address: 'GCONNECTEDAFTERPROMPT' });
-    getNetworkDetailsMock.mockResolvedValue({ networkPassphrase: 'Test SDF Network ; September 2015' });
+    getNetworkDetailsMock.mockResolvedValue({
+      networkPassphrase: 'Test SDF Network ; September 2015',
+    });
 
     const { result } = renderHook(() => useWallet());
 
@@ -120,7 +122,9 @@ describe('useWallet', () => {
 
     const { result } = renderHook(() => useWallet());
 
-    await waitFor(() => expect(result.current.error).toBe('Unable to connect to Freighter. Please try again.'));
+    await waitFor(() =>
+      expect(result.current.error).toBe('Unable to connect to Freighter. Please try again.'),
+    );
     expect(result.current.connected).toBe(false);
     expect(result.current.address).toBe('');
   });

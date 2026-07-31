@@ -1,31 +1,27 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createMockRequest,
-  parseResponse,
-  createMockRouteContext,
-} from "./helpers";
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockRequest, parseResponse, createMockRouteContext } from './helpers';
 
 // Mock dependencies BEFORE importing the route
-vi.mock("@/lib/backend/requireAuth", () => ({
+vi.mock('@/lib/backend/requireAuth', () => ({
   requireAuth: vi.fn(),
 }));
 
-vi.mock("@/lib/backend/csrf", () => ({
+vi.mock('@/lib/backend/csrf', () => ({
   assertMutationCsrf: vi.fn(),
 }));
 
-vi.mock("@/lib/backend/rateLimit", () => ({
+vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn(),
   getRateLimitWindowSeconds: vi.fn(() => 60),
 }));
 
-vi.mock("@/lib/backend/logger", () => ({
+vi.mock('@/lib/backend/logger', () => ({
   logEarlyExit: vi.fn(),
   logWarn: vi.fn(),
   logError: vi.fn(),
 }));
 
-vi.mock("@/lib/backend/idempotency", () => ({
+vi.mock('@/lib/backend/idempotency', () => ({
   idempotencyService: {
     getRecord: vi.fn(),
     start: vi.fn(),
@@ -34,26 +30,26 @@ vi.mock("@/lib/backend/idempotency", () => ({
   },
 }));
 
-vi.mock("@/lib/backend/getClientIp", () => ({
-  getClientIp: vi.fn(() => "127.0.0.1"),
+vi.mock('@/lib/backend/getClientIp', () => ({
+  getClientIp: vi.fn(() => '127.0.0.1'),
 }));
 
-vi.mock("@/lib/backend/services/contracts", () => ({
+vi.mock('@/lib/backend/services/contracts', () => ({
   earlyExitCommitmentOnChain: vi.fn(),
   getCommitmentFromChain: vi.fn(),
 }));
 
 // NOW import the route and dependencies
-import { POST as postHandler } from "@/app/api/commitments/[id]/early-exit/route";
-import type { NextRequest } from "next/server";
-import { requireAuth } from "@/lib/backend/requireAuth";
-import { assertMutationCsrf } from "@/lib/backend/csrf";
-import { checkRateLimit } from "@/lib/backend/rateLimit";
-import { BackendError, CsrfValidationError } from "@/lib/backend/errors";
+import { POST as postHandler } from '@/app/api/commitments/[id]/early-exit/route';
+import type { NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/backend/requireAuth';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { BackendError, CsrfValidationError } from '@/lib/backend/errors';
 import {
   earlyExitCommitmentOnChain,
   getCommitmentFromChain,
-} from "@/lib/backend/services/contracts";
+} from '@/lib/backend/services/contracts';
 
 // Get mocked versions
 const mockedRequireAuth = vi.mocked(requireAuth);
@@ -68,185 +64,163 @@ const POST = postHandler as (
   context: { params: Record<string, string> },
 ) => Promise<Response>;
 
-const VALID_ADDRESS = `G${"A".repeat(55)}`;
-const DIFFERENT_ADDRESS = `G${"B".repeat(55)}`;
-const COMMITMENT_ID = "cm_123456";
+const VALID_ADDRESS = `G${'A'.repeat(55)}`;
+const DIFFERENT_ADDRESS = `G${'B'.repeat(55)}`;
+const COMMITMENT_ID = 'cm_123456';
 
-describe("POST /api/commitments/[id]/early-exit", () => {
+describe('POST /api/commitments/[id]/early-exit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedAssertMutationCsrf.mockReset();
     mockedCheckRateLimit.mockResolvedValue(true);
     mockedRequireAuth.mockReturnValue({
-      user: { address: VALID_ADDRESS, csrfToken: "csrf-token" },
+      user: { address: VALID_ADDRESS, csrfToken: 'csrf-token' },
     } as unknown as ReturnType<typeof requireAuth>);
     mockedGetCommitmentFromChain.mockResolvedValue({
       id: COMMITMENT_ID,
       ownerAddress: VALID_ADDRESS,
-      asset: "USDC",
-      amount: "1000",
-      status: "ACTIVE",
+      asset: 'USDC',
+      amount: '1000',
+      status: 'ACTIVE',
       complianceScore: 85,
-      currentValue: "1000",
-      feeEarned: "0",
+      currentValue: '1000',
+      feeEarned: '0',
       violationCount: 0,
     });
     mockedEarlyExitCommitmentOnChain.mockResolvedValue({
-      exitAmount: "950",
-      penaltyAmount: "50",
-      finalStatus: "EARLY_EXIT",
-      txHash: "abc123",
+      exitAmount: '950',
+      penaltyAmount: '50',
+      finalStatus: 'EARLY_EXIT',
+      txHash: 'abc123',
       reference: undefined,
     });
   });
 
-  it("returns 403 when CSRF token is missing or invalid", async () => {
+  it('returns 403 when CSRF token is missing or invalid', async () => {
     mockedAssertMutationCsrf.mockImplementation(() => {
-      throw new CsrfValidationError("Missing CSRF token.", {
-        reason: "missing_header",
+      throw new CsrfValidationError('Missing CSRF token.', {
+        reason: 'missing_header',
       });
     });
 
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(403);
-    expect(result.data.error.code).toBe("CSRF_INVALID");
+    expect(result.data.error.code).toBe('CSRF_INVALID');
   });
 
-  it("validates request body - missing reason", async () => {
+  it('validates request body - missing reason', async () => {
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(400);
-    expect(result.data.error.code).toBe("VALIDATION_ERROR");
+    expect(result.data.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it("validates request body - missing callerAddress", async () => {
+  it('validates request body - missing callerAddress', async () => {
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity" },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity' },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(400);
-    expect(result.data.error.code).toBe("VALIDATION_ERROR");
+    expect(result.data.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it("validates request body - invalid Stellar address", async () => {
+  it('validates request body - invalid Stellar address', async () => {
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: "invalid-address" },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: 'invalid-address' },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(400);
-    expect(result.data.error.code).toBe("VALIDATION_ERROR");
+    expect(result.data.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it("returns 401 when not authenticated", async () => {
-    const { UnauthorizedError } = await import("@/lib/backend/errors");
+  it('returns 401 when not authenticated', async () => {
+    const { UnauthorizedError } = await import('@/lib/backend/errors');
     mockedRequireAuth.mockImplementation(() => {
-      throw new UnauthorizedError("No session token");
+      throw new UnauthorizedError('No session token');
     });
 
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(401);
   });
 
-  it("returns 403 when session address does not match callerAddress", async () => {
+  it('returns 403 when session address does not match callerAddress', async () => {
     mockedRequireAuth.mockReturnValue({
-      user: { address: DIFFERENT_ADDRESS, csrfToken: "csrf-token" },
+      user: { address: DIFFERENT_ADDRESS, csrfToken: 'csrf-token' },
     } as unknown as ReturnType<typeof requireAuth>);
 
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(403);
-    expect(result.data.error.code).toBe("FORBIDDEN");
+    expect(result.data.error.code).toBe('FORBIDDEN');
   });
 
-  it("returns 403 when caller does not own commitment", async () => {
+  it('returns 403 when caller does not own commitment', async () => {
     mockedGetCommitmentFromChain.mockResolvedValue({
       id: COMMITMENT_ID,
       ownerAddress: DIFFERENT_ADDRESS,
-      asset: "USDC",
-      amount: "1000",
-      status: "ACTIVE",
+      asset: 'USDC',
+      amount: '1000',
+      status: 'ACTIVE',
       complianceScore: 85,
-      currentValue: "1000",
-      feeEarned: "0",
+      currentValue: '1000',
+      feeEarned: '0',
       violationCount: 0,
     });
 
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(403);
-    expect(result.data.error.code).toBe("FORBIDDEN");
+    expect(result.data.error.code).toBe('FORBIDDEN');
   });
 
-  it("maps normalized contract errors into the standard error envelope", async () => {
+  it('maps normalized contract errors into the standard error envelope', async () => {
     mockedEarlyExitCommitmentOnChain.mockRejectedValue(
       new BackendError({
-        code: "GATEWAY_TIMEOUT",
-        message:
-          "The blockchain operation timed out. It may still be processed later.",
+        code: 'GATEWAY_TIMEOUT',
+        message: 'The blockchain operation timed out. It may still be processed later.',
         status: 504,
         details: {
-          method: "early_exit_commitment",
+          method: 'early_exit_commitment',
           commitmentId: COMMITMENT_ID,
           retryable: true,
         },
@@ -254,13 +228,10 @@ describe("POST /api/commitments/[id]/early-exit", () => {
     );
 
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
@@ -269,59 +240,49 @@ describe("POST /api/commitments/[id]/early-exit", () => {
     expect(result.data).toMatchObject({
       success: false,
       error: {
-        code: "GATEWAY_TIMEOUT",
-        message:
-          "The blockchain operation timed out. It may still be processed later.",
+        code: 'GATEWAY_TIMEOUT',
+        message: 'The blockchain operation timed out. It may still be processed later.',
       },
     });
   });
 
-  it("returns 429 when rate limited", async () => {
+  it('returns 429 when rate limited', async () => {
     mockedCheckRateLimit.mockResolvedValue(false);
 
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
     expect(result.status).toBe(429);
-    expect(result.data.error.code).toBe("TOO_MANY_REQUESTS");
+    expect(result.data.error.code).toBe('TOO_MANY_REQUESTS');
   });
 
-  it("returns 200 on successful early exit", async () => {
+  it('returns 200 on successful early exit', async () => {
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
 
     expect(result.status).toBe(200);
     expect(result.data.success).toBe(true);
-    expect(result.data.data.exitAmount).toBe("950");
-    expect(result.data.data.penaltyAmount).toBe("50");
+    expect(result.data.data.exitAmount).toBe('950');
+    expect(result.data.data.penaltyAmount).toBe('50');
   });
 
-  it("calls earlyExitCommitmentOnChain with correct parameters", async () => {
+  it('calls earlyExitCommitmentOnChain with correct parameters', async () => {
     await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
 
@@ -331,18 +292,15 @@ describe("POST /api/commitments/[id]/early-exit", () => {
     });
   });
 
-  it("includes correlation ID in response headers", async () => {
+  it('includes correlation ID in response headers', async () => {
     const response = await POST(
-      createMockRequest(
-        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
-        {
-          method: "POST",
-          body: { reason: "Need liquidity", callerAddress: VALID_ADDRESS },
-        },
-      ),
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+      }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
 
-    expect(response.headers.get("x-correlation-id")).toBeDefined();
+    expect(response.headers.get('x-correlation-id')).toBeDefined();
   });
 });

@@ -1,4 +1,4 @@
-import { getKV } from "./kv";
+import { getKV } from './kv';
 
 /**
  * Rate Limiting Strategy for Commitlabs Public API Endpoints.
@@ -45,28 +45,28 @@ function envInt(name: string, fallback: number): number {
 
 function buildLimits(): Record<string, { windowMs: number; maxRequests: number }> {
   // Auth routes — low defaults to resist credential-farming and brute-force
-  const authNonceMax = envInt("RATE_LIMIT_AUTH_NONCE_MAX_REQUESTS", 5);
-  const authNonceWindowSec = envInt("RATE_LIMIT_AUTH_NONCE_WINDOW_SECONDS", 60);
-  const authVerifyMax = envInt("RATE_LIMIT_AUTH_VERIFY_MAX_REQUESTS", 5);
-  const authVerifyWindowSec = envInt("RATE_LIMIT_AUTH_VERIFY_WINDOW_SECONDS", 60);
+  const authNonceMax = envInt('RATE_LIMIT_AUTH_NONCE_MAX_REQUESTS', 5);
+  const authNonceWindowSec = envInt('RATE_LIMIT_AUTH_NONCE_WINDOW_SECONDS', 60);
+  const authVerifyMax = envInt('RATE_LIMIT_AUTH_VERIFY_MAX_REQUESTS', 5);
+  const authVerifyWindowSec = envInt('RATE_LIMIT_AUTH_VERIFY_WINDOW_SECONDS', 60);
   // Per-address nonce bucket — longer window than the IP bucket
-  const nonceAddressMax = envInt("RATE_LIMIT_NONCE_ADDRESS_MAX_REQUESTS", 3);
-  const nonceAddressWindowSec = envInt("RATE_LIMIT_NONCE_ADDRESS_WINDOW_SECONDS", 300);
+  const nonceAddressMax = envInt('RATE_LIMIT_NONCE_ADDRESS_MAX_REQUESTS', 3);
+  const nonceAddressWindowSec = envInt('RATE_LIMIT_NONCE_ADDRESS_WINDOW_SECONDS', 300);
   // Write-heavy routes — tighter limits to protect on-chain operations
-  const writeMax = envInt("RATE_LIMIT_WRITE_MAX_REQUESTS", 10);
-  const writeWindowSec = envInt("RATE_LIMIT_WRITE_WINDOW_SECONDS", 60);
+  const writeMax = envInt('RATE_LIMIT_WRITE_MAX_REQUESTS', 10);
+  const writeWindowSec = envInt('RATE_LIMIT_WRITE_WINDOW_SECONDS', 60);
   // Default bucket for all other routes
-  const defaultMax = envInt("RATE_LIMIT_DEFAULT_MAX_REQUESTS", 20);
-  const defaultWindowSec = envInt("RATE_LIMIT_DEFAULT_WINDOW_SECONDS", 60);
+  const defaultMax = envInt('RATE_LIMIT_DEFAULT_MAX_REQUESTS', 20);
+  const defaultWindowSec = envInt('RATE_LIMIT_DEFAULT_WINDOW_SECONDS', 60);
 
   return {
-    "api/auth/nonce": { windowMs: authNonceWindowSec * 1000, maxRequests: authNonceMax },
-    "api/auth/verify": { windowMs: authVerifyWindowSec * 1000, maxRequests: authVerifyMax },
-    "auth:nonce:address": { windowMs: nonceAddressWindowSec * 1000, maxRequests: nonceAddressMax },
+    'api/auth/nonce': { windowMs: authNonceWindowSec * 1000, maxRequests: authNonceMax },
+    'api/auth/verify': { windowMs: authVerifyWindowSec * 1000, maxRequests: authVerifyMax },
+    'auth:nonce:address': { windowMs: nonceAddressWindowSec * 1000, maxRequests: nonceAddressMax },
     // Write-heavy routes — tighter limits to protect on-chain operations
-    "api/commitments/create": { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
-    "api/commitments/settle": { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
-    "api/commitments/early-exit": { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
+    'api/commitments/create': { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
+    'api/commitments/settle': { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
+    'api/commitments/early-exit': { windowMs: writeWindowSec * 1000, maxRequests: writeMax },
     default: { windowMs: defaultWindowSec * 1000, maxRequests: defaultMax },
   };
 }
@@ -81,11 +81,8 @@ export function getRateLimitWindowSeconds(routeId: string): number {
   return Math.ceil(config.windowMs / 1000);
 }
 
-export async function checkRateLimit(
-  key: string,
-  routeId: string,
-): Promise<boolean> {
-  const isDev = process.env.NODE_ENV === "development";
+export async function checkRateLimit(key: string, routeId: string): Promise<boolean> {
+  const isDev = process.env.NODE_ENV === 'development';
   const kv = getKV();
   const redisKey = `ratelimit:${routeId}:${key}`;
   const limits = buildLimits();
@@ -108,10 +105,7 @@ export async function checkRateLimit(
 
     return isAllowed;
   } catch (error) {
-    console.error(
-      `[RateLimit] Error checking rate limit for ${routeId}:`,
-      error,
-    );
+    console.error(`[RateLimit] Error checking rate limit for ${routeId}:`, error);
     return true;
   }
 }

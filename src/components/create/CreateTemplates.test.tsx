@@ -41,7 +41,10 @@ describe('Commitment Templates / Presets', () => {
   it('presets container has radiogroup role and accessible label', () => {
     render(<CreateCommitmentStepSelectType {...defaultProps} />);
     expect(screen.getByTestId('presets-container')).toHaveAttribute('role', 'radiogroup');
-    expect(screen.getByTestId('presets-container')).toHaveAttribute('aria-label', 'Commitment templates');
+    expect(screen.getByTestId('presets-container')).toHaveAttribute(
+      'aria-label',
+      'Commitment templates',
+    );
   });
 
   it('each preset button has role radio and aria-checked false when none selected', () => {
@@ -62,7 +65,7 @@ describe('Commitment Templates / Presets', () => {
         type: 'safe',
         durationDays: 90,
         maxLossPercent: 2,
-      })
+      }),
     );
   });
 
@@ -74,22 +77,12 @@ describe('Commitment Templates / Presets', () => {
   });
 
   it('selected preset has aria-checked true', () => {
-    render(
-      <CreateCommitmentStepSelectType
-        {...defaultProps}
-        selectedType="safe"
-      />
-    );
+    render(<CreateCommitmentStepSelectType {...defaultProps} selectedType="safe" />);
     expect(screen.getByTestId('preset-conservative-90')).toHaveAttribute('aria-checked', 'true');
   });
 
   it('unrelated presets keep aria-checked false when one is selected', () => {
-    render(
-      <CreateCommitmentStepSelectType
-        {...defaultProps}
-        selectedType="safe"
-      />
-    );
+    render(<CreateCommitmentStepSelectType {...defaultProps} selectedType="safe" />);
     expect(screen.getByTestId('preset-balanced-60')).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByTestId('preset-aggressive-30')).toHaveAttribute('aria-checked', 'false');
   });
@@ -102,12 +95,7 @@ describe('Commitment Templates / Presets', () => {
   });
 
   it('fields remain editable — Continue button is enabled after preset selects a type', () => {
-    render(
-      <CreateCommitmentStepSelectType
-        {...defaultProps}
-        selectedType="balanced"
-      />
-    );
+    render(<CreateCommitmentStepSelectType {...defaultProps} selectedType="balanced" />);
     const continueBtn = screen.getByTestId('select-type-continue');
     expect(continueBtn).not.toBeDisabled();
   });
@@ -122,9 +110,7 @@ describe('Commitment Templates / Presets', () => {
     render(<CreateCommitmentStepSelectType {...defaultProps} onApplyPreset={onApplyPreset} />);
     const btn = screen.getByTestId('preset-conservative-90');
     fireEvent.keyDown(btn, { key: 'Enter' });
-    expect(onApplyPreset).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'conservative-90' })
-    );
+    expect(onApplyPreset).toHaveBeenCalledWith(expect.objectContaining({ id: 'conservative-90' }));
   });
 
   it('preset selection via keyboard Space calls onApplyPreset', () => {
@@ -132,9 +118,7 @@ describe('Commitment Templates / Presets', () => {
     render(<CreateCommitmentStepSelectType {...defaultProps} onApplyPreset={onApplyPreset} />);
     const btn = screen.getByTestId('preset-aggressive-30');
     fireEvent.keyDown(btn, { key: ' ' });
-    expect(onApplyPreset).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'aggressive-30' })
-    );
+    expect(onApplyPreset).toHaveBeenCalledWith(expect.objectContaining({ id: 'aggressive-30' }));
   });
 
   it('prefill respects validation — onApplyPreset not called without handler', () => {

@@ -26,4 +26,4 @@ export const SENSITIVE_FIELDS = new Set([
   'csrf',
   'xss',
   'sql',
-])
+]);

@@ -28,8 +28,5 @@ module.exports = {
     'body-max-line-length': [0, 'always', Infinity],
   },
   // Allow merge/revert commits and dependabot to bypass the rules.
-  ignores: [
-    (message) => /^Merge /.test(message),
-    (message) => /^Revert /.test(message),
-  ],
+  ignores: [(message) => /^Merge /.test(message), (message) => /^Revert /.test(message)],
 };

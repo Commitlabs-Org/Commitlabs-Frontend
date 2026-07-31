@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-type CommitmentType = "safe" | "balanced" | "aggressive";
+type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
 export interface PrefillData {
   commitmentType: CommitmentType;
@@ -11,10 +11,10 @@ export interface PrefillData {
   maxLossPercent: number;
 }
 
-const VALID_TYPES = new Set<CommitmentType>(["safe", "balanced", "aggressive"]);
+const VALID_TYPES = new Set<CommitmentType>(['safe', 'balanced', 'aggressive']);
 
 function isCommitmentType(value: unknown): value is CommitmentType {
-  return typeof value === "string" && VALID_TYPES.has(value as CommitmentType);
+  return typeof value === 'string' && VALID_TYPES.has(value as CommitmentType);
 }
 
 /**
@@ -28,7 +28,7 @@ function isCommitmentType(value: unknown): value is CommitmentType {
  */
 export function usePrefillFromCommitment(): PrefillData | null {
   const searchParams = useSearchParams();
-  const sourceId = searchParams?.get("sourceId") ?? null;
+  const sourceId = searchParams?.get('sourceId') ?? null;
   const [prefill, setPrefill] = useState<PrefillData | null>(null);
 
   useEffect(() => {
@@ -51,18 +51,18 @@ export function usePrefillFromCommitment(): PrefillData | null {
 
         const commitmentType: CommitmentType = isCommitmentType(data?.commitmentType)
           ? data.commitmentType
-          : "balanced";
+          : 'balanced';
 
         const prefillData: PrefillData = {
           commitmentType,
-          amount: String(data?.amount ?? ""),
-          asset: typeof data?.asset === "string" ? data.asset : "XLM",
+          amount: String(data?.amount ?? ''),
+          asset: typeof data?.asset === 'string' ? data.asset : 'XLM',
           durationDays:
-            typeof data?.durationDays === "number" && data.durationDays >= 1
+            typeof data?.durationDays === 'number' && data.durationDays >= 1
               ? Math.min(365, data.durationDays)
               : 90,
           maxLossPercent:
-            typeof data?.maxLossPercent === "number"
+            typeof data?.maxLossPercent === 'number'
               ? Math.min(100, Math.max(0, data.maxLossPercent))
               : 100,
         };

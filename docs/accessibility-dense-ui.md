@@ -170,24 +170,24 @@ The `VolatilityExposureMeter` component visualizes portfolio volatility with thr
 
 ### Threshold Zones
 
-| Zone | Range | Risk Profile Alignment | Color Indicator |
-| :--- | :---- | :--------------------- | :-------------- |
-| Safe | 0–33% | Conservative | Green (`#00C950`) |
-| Caution | 34–66% | Balanced | Amber (`#FFA500`) |
-| Danger | 67–100% | Aggressive | Red (`#FB2C36`) |
+| Zone    | Range   | Risk Profile Alignment | Color Indicator   |
+| :------ | :------ | :--------------------- | :---------------- |
+| Safe    | 0–33%   | Conservative           | Green (`#00C950`) |
+| Caution | 34–66%  | Balanced               | Amber (`#FFA500`) |
+| Danger  | 67–100% | Aggressive             | Red (`#FB2C36`)   |
 
 ### Accessibility Requirements
 
 #### Meter Attributes
 
-| Attribute | Value | Purpose |
-| :---------| :---- | :------ |
-| `role="meter"` | — | Identifies the element as a gauge |
-| `aria-valuenow` | 0–100 | Current numeric value |
-| `aria-valuemin` | 0 | Minimum value |
-| `aria-valuemax` | 100 | Maximum value |
-| `aria-valuetext` | `"X percent, Z zone — annotation"` | Human-readable value + zone explanation |
-| `aria-label` | `"Volatility exposure: X%, Y range."` | Primary accessible name |
+| Attribute        | Value                                 | Purpose                                 |
+| :--------------- | :------------------------------------ | :-------------------------------------- |
+| `role="meter"`   | —                                     | Identifies the element as a gauge       |
+| `aria-valuenow`  | 0–100                                 | Current numeric value                   |
+| `aria-valuemin`  | 0                                     | Minimum value                           |
+| `aria-valuemax`  | 100                                   | Maximum value                           |
+| `aria-valuetext` | `"X percent, Z zone — annotation"`    | Human-readable value + zone explanation |
+| `aria-label`     | `"Volatility exposure: X%, Y range."` | Primary accessible name                 |
 
 #### Zone Labels & Annotations
 
@@ -206,14 +206,14 @@ When a `riskProfileId` prop is provided, a badge appears next to the title annou
 ```tsx
 interface VolatilityExposureMeterProps {
   /** Current exposure as a percentage (0–100). Clamped when rendering. */
-  valuePercent: number
+  valuePercent: number;
   /** Optional short description of what the exposure means. */
-  description?: string
+  description?: string;
   /**
    * Optional risk-profile identifier that highlights the matching zone.
    * One of 'conservative' | 'balanced' | 'aggressive'.
    */
-  riskProfileId?: RiskProfileId
+  riskProfileId?: RiskProfileId;
 }
 ```
 

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { methodNotAllowed } from '@/lib/backend/apiResponse';
-import {
-  ChainCommitment,
-  getUserCommitmentsFromChain,
-} from '@/lib/backend/services/contracts';
+import { ChainCommitment, getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
 import {
   applyCorsPolicy,
   createCorsOptionsHandler,
@@ -11,11 +8,7 @@ import {
   toCorsErrorResponse,
   type CorsRoutePolicy,
 } from '@/lib/backend/cors';
-import {
-  BackendError,
-  normalizeBackendError,
-  toBackendErrorResponse
-} from '@/lib/backend/errors';
+import { BackendError, normalizeBackendError, toBackendErrorResponse } from '@/lib/backend/errors';
 import { isFeatureEnabled } from '@/lib/backend/config';
 import { getMockData } from '@/lib/backend/mockDb';
 
@@ -39,7 +32,7 @@ export const OPTIONS = createCorsOptionsHandler(ANALYTICS_PROTOCOL_CORS_POLICY);
 
 function sumNumericStringField(
   commitments: ChainCommitment[],
-  field: 'amount' | 'feeEarned'
+  field: 'amount' | 'feeEarned',
 ): string {
   const total = commitments.reduce((acc, commitment) => {
     const value = Number(commitment[field]);
@@ -48,13 +41,11 @@ function sumNumericStringField(
   return total.toFixed(2);
 }
 
-export function buildProtocolAnalytics(
-  commitments: ChainCommitment[]
-): ProtocolAnalyticsResponse {
+export function buildProtocolAnalytics(commitments: ChainCommitment[]): ProtocolAnalyticsResponse {
   const totalCommitments = commitments.length;
-  const activeCommitments = commitments.filter(c => c.status === 'ACTIVE').length;
-  const settledCommitments = commitments.filter(c => c.status === 'SETTLED').length;
-  const violatedCommitments = commitments.filter(c => c.status === 'VIOLATED').length;
+  const activeCommitments = commitments.filter((c) => c.status === 'ACTIVE').length;
+  const settledCommitments = commitments.filter((c) => c.status === 'SETTLED').length;
+  const violatedCommitments = commitments.filter((c) => c.status === 'VIOLATED').length;
 
   const averageComplianceScore =
     totalCommitments === 0
@@ -63,9 +54,7 @@ export function buildProtocolAnalytics(
 
   const totalViolations = commitments.reduce((acc, c) => acc + c.violationCount, 0);
 
-  const uniqueOwners = new Set(
-    commitments.map(c => c.ownerAddress).filter(Boolean)
-  ).size;
+  const uniqueOwners = new Set(commitments.map((c) => c.ownerAddress).filter(Boolean)).size;
 
   return {
     totalCommitments,
@@ -90,7 +79,7 @@ async function fetchAllCommitmentsForProtocol(): Promise<ChainCommitment[]> {
   if (process.env.NEXT_PUBLIC_USE_MOCKS === 'true') {
     // In mock mode, pull from the shared mock-db and map to ChainCommitment
     const mockData = await getMockData();
-    return mockData.commitments.map(c => ({
+    return mockData.commitments.map((c) => ({
       id: c.id,
       ownerAddress: '',
       asset: c.asset ?? '',
@@ -108,9 +97,9 @@ async function fetchAllCommitmentsForProtocol(): Promise<ChainCommitment[]> {
   // We fall back to an empty array rather than throwing so a partial analytics
   // view is always renderable on the frontend.
   try {
-    const { default: contractsService } = await import(
-      '@/lib/backend/services/contracts'
-    ) as { default?: never };
+    const { default: contractsService } = (await import('@/lib/backend/services/contracts')) as {
+      default?: never;
+    };
     void contractsService; // reserved for future protocol-level RPC call
     // Until the contract exposes a `get_all_commitment_ids` method the protocol
     // analytics endpoint returns zeros rather than failing. The frontend handles
@@ -141,13 +130,13 @@ export async function GET(req: NextRequest) {
       code: 'NOT_FOUND',
       message: 'Protocol analytics endpoint is disabled.',
       status: 404,
-      details: { feature: 'analyticsProtocol' }
+      details: { feature: 'analyticsProtocol' },
     });
 
     return applyCorsPolicy(
       req,
       NextResponse.json(toBackendErrorResponse(error), { status: error.status }),
-      ANALYTICS_PROTOCOL_CORS_POLICY
+      ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   }
 
@@ -156,21 +145,21 @@ export async function GET(req: NextRequest) {
     return applyCorsPolicy(
       req,
       NextResponse.json(buildProtocolAnalytics(commitments)),
-      ANALYTICS_PROTOCOL_CORS_POLICY
+      ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   } catch (error) {
     const normalized = normalizeBackendError(error, {
       code: 'INTERNAL_ERROR',
       message: 'Failed to compute protocol analytics.',
-      status: 500
+      status: 500,
     });
 
     return applyCorsPolicy(
       req,
       NextResponse.json(toBackendErrorResponse(normalized), {
-        status: normalized.status
+        status: normalized.status,
       }),
-      ANALYTICS_PROTOCOL_CORS_POLICY
+      ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   }
 }

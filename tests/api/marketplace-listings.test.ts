@@ -31,10 +31,7 @@ import { GET, POST } from '@/app/api/marketplace/listings/route';
 import type { NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
-import {
-  listMarketplaceListings,
-  marketplaceService,
-} from '@/lib/backend/services/marketplace';
+import { listMarketplaceListings, marketplaceService } from '@/lib/backend/services/marketplace';
 import { parseJsonWithLimit } from '@/lib/backend/jsonBodyLimit';
 import { CsrfValidationError } from '@/lib/backend/errors';
 

@@ -97,19 +97,29 @@ describe('useGuidedTour — tour-progress store (replayable + dismissible)', () 
 
   it('skipTour only attempts API PUT if document.cookie contains a real session', async () => {
     // 1. Without session
-    const { result, unmount } = renderHook(() => useGuidedTour(makeProps({ walletAddress: '0x123' })));
+    const { result, unmount } = renderHook(() =>
+      useGuidedTour(makeProps({ walletAddress: '0x123' })),
+    );
     await waitFor(() => expect(result.current.isActive).toBe(true));
     act(() => result.current.skipTour());
     // Should not call fetch because session= is missing
-    expect(global.fetch).not.toHaveBeenCalledWith('/api/user/preferences', expect.objectContaining({ method: 'PUT' }));
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      '/api/user/preferences',
+      expect.objectContaining({ method: 'PUT' }),
+    );
     unmount();
 
     // 2. With session
     document.cookie = 'session=real_token_123';
-    const { result: result2 } = renderHook(() => useGuidedTour(makeProps({ walletAddress: '0x123' })));
+    const { result: result2 } = renderHook(() =>
+      useGuidedTour(makeProps({ walletAddress: '0x123' })),
+    );
     await waitFor(() => expect(result2.current.isActive).toBe(true));
     act(() => result2.current.skipTour());
     // Should call fetch
-    expect(global.fetch).toHaveBeenCalledWith('/api/user/preferences', expect.objectContaining({ method: 'PUT' }));
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/user/preferences',
+      expect.objectContaining({ method: 'PUT' }),
+    );
   });
 });

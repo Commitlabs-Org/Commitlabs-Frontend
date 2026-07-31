@@ -5,6 +5,7 @@ This document demonstrates how to test the Stellar wallet authentication flow.
 ## API Endpoints
 
 ### 1. Get Nonce
+
 ```
 POST /api/auth/nonce
 Content-Type: application/json
@@ -15,6 +16,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -27,6 +29,7 @@ Content-Type: application/json
 ```
 
 ### 2. Verify Signature
+
 ```
 POST /api/auth/verify
 Content-Type: application/json
@@ -39,6 +42,7 @@ Content-Type: application/json
 ```
 
 **Success Response:**
+
 ```json
 {
   "success": true,

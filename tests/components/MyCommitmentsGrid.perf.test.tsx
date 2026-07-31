@@ -40,7 +40,10 @@ vi.mock('../../src/components/modals/PurchaseSuccessModal', () => ({
 // ---------------------------------------------------------------------------
 function buildCommitments(count: number): Commitment[] {
   return Array.from({ length: count }, (_, i) =>
-    makeCommitment({ id: `CMT-${String(i + 1).padStart(3, '0')}`, type: i % 2 === 0 ? 'Safe' : 'Balanced' }),
+    makeCommitment({
+      id: `CMT-${String(i + 1).padStart(3, '0')}`,
+      type: i % 2 === 0 ? 'Safe' : 'Balanced',
+    }),
   );
 }
 
@@ -91,9 +94,7 @@ describe('MyCommitmentsGrid — memoization', () => {
       makeCommitment({ id: 'CMT-002', amount: '20000' }),
     ];
     const sortFn = (a: Commitment, b: Commitment) => a.id.localeCompare(b.id);
-    const { container } = render(
-      <MyCommitmentsGrid commitments={commitments} sortFn={sortFn} />,
-    );
+    const { container } = render(<MyCommitmentsGrid commitments={commitments} sortFn={sortFn} />);
     const links = container.querySelectorAll('a[href^="/commitments/"]');
     expect(links[0].textContent).toContain('CMT-001');
     expect(links[1].textContent).toContain('CMT-002');
@@ -104,7 +105,8 @@ describe('MyCommitmentsGrid — memoization', () => {
     // Track how many times MyCommitmentCard renders by spying on the module.
     let renderCount = 0;
     vi.doMock('../../src/components/MyCommitmentCard', async (importOriginal) => {
-      const original = await importOriginal<typeof import('../../src/components/MyCommitmentCard')>();
+      const original =
+        await importOriginal<typeof import('../../src/components/MyCommitmentCard')>();
       const WrappedCard = React.memo((props: Parameters<typeof original.default>[0]) => {
         renderCount++;
         return React.createElement(original.default, props);

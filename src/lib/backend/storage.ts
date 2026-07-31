@@ -24,11 +24,7 @@ interface MemoryStorageEntry {
 
 export interface KeyValueClient {
   get(key: string): Promise<string | null | undefined>;
-  set(
-    key: string,
-    value: string,
-    options?: { ttlSeconds?: number },
-  ): Promise<void>;
+  set(key: string, value: string, options?: { ttlSeconds?: number }): Promise<void>;
   delete(key: string): Promise<void>;
   increment(key: string, amount?: number): Promise<number>;
   expire?(key: string, ttlSeconds: number): Promise<void>;
@@ -71,11 +67,7 @@ class UpstashKeyValueClient implements KeyValueClient {
     return result === null ? null : (result as string);
   }
 
-  async set(
-    key: string,
-    value: string,
-    options?: { ttlSeconds?: number },
-  ): Promise<void> {
+  async set(key: string, value: string, options?: { ttlSeconds?: number }): Promise<void> {
     if (options?.ttlSeconds) {
       await this.command(['SET', key, value, 'EX', options.ttlSeconds]);
     } else {
@@ -122,13 +114,8 @@ export class MemoryStorageAdapter implements StorageAdapter {
     return (entry?.value as T | undefined) ?? null;
   }
 
-  async set<T>(
-    key: string,
-    value: T,
-    options?: StorageSetOptions,
-  ): Promise<void> {
-    const expiresAt =
-      options?.ttlMs !== undefined ? Date.now() + options.ttlMs : undefined;
+  async set<T>(key: string, value: T, options?: StorageSetOptions): Promise<void> {
+    const expiresAt = options?.ttlMs !== undefined ? Date.now() + options.ttlMs : undefined;
 
     this.store.set(key, { value, expiresAt });
   }
@@ -137,16 +124,12 @@ export class MemoryStorageAdapter implements StorageAdapter {
     this.store.delete(key);
   }
 
-  async increment(
-    key: string,
-    options?: StorageIncrementOptions,
-  ): Promise<number> {
+  async increment(key: string, options?: StorageIncrementOptions): Promise<number> {
     this.sweepExpired(key);
 
     const amount = options?.amount ?? 1;
     const currentEntry = this.store.get(key);
-    const currentValue =
-      typeof currentEntry?.value === 'number' ? currentEntry.value : 0;
+    const currentValue = typeof currentEntry?.value === 'number' ? currentEntry.value : 0;
     const nextValue = currentValue + amount;
 
     const expiresAt =
@@ -186,11 +169,7 @@ export class KeyValueStorageAdapter implements StorageAdapter {
 
   private normalizeError(operation: string, error: unknown): Error {
     const normalized = error instanceof Error ? error : new Error(String(error));
-    logError(
-      undefined,
-      `[Storage] ${operation} failed`,
-      normalized,
-    );
+    logError(undefined, `[Storage] ${operation} failed`, normalized);
     return new Error('Storage operation failed');
   }
 
@@ -206,17 +185,11 @@ export class KeyValueStorageAdapter implements StorageAdapter {
     }
   }
 
-  async set<T>(
-    key: string,
-    value: T,
-    options?: StorageSetOptions,
-  ): Promise<void> {
+  async set<T>(key: string, value: T, options?: StorageSetOptions): Promise<void> {
     try {
       await this.client.set(key, JSON.stringify(value), {
         ttlSeconds:
-          options?.ttlMs !== undefined
-            ? Math.max(1, Math.ceil(options.ttlMs / 1000))
-            : undefined,
+          options?.ttlMs !== undefined ? Math.max(1, Math.ceil(options.ttlMs / 1000)) : undefined,
       });
     } catch (error) {
       throw this.normalizeError('set', error);
@@ -231,18 +204,12 @@ export class KeyValueStorageAdapter implements StorageAdapter {
     }
   }
 
-  async increment(
-    key: string,
-    options?: StorageIncrementOptions,
-  ): Promise<number> {
+  async increment(key: string, options?: StorageIncrementOptions): Promise<number> {
     try {
       const nextValue = await this.client.increment(key, options?.amount ?? 1);
 
       if (options?.ttlMs !== undefined && this.client.expire) {
-        await this.client.expire(
-          key,
-          Math.max(1, Math.ceil(options.ttlMs / 1000)),
-        );
+        await this.client.expire(key, Math.max(1, Math.ceil(options.ttlMs / 1000)));
       } else if (options?.ttlMs !== undefined && !this.client.expire) {
         logWarn(
           undefined,
@@ -281,11 +248,7 @@ export class KeyValueStorageAdapter implements StorageAdapter {
       if (this.client.expire) {
         await this.client.expire(key, seconds);
       } else {
-        logWarn(
-          undefined,
-          '[Storage] expire requested but provider does not support it',
-          { key },
-        );
+        logWarn(undefined, '[Storage] expire requested but provider does not support it', { key });
       }
     } catch (error) {
       throw this.normalizeError('expire', error);
@@ -296,11 +259,7 @@ export class KeyValueStorageAdapter implements StorageAdapter {
 function resolveProvider(provider?: StorageProvider): StorageProvider {
   const configured = provider ?? process.env.COMMITLABS_STORAGE_PROVIDER;
 
-  if (
-    configured === 'memory' ||
-    configured === 'redis' ||
-    configured === 'kv'
-  ) {
+  if (configured === 'memory' || configured === 'redis' || configured === 'kv') {
     return configured;
   }
 
@@ -313,9 +272,7 @@ function resolveProvider(provider?: StorageProvider): StorageProvider {
 
 let cachedStorage: StorageAdapter | null = null;
 
-export function createStorageAdapter(
-  options: CreateStorageOptions = {},
-): StorageAdapter {
+export function createStorageAdapter(options: CreateStorageOptions = {}): StorageAdapter {
   const provider = resolveProvider(options.provider);
 
   if (provider === 'redis' || provider === 'kv') {
@@ -350,9 +307,7 @@ export function getStorageAdapter(): StorageAdapter {
   return cachedStorage;
 }
 
-export function configureStorageAdapterForTests(
-  adapter: StorageAdapter | null,
-): void {
+export function configureStorageAdapterForTests(adapter: StorageAdapter | null): void {
   cachedStorage = adapter;
 }
 

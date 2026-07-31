@@ -8,26 +8,16 @@ import {
   TransactionBuilder,
   nativeToScVal,
   scValToNative,
-} from "@stellar/stellar-sdk";
-import {
-  BackendError,
-  BackendErrorCode,
-  normalizeBackendError,
-} from "@/lib/backend/errors";
-import { getBackendConfig } from "@/lib/backend/config";
-import { logInfo } from "@/lib/backend/logger";
-import { cache } from "@/lib/backend/cache/factory";
-import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
-import { getCountersAdapter } from "@/lib/backend/counters/provider";
+} from '@stellar/stellar-sdk';
+import { BackendError, BackendErrorCode, normalizeBackendError } from '@/lib/backend/errors';
+import { getBackendConfig } from '@/lib/backend/config';
+import { logInfo } from '@/lib/backend/logger';
+import { cache } from '@/lib/backend/cache/factory';
+import { CacheKey, CacheTTL } from '@/lib/backend/cache/index';
+import { getCountersAdapter } from '@/lib/backend/counters/provider';
 
 export type ChainCommitmentStatus =
-  | "CREATED"
-  | "ACTIVE"
-  | "SETTLED"
-  | "VIOLATED"
-  | "EARLY_EXIT"
-  | "DISPUTED"
-  | "UNKNOWN";
+  'CREATED' | 'ACTIVE' | 'SETTLED' | 'VIOLATED' | 'EARLY_EXIT' | 'DISPUTED' | 'UNKNOWN';
 
 export interface CreateCommitmentOnChainParams {
   ownerAddress: string;
@@ -113,7 +103,7 @@ export interface DisputeOnChainResult {
 
 export interface ResolveDisputeOnChainParams {
   commitmentId: string;
-  resolution: "resolved_in_favor_of_owner" | "resolved_in_favor_of_counterparty" | "dismissed";
+  resolution: 'resolved_in_favor_of_owner' | 'resolved_in_favor_of_counterparty' | 'dismissed';
   notes?: string;
   resolverAddress: string;
 }
@@ -140,7 +130,7 @@ export interface EarlyExitCommitmentOnChainResult {
   reference?: string;
 }
 
-type ContractCallMode = "read" | "write";
+type ContractCallMode = 'read' | 'write';
 interface ContractInvocationResult {
   value: unknown;
   txHash?: string;
@@ -234,7 +224,8 @@ export function isRetryableContractError(error: unknown): boolean {
   const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 
   if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('deadline')) return true;
-  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) return true;
+  if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests'))
+    return true;
   if (msg.includes('not found') || msg.includes('404')) return false;
   if (msg.includes('invalid') || msg.includes('malformed')) return false;
 
@@ -246,7 +237,12 @@ export function isRetryableContractError(error: unknown): boolean {
   }
 
   // Fallback: treat generic network/gateway failures as retryable
-  if (msg.includes('socket hang up') || msg.includes('econnreset') || msg.includes('connection reset')) return true;
+  if (
+    msg.includes('socket hang up') ||
+    msg.includes('econnreset') ||
+    msg.includes('connection reset')
+  )
+    return true;
   if (/5\d\d/.test(msg)) return true; // 5xx
 
   return false;
@@ -266,7 +262,6 @@ export function assertRetrySafe(mode: ContractCallMode, attempt: number): void {
   });
 }
 
-
 function getRpcUrl(): string {
   return getBackendConfig().sorobanRpcUrl;
 }
@@ -275,10 +270,9 @@ function getNetworkPassphrase(): string {
   return getBackendConfig().networkPassphrase;
 }
 
-
-function getContractId(kind: "commitmentCore" | "attestationEngine"): string {
+function getContractId(kind: 'commitmentCore' | 'attestationEngine'): string {
   const config = getBackendConfig();
-  if (kind === "commitmentCore") {
+  if (kind === 'commitmentCore') {
     return config.contractAddresses.commitmentCore;
   }
   return config.contractAddresses.attestationEngine;
@@ -301,33 +295,30 @@ function getSourcePublicKey(): string | null {
   return process.env.SOROBAN_SOURCE_ACCOUNT || null;
 }
 
-
 function getSorobanServer(): SorobanRpc.Server {
   const url = getRpcUrl();
-  return new SorobanRpc.Server(url, { allowHttp: url.startsWith("http://") });
+  return new SorobanRpc.Server(url, { allowHttp: url.startsWith('http://') });
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object"
-    ? (value as Record<string, unknown>)
-    : {};
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
 
-function asString(value: unknown, fallback = ""): string {
-  if (typeof value === "string") {
+function asString(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') {
     return value;
   }
-  if (typeof value === "number" || typeof value === "bigint") {
+  if (typeof value === 'number' || typeof value === 'bigint') {
     return String(value);
   }
   return fallback;
 }
 
 function asNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     const parsed = Number(value);
     if (Number.isFinite(parsed)) {
       return parsed;
@@ -337,18 +328,18 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 function normalizeStatus(value: unknown): ChainCommitmentStatus {
-  const raw = asString(value, "UNKNOWN").toUpperCase();
+  const raw = asString(value, 'UNKNOWN').toUpperCase();
   if (
-    raw === "CREATED" ||
-    raw === "ACTIVE" ||
-    raw === "SETTLED" ||
-    raw === "VIOLATED" ||
-    raw === "EARLY_EXIT" ||
-    raw === "DISPUTED"
+    raw === 'CREATED' ||
+    raw === 'ACTIVE' ||
+    raw === 'SETTLED' ||
+    raw === 'VIOLATED' ||
+    raw === 'EARLY_EXIT' ||
+    raw === 'DISPUTED'
   ) {
     return raw;
   }
-  return "UNKNOWN";
+  return 'UNKNOWN';
 }
 
 /**
@@ -362,8 +353,8 @@ function parseChainCommitment(value: unknown): ChainCommitment {
 
   if (!id) {
     throw new BackendError({
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Soroban returned a commitment without an id.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Soroban returned a commitment without an id.',
       status: 502,
       details: { raw },
     });
@@ -373,14 +364,11 @@ function parseChainCommitment(value: unknown): ChainCommitment {
     id,
     ownerAddress: asString(raw.ownerAddress ?? raw.owner_address),
     asset: asString(raw.asset),
-    amount: asString(raw.amount, "0"),
+    amount: asString(raw.amount, '0'),
     status: normalizeStatus(raw.status),
     complianceScore: asNumber(raw.complianceScore ?? raw.compliance_score) * ANALYTICS_SCALE,
-    currentValue: asString(
-      raw.currentValue ?? raw.current_value ?? raw.amount,
-      "0",
-    ),
-    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, "0"),
+    currentValue: asString(raw.currentValue ?? raw.current_value ?? raw.amount, '0'),
+    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, '0'),
     violationCount: asNumber(raw.violationCount ?? raw.violation_count),
     createdAt: asString(raw.createdAt ?? raw.created_at) || undefined,
     expiresAt: asString(raw.expiresAt ?? raw.expires_at) || undefined,
@@ -392,18 +380,18 @@ function parseCreateCommitmentResult(
   value: unknown,
   txHash?: string,
 ): CreateCommitmentOnChainResult {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return {
       commitmentId: value,
       commitment: {
         id: value,
-        ownerAddress: "",
-        asset: "",
-        amount: "0",
-        status: "UNKNOWN",
+        ownerAddress: '',
+        asset: '',
+        amount: '0',
+        status: 'UNKNOWN',
         complianceScore: 0,
-        currentValue: "0",
-        feeEarned: "0",
+        currentValue: '0',
+        feeEarned: '0',
         violationCount: 0,
       },
       txHash,
@@ -420,18 +408,15 @@ function parseCreateCommitmentResult(
   };
 }
 
-function parseAttestationResult(
-  value: unknown,
-  txHash?: string,
-): RecordAttestationOnChainResult {
+function parseAttestationResult(value: unknown, txHash?: string): RecordAttestationOnChainResult {
   const raw = asRecord(value);
   const attestationId = asString(raw.attestationId ?? raw.id);
   const commitmentId = asString(raw.commitmentId ?? raw.commitment_id);
 
   if (!attestationId || !commitmentId) {
     throw new BackendError({
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Soroban returned an invalid attestation payload.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Soroban returned an invalid attestation payload.',
       status: 502,
       details: { raw },
     });
@@ -442,9 +427,8 @@ function parseAttestationResult(
     commitmentId,
     complianceScore: asNumber(raw.complianceScore ?? raw.compliance_score) * ANALYTICS_SCALE,
     violation: Boolean(raw.violation),
-    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, "0"),
-    recordedAt:
-      asString(raw.recordedAt ?? raw.recorded_at) || new Date().toISOString(),
+    feeEarned: asString(raw.feeEarned ?? raw.fees_earned, '0'),
+    recordedAt: asString(raw.recordedAt ?? raw.recorded_at) || new Date().toISOString(),
     txHash: asString(raw.txHash) || txHash,
   };
 }
@@ -472,8 +456,8 @@ function withRpcTimeout<T>(
     const timer = setTimeout(() => {
       reject(
         new BackendError({
-          code: "GATEWAY_TIMEOUT",
-          message: "The blockchain operation timed out. It may still be processed later.",
+          code: 'GATEWAY_TIMEOUT',
+          message: 'The blockchain operation timed out. It may still be processed later.',
           status: 504,
           details: {
             methodName,
@@ -504,18 +488,14 @@ async function waitForTransactionResult(
 ): Promise<unknown> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    const tx = await withRpcTimeout(
-      server.getTransaction(hash),
-      "getTransaction",
-      timeoutMs,
-    );
+    const tx = await withRpcTimeout(server.getTransaction(hash), 'getTransaction', timeoutMs);
     if (tx.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
       return tx.returnValue ? scValToNative(tx.returnValue) : null;
     }
     if (tx.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
-      throw normalizeBackendError(new Error("Transaction execution failed"), {
-        code: "BLOCKCHAIN_CALL_FAILED",
-        message: "Soroban transaction failed.",
+      throw normalizeBackendError(new Error('Transaction execution failed'), {
+        code: 'BLOCKCHAIN_CALL_FAILED',
+        message: 'Soroban transaction failed.',
         status: 502,
         details: { hash, txStatus: tx.status },
       });
@@ -526,9 +506,9 @@ async function waitForTransactionResult(
     });
   }
 
-  throw normalizeBackendError(new Error("RPC Timeout"), {
-    code: "BLOCKCHAIN_CALL_FAILED",
-    message: "Timed out waiting for Soroban transaction result.",
+  throw normalizeBackendError(new Error('RPC Timeout'), {
+    code: 'BLOCKCHAIN_CALL_FAILED',
+    message: 'Timed out waiting for Soroban transaction result.',
     status: 504,
     details: { hash },
   });
@@ -549,8 +529,8 @@ async function invokeContractMethod(
 
   if (!contractId) {
     throw new BackendError({
-      code: "BLOCKCHAIN_UNAVAILABLE",
-      message: "Missing Soroban contract configuration.",
+      code: 'BLOCKCHAIN_UNAVAILABLE',
+      message: 'Missing Soroban contract configuration.',
       status: 500,
       details: { methodName },
     });
@@ -559,8 +539,8 @@ async function invokeContractMethod(
   const sourcePublicKey = getSourcePublicKey();
   if (!sourcePublicKey) {
     throw new BackendError({
-      code: "BLOCKCHAIN_UNAVAILABLE",
-      message: "Missing SOROBAN source account configuration.",
+      code: 'BLOCKCHAIN_UNAVAILABLE',
+      message: 'Missing SOROBAN source account configuration.',
       status: 500,
       details: { methodName },
     });
@@ -569,16 +549,10 @@ async function invokeContractMethod(
   const server = getSorobanServer();
   const contract = new Contract(contractId);
   const account =
-    mode === "write"
-      ? await withRpcTimeout(
-          server.getAccount(sourcePublicKey),
-          `${methodName}.getAccount`,
-        )
-      : new Account(sourcePublicKey, "0");
-  const operation = contract.call(
-    methodName,
-    ...params.map((value) => nativeToScVal(value)),
-  );
+    mode === 'write'
+      ? await withRpcTimeout(server.getAccount(sourcePublicKey), `${methodName}.getAccount`)
+      : new Account(sourcePublicKey, '0');
+  const operation = contract.call(methodName, ...params.map((value) => nativeToScVal(value)));
 
   const tx = new TransactionBuilder(account, {
     fee: String(BASE_FEE),
@@ -594,14 +568,14 @@ async function invokeContractMethod(
   );
   if (SorobanRpc.Api.isSimulationError(simulation)) {
     throw normalizeBackendError(new Error(simulation.error), {
-      code: "BLOCKCHAIN_CALL_FAILED",
+      code: 'BLOCKCHAIN_CALL_FAILED',
       message: `Soroban simulation failed for ${methodName}.`,
       status: 502,
       details: { methodName },
     });
   }
 
-  if (mode === "read") {
+  if (mode === 'read') {
     return {
       value: simulation.result ? scValToNative(simulation.result.retval) : null,
       version: getBackendConfig().activeVersion,
@@ -611,8 +585,8 @@ async function invokeContractMethod(
   const sourceKeypair = getSourceKeypair();
   if (!sourceKeypair) {
     throw new BackendError({
-      code: "BLOCKCHAIN_UNAVAILABLE",
-      message: "Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.",
+      code: 'BLOCKCHAIN_UNAVAILABLE',
+      message: 'Missing SOROBAN_SERVER_SECRET_KEY for write contract calls.',
       status: 500,
       details: { methodName },
     });
@@ -623,10 +597,7 @@ async function invokeContractMethod(
     `${methodName}.prepareTransaction`,
   );
   preparedTx.sign(sourceKeypair);
-  const sendResult = await withRpcTimeout(
-    server.sendTransaction(preparedTx),
-    "sendTransaction",
-  );
+  const sendResult = await withRpcTimeout(server.sendTransaction(preparedTx), 'sendTransaction');
   const txHash = sendResult.hash;
 
   const onChainValue = await waitForTransactionResult(server, txHash);
@@ -653,18 +624,17 @@ async function invokeReadContractMethod(
   params: unknown[],
 ): Promise<ContractInvocationResult> {
   return retryWithBackoff(
-    (attempt) =>
-      invokeContractMethod(contractId, methodName, params, "read", attempt),
+    (attempt) => invokeContractMethod(contractId, methodName, params, 'read', attempt),
     {
       ...READ_RETRY_CONFIG,
       isRetryable: (error) =>
         !(
           error instanceof BackendError &&
-          error.code === "GATEWAY_TIMEOUT" &&
+          error.code === 'GATEWAY_TIMEOUT' &&
           asRecord(error.details).timeoutMs !== undefined
         ) && isRetryableContractError(error),
       onRetry: ({ attempt, delayMs, error }) => {
-        logInfo(undefined, "[soroban] retrying read after transient failure", {
+        logInfo(undefined, '[soroban] retrying read after transient failure', {
           methodName,
           attempt,
           delayMs: Math.round(delayMs),
@@ -678,8 +648,8 @@ async function invokeReadContractMethod(
 function validateOwnerAddress(ownerAddress: string): void {
   if (!ownerAddress || ownerAddress.trim().length < 5) {
     throw new BackendError({
-      code: "BAD_REQUEST",
-      message: "Invalid owner address.",
+      code: 'BAD_REQUEST',
+      message: 'Invalid owner address.',
       status: 400,
       details: { ownerAddress },
     });
@@ -693,8 +663,8 @@ export async function createCommitmentOnChain(
   try {
     validateOwnerAddress(params.ownerAddress);
     const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "create_commitment",
+      getContractId('commitmentCore'),
+      'create_commitment',
       [
         new Address(params.ownerAddress).toScVal(),
         nativeToScVal(params.asset),
@@ -703,12 +673,12 @@ export async function createCommitmentOnChain(
         nativeToScVal(params.maxLossBps),
         nativeToScVal(params.metadata ?? {}),
       ],
-      "write",
+      'write',
     );
 
     // Increment successful actions counter on successful commitment creation
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.userCommitments(params.ownerAddress));
 
@@ -716,13 +686,13 @@ export async function createCommitmentOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to create commitment on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to create commitment on chain.',
       status: 502,
-      details: { method: "create_commitment" },
+      details: { method: 'create_commitment' },
     });
   }
 }
@@ -734,8 +704,8 @@ export async function getCommitmentFromChain(
   try {
     if (!commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id.',
         status: 400,
       });
     }
@@ -743,21 +713,21 @@ export async function getCommitmentFromChain(
     const cacheKey = CacheKey.commitment(commitmentId);
     const cached = await cache.get<ChainCommitment>(cacheKey);
     if (cached !== null) {
-      logInfo(loggingContext?.requestId, "[cache] hit commitment", { commitmentId });
+      logInfo(loggingContext?.requestId, '[cache] hit commitment', { commitmentId });
       return cached;
     }
-    logInfo(loggingContext?.requestId, "[cache] miss commitment", { commitmentId });
+    logInfo(loggingContext?.requestId, '[cache] miss commitment', { commitmentId });
 
     // Read call: wrapped with bounded retry-and-backoff for transient failures.
     const invocation = await invokeReadContractMethod(
-      getContractId("commitmentCore"),
-      "get_commitment",
+      getContractId('commitmentCore'),
+      'get_commitment',
       [commitmentId],
     );
 
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     const commitment = {
       ...parseChainCommitment(invocation.value),
@@ -769,13 +739,13 @@ export async function getCommitmentFromChain(
     // Increment chain failures counter on blockchain operation failures.
     // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to fetch commitment from chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to fetch commitment from chain.',
       status: 502,
-      details: { method: "get_commitment", commitmentId },
+      details: { method: 'get_commitment', commitmentId },
     });
   }
 }
@@ -790,12 +760,12 @@ export async function getUserCommitmentsFromChain(
     const cacheKey = CacheKey.userCommitments(ownerAddress);
     const cached = await cache.get<ChainCommitment[]>(cacheKey);
     if (cached !== null) {
-      logInfo(loggingContext?.requestId, "[cache] hit user-commitments", { ownerAddress });
+      logInfo(loggingContext?.requestId, '[cache] hit user-commitments', { ownerAddress });
       return cached;
     }
-    logInfo(loggingContext?.requestId, "[cache] miss user-commitments", { ownerAddress });
+    logInfo(loggingContext?.requestId, '[cache] miss user-commitments', { ownerAddress });
 
-    const contractId = getContractId("commitmentCore");
+    const contractId = getContractId('commitmentCore');
 
     try {
       // Optimistic probe. `get_user_commitments` may not exist on every
@@ -807,16 +777,16 @@ export async function getUserCommitmentsFromChain(
       // `invokeReadContractMethod` and so are retried.
       const directResult = await invokeContractMethod(
         contractId,
-        "get_user_commitments",
+        'get_user_commitments',
         [ownerAddress],
-        "read",
+        'read',
       );
       const commitments = parseCommitmentList(directResult.value);
       if (commitments.length > 0) {
         await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
         // Increment successful actions counter on successful chain read
         const countersAdapter = getCountersAdapter();
-        void countersAdapter.incrementSuccessfulActions();
+        await countersAdapter.incrementSuccessfulActions();
         return commitments;
       }
     } catch (error) {
@@ -826,11 +796,9 @@ export async function getUserCommitmentsFromChain(
     }
 
     // Read call: wrapped with bounded retry-and-backoff for transient failures.
-    const idsResult = await invokeReadContractMethod(
-      contractId,
-      "get_user_commitment_ids",
-      [ownerAddress],
-    );
+    const idsResult = await invokeReadContractMethod(contractId, 'get_user_commitment_ids', [
+      ownerAddress,
+    ]);
     const commitmentIds = Array.isArray(idsResult.value)
       ? idsResult.value.map((id) => asString(id)).filter(Boolean)
       : [];
@@ -841,19 +809,23 @@ export async function getUserCommitmentsFromChain(
     await cache.set(cacheKey, commitments, CacheTTL.USER_COMMITMENTS);
     // Increment successful actions counter on successful chain read
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
+    await countersAdapter.incrementSuccessfulActions();
     return commitments;
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures.
     // Reached only after read retries (if any) have been exhausted.
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
+    await countersAdapter.incrementChainFailures();
 
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to fetch user commitments from chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to fetch user commitments from chain.',
       status: 502,
-      details: { method: "get_user_commitments", ownerAddress, requestId: loggingContext?.requestId },
+      details: {
+        method: 'get_user_commitments',
+        ownerAddress,
+        requestId: loggingContext?.requestId,
+      },
     });
   }
 }
@@ -865,8 +837,8 @@ export async function recordAttestationOnChain(
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for attestation.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for attestation.',
         status: 400,
       });
     }
@@ -878,29 +850,27 @@ export async function recordAttestationOnChain(
     );
 
     const invocation = await invokeContractMethod(
-      getContractId("attestationEngine"),
-      "record_attestation",
+      getContractId('attestationEngine'),
+      'record_attestation',
       [
         nativeToScVal(params.commitmentId),
         new Address(params.attestorAddress).toScVal(),
         nativeToScVal(params.complianceScore / ANALYTICS_SCALE),
         nativeToScVal(params.violation),
-        nativeToScVal(params.feeEarned ?? "0"),
+        nativeToScVal(params.feeEarned ?? '0'),
         nativeToScVal(params.timestamp ?? new Date().toISOString()),
         nativeToScVal(params.details ?? {}),
       ],
-      "write",
+      'write',
     );
 
     // Increment successful actions counter on successful attestation recording
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (cachedCommitment?.ownerAddress) {
-      void cache.delete(
-        CacheKey.userCommitments(cachedCommitment.ownerAddress),
-      );
+      void cache.delete(CacheKey.userCommitments(cachedCommitment.ownerAddress));
     }
 
     // Add logging context to payload if needed
@@ -911,14 +881,14 @@ export async function recordAttestationOnChain(
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to record attestation on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to record attestation on chain.',
       status: 502,
       details: {
-        method: "record_attestation",
+        method: 'record_attestation',
         commitmentId: params.commitmentId,
       },
     });
@@ -932,8 +902,8 @@ export async function settleCommitmentOnChain(
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for settlement.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for settlement.',
         status: 400,
       });
     }
@@ -942,15 +912,15 @@ export async function settleCommitmentOnChain(
     const commitment = await getCommitmentFromChain(params.commitmentId, loggingContext);
 
     // Check if commitment is matured (expired or can be settled)
-    if (commitment.status === "SETTLED") {
+    if (commitment.status === 'SETTLED') {
       throw new BackendError({
-        code: "CONFLICT" as BackendErrorCode,
-        message: "Commitment has already been settled.",
+        code: 'CONFLICT' as BackendErrorCode,
+        message: 'Commitment has already been settled.',
         status: 409,
       });
     }
 
-    if (commitment.status === "ACTIVE") {
+    if (commitment.status === 'ACTIVE') {
       // Invariant: An active commitment can only be settled if it has matured.
       // If expiresAt is present, we check if the current time is past the expiry time.
       // If expiresAt is missing, we err on the side of safety and block settlement
@@ -960,15 +930,15 @@ export async function settleCommitmentOnChain(
         const now = new Date().getTime();
         if (now < expiryTime) {
           throw new BackendError({
-            code: "NOT_MATURED",
-            message: "Commitment has not matured yet and cannot be settled.",
+            code: 'NOT_MATURED',
+            message: 'Commitment has not matured yet and cannot be settled.',
             status: 400,
           });
         }
       } else {
         throw new BackendError({
-          code: "NOT_MATURED",
-          message: "Commitment maturity information is missing. Cannot settle.",
+          code: 'NOT_MATURED',
+          message: 'Commitment maturity information is missing. Cannot settle.',
           status: 400,
         });
       }
@@ -976,13 +946,13 @@ export async function settleCommitmentOnChain(
 
     // Call the settlement function on the contract
     const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "settle_commitment",
+      getContractId('commitmentCore'),
+      'settle_commitment',
       [
         nativeToScVal(params.commitmentId),
         new Address(params.callerAddress ?? commitment.ownerAddress).toScVal(),
       ],
-      "write",
+      'write',
     );
     // This method is intentionally aligned with the escrow contract alias in
     // contracts/escrow/src/lib.rs so the backend can invoke settled releases
@@ -990,7 +960,7 @@ export async function settleCommitmentOnChain(
 
     // Increment successful actions counter on successful settlement
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+    await countersAdapter.incrementSuccessfulActions(); // Track metrics
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -999,28 +969,26 @@ export async function settleCommitmentOnChain(
 
     // Parse the settlement result
     const result = asRecord(invocation.value);
-    const settlementAmount = asString(result.settlementAmount, "0");
-    const finalStatus = asString(result.finalStatus, "SETTLED");
+    const settlementAmount = asString(result.settlementAmount, '0');
+    const finalStatus = asString(result.finalStatus, 'SETTLED');
 
     return {
       settlementAmount,
       finalStatus,
       txHash: invocation.txHash,
-      reference: invocation.txHash
-        ? undefined
-        : "TODO_CHAIN_CALL_SETTLE_COMMITMENT",
+      reference: invocation.txHash ? undefined : 'TODO_CHAIN_CALL_SETTLE_COMMITMENT',
     };
   } catch (error) {
     // Increment chain failures counter on blockchain operation failures
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+    await countersAdapter.incrementChainFailures(); // Track metrics
 
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to settle commitment on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to settle commitment on chain.',
       status: 502,
       details: {
-        method: "settle_commitment",
+        method: 'settle_commitment',
         commitmentId: params.commitmentId,
         requestId: loggingContext?.requestId,
       },
@@ -1034,8 +1002,8 @@ export async function fundEscrowOnChain(
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for funding.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for funding.',
         status: 400,
       });
     }
@@ -1048,17 +1016,17 @@ export async function fundEscrowOnChain(
 
     if (!commitment) {
       throw new BackendError({
-        code: "NOT_FOUND",
-        message: "Commitment not found.",
+        code: 'NOT_FOUND',
+        message: 'Commitment not found.',
         status: 404,
         details: { commitmentId: params.commitmentId },
       });
     }
 
-    if (commitment.status !== "CREATED") {
+    if (commitment.status !== 'CREATED') {
       throw new BackendError({
-        code: "CONFLICT",
-        message: "Only created commitments can be funded.",
+        code: 'CONFLICT',
+        message: 'Only created commitments can be funded.',
         status: 409,
         details: { commitmentId: params.commitmentId, status: commitment.status },
       });
@@ -1067,25 +1035,22 @@ export async function fundEscrowOnChain(
     const callerAddress = params.callerAddress ?? commitment.ownerAddress;
     if (!callerAddress || callerAddress !== commitment.ownerAddress) {
       throw new BackendError({
-        code: "FORBIDDEN",
-        message: "Only the commitment owner may fund this commitment.",
+        code: 'FORBIDDEN',
+        message: 'Only the commitment owner may fund this commitment.',
         status: 403,
         details: { commitmentId: params.commitmentId, callerAddress },
       });
     }
 
     const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "fund_escrow",
-      [
-        nativeToScVal(params.commitmentId),
-        new Address(callerAddress).toScVal(),
-      ],
-      "write",
+      getContractId('commitmentCore'),
+      'fund_escrow',
+      [nativeToScVal(params.commitmentId), new Address(callerAddress).toScVal()],
+      'write',
     );
 
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementSuccessfulActions();
+    await countersAdapter.incrementSuccessfulActions();
 
     void cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -1096,18 +1061,116 @@ export async function fundEscrowOnChain(
       commitmentId: params.commitmentId,
       txHash: invocation.txHash,
       contractVersion: invocation.version,
-      reference: invocation.txHash ? undefined : "TODO_CHAIN_CALL_FUND_ESCROW",
+      reference: invocation.txHash ? undefined : 'TODO_CHAIN_CALL_FUND_ESCROW',
     };
   } catch (error) {
     const countersAdapter = getCountersAdapter();
-    void countersAdapter.incrementChainFailures();
+    await countersAdapter.incrementChainFailures();
 
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to fund escrow on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to fund escrow on chain.',
       status: 502,
       details: {
-        method: "fund_escrow",
+        method: 'fund_escrow',
+        commitmentId: params.commitmentId,
+      },
+    });
+  }
+}
+
+export interface TransferOwnershipParams {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+}
+
+export interface TransferOwnershipResult {
+  commitmentId: string;
+  fromAddress: string;
+  toAddress: string;
+  txHash?: string;
+}
+
+/**
+ * Transfers marketplace ownership of a funded commitment to a new owner,
+ * bridging to the on-chain `transfer_ownership` method (see
+ * `contracts/escrow/src/lib.rs`). Named `transferOwnership` (rather than the
+ * `...OnChain` suffix used elsewhere in this file) to match the import used
+ * by the marketplace purchase route.
+ *
+ * # Preconditions
+ * - Commitment must be in `FUNDED` state on-chain.
+ * - `fromAddress` must match the commitment's current owner.
+ */
+export async function transferOwnership(
+  params: TransferOwnershipParams,
+  loggingContext?: LoggingContext,
+): Promise<TransferOwnershipResult> {
+  try {
+    if (!params.commitmentId) {
+      throw new BackendError({
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for ownership transfer.',
+        status: 400,
+      });
+    }
+
+    validateOwnerAddress(params.fromAddress);
+    validateOwnerAddress(params.toAddress);
+
+    const commitment = await getCommitmentFromChain(params.commitmentId, loggingContext);
+
+    if (!commitment) {
+      throw new BackendError({
+        code: 'NOT_FOUND',
+        message: 'Commitment not found.',
+        status: 404,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    if (commitment.ownerAddress && commitment.ownerAddress !== params.fromAddress) {
+      throw new BackendError({
+        code: 'FORBIDDEN',
+        message: "Only the current owner may transfer this commitment's ownership.",
+        status: 403,
+        details: { commitmentId: params.commitmentId },
+      });
+    }
+
+    const invocation = await invokeContractMethod(
+      getContractId('commitmentCore'),
+      'transfer_ownership',
+      [params.commitmentId, new Address(params.toAddress).toScVal()],
+      'write',
+    );
+
+    // Increment successful actions counter on successful ownership transfer
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementSuccessfulActions(); // Fire and forget for metrics
+
+    void cache.delete(CacheKey.commitment(params.commitmentId));
+    void cache.delete(CacheKey.userCommitments(params.fromAddress));
+    void cache.delete(CacheKey.userCommitments(params.toAddress));
+
+    return {
+      commitmentId: params.commitmentId,
+      fromAddress: params.fromAddress,
+      toAddress: params.toAddress,
+      txHash: invocation.txHash,
+    };
+  } catch (error) {
+    // Increment chain failures counter on blockchain operation failures
+    const countersAdapter = getCountersAdapter();
+    void countersAdapter.incrementChainFailures(); // Fire and forget for metrics
+
+    throw normalizeBackendError(error, {
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to transfer commitment ownership on chain.',
+      status: 502,
+      details: {
+        method: 'transfer_ownership',
         commitmentId: params.commitmentId,
       },
     });
@@ -1121,50 +1184,49 @@ export async function earlyExitCommitmentOnChain(
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for early exit.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for early exit.',
         status: 400,
       });
     }
 
     const commitment = await getCommitmentFromChain(params.commitmentId, loggingContext);
 
-    if (commitment.status === "SETTLED") {
+    if (commitment.status === 'SETTLED') {
       throw new BackendError({
-        code: "CONFLICT",
-        message:
-          "Commitment has already been settled and cannot be exited early.",
+        code: 'CONFLICT',
+        message: 'Commitment has already been settled and cannot be exited early.',
         status: 409,
       });
     }
 
-    if (commitment.status === "EARLY_EXIT") {
+    if (commitment.status === 'EARLY_EXIT') {
       throw new BackendError({
-        code: "CONFLICT",
-        message: "Commitment has already been exited early.",
+        code: 'CONFLICT',
+        message: 'Commitment has already been exited early.',
         status: 409,
       });
     }
 
-    if (commitment.status === "VIOLATED") {
+    if (commitment.status === 'VIOLATED') {
       throw new BackendError({
-        code: "CONFLICT",
-        message: "Commitment has been violated and cannot be exited early.",
+        code: 'CONFLICT',
+        message: 'Commitment has been violated and cannot be exited early.',
         status: 409,
       });
     }
 
     const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "early_exit_commitment",
+      getContractId('commitmentCore'),
+      'early_exit_commitment',
       [params.commitmentId, params.callerAddress ?? commitment.ownerAddress],
-      "write",
+      'write',
     );
 
     const result = asRecord(invocation.value);
-    const exitAmount = asString(result.exitAmount, "0");
-    const penaltyAmount = asString(result.penaltyAmount, "0");
-    const finalStatus = asString(result.finalStatus, "EARLY_EXIT");
+    const exitAmount = asString(result.exitAmount, '0');
+    const penaltyAmount = asString(result.penaltyAmount, '0');
+    const finalStatus = asString(result.finalStatus, 'EARLY_EXIT');
 
     return {
       exitAmount,
@@ -1176,11 +1238,11 @@ export async function earlyExitCommitmentOnChain(
     };
   } catch (error) {
     throw normalizeContractError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to exit commitment early on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to exit commitment early on chain.',
       status: 502,
       details: {
-        method: "early_exit_commitment",
+        method: 'early_exit_commitment',
         commitmentId: params.commitmentId,
       },
     });
@@ -1193,41 +1255,41 @@ export async function openDisputeOnChain(
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for dispute.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for dispute.',
         status: 400,
       });
     }
 
     const commitment = await getCommitmentFromChain(params.commitmentId);
 
-    if (commitment.status === "SETTLED" || commitment.status === "EARLY_EXIT") {
+    if (commitment.status === 'SETTLED' || commitment.status === 'EARLY_EXIT') {
       throw new BackendError({
-        code: "CONFLICT",
-        message: "Cannot dispute a commitment that is already settled or exited.",
+        code: 'CONFLICT',
+        message: 'Cannot dispute a commitment that is already settled or exited.',
         status: 409,
       });
     }
 
-    if (commitment.status === "DISPUTED") {
+    if (commitment.status === 'DISPUTED') {
       throw new BackendError({
-        code: "CONFLICT",
-        message: "Commitment is already in dispute.",
+        code: 'CONFLICT',
+        message: 'Commitment is already in dispute.',
         status: 409,
       });
     }
 
     const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "early_exit_commitment",
+      getContractId('commitmentCore'),
+      'early_exit_commitment',
       [params.commitmentId, params.callerAddress ?? commitment.ownerAddress],
-      "write",
+      'write',
     );
 
     const result = asRecord(invocation.value);
-    const exitAmount = asString(result.exitAmount, "0");
-    const penaltyAmount = asString(result.penaltyAmount, "0");
-    const finalStatus = asString(result.finalStatus, "EARLY_EXIT");
+    const exitAmount = asString(result.exitAmount, '0');
+    const penaltyAmount = asString(result.penaltyAmount, '0');
+    const finalStatus = asString(result.finalStatus, 'EARLY_EXIT');
 
     await cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
@@ -1239,15 +1301,15 @@ export async function openDisputeOnChain(
       penaltyAmount,
       finalStatus,
       txHash: invocation.txHash,
-      reference: invocation.txHash ? undefined : "TODO_CHAIN_CALL_EARLY_EXIT",
+      reference: invocation.txHash ? undefined : 'TODO_CHAIN_CALL_EARLY_EXIT',
     };
   } catch (error) {
     throw normalizeContractError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to exit commitment early on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to exit commitment early on chain.',
       status: 502,
       details: {
-        method: "early_exit_commitment",
+        method: 'early_exit_commitment',
         commitmentId: params.commitmentId,
       },
     });
@@ -1260,39 +1322,39 @@ export async function resolveDisputeOnChain(
   try {
     if (!params.commitmentId) {
       throw new BackendError({
-        code: "BAD_REQUEST",
-        message: "Missing commitment id for dispute resolution.",
+        code: 'BAD_REQUEST',
+        message: 'Missing commitment id for dispute resolution.',
         status: 400,
       });
     }
 
     const commitment = await getCommitmentFromChain(params.commitmentId);
 
-    if (commitment.status !== "DISPUTED") {
+    if (commitment.status !== 'DISPUTED') {
       throw new BackendError({
-        code: "CONFLICT",
-        message: "Can only resolve a commitment that is currently in dispute.",
+        code: 'CONFLICT',
+        message: 'Can only resolve a commitment that is currently in dispute.',
         status: 409,
       });
     }
 
     const invocation = await invokeContractMethod(
-      getContractId("commitmentCore"),
-      "resolve_dispute",
-      [params.commitmentId, params.resolution, params.notes ?? ""],
-      "write",
+      getContractId('commitmentCore'),
+      'resolve_dispute',
+      [params.commitmentId, params.resolution, params.notes ?? ''],
+      'write',
     );
 
     const result = asRecord(invocation.value);
     const disputeId = asString(result.disputeId ?? result.id);
-    const finalStatus = asString(result.finalStatus, "ACTIVE");
+    const finalStatus = asString(result.finalStatus, 'ACTIVE');
 
     // Status changed — invalidate detail and owner list.
     await cache.delete(CacheKey.commitment(params.commitmentId));
     if (commitment.ownerAddress) {
       await cache.delete(CacheKey.userCommitments(commitment.ownerAddress));
     }
-    logInfo(undefined, "[cache] invalidated commitment after dispute resolution", {
+    logInfo(undefined, '[cache] invalidated commitment after dispute resolution', {
       commitmentId: params.commitmentId,
     });
 
@@ -1306,11 +1368,11 @@ export async function resolveDisputeOnChain(
     };
   } catch (error) {
     throw normalizeBackendError(error, {
-      code: "BLOCKCHAIN_CALL_FAILED",
-      message: "Unable to resolve dispute on chain.",
+      code: 'BLOCKCHAIN_CALL_FAILED',
+      message: 'Unable to resolve dispute on chain.',
       status: 502,
       details: {
-        method: "resolve_dispute",
+        method: 'resolve_dispute',
         commitmentId: params.commitmentId,
         requestId: loggingContext?.requestId,
       },

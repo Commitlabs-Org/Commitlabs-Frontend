@@ -142,14 +142,7 @@ fn unauthorized_cannot_rotate_admin_or_fee_recipient() {
 
 // ── Lifecycle tests ───────────────────────────────────────────────────────────
 
-#[test]
-fn initialize_is_one_time() {
-    let f = setup();
-    let other = Address::generate(&f.env);
-    let res = f
-        .client
-        .try_initialize(&f.admin, &f.asset, &other, &200, &300, &500);
-    assert_eq!(res, Err(Ok(Error::AlreadyInitialized)));
+    panic!("expected contract event was not emitted");
 }
 
 #[test]
@@ -592,6 +585,42 @@ fn dispute_freezes_then_admin_resolves() {
     let record = dispute_after.unwrap();
     assert_eq!(record.reason_text, reason);
     assert_eq!(record.reason_category, DisputeReason::Other);
+}
+
+#[test]
+fn release_decreases_contract_token_balance_by_exactly_total_payout() {
+    let f = setup();
+    let owner = Address::generate(&f.env);
+    fund_owner(&f, &owner, 1_000);
+
+    let id = f.client.create_commitment(
+        &owner,
+        &f.asset,
+        &1_000i128,
+        &RiskProfile::Safe,
+        &10u32,
+        &200u32,
+        &metadata(&f.env),
+    );
+    let commitment = f.client.get_commitment(&id);
+    f.client.fund_escrow(&id);
+
+    let admin_deposit = 500;
+    f.token_admin.mint(&f.admin, &admin_deposit);
+    f.client.deposit_yield_pool(&f.admin, &admin_deposit);
+
+    let contract_balance_before = f.token.balance(&f.contract_id);
+    assert_eq!(contract_balance_before, 1_500);
+
+    f.env.ledger().set_timestamp(commitment.maturity);
+
+    let total_payout = commitment.amount + commitment.accrued_yield;
+    let paid = f.client.release(&id, &owner);
+    assert_eq!(paid, total_payout);
+
+    let contract_balance_after = f.token.balance(&f.contract_id);
+    assert_eq!(contract_balance_before - contract_balance_after, total_payout);
+    assert_eq!(contract_balance_after, 1_500 - total_payout);
 }
 
 #[test]

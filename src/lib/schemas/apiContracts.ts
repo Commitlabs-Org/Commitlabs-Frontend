@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // ─── Envelope schemas ─────────────────────────────────────────────────────────
 
@@ -112,9 +112,7 @@ export const CommitmentDetailSchema = z.object({
   contractVersion: z.string().optional(),
 });
 
-export const CommitmentDetailResponseSchema = OkBodySchema(
-  CommitmentDetailSchema,
-);
+export const CommitmentDetailResponseSchema = OkBodySchema(CommitmentDetailSchema);
 
 export const MarketplaceListingCardSchema = z.object({
   id: z.string(),
@@ -177,9 +175,7 @@ export const ProtocolConstantsSchema = z.object({
   cachedAt: z.string().datetime(),
 });
 
-export const ProtocolConstantsResponseSchema = OkBodySchema(
-  ProtocolConstantsSchema,
-);
+export const ProtocolConstantsResponseSchema = OkBodySchema(ProtocolConstantsSchema);
 
 // ─── Early-exit request validation ──────────────────────────────────────────
 
@@ -194,16 +190,13 @@ export const EarlyExitRequestBodySchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(1, "Reason is required")
-    .max(500, "Reason must be 500 characters or less"),
+    .min(1, 'Reason is required')
+    .max(500, 'Reason must be 500 characters or less'),
   callerAddress: z
     .string()
     .trim()
-    .min(1, "Caller address is required")
-    .regex(
-      /^[A-Z0-9]{56}$/,
-      "Caller address must be a valid Stellar public key",
-    ),
+    .min(1, 'Caller address is required')
+    .regex(/^[A-Z0-9]{56}$/, 'Caller address must be a valid Stellar public key'),
 });
 
 export type EarlyExitRequestBody = z.infer<typeof EarlyExitRequestBodySchema>;

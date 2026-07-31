@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { isFeatureEnabled } from '@/lib/backend/config';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
@@ -17,7 +18,11 @@ import {
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import type { CreateListingRequest, CreateListingResponse } from '@/types/marketplace';
 
-const COMMITMENT_TYPES: readonly MarketplaceCommitmentType[] = ['Safe', 'Balanced', 'Aggressive'] as const;
+const COMMITMENT_TYPES: readonly MarketplaceCommitmentType[] = [
+  'Safe',
+  'Balanced',
+  'Aggressive',
+] as const;
 
 interface ParseResult {
   type?: MarketplaceCommitmentType;
@@ -82,7 +87,9 @@ function parseType(searchParams: URLSearchParams): MarketplaceCommitmentType | u
   };
 
   if (!(normalized in mapping)) {
-    throw new ValidationError(`Invalid 'type' query param. Allowed values: ${COMMITMENT_TYPES.join(', ')}.`);
+    throw new ValidationError(
+      `Invalid 'type' query param. Allowed values: ${COMMITMENT_TYPES.join(', ')}.`,
+    );
   }
 
   return mapping[normalized];
@@ -92,12 +99,16 @@ function parseQuery(searchParams: URLSearchParams): ParseResult {
   const minAmount = parseNumber(searchParams, 'minAmount');
   const maxAmount = parseNumber(searchParams, 'maxAmount');
   if (minAmount !== undefined && maxAmount !== undefined && minAmount > maxAmount) {
-    throw new ValidationError("Invalid amount filter. 'minAmount' cannot be greater than 'maxAmount'.");
+    throw new ValidationError(
+      "Invalid amount filter. 'minAmount' cannot be greater than 'maxAmount'.",
+    );
   }
 
   const sortBy = searchParams.get('sortBy') ?? undefined;
   if (sortBy && !isMarketplaceSortBy(sortBy)) {
-    throw new ValidationError(`Invalid 'sortBy' query param. Allowed values: ${getMarketplaceSortKeys().join(', ')}.`);
+    throw new ValidationError(
+      `Invalid 'sortBy' query param. Allowed values: ${getMarketplaceSortKeys().join(', ')}.`,
+    );
   }
 
   return {
@@ -112,48 +123,85 @@ function parseQuery(searchParams: URLSearchParams): ParseResult {
   };
 }
 
-export const GET = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  const ip = getClientIp(req);
-  if (!(await checkRateLimit(ip, 'api/marketplace/listings'))) {
-    throw new TooManyRequestsError();
-  }
+export const GET = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    if (!isFeatureEnabled('marketplace')) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Marketplace feature is disabled.',
+            details: { feature: 'marketplace' },
+          },
+        },
+        { status: 404 },
+      );
+    }
 
-  const { searchParams } = new URL(req.url);
-  const filters = parseQuery(searchParams);
-  const listings = await listMarketplaceListings(filters);
+    const ip = getClientIp(req);
+    if (!(await checkRateLimit(ip, 'api/marketplace/listings'))) {
+      throw new TooManyRequestsError();
+    }
 
-  return ok({
-    listings,
-    cards: listings.map(toMarketplaceCard),
-    total: listings.length,
-  }, undefined, 200, correlationId);
-}, { cors: MARKETPLACE_LISTINGS_CORS_POLICY, enableETag: true });
+    const { searchParams } = new URL(req.url);
+    const filters = parseQuery(searchParams);
+    const listings = await listMarketplaceListings(filters);
 
-export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  assertMutationCsrf(req);
-
-  const ip = getClientIp(req);
-  if (!(await checkRateLimit(ip, 'api/marketplace/listings/create'))) {
-    throw new TooManyRequestsError(
-      'Too many requests. Please try again later.',
+    return ok(
+      {
+        listings,
+        cards: listings.map(toMarketplaceCard),
+        total: listings.length,
+      },
       undefined,
-      getRateLimitWindowSeconds('api/marketplace/listings/create'),
+      200,
+      correlationId,
     );
-  }
+  },
+  { cors: MARKETPLACE_LISTINGS_CORS_POLICY, enableETag: true },
+);
 
-  const body = await parseJsonWithLimit(req, {
-    limitBytes: JSON_BODY_LIMITS.marketplaceListingsCreate,
-  });
+export const POST = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    if (!isFeatureEnabled('marketplace')) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Marketplace feature is disabled.',
+            details: { feature: 'marketplace' },
+          },
+        },
+        { status: 404 },
+      );
+    }
 
-  if (!body || typeof body !== 'object') {
-    throw new ValidationError('Request body must be an object');
-  }
+    assertMutationCsrf(req);
 
-  const request = body as CreateListingRequest;
-  const listing = await marketplaceService.createListing(request);
-  const response: CreateListingResponse = { listing };
-  return ok(response, undefined, 201, correlationId);
-}, { cors: MARKETPLACE_LISTINGS_CORS_POLICY });
+    const ip = getClientIp(req);
+    if (!(await checkRateLimit(ip, 'api/marketplace/listings/create'))) {
+      throw new TooManyRequestsError(
+        'Too many requests. Please try again later.',
+        undefined,
+        getRateLimitWindowSeconds('api/marketplace/listings/create'),
+      );
+    }
+
+    const body = await parseJsonWithLimit(req, {
+      limitBytes: JSON_BODY_LIMITS.marketplaceListingsCreate,
+    });
+
+    if (!body || typeof body !== 'object') {
+      throw new ValidationError('Request body must be an object');
+    }
+
+    const request = body as CreateListingRequest;
+    const listing = await marketplaceService.createListing(request);
+    const response: CreateListingResponse = { listing };
+    return ok(response, undefined, 201, correlationId);
+  },
+  { cors: MARKETPLACE_LISTINGS_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['GET', 'POST']);
 export { _405 as PUT, _405 as PATCH, _405 as DELETE };

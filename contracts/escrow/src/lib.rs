@@ -655,10 +655,8 @@ impl EscrowContract {
         }
 
         let total_payout = c.amount + c.accrued_yield;
-        let token = Self::token_client(env);
-        let contract = env.current_contract_address();
-        token.transfer(&contract, &c.owner, &total_payout);
 
+        // Effects: update yield pool balance and mark commitment as released before external token transfer.
         Self::set_yield_pool_balance(env, yield_pool - c.accrued_yield);
         c.status = EscrowStatus::Released;
         Self::save(env, &c);

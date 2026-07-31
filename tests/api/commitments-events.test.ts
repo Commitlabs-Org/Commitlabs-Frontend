@@ -41,13 +41,13 @@ describe('GET /api/commitments/[id]/events', () => {
   it('validates and clamps interval values (NaN case)', async () => {
     process.env.SSE_POLL_INTERVAL_MS = 'NaN';
     process.env.SSE_KEEPALIVE_INTERVAL_MS = 'invalid';
-    
-    // We can't easily test the internal setInterval behavior without mocking it, 
+
+    // We can't easily test the internal setInterval behavior without mocking it,
     // but we can check if the code runs without throwing.
     const req = new NextRequest('http://localhost:3000/api/commitments/123/events');
     const response = await GET(req, { params: { id: '123' } } as any);
     expect(response.status).toBe(200);
-    
+
     // Cleanup
     delete process.env.SSE_POLL_INTERVAL_MS;
     delete process.env.SSE_KEEPALIVE_INTERVAL_MS;

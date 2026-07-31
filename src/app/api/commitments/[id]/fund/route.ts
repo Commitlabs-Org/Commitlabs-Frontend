@@ -85,10 +85,9 @@ export const POST = withApiHandler(
       // this check is no longer skippable the way `callerAddress && ...` was
       // when the field was optional. Every request must prove ownership.
       if (callerAddress !== commitment.ownerAddress) {
-        throw new ForbiddenError(
-          'Only the commitment owner may fund this commitment',
-          { commitmentId: id },
-        );
+        throw new ForbiddenError('Only the commitment owner may fund this commitment', {
+          commitmentId: id,
+        });
       }
 
       const funded = await fundEscrowOnChain({

@@ -1,28 +1,28 @@
-"use client";
+'use client';
 
-import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import CreateCommitmentStepSelectType from "@/components/CreateCommitmentStepSelectType";
-import CreateCommitmentStepConfigure from "@/components/CreateCommitmentStepConfigure";
-import CreateCommitmentStepReview from "@/components/CreateCommitmentStepReview";
-import CommitmentCreatedModal from "@/components/modals/CommitmentCreatedModal";
-import { buildExplorerUrl, openExplorerUrl } from "@/utils/explorerLinks";
-import { useWallet } from "@/hooks/useWallet";
-import { AppShellLayout } from "@/components/shell/AppShellLayout";
-import { useDraftPersistence, type DraftState } from "@/hooks/useDraftPersistence";
-import ResumeDraftPrompt from "@/components/create/ResumeDraftPrompt";
-import { useGuidedTour } from "@/hooks/useGuidedTour";
-import { GuidedTour } from "@/components/onboarding/GuidedTour";
-import { HelpCircle } from "lucide-react";
-import { usePrefillFromCommitment } from "@/hooks/usePrefillFromCommitment";
-import { type CommitmentPreset } from "@/components/create/commitmentPresets";
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import CreateCommitmentStepSelectType from '@/components/CreateCommitmentStepSelectType';
+import CreateCommitmentStepConfigure from '@/components/CreateCommitmentStepConfigure';
+import CreateCommitmentStepReview from '@/components/CreateCommitmentStepReview';
+import CommitmentCreatedModal from '@/components/modals/CommitmentCreatedModal';
+import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
+import { useWallet } from '@/hooks/useWallet';
+import { AppShellLayout } from '@/components/shell/AppShellLayout';
+import { useDraftPersistence, type DraftState } from '@/hooks/useDraftPersistence';
+import ResumeDraftPrompt from '@/components/create/ResumeDraftPrompt';
+import { useGuidedTour } from '@/hooks/useGuidedTour';
+import { GuidedTour } from '@/components/onboarding/GuidedTour';
+import { HelpCircle } from 'lucide-react';
+import { usePrefillFromCommitment } from '@/hooks/usePrefillFromCommitment';
+import { type CommitmentPreset } from '@/components/create/commitmentPresets';
 
-type CommitmentType = "safe" | "balanced" | "aggressive";
+type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
 // Generate a random commitment ID (in production, this comes from the blockchain)
 function generateCommitmentId(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let id = "CMT-";
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = 'CMT-';
   for (let i = 0; i < 7; i++) {
     id += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -54,19 +54,18 @@ export default function CreateCommitment() {
     walletAddress,
     onSelectDefaultType: () => {
       if (!selectedType) {
-        handleSelectType("balanced");
+        handleSelectType('balanced');
       }
     },
   });
   const [selectedType, setSelectedType] = useState<CommitmentType | null>(null);
-  const [commitmentType, setCommitmentType] =
-    useState<CommitmentType>("balanced");
-  const [amount, setAmount] = useState<string>("");
-  const [asset, setAsset] = useState<string>("XLM");
+  const [commitmentType, setCommitmentType] = useState<CommitmentType>('balanced');
+  const [amount, setAmount] = useState<string>('');
+  const [asset, setAsset] = useState<string>('XLM');
   const [durationDays, setDurationDays] = useState<number>(90);
   const [maxLossPercent, setMaxLossPercent] = useState<number>(100);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [commitmentId, setCommitmentId] = useState("");
+  const [commitmentId, setCommitmentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // In production this would come from the connected wallet hook.
@@ -98,9 +97,9 @@ export default function CreateCommitment() {
   }, [prefill]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("startTour") === "true") {
+      if (params.get('startTour') === 'true') {
         startTour();
         const cleanUrl = window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
@@ -142,28 +141,28 @@ export default function CreateCommitment() {
   // Build review data from actual configured values
   const getReviewData = () => {
     const typeLabelMap: Record<string, string> = {
-      safe: "Safe Commitment",
-      balanced: "Balanced Commitment",
-      aggressive: "Aggressive Commitment",
+      safe: 'Safe Commitment',
+      balanced: 'Balanced Commitment',
+      aggressive: 'Aggressive Commitment',
     };
     const yieldMap: Record<string, string> = {
-      safe: "5.2% APY",
-      balanced: "12.5% APY",
-      aggressive: "45.0% APY",
+      safe: '5.2% APY',
+      balanced: '12.5% APY',
+      aggressive: '45.0% APY',
     };
     const start = new Date();
     const end = new Date(start);
     end.setDate(end.getDate() + durationDays);
     return {
-      typeLabel: typeLabelMap[selectedType ?? "balanced"] ?? "Commitment",
-      amount: amount || "0",
+      typeLabel: typeLabelMap[selectedType ?? 'balanced'] ?? 'Commitment',
+      amount: amount || '0',
       asset,
       durationDays,
       maxLossPercent,
       earlyExitPenalty,
       estimatedFees,
-      estimatedYield: yieldMap[selectedType ?? "balanced"] ?? "—",
-      commitmentStart: "Immediately",
+      estimatedYield: yieldMap[selectedType ?? 'balanced'] ?? '—',
+      commitmentStart: 'Immediately',
       commitmentEnd: end.toLocaleDateString(),
     };
   };
@@ -173,12 +172,7 @@ export default function CreateCommitment() {
 
   // Derived values
   const earlyExitPenalty = useMemo(() => {
-    const penalty =
-      commitmentType === "aggressive"
-        ? 5
-        : commitmentType === "balanced"
-          ? 3
-          : 2;
+    const penalty = commitmentType === 'aggressive' ? 5 : commitmentType === 'balanced' ? 3 : 2;
     return `${((Number(amount) || 0) * penalty) / 100} ${asset}`;
   }, [amount, asset, commitmentType]);
 
@@ -186,8 +180,8 @@ export default function CreateCommitment() {
 
   const amountError = useMemo(() => {
     const numAmount = Number(amount);
-    if (amount && numAmount <= 0) return "Amount must be greater than 0";
-    if (numAmount > availableBalance) return "Amount exceeds available balance";
+    if (amount && numAmount <= 0) return 'Amount must be greater than 0';
+    if (numAmount > availableBalance) return 'Amount exceeds available balance';
     return undefined;
   }, [amount, availableBalance]);
 
@@ -230,7 +224,7 @@ export default function CreateCommitment() {
     if (step > 1) {
       setStep(step - 1);
     } else {
-      router.push("/");
+      router.push('/');
     }
   };
 
@@ -240,8 +234,8 @@ export default function CreateCommitment() {
       setIsSubmitting(false);
       const newCommitmentId = generateCommitmentId();
       setCommitmentId(newCommitmentId);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("commitlabs:created-commitment", "true");
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('commitlabs:created-commitment', 'true');
       }
       setShowSuccessModal(true);
       clearDraft();
@@ -249,7 +243,7 @@ export default function CreateCommitment() {
   };
 
   const handleViewCommitment = () => {
-    const numericId = commitmentId.split("-")[1] || "1";
+    const numericId = commitmentId.split('-')[1] || '1';
     router.push(`/commitments/${numericId}`);
   };
 
@@ -257,10 +251,10 @@ export default function CreateCommitment() {
     setShowSuccessModal(false);
     setSelectedType(null);
     setStep(1);
-    setCommitmentId("");
-    setCommitmentType("balanced");
-    setAmount("");
-    setAsset("XLM");
+    setCommitmentId('');
+    setCommitmentType('balanced');
+    setAmount('');
+    setAsset('XLM');
     setDurationDays(90);
     setMaxLossPercent(100);
     clearDraft();
@@ -268,22 +262,22 @@ export default function CreateCommitment() {
 
   const handleCloseModal = () => {
     setShowSuccessModal(false);
-    router.push("/commitments");
+    router.push('/commitments');
   };
 
   // Fund-later: close the success modal and go to the detail page so the
   // user can fund the escrow from there at any time.
   const handleFundLater = () => {
     setShowSuccessModal(false);
-    const numericId = commitmentId.split("-")[1] || "1";
+    const numericId = commitmentId.split('-')[1] || '1';
     router.push(`/commitments/${numericId}`);
   };
 
   const handleViewOnExplorer = () => {
-    openExplorerUrl("tx", commitmentId, "testnet");
+    openExplorerUrl('tx', commitmentId, 'testnet');
   };
 
-  const commitmentExplorerUrl = buildExplorerUrl("tx", commitmentId, "testnet");
+  const commitmentExplorerUrl = buildExplorerUrl('tx', commitmentId, 'testnet');
 
   const handleEditStep = (targetStep: 1 | 2, fieldId?: string) => {
     if (fieldId) {

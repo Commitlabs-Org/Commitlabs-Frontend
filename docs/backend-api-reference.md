@@ -226,6 +226,7 @@ curl -X GET 'http://localhost:3000/api/admin/audit-events?actor=0xdeadbeef&type=
 ---
 
     - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Replayed requests within the 24-hour replay window return the original prior result.
+
 - **Request body**: optional JSON payload with additional details.
 - **Response**: stub confirmation message.
 
@@ -305,9 +306,9 @@ Funds an existing commitment that was previously created but not yet funded. The
 
 - **Path parameter**: `id` (string)
 - **Headers**:
-    - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Replayed requests within the 24-hour replay window return the original prior result.
+  - `Idempotency-Key`: (Optional) A unique string to identify the request and prevent duplicate processing. Replayed requests within the 24-hour replay window return the original prior result.
 - **Request body**:
-    - `callerAddress` (string, optional) — Stellar address of the funding wallet. If omitted, the commitment owner is used.
+  - `callerAddress` (string, optional) — Stellar address of the funding wallet. If omitted, the commitment owner is used.
 - **Response**: confirmation of the funded commitment with `txHash` and `reference`.
 
 ### Example
@@ -354,11 +355,13 @@ applicable penalties.
 **Path parameter**: `id` (string) — The commitment ID to exit early.
 
 **Headers**:
+
 - `Idempotency-Key`: Optional. Replayed requests within the 24-hour replay window return the original prior result.
 - `Cookie`: Required session cookie with valid token.
 - `Content-Type`: `application/json`
 
 **Body Schema** (validated via Zod):
+
 ```typescript
 {
   reason: string; // Non-empty, max 500 characters (reason for early exit)
@@ -376,6 +379,7 @@ applicable penalties.
 ### Response
 
 **Success (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -492,14 +496,14 @@ Returns the most recent attestations sorted by `observedAt` descending, with
 page-based pagination metadata.
 
 - **Query parameters**:
-    - `page`: (integer, optional) Page number (1-based). Must be ≥ 1. Defaults to 1.
-    - `pageSize`: (integer, optional) Items per page. Must be 1–100. Defaults to 10.
-    - `ownerAddress`: (string, optional) Filter by commitment owner address. Requires a valid `Authorization: Bearer <token>` header.
+  - `page`: (integer, optional) Page number (1-based). Must be ≥ 1. Defaults to 1.
+  - `pageSize`: (integer, optional) Items per page. Must be 1–100. Defaults to 10.
+  - `ownerAddress`: (string, optional) Filter by commitment owner address. Requires a valid `Authorization: Bearer <token>` header.
 - **Response**: `200 OK` with attestation list and pagination meta.
 - **Error codes**:
-    - `400 VALIDATION_ERROR` — `page` or `pageSize` out of range, or `ownerAddress` is blank.
-    - `401 UNAUTHORIZED` — `ownerAddress` provided without a valid Bearer token.
-    - `429 TOO_MANY_REQUESTS` — Rate limit exceeded.
+  - `400 VALIDATION_ERROR` — `page` or `pageSize` out of range, or `ownerAddress` is blank.
+  - `401 UNAUTHORIZED` — `ownerAddress` provided without a valid Bearer token.
+  - `429 TOO_MANY_REQUESTS` — Rate limit exceeded.
 
 ### Example
 
@@ -576,21 +580,21 @@ user preferences (the `notificationCategories` field) and updated via the
 `PUT /api/user/preferences` endpoint.
 
 - **Query parameters**:
-    - `ownerAddress`: (string, required) The Stellar address whose feed to return.
-    - `page`: (number, optional, default `1`) 1-indexed page number. Must be `>= 1`.
-    - `pageSize`: (number, optional, default `10`) Items per page. Must be `1`–`100`.
+  - `ownerAddress`: (string, required) The Stellar address whose feed to return.
+  - `page`: (number, optional, default `1`) 1-indexed page number. Must be `>= 1`.
+  - `pageSize`: (number, optional, default `10`) Items per page. Must be `1`–`100`.
 - **Preference filtering**:
-    - Notification categories the owner has set to `false` in
-      `notificationCategories` are excluded from the feed.
-    - When no preferences are stored, or a category key is absent, the category
-      is **delivered by default** (safe opt-in). An owner only stops receiving a
-      category by explicitly opting out.
-    - Filtering is applied **before pagination**, so `total` reflects the count
-      of notifications the owner can actually see — not the raw derived count.
+  - Notification categories the owner has set to `false` in
+    `notificationCategories` are excluded from the feed.
+  - When no preferences are stored, or a category key is absent, the category
+    is **delivered by default** (safe opt-in). An owner only stops receiving a
+    category by explicitly opting out.
+  - Filtering is applied **before pagination**, so `total` reflects the count
+    of notifications the owner can actually see — not the raw derived count.
 - **Response**:
-    - `200 OK`: Paginated, preference-filtered feed.
-    - `400 Bad Request`: `ownerAddress` is missing, or pagination params are out of range.
-    - `429 Too Many Requests`: Rate limit exceeded.
+  - `200 OK`: Paginated, preference-filtered feed.
+  - `400 Bad Request`: `ownerAddress` is missing, or pagination params are out of range.
+  - `429 Too Many Requests`: Rate limit exceeded.
 
 ### Example
 
@@ -655,17 +659,17 @@ curl http://localhost:3000/api/protocol/constants
 
 ## `POST /api/commitments/[id]/dispute`
 
-Opens a dispute for the named commitment.  Calls the escrow contract's
+Opens a dispute for the named commitment. Calls the escrow contract's
 `dispute` method and records an audit log event.
 
 - **Path parameter**: `id` (string) — the commitment ID
 - **Request body**:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `reason` | string | Yes | Reason for the dispute (1–500 characters) |
-| `evidence` | string | No | Optional URL or reference to supporting evidence |
-| `callerAddress` | string | No | Stellar address of the caller (defaults to commitment owner) |
+| Field           | Type   | Required | Description                                                  |
+| --------------- | ------ | -------- | ------------------------------------------------------------ |
+| `reason`        | string | Yes      | Reason for the dispute (1–500 characters)                    |
+| `evidence`      | string | No       | Optional URL or reference to supporting evidence             |
+| `callerAddress` | string | No       | Stellar address of the caller (defaults to commitment owner) |
 
 - **Response**: dispute details including `disputeId`, `status`, and `txHash`.
 
@@ -692,11 +696,11 @@ curl -X POST http://localhost:3000/api/commitments/abc123/dispute \
 
 ### Error Responses
 
-| Status | Condition |
-|--------|-----------|
-| 400 | Missing or invalid `reason`, empty commitment ID |
-| 409 | Commitment already settled, exited, or already in dispute |
-| 502 | Blockchain call failed |
+| Status | Condition                                                 |
+| ------ | --------------------------------------------------------- |
+| 400    | Missing or invalid `reason`, empty commitment ID          |
+| 409    | Commitment already settled, exited, or already in dispute |
+| 502    | Blockchain call failed                                    |
 
 ---
 
@@ -704,17 +708,17 @@ curl -X POST http://localhost:3000/api/commitments/abc123/dispute \
 
 Resolves an open dispute on a commitment. **Admin access only** — the caller
 must authenticate with a valid Bearer token and the address must be listed in
-`ADMIN_ADDRESSES`.  Calls the escrow contract's `resolve_dispute` method and
+`ADMIN_ADDRESSES`. Calls the escrow contract's `resolve_dispute` method and
 records an audit log event.
 
 - **Path parameter**: `id` (string) — the commitment ID
 - **Authentication**: Bearer token required (admin only)
 - **Request body**:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `resolution` | enum | Yes | One of: `resolved_in_favor_of_owner`, `resolved_in_favor_of_counterparty`, `dismissed` |
-| `notes` | string | No | Optional resolution notes (max 1000 characters) |
+| Field        | Type   | Required | Description                                                                            |
+| ------------ | ------ | -------- | -------------------------------------------------------------------------------------- |
+| `resolution` | enum   | Yes      | One of: `resolved_in_favor_of_owner`, `resolved_in_favor_of_counterparty`, `dismissed` |
+| `notes`      | string | No       | Optional resolution notes (max 1000 characters)                                        |
 
 - **Response**: resolution details including `disputeId`, `resolution`, and `finalStatus`.
 
@@ -743,25 +747,26 @@ curl -X POST http://localhost:3000/api/commitments/abc123/resolve \
 
 ### Error Responses
 
-| Status | Condition |
-|--------|-----------|
-| 400 | Missing or invalid `resolution`, empty commitment ID, notes too long |
-| 401 | Missing or invalid Bearer token |
-| 403 | Caller is not an admin |
-| 409 | Commitment is not currently in dispute |
-| 502 | Blockchain call failed |
+| Status | Condition                                                            |
+| ------ | -------------------------------------------------------------------- |
+| 400    | Missing or invalid `resolution`, empty commitment ID, notes too long |
+| 401    | Missing or invalid Bearer token                                      |
+| 403    | Caller is not an admin                                               |
+| 409    | Commitment is not currently in dispute                               |
+| 502    | Blockchain call failed                                               |
+
 ## `GET /api/commitments/[id]/events`
 
 Server-Sent Events (SSE) stream that pushes real-time commitment status updates and transitions (Active, Settled, Early Exit, Violated).
 
 - **Path parameter**: `id` (string)
 - **Headers**:
-    - `Accept`: `text/event-stream` (required)
+  - `Accept`: `text/event-stream` (required)
 - **Security**: Requires an authenticated session via browser cookies.
 - **Protocol Details**:
-    - **Snapshot**: The server emits a `snapshot` event immediately upon connection carrying the current status.
-    - **Transitions**: The server emits a `status_change` event only when a status transition is detected on-chain.
-    - **Heartbeat**: The server enqueues a comment heartbeat (`: keepalive`) every 20 seconds to prevent intermediates (proxies, load balancers) from dropping the idle connection.
+  - **Snapshot**: The server emits a `snapshot` event immediately upon connection carrying the current status.
+  - **Transitions**: The server emits a `status_change` event only when a status transition is detected on-chain.
+  - **Heartbeat**: The server enqueues a comment heartbeat (`: keepalive`) every 20 seconds to prevent intermediates (proxies, load balancers) from dropping the idle connection.
 
 ### Example Event Output
 

@@ -1,108 +1,113 @@
 import { describe, it, expect } from 'vitest';
 import {
-  computeVolatilityExposurePercent,
   computeCommitmentExposure,
-  type ValueHistoryItem,
-  type DrawdownHistoryItem,
+  computeDrawdownThresholdPercent,
+  getExposureLevel,
+  EXPOSURE_ZONE_THRESHOLDS,
+  type ValueHistoryPoint,
+  type DrawdownPoint,
 } from '../exposure';
 
-describe('computeVolatilityExposurePercent', () => {
-  it('returns a finite percent for a positive ceiling', () => {
-    const result = computeVolatilityExposurePercent(0.5, 10)
-    expect(result.percent).toBeGreaterThanOrEqual(0)
-    expect(result.percent).toBeLessThanOrEqual(100)
-    expect(result.insufficientData).toBe(false)
-  })
+describe('getExposureLevel', () => {
+  it('classifies low/medium/high against the zone thresholds', () => {
+    expect(getExposureLevel(0)).toBe('low');
+    expect(getExposureLevel(EXPOSURE_ZONE_THRESHOLDS.lowMax)).toBe('low');
+    expect(getExposureLevel(EXPOSURE_ZONE_THRESHOLDS.lowMax + 1)).toBe('medium');
+    expect(getExposureLevel(EXPOSURE_ZONE_THRESHOLDS.mediumMax)).toBe('medium');
+    expect(getExposureLevel(EXPOSURE_ZONE_THRESHOLDS.mediumMax + 1)).toBe('high');
+    expect(getExposureLevel(100)).toBe('high');
+  });
+});
 
-  it('returns 100% when meanAbsReturn is very large', () => {
-    const result = computeVolatilityExposurePercent(100, 1)
-    expect(result.percent).toBe(100)
-    expect(result.insufficientData).toBe(false)
-  })
+describe('computeDrawdownThresholdPercent', () => {
+  it('converts a max-loss percent to a 0-1 fraction', () => {
+    expect(computeDrawdownThresholdPercent(8)).toBeCloseTo(0.08);
+  });
 
-  it('returns 0% when meanAbsReturn is 0', () => {
-    const result = computeVolatilityExposurePercent(0, 10)
-    expect(result.percent).toBe(0)
-    expect(result.insufficientData).toBe(false)
-  })
-
-  it('guards against a zero ceiling — returns insufficientData', () => {
-    const result = computeVolatilityExposurePercent(0.5, 0)
-    expect(result.percent).toBe(0)
-    expect(result.insufficientData).toBe(true)
-  })
-
-  it('guards against a negative ceiling — returns insufficientData', () => {
-    const result = computeVolatilityExposurePercent(0.5, -5)
-    expect(result.percent).toBe(0)
-    expect(result.insufficientData).toBe(true)
-  })
-})
+  it('guards against a zero/negative/non-finite maxLossPercent', () => {
+    expect(computeDrawdownThresholdPercent(0)).toBe(0);
+    expect(computeDrawdownThresholdPercent(-5)).toBe(0);
+    expect(computeDrawdownThresholdPercent(NaN)).toBe(0);
+  });
+});
 
 describe('computeCommitmentExposure', () => {
-  const valueHistory: ValueHistoryItem[] = [
+  const valueHistory: ValueHistoryPoint[] = [
     { date: 'Jan 10', currentValue: 50000, initialAmount: 50000 },
     { date: 'Jan 15', currentValue: 52000, initialAmount: 50000 },
     { date: 'Jan 20', currentValue: 51500, initialAmount: 50000 },
     { date: 'Jan 25', currentValue: 53000, initialAmount: 50000 },
     { date: 'Jan 28', currentValue: 54000, initialAmount: 50000 },
-  ]
+  ];
 
-  const drawdownHistory: DrawdownHistoryItem[] = [
+  const drawdownHistory: DrawdownPoint[] = [
     { date: 'Jan 10', drawdownPercent: 0 },
     { date: 'Jan 15', drawdownPercent: 0.35 },
     { date: 'Jan 20', drawdownPercent: 0.58 },
     { date: 'Jan 25', drawdownPercent: 0.52 },
     { date: 'Jan 28', drawdownPercent: 0.78 },
-  ]
+  ];
 
   it('computes exposure from history data', () => {
     const result = computeCommitmentExposure({
       valueHistory,
       drawdownHistory,
       maxLossPercent: 8,
-    })
+    });
 
-    expect(result.currentDrawdownPercent).toBe(0.78)
-    expect(result.meanAbsReturn).toBeGreaterThan(0)
-    expect(result.volatilityExposurePercent).toBeGreaterThanOrEqual(0)
-    expect(result.volatilityExposurePercent).toBeLessThanOrEqual(100)
-    expect(result.insufficientData).toBe(false)
-  })
-
-  it('uses the most recent drawdown as currentDrawdownPercent', () => {
-    const result = computeCommitmentExposure({
-      valueHistory: [{ date: 'Jan 1', currentValue: 100, initialAmount: 100 }],
-      drawdownHistory: [
-        { date: 'Jan 1', drawdownPercent: 1 },
-        { date: 'Jan 2', drawdownPercent: 2 },
-      ],
-      maxLossPercent: 10,
-    })
-
-    expect(result.currentDrawdownPercent).toBe(2)
-  })
+    expect(result.status).toBe('ok');
+    expect(result.exposurePercent).toBeGreaterThanOrEqual(0);
+    expect(result.exposurePercent).toBeLessThanOrEqual(100);
+    expect(result.level).toBeDefined();
+    expect(result.drawdownThresholdPercent).toBeCloseTo(0.08);
+    expect(result.zoneThresholds).toEqual(EXPOSURE_ZONE_THRESHOLDS);
+  });
 
   it('handles empty history gracefully', () => {
     const result = computeCommitmentExposure({
       valueHistory: [],
       drawdownHistory: [],
       maxLossPercent: 8,
-    })
+    });
 
-    expect(result.currentDrawdownPercent).toBe(0)
-    expect(result.meanAbsReturn).toBe(0)
-    expect(result.volatilityExposurePercent).toBe(0)
-  })
+    expect(result.status).toBe('insufficient_data');
+    expect(result.exposurePercent).toBeUndefined();
+  });
 
-  it('guards against a zero maxLossPercent — insufficientData', () => {
+  it('guards against a zero maxLossPercent — insufficient_data', () => {
     const result = computeCommitmentExposure({
       valueHistory,
       drawdownHistory,
       maxLossPercent: 0,
-    })
+    });
 
-    expect(result.insufficientData).toBe(true)
-    expect(result.volatilityExposurePercent).toBe(0)
-  })
-})
+    expect(result.status).toBe('insufficient_data');
+  });
+
+  it('guards against a zero protocolMaxLossPercentCeiling instead of producing NaN/Infinity', () => {
+    const result = computeCommitmentExposure({
+      valueHistory,
+      drawdownHistory,
+      maxLossPercent: 8,
+      protocolMaxLossPercentCeiling: 0,
+    });
+
+    // Drawdown-based exposure still applies even though the volatility
+    // leg is dropped for an invalid ceiling — the result must stay a
+    // finite, valid percent rather than NaN/Infinity.
+    expect(result.status).toBe('ok');
+    expect(Number.isFinite(result.exposurePercent)).toBe(true);
+  });
+
+  it('guards against a negative protocolMaxLossPercentCeiling instead of producing NaN/Infinity', () => {
+    const result = computeCommitmentExposure({
+      valueHistory,
+      drawdownHistory,
+      maxLossPercent: 8,
+      protocolMaxLossPercentCeiling: -10,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(Number.isFinite(result.exposurePercent)).toBe(true);
+  });
+});

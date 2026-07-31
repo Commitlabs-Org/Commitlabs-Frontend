@@ -41,14 +41,14 @@ The following are already in place and verifiable in the codebase:
 
 The following issues are tracked and will be addressed in upcoming releases:
 
-| ID | Description | Severity | Status |
-| :-- | :---------- | :------- | :----- |
-| F-05-02 | Modal animations not gated on `prefers-reduced-motion` in some legacy modals | High | Open |
-| F-05-03 | No shared `<Dialog>` primitive — each modal re-implements focus trap / ARIA / scroll lock | High | Open |
-| F-05-04 | Early-exit modal needs explicit acknowledgement semantics for destructive actions | High | Open |
-| F-05-05 | Backdrop element missing `aria-hidden="true"` for screen-reader rotors | Medium | Open |
-| F-05-06 | Modal close button accessible name is generic ("Close modal") instead of contextual | Medium | Open |
-| F-05-08 | Body scroll lock can leak if a second modal opens and closes while the first is still open | Medium | Open |
+| ID      | Description                                                                                | Severity | Status |
+| :------ | :----------------------------------------------------------------------------------------- | :------- | :----- |
+| F-05-02 | Modal animations not gated on `prefers-reduced-motion` in some legacy modals               | High     | Open   |
+| F-05-03 | No shared `<Dialog>` primitive — each modal re-implements focus trap / ARIA / scroll lock  | High     | Open   |
+| F-05-04 | Early-exit modal needs explicit acknowledgement semantics for destructive actions          | High     | Open   |
+| F-05-05 | Backdrop element missing `aria-hidden="true"` for screen-reader rotors                     | Medium   | Open   |
+| F-05-06 | Modal close button accessible name is generic ("Close modal") instead of contextual        | Medium   | Open   |
+| F-05-08 | Body scroll lock can leak if a second modal opens and closes while the first is still open | Medium   | Open   |
 
 These are documented in detail in
 [`design/accessibility-audit/findings/05-modals.md`](../../design/accessibility-audit/findings/05-modals.md).

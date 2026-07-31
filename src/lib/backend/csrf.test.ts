@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { assertMutationCsrf, assertSameOriginForCookieSession, CSRF_HEADER_NAME } from './csrf';
 import { CsrfValidationError } from './errors';
-import { __resetSessionStoreForTests, createBrowserSession, rotateCsrfToken, SESSION_COOKIE_NAME } from './session';
+import {
+  __resetSessionStoreForTests,
+  createBrowserSession,
+  rotateCsrfToken,
+  SESSION_COOKIE_NAME,
+} from './session';
 
 const BASE = 'http://localhost:3000';
 

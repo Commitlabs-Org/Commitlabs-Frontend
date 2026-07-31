@@ -91,7 +91,6 @@ async function expectError(
 }
 
 describe('POST /api/commitments/[id]/fund', () => {
-
   beforeEach(() => {
     vi.resetAllMocks();
     mockCheckRateLimit.mockResolvedValue(true);

@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { useId } from 'react'
-import styles from './VolatilityExposureMeter.module.css'
-import { useReducedMotion } from '@/lib/a11y/useReducedMotion'
-import styles from './VolatilityExposureMeter.module.css'
+import { useId } from 'react';
+import styles from './VolatilityExposureMeter.module.css';
+import { useReducedMotion } from '@/lib/a11y/useReducedMotion';
+import styles from './VolatilityExposureMeter.module.css';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type RiskProfileId = 'conservative' | 'balanced' | 'aggressive'
+export type RiskProfileId = 'conservative' | 'balanced' | 'aggressive';
 
-export type ThresholdZone = 'safe' | 'caution' | 'danger'
+export type ThresholdZone = 'safe' | 'caution' | 'danger';
 
 export interface ThresholdZoneConfig {
-  id: ThresholdZone
-  label: string
-  rangeMin: number
-  rangeMax: number
+  id: ThresholdZone;
+  label: string;
+  rangeMin: number;
+  rangeMax: number;
   /** Brief plain‑text description shown on‑screen */
-  annotation: string
+  annotation: string;
   /** Longer description used in tooltip / aria‑description */
-  tooltip: string
+  tooltip: string;
 }
 
 export const THRESHOLD_ZONES: ThresholdZoneConfig[] = [
@@ -50,48 +50,48 @@ export const THRESHOLD_ZONES: ThresholdZoneConfig[] = [
     tooltip:
       'Your portfolio is in the danger zone. This aligns with an Aggressive risk profile with high loss tolerance. Volatility is elevated; monitor positions closely.',
   },
-]
+];
 
 export const RISK_PROFILE_LABELS: Record<RiskProfileId, string> = {
   conservative: 'Conservative',
   balanced: 'Balanced',
   aggressive: 'Aggressive',
-}
+};
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 export function clamp(value: number): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) return 0
-  return Math.max(0, Math.min(100, value))
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, value));
 }
 
 export function getThresholdZone(percent: number): ThresholdZoneConfig {
-  const clamped = clamp(percent)
-  if (clamped <= 33) return THRESHOLD_ZONES[0]
-  if (clamped <= 66) return THRESHOLD_ZONES[1]
-  return THRESHOLD_ZONES[2]
+  const clamped = clamp(percent);
+  if (clamped <= 33) return THRESHOLD_ZONES[0];
+  if (clamped <= 66) return THRESHOLD_ZONES[1];
+  return THRESHOLD_ZONES[2];
 }
 
 export function getExposureLevel(percent: number): 'low' | 'medium' | 'high' {
-  const clamped = clamp(percent)
-  if (clamped <= 33) return 'low'
-  if (clamped <= 66) return 'medium'
-  return 'high'
+  const clamped = clamp(percent);
+  if (clamped <= 33) return 'low';
+  if (clamped <= 66) return 'medium';
+  return 'high';
 }
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
 export interface VolatilityExposureMeterProps {
   /** Current exposure as a percentage (0–100). Clamped when rendering. */
-  valuePercent: number
+  valuePercent: number;
   /** Optional short description of what the exposure means. */
-  description?: string
+  description?: string;
   /**
    * Optional risk‑profile identifier.
    * When provided, the matching threshold zone is highlighted and a
    * "your risk profile" indicator is shown alongside the meter.
    */
-  riskProfileId?: RiskProfileId
+  riskProfileId?: RiskProfileId;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -102,17 +102,15 @@ export default function VolatilityExposureMeter({
   description,
   riskProfileId,
 }: VolatilityExposureMeterProps) {
-  const titleId = useId()
-  const descId = useId()
+  const titleId = useId();
+  const descId = useId();
 
-  const percent = clamp(valuePercent)
-  const zone = getThresholdZone(percent)
-  const level = getExposureLevel(percent)
-  const riskProfileLabel = riskProfileId
-    ? RISK_PROFILE_LABELS[riskProfileId]
-    : undefined
+  const percent = clamp(valuePercent);
+  const zone = getThresholdZone(percent);
+  const level = getExposureLevel(percent);
+  const riskProfileLabel = riskProfileId ? RISK_PROFILE_LABELS[riskProfileId] : undefined;
 
-  const ariaValueText = `${percent} percent, ${zone.label.toLowerCase()} zone — ${zone.annotation}`
+  const ariaValueText = `${percent} percent, ${zone.label.toLowerCase()} zone — ${zone.annotation}`;
 
   return (
     <section
@@ -162,11 +160,7 @@ export default function VolatilityExposureMeter({
         </div>
 
         {/* Foreground fill mask */}
-        <div
-          className={styles.barMask}
-          style={{ width: `${percent}%` }}
-          aria-hidden="true"
-        >
+        <div className={styles.barMask} style={{ width: `${percent}%` }} aria-hidden="true">
           <div className={styles.barGradient} />
         </div>
       </div>
@@ -174,7 +168,7 @@ export default function VolatilityExposureMeter({
       {/* ── Zone labels row ─────────────────────────────────────── */}
       <div className={styles.labelsRow} role="list" aria-label="Exposure threshold zones">
         {THRESHOLD_ZONES.map((z) => {
-          const isActive = z.id === zone.id
+          const isActive = z.id === zone.id;
           return (
             <span
               key={z.id}
@@ -185,17 +179,12 @@ export default function VolatilityExposureMeter({
             >
               {z.label}
             </span>
-          )
+          );
         })}
       </div>
 
       {/* ── Active zone annotation (always visible text) ─────────── */}
-      <div
-        className={styles.annotationBox}
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
+      <div className={styles.annotationBox} role="status" aria-live="polite" aria-atomic="true">
         <span className={styles.annotationIcon} aria-hidden="true">
           {zone.id === 'safe' && '\u2705'}
           {zone.id === 'caution' && '\u26A0\uFE0F'}
@@ -220,5 +209,5 @@ export default function VolatilityExposureMeter({
         </p>
       )}
     </section>
-  )
+  );
 }

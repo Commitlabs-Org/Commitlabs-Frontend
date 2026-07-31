@@ -4,19 +4,16 @@
 // Uses Zod validation, pagination.ts utilities for stable sorting/paging, and
 // a short-TTL cache for common queries.
 
-import { NextRequest } from "next/server";
-import { z } from "zod";
-import { ok, methodNotAllowed } from "@/lib/backend/apiResponse";
-import {
-  createCorsOptionsHandler,
-  type CorsRoutePolicy,
-} from "@/lib/backend/cors";
-import { TooManyRequestsError, ValidationError } from "@/lib/backend/errors";
-import { getClientIp } from "@/lib/backend/getClientIp";
-import { checkRateLimit } from "@/lib/backend/rateLimit";
-import { getUserCommitmentsFromChain } from "@/lib/backend/services/contracts";
-import type { ChainCommitmentStatus } from "@/lib/backend/services/contracts";
-import { withApiHandler } from "@/lib/backend/withApiHandler";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
+import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
+import { getClientIp } from '@/lib/backend/getClientIp';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
+import type { ChainCommitmentStatus } from '@/lib/backend/services/contracts';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
 import {
   parsePaginationParams,
   parseSortParams,
@@ -24,10 +21,10 @@ import {
   paginationErrorResponse,
   PaginationParseError,
   type SortOrder,
-} from "@/lib/backend/pagination";
-import { cache } from "@/lib/backend/cache/factory";
-import { CacheKey, CacheTTL } from "@/lib/backend/cache/index";
-import { createHash } from "crypto";
+} from '@/lib/backend/pagination';
+import { cache } from '@/lib/backend/cache/factory';
+import { CacheKey, CacheTTL } from '@/lib/backend/cache/index';
+import { createHash } from 'crypto';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -36,33 +33,27 @@ import { createHash } from "crypto";
  * Maps user-facing values to the on-chain `ChainCommitmentStatus` type.
  */
 const COMMITMENT_STATUS_VALUES = [
-  "CREATED",
-  "ACTIVE",
-  "SETTLED",
-  "VIOLATED",
-  "EARLY_EXIT",
+  'CREATED',
+  'ACTIVE',
+  'SETTLED',
+  'VIOLATED',
+  'EARLY_EXIT',
 ] as const;
 type CommitmentStatusFilter = (typeof COMMITMENT_STATUS_VALUES)[number];
 
 /** Risk type filter – mirrors `CommitmentType` from domain types. */
-const RISK_TYPE_VALUES = ["Safe", "Balanced", "Aggressive"] as const;
+const RISK_TYPE_VALUES = ['Safe', 'Balanced', 'Aggressive'] as const;
 type RiskTypeFilter = (typeof RISK_TYPE_VALUES)[number];
 
 /** Fields available for `sortBy`. */
-const SORTABLE_FIELDS = [
-  "createdAt",
-  "amount",
-  "complianceScore",
-  "status",
-  "asset",
-] as const;
+const SORTABLE_FIELDS = ['createdAt', 'amount', 'complianceScore', 'status', 'asset'] as const;
 type SortableField = (typeof SORTABLE_FIELDS)[number];
 
 // ─── Zod validation schema ───────────────────────────────────────────────────
 
 const CommitmentSearchQuerySchema = z.object({
   /** Owner address – required to scope the search. */
-  ownerAddress: z.string().min(1, "ownerAddress is required"),
+  ownerAddress: z.string().min(1, 'ownerAddress is required'),
 
   /** Filter by asset code (e.g. "XLM", "USDC"). Case-insensitive match. */
   asset: z.string().optional(),
@@ -74,17 +65,13 @@ const CommitmentSearchQuerySchema = z.object({
    * Filter by commitment status.
    * Accepted values: CREATED, ACTIVE, SETTLED, VIOLATED, EARLY_EXIT.
    */
-  status: z
-    .enum(COMMITMENT_STATUS_VALUES)
-    .optional(),
+  status: z.enum(COMMITMENT_STATUS_VALUES).optional(),
 
   /**
    * Filter by risk type.
    * Accepted values: Safe, Balanced, Aggressive.
    */
-  riskType: z
-    .enum(RISK_TYPE_VALUES)
-    .optional(),
+  riskType: z.enum(RISK_TYPE_VALUES).optional(),
 
   /** Minimum compliance score (0–100). */
   minCompliance: z.coerce.number().min(0).max(100).optional(),
@@ -127,7 +114,7 @@ export interface CommitmentSearchItem {
  * Here we keep the same default for consistency until the contract adds a type field.
  */
 function inferRiskType(_commitment: Record<string, unknown>): string {
-  return "Safe";
+  return 'Safe';
 }
 
 /**
@@ -139,7 +126,7 @@ function buildSearchCacheKey(
   filters: Record<string, string | number | undefined>,
 ): string {
   const payload = JSON.stringify({ ownerAddress, ...filters });
-  const hash = createHash("sha256").update(payload).digest("hex").slice(0, 16);
+  const hash = createHash('sha256').update(payload).digest('hex').slice(0, 16);
   return CacheKey.commitmentSearch(hash);
 }
 
@@ -153,29 +140,29 @@ function compareItems(
   field: SortableField,
   order: SortOrder,
 ): number {
-  const dir = order === "asc" ? 1 : -1;
+  const dir = order === 'asc' ? 1 : -1;
 
   let cmp: number;
   switch (field) {
-    case "amount": {
+    case 'amount': {
       cmp = Number(a.amount) - Number(b.amount);
       break;
     }
-    case "complianceScore": {
+    case 'complianceScore': {
       cmp = a.complianceScore - b.complianceScore;
       break;
     }
-    case "createdAt": {
+    case 'createdAt': {
       const dateA = new Date(a.createdAt).getTime() || 0;
       const dateB = new Date(b.createdAt).getTime() || 0;
       cmp = dateA - dateB;
       break;
     }
-    case "status": {
+    case 'status': {
       cmp = a.status.localeCompare(b.status);
       break;
     }
-    case "asset": {
+    case 'asset': {
       cmp = a.asset.localeCompare(b.asset);
       break;
     }
@@ -194,7 +181,7 @@ function compareItems(
 // ─── CORS policy ──────────────────────────────────────────────────────────────
 
 const SEARCH_CORS_POLICY = {
-  GET: { access: "first-party" },
+  GET: { access: 'first-party' },
 } satisfies CorsRoutePolicy;
 
 export const OPTIONS = createCorsOptionsHandler(SEARCH_CORS_POLICY);
@@ -205,7 +192,7 @@ export const GET = withApiHandler(
   async (req: NextRequest, _context, correlationId) => {
     // 1. Rate limit
     const ip = getClientIp(req);
-    if (!(await checkRateLimit(ip, "api/commitments/search"))) {
+    if (!(await checkRateLimit(ip, 'api/commitments/search'))) {
       throw new TooManyRequestsError();
     }
 
@@ -215,26 +202,17 @@ export const GET = withApiHandler(
     const queryResult = CommitmentSearchQuerySchema.safeParse(rawQuery);
 
     if (!queryResult.success) {
-      throw new ValidationError(
-        "Invalid search parameters",
-        queryResult.error.issues,
-      );
+      throw new ValidationError('Invalid search parameters', queryResult.error.issues);
     }
 
-    const { ownerAddress, asset, commitmentId, status, riskType, minCompliance } =
-      queryResult.data;
+    const { ownerAddress, asset, commitmentId, status, riskType, minCompliance } = queryResult.data;
 
     // 3. Parse pagination & sort via pagination.ts helpers
     let paginationParams;
     let sortParams;
     try {
       paginationParams = parsePaginationParams(searchParams);
-      sortParams = parseSortParams(
-        searchParams,
-        SORTABLE_FIELDS,
-        "createdAt",
-        "desc",
-      );
+      sortParams = parseSortParams(searchParams, SORTABLE_FIELDS, 'createdAt', 'desc');
     } catch (err) {
       if (err instanceof PaginationParseError) {
         return paginationErrorResponse(err);
@@ -273,16 +251,13 @@ export const GET = withApiHandler(
       commitmentId: String(c.id ?? c.commitmentId),
       ownerAddress: c.ownerAddress,
       asset: c.asset,
-      amount:
-        typeof c.amount === "bigint" ? String(c.amount) : String(c.amount),
+      amount: typeof c.amount === 'bigint' ? String(c.amount) : String(c.amount),
       status: c.status as ChainCommitmentStatus,
       riskType: inferRiskType(c),
       complianceScore: c.complianceScore ?? 0,
       currentValue:
-        typeof c.currentValue === "bigint"
-          ? String(c.currentValue)
-          : String(c.currentValue ?? "0"),
-      feeEarned: String(c.feeEarned ?? "0"),
+        typeof c.currentValue === 'bigint' ? String(c.currentValue) : String(c.currentValue ?? '0'),
+      feeEarned: String(c.feeEarned ?? '0'),
       violationCount: c.violationCount ?? 0,
       createdAt: c.createdAt ?? new Date().toISOString(),
       expiresAt: c.expiresAt ?? new Date().toISOString(),
@@ -296,9 +271,7 @@ export const GET = withApiHandler(
 
     if (commitmentId) {
       const normalizedQuery = commitmentId.toUpperCase();
-      items = items.filter((c) =>
-        c.commitmentId.toUpperCase().includes(normalizedQuery),
-      );
+      items = items.filter((c) => c.commitmentId.toUpperCase().includes(normalizedQuery));
     }
 
     if (status) {
@@ -306,9 +279,7 @@ export const GET = withApiHandler(
     }
 
     if (riskType) {
-      items = items.filter(
-        (c) => c.riskType.toLowerCase() === riskType.toLowerCase(),
-      );
+      items = items.filter((c) => c.riskType.toLowerCase() === riskType.toLowerCase());
     }
 
     if (minCompliance !== undefined) {
@@ -316,9 +287,7 @@ export const GET = withApiHandler(
     }
 
     // 8. Sort with stable ordering
-    items.sort((a, b) =>
-      compareItems(a, b, sortParams.sortBy, sortParams.sortOrder),
-    );
+    items.sort((a, b) => compareItems(a, b, sortParams.sortBy, sortParams.sortOrder));
 
     // 9. Paginate
     const result = paginateArray(items, paginationParams);
@@ -348,5 +317,5 @@ export const GET = withApiHandler(
 
 // ─── Disallow other methods ───────────────────────────────────────────────────
 
-const _405 = methodNotAllowed(["GET"]);
+const _405 = methodNotAllowed(['GET']);
 export { _405 as POST, _405 as PUT, _405 as PATCH, _405 as DELETE };

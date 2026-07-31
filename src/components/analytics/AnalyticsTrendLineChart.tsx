@@ -86,13 +86,9 @@ const AnalyticsTrendLineChart: React.FC<AnalyticsTrendLineChartProps> = ({
       aria-label={title}
       className="w-full bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222] shadow-sm"
     >
-      <h3 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">
-        {title}
-      </h3>
+      <h3 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">{title}</h3>
 
-      {description && (
-        <p className="text-[#99a1af] text-xs mb-4">{description}</p>
-      )}
+      {description && <p className="text-[#99a1af] text-xs mb-4">{description}</p>}
 
       {hasData ? (
         <>
@@ -126,7 +122,9 @@ const AnalyticsTrendLineChart: React.FC<AnalyticsTrendLineChartProps> = ({
                   content={() => (
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                      <span className="text-xs" style={{ color }}>{seriesLabel}</span>
+                      <span className="text-xs" style={{ color }}>
+                        {seriesLabel}
+                      </span>
                     </div>
                   )}
                 />

@@ -1,70 +1,173 @@
-export interface ValueHistoryItem {
-  date: string
-  currentValue: number
-  initialAmount: number
+/**
+ * Commitment exposure types and helpers used by Health Metrics charts.
+ *
+ * Kept free of protocol-module imports so chart consumers can type `exposure`
+ * props without pulling unrelated dependencies.
+ */
+
+export const EXPOSURE_ZONE_THRESHOLDS = {
+  lowMax: 33,
+  mediumMax: 66,
+} as const;
+
+export type ExposureLevel = 'low' | 'medium' | 'high';
+
+export interface ValueHistoryPoint {
+  date: string;
+  currentValue: number;
+  initialAmount?: number;
 }
 
-export interface DrawdownHistoryItem {
-  date: string
-  drawdownPercent: number
+export interface DrawdownPoint {
+  date: string;
+  drawdownPercent: number;
 }
 
-export interface ComputeCommitmentExposureParams {
-  valueHistory: ValueHistoryItem[]
-  drawdownHistory: DrawdownHistoryItem[]
-  maxLossPercent: number
+export interface CommitmentExposureInput {
+  valueHistory?: ValueHistoryPoint[];
+  drawdownHistory?: DrawdownPoint[];
+  maxLossPercent: number;
+  protocolMaxLossPercentCeiling?: number;
 }
 
 export interface CommitmentExposureResult {
-  currentDrawdownPercent: number
-  meanAbsReturn: number
-  volatilityExposurePercent: number
-  insufficientData: boolean
+  status: 'ok' | 'insufficient_data';
+  exposurePercent?: number;
+  level?: ExposureLevel;
+  /** Drawdown chart reference line on 0–1 scale (max loss as fraction). */
+  drawdownThresholdPercent?: number;
+  zoneThresholds: typeof EXPOSURE_ZONE_THRESHOLDS;
 }
 
-const VOLATILITY_RETURN_SCALE = 1
+const DRAWDOWN_WEIGHT = 0.6;
+const VOLATILITY_WEIGHT = 0.4;
+const VOLATILITY_RETURN_SCALE = 20;
+const DEFAULT_PROTOCOL_MAX_LOSS_CEILING = 100;
 
-export function computeVolatilityExposurePercent(
-  meanAbsReturn: number,
-  protocolMaxLossPercentCeiling: number,
-): { percent: number; insufficientData: boolean } {
-  if (protocolMaxLossPercentCeiling <= 0) {
-    return { percent: 0, insufficientData: true }
+export function getExposureLevel(
+  percent: number,
+  thresholds: typeof EXPOSURE_ZONE_THRESHOLDS = EXPOSURE_ZONE_THRESHOLDS,
+): ExposureLevel {
+  if (percent <= thresholds.lowMax) return 'low';
+  if (percent <= thresholds.mediumMax) return 'medium';
+  return 'high';
+}
+
+export function computeDrawdownThresholdPercent(maxLossPercent: number): number {
+  if (!Number.isFinite(maxLossPercent) || maxLossPercent <= 0) return 0;
+  return maxLossPercent / 100;
+}
+
+function latestDrawdownFraction(drawdownHistory: DrawdownPoint[]): number | null {
+  if (!drawdownHistory?.length) return null;
+
+  const latest = drawdownHistory[drawdownHistory.length - 1];
+  if (!Number.isFinite(latest.drawdownPercent) || latest.drawdownPercent < 0) {
+    return null;
   }
 
-  const scale = (VOLATILITY_RETURN_SCALE * 100) / protocolMaxLossPercentCeiling
-  const raw = meanAbsReturn * 100 * scale
-  const percent = Math.min(100, Math.max(0, raw))
+  return latest.drawdownPercent;
+}
 
-  return { percent, insufficientData: false }
+function computeDrawdownExposurePercent(drawdownFraction: number, maxLossPercent: number): number {
+  const drawdownPercent = drawdownFraction * 100;
+  return Math.min(100, Math.max(0, (drawdownPercent / maxLossPercent) * 100));
+}
+
+function computeVolatilityExposurePercent(
+  values: number[],
+  protocolMaxLossPercentCeiling: number,
+): number | null {
+  if (values.length < 2) return null;
+
+  // Guard against a zero/negative/non-finite ceiling — without this the
+  // scale factor below divides by zero and produces NaN/Infinity, which
+  // would otherwise leak into the chart as an invalid exposure percent.
+  if (!Number.isFinite(protocolMaxLossPercentCeiling) || protocolMaxLossPercentCeiling <= 0) {
+    return null;
+  }
+
+  const returns: number[] = [];
+  for (let i = 1; i < values.length; i += 1) {
+    const previous = values[i - 1];
+    const current = values[i];
+    if (!Number.isFinite(previous) || previous <= 0 || !Number.isFinite(current)) {
+      continue;
+    }
+    returns.push(Math.abs((current - previous) / previous));
+  }
+
+  if (returns.length === 0) return null;
+
+  const meanAbsReturn = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+  const scale = (VOLATILITY_RETURN_SCALE * 100) / protocolMaxLossPercentCeiling;
+  return Math.min(100, Math.max(0, meanAbsReturn * 100 * scale));
+}
+
+function combineExposure(
+  drawdownExposure: number | null,
+  volatilityExposure: number | null,
+): number | null {
+  if (drawdownExposure !== null && volatilityExposure !== null) {
+    return DRAWDOWN_WEIGHT * drawdownExposure + VOLATILITY_WEIGHT * volatilityExposure;
+  }
+  if (drawdownExposure !== null) return drawdownExposure;
+  if (volatilityExposure !== null) return volatilityExposure;
+  return null;
 }
 
 export function computeCommitmentExposure(
-  params: ComputeCommitmentExposureParams,
+  input: CommitmentExposureInput,
+  commitmentLimits?: { maxLossPercentCeiling?: number },
 ): CommitmentExposureResult {
-  const { valueHistory, drawdownHistory, maxLossPercent } = params
+  const zoneThresholds = EXPOSURE_ZONE_THRESHOLDS;
+  const ceiling =
+    input.protocolMaxLossPercentCeiling ??
+    commitmentLimits?.maxLossPercentCeiling ??
+    DEFAULT_PROTOCOL_MAX_LOSS_CEILING;
 
-  const currentDrawdownPercent =
-    drawdownHistory.length > 0
-      ? drawdownHistory[drawdownHistory.length - 1].drawdownPercent
-      : 0
+  const drawdownThresholdPercent = computeDrawdownThresholdPercent(input.maxLossPercent);
 
-  const meanAbsReturn =
-    valueHistory.length > 0
-      ? valueHistory.reduce((sum, item) => {
-          const return_ =
-            (item.currentValue - item.initialAmount) / item.initialAmount
-          return sum + Math.abs(return_)
-        }, 0) / valueHistory.length
-      : 0
+  if (!Number.isFinite(input.maxLossPercent) || input.maxLossPercent <= 0) {
+    return {
+      status: 'insufficient_data',
+      drawdownThresholdPercent,
+      zoneThresholds,
+    };
+  }
 
-  const { percent: volatilityExposurePercent, insufficientData } =
-    computeVolatilityExposurePercent(meanAbsReturn, maxLossPercent)
+  const drawdownFraction = input.drawdownHistory
+    ? latestDrawdownFraction(input.drawdownHistory)
+    : null;
+  const drawdownExposure =
+    drawdownFraction !== null
+      ? computeDrawdownExposurePercent(drawdownFraction, input.maxLossPercent)
+      : null;
+
+  const values =
+    input.valueHistory
+      ?.map((point) => point.currentValue)
+      .filter((value) => Number.isFinite(value)) ?? [];
+  const volatilityExposure =
+    values.length >= 2 ? computeVolatilityExposurePercent(values, ceiling) : null;
+
+  const exposurePercent = combineExposure(drawdownExposure, volatilityExposure);
+
+  if (exposurePercent === null || !Number.isFinite(exposurePercent)) {
+    return {
+      status: 'insufficient_data',
+      drawdownThresholdPercent,
+      zoneThresholds,
+    };
+  }
+
+  const rounded = Math.round(exposurePercent * 10) / 10;
 
   return {
-    currentDrawdownPercent,
-    meanAbsReturn,
-    volatilityExposurePercent,
-    insufficientData,
-  }
+    status: 'ok',
+    exposurePercent: rounded,
+    level: getExposureLevel(rounded, zoneThresholds),
+    drawdownThresholdPercent,
+    zoneThresholds,
+  };
 }

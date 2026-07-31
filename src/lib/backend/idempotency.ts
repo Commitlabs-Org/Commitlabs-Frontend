@@ -1,4 +1,3 @@
-
 export interface IdempotencyRecord<T = unknown> {
   key: string;
   status: 'STARTED' | 'COMPLETED' | 'FAILED';
@@ -8,7 +7,7 @@ export interface IdempotencyRecord<T = unknown> {
   expiresAt: number;
 }
 
-import type { KVStore } from "./kv";
+import type { KVStore } from './kv';
 
 /**
  * A simple in-memory KV store with TTL support.
@@ -94,7 +93,8 @@ export class IdempotencyService {
   private store: KVStore;
   private ttlSeconds: number;
 
-  constructor(store: KVStore = globalStore, ttlSeconds: number = 86400) { // Default 24h TTL
+  constructor(store: KVStore = globalStore, ttlSeconds: number = 86400) {
+    // Default 24h TTL
     this.store = store;
     this.ttlSeconds = ttlSeconds;
   }

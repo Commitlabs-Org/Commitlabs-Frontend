@@ -8,11 +8,11 @@ The **Select Type** step of the Create Commitment wizard includes a quick-start 
 
 Presets are defined in `src/components/create/commitmentPresets.ts`:
 
-| Preset ID | Label | Type | Duration | Max Loss |
-|---|---|---|---|---|
-| `conservative-90` | Conservative 90-day | safe | 90 days | 2% |
-| `balanced-60` | Balanced 60-day | balanced | 60 days | 8% |
-| `aggressive-30` | Aggressive 30-day | aggressive | 30 days | 20% |
+| Preset ID         | Label               | Type       | Duration | Max Loss |
+| ----------------- | ------------------- | ---------- | -------- | -------- |
+| `conservative-90` | Conservative 90-day | safe       | 90 days  | 2%       |
+| `balanced-60`     | Balanced 60-day     | balanced   | 60 days  | 8%       |
+| `aggressive-30`   | Aggressive 30-day   | aggressive | 30 days  | 20%      |
 
 A **Start from scratch** option lets users pick a type and configure every field themselves.
 

@@ -59,9 +59,7 @@ function buildAttestationEvents(
             ? (a.details.complianceScore as number)
             : undefined,
         violation:
-          typeof a.details?.violation === 'boolean'
-            ? (a.details.violation as boolean)
-            : undefined,
+          typeof a.details?.violation === 'boolean' ? (a.details.violation as boolean) : undefined,
         severity: a.severity,
       },
     }));
@@ -119,10 +117,7 @@ function terminalProxyTimestamp(
     Number.NEGATIVE_INFINITY,
   );
 
-  if (
-    Number.isFinite(latestPrecedingMs) &&
-    latestPrecedingMs > new Date(expiresAt).getTime()
-  ) {
+  if (Number.isFinite(latestPrecedingMs) && latestPrecedingMs > new Date(expiresAt).getTime()) {
     return new Date(latestPrecedingMs).toISOString();
   }
   return expiresAt;
@@ -154,17 +149,11 @@ export async function getCommitmentHistory(
     ...buildAttestationEvents(commitment.id, attestations),
   ];
 
-  const terminal = buildTerminalEvent(
-    commitment,
-    terminalProxyTimestamp(commitment, events),
-  );
+  const terminal = buildTerminalEvent(commitment, terminalProxyTimestamp(commitment, events));
   if (terminal) events.push(terminal);
 
   // Sort chronologically (oldest first)
-  events.sort(
-    (a, b) =>
-      new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
-  );
+  events.sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
 
   return { events, total: events.length };
 }

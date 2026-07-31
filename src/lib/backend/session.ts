@@ -162,9 +162,9 @@ export function __resetSessionStoreForTests(): void {
 }
 
 /** Parse session id from Cookie header (NextRequest#cookies). */
-export function readSessionIdFromRequest(
-  cookies: { get: (name: string) => { value: string } | undefined },
-): string | undefined {
+export function readSessionIdFromRequest(cookies: {
+  get: (name: string) => { value: string } | undefined;
+}): string | undefined {
   const raw = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!raw || raw.trim() === '') return undefined;
   return raw.trim();

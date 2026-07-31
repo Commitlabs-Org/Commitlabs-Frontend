@@ -43,13 +43,9 @@ function defaultFormatter(v: number): string {
   return v.toLocaleString();
 }
 
-const CustomTooltip: React.FC<TooltipPayload & { formatter: (v: number) => string; color: string }> = ({
-  active,
-  payload,
-  label,
-  formatter,
-  color,
-}) => {
+const CustomTooltip: React.FC<
+  TooltipPayload & { formatter: (v: number) => string; color: string }
+> = ({ active, payload, label, formatter, color }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#1a1a1a] border border-[#333] p-3 rounded-lg shadow-lg min-w-[140px]">
@@ -82,22 +78,28 @@ const AnalyticsTrendBarChart: React.FC<AnalyticsTrendBarChartProps> = ({
       aria-label={title}
       className="w-full bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222] shadow-sm"
     >
-      <h3 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">
-        {title}
-      </h3>
+      <h3 className="text-white text-sm font-semibold mb-4 uppercase tracking-wider">{title}</h3>
 
-      {description && (
-        <p className="text-[#99a1af] text-xs mb-4">{description}</p>
-      )}
+      {description && <p className="text-[#99a1af] text-xs mb-4">{description}</p>}
 
       {hasData ? (
         <>
           {/* Visual chart */}
           <div aria-hidden="true">
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} barCategoryGap="20%">
+              <BarChart
+                data={data}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                barCategoryGap="20%"
+              >
                 <defs>
-                  <linearGradient id={`barGrad-${title.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id={`barGrad-${title.replace(/\s/g, '')}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor={color} stopOpacity={1} />
                     <stop offset="100%" stopColor={color} stopOpacity={0.65} />
                   </linearGradient>
@@ -128,11 +130,19 @@ const AnalyticsTrendBarChart: React.FC<AnalyticsTrendBarChartProps> = ({
                   content={() => (
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
-                      <span className="text-xs" style={{ color }}>{seriesLabel}</span>
+                      <span className="text-xs" style={{ color }}>
+                        {seriesLabel}
+                      </span>
                     </div>
                   )}
                 />
-                <Bar dataKey="value" name={seriesLabel} fill={`url(#barGrad-${title.replace(/\s/g, '')})`} radius={[4, 4, 0, 0]} maxBarSize={60}>
+                <Bar
+                  dataKey="value"
+                  name={seriesLabel}
+                  fill={`url(#barGrad-${title.replace(/\s/g, '')})`}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={60}
+                >
                   {data.map((_, index) => (
                     <Cell key={`cell-${index}`} />
                   ))}

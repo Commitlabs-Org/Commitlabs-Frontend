@@ -13,6 +13,8 @@
     "analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,css,scss,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mdx,css,scss,yaml,yml}\"",
     "typecheck": "tsc --noEmit",
     "deadcode": "knip",
     "circular": "madge --circular --extensions ts,tsx src",
@@ -27,7 +29,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix"
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,mdx,css,scss,yaml,yml}": [
+      "prettier --write"
     ],
     "docs/**/*.{md,mdx}": [
       "node scripts/check-docs-file-urls.mjs"
@@ -78,6 +84,7 @@
     "lint-staged": "^15.2.10",
     "madge": "^8.0.0",
     "node-fetch": "^3.3.2",
+    "prettier": "^3.9.6",
     "size-limit": "^12.1.0",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",

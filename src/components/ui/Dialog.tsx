@@ -35,7 +35,7 @@ export function Dialog({
     setMounted(true);
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(mediaQuery.matches);
-    
+
     const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mediaQuery.addEventListener('change', listener);
     return () => {
@@ -61,7 +61,7 @@ export function Dialog({
 
       if (event.key === 'Tab' && dialogRef.current) {
         const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         );
 
         if (focusableElements.length === 0) {
@@ -87,7 +87,7 @@ export function Dialog({
         initialFocusRef.current.focus();
       } else if (dialogRef.current) {
         const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         );
         if (focusableElements.length > 0) {
           focusableElements[0].focus();
@@ -98,19 +98,19 @@ export function Dialog({
     }, 100);
 
     document.addEventListener('keydown', handleKeyDown);
-    
+
     // Scroll lock and inert implementation
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    
+
     // Make sibling root elements inert for accessibility
     const rootElements = Array.from(document.body.children).filter(
-      (child) => 
-        child.tagName !== 'SCRIPT' && 
-        child.tagName !== 'NOSCRIPT' && 
-        !child.hasAttribute('data-dialog-portal')
+      (child) =>
+        child.tagName !== 'SCRIPT' &&
+        child.tagName !== 'NOSCRIPT' &&
+        !child.hasAttribute('data-dialog-portal'),
     );
-    
+
     rootElements.forEach((el) => {
       el.setAttribute('inert', '');
       el.setAttribute('aria-hidden', 'true');
@@ -120,7 +120,7 @@ export function Dialog({
       window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = originalOverflow;
-      
+
       rootElements.forEach((el) => {
         el.removeAttribute('inert');
         el.removeAttribute('aria-hidden');
@@ -142,11 +142,14 @@ export function Dialog({
   };
 
   const animationClasses = prefersReducedMotion ? '' : 'animate-in fade-in duration-300';
-  const slideClasses = prefersReducedMotion ? '' : 'animate-in slide-in-from-bottom-8 duration-500 ease-out';
+  const slideClasses = prefersReducedMotion
+    ? ''
+    : 'animate-in slide-in-from-bottom-8 duration-500 ease-out';
 
-  // We trim the classes in case some are empty to avoid stray spaces, 
+  // We trim the classes in case some are empty to avoid stray spaces,
   // though it's technically fine if they have spaces.
-  const finalBackdropClass = `fixed inset-0 z-[9999] flex items-center justify-center ${backdropClassName} ${animationClasses}`.trim();
+  const finalBackdropClass =
+    `fixed inset-0 z-[9999] flex items-center justify-center ${backdropClassName} ${animationClasses}`.trim();
   const finalPanelClass = `${slideClasses} ${className}`.trim();
 
   return createPortal(
@@ -169,6 +172,6 @@ export function Dialog({
         {children}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

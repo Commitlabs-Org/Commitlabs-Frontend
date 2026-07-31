@@ -86,7 +86,9 @@ export default function ResumeDraftPrompt({
                     </div>
                     <div className="text-xs text-gray-500 grid grid-cols-2 gap-x-3 gap-y-0.5">
                       <span>Amount:</span>
-                      <span className="text-gray-700">{data.amount || 'Not set'} {data.asset}</span>
+                      <span className="text-gray-700">
+                        {data.amount || 'Not set'} {data.asset}
+                      </span>
                       <span>Duration:</span>
                       <span className="text-gray-700">{data.durationDays}d</span>
                       <span>Step:</span>

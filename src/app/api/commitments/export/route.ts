@@ -33,10 +33,10 @@ type CsvHeader = (typeof ALL_CSV_HEADERS)[number];
 /** Map each header label to the commitment field that supplies its value. */
 const HEADER_TO_FIELD: Record<CsvHeader, (c: ChainCommitment) => unknown> = {
   'Commitment ID': (c) => c.id,
-  'Owner': (c) => c.ownerAddress,
-  'Asset': (c) => c.asset,
-  'Amount': (c) => c.amount,
-  'Status': (c) => c.status,
+  Owner: (c) => c.ownerAddress,
+  Asset: (c) => c.asset,
+  Amount: (c) => c.amount,
+  Status: (c) => c.status,
   'Compliance Score': (c) => c.complianceScore,
   'Current Value': (c) => c.currentValue,
   'Fee Earned': (c) => c.feeEarned,

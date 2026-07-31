@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  
+
   const pageParam = searchParams.get('page');
   const pageSizeParam = searchParams.get('pageSize');
 
@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
   const allNotifications = Array.from({ length: 50 }, (_, i) => ({ id: i + 1 }));
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
-  
+
   const paginated = allNotifications.slice(start, end);
 
-  return NextResponse.json({ 
+  return NextResponse.json({
     data: paginated,
-    meta: { page, pageSize, total: allNotifications.length }
+    meta: { page, pageSize, total: allNotifications.length },
   });
 }
