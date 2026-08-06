@@ -22,6 +22,9 @@
 # (canonical component at src/components/MarketplaceEmptyState.tsx)
 /src/components/marketplace/MarketplaceEmptyState.tsx
 
+# lockfiles (pnpm is the package manager, see package.json "packageManager")
+package-lock.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
