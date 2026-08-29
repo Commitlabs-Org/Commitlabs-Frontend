@@ -1,4 +1,4 @@
-import { memo, useMemo, useEffect, useRef } from 'react';
+import { memo, useMemo, useEffect, useRef, useCallback } from 'react';
 import type { MarketplaceCardProps } from './MarketplaceCard';
 import { MarketplaceCard } from './MarketplaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -12,7 +12,7 @@ export interface MarketplaceGridProps {
   onCompareToggle?: (listing: MarketplaceCardProps) => void;
   onView?: (id: string) => void;
   /** Additional query parameters for filtering/sorting */
-  queryParams?: Record<string, any>;
+  queryParams?: Record<string, unknown>;
   /** Optional comparator applied before rendering. Stabilize with useCallback. */
   sortFn?: (a: MarketplaceCardProps, b: MarketplaceCardProps) => number;
   /** Optional predicate applied before rendering. Stabilize with useCallback. */
@@ -46,22 +46,77 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
   sortFn,
   filterFn,
 }: MarketplaceGridProps) {
+  const safeOnCompareToggle = useCallback(
+    (listing: MarketplaceCardProps) => {
+      if (typeof onCompareToggle === 'function') {
+        return onCompareToggle(listing);
+      }
+    },
+    [onCompareToggle],
+  );
+
+  const safeOnView = useCallback(
+    (id: string) => {
+      if (typeof onView === 'function' && id && typeof id === 'string') {
+        return onView(id);
+      }
+    },
+    [onView],
+  );
+
+  const safeIsComparePinned = useCallback(
+    (id: string) => {
+      if (typeof isComparePinned === 'function' && id) {
+        return isComparePinned(id);
+      }
+      return false;
+    },
+    [isComparePinned],
+  );
+
   // Use the pagination hook when no items are supplied.
   // We disable the hook when pre-loaded items are supplied.
   const { listings, isLoading, hasMore, loadMore } = usePaginatedListings(queryParams, 9, !!items);
   const rawItems = items ?? listings;
 
+  const sanitizedItems = useMemo(() => {
+    if (!Array.isArray(rawItems)) return [];
+    return rawItems.filter((item): item is MarketplaceCardProps => {
+      return (
+        typeof item === 'object' &&
+        item !== null &&
+        typeof item.id === 'string' &&
+        item.id.trim().length > 0 &&
+        typeof item.type === 'string' &&
+        ['Safe', 'Balanced', 'Aggressive'].includes(item.type) &&
+        typeof item.amount === 'string' &&
+        typeof item.duration === 'string' &&
+        typeof item.yield === 'string' &&
+        typeof item.maxLoss === 'string' &&
+        typeof item.price === 'string'
+      );
+    });
+  }, [rawItems]);
+
   // Memoize derived list — only recomputes when items / predicates change.
   const displayedItems = useMemo(() => {
-    let result = rawItems;
+    let result = sanitizedItems;
     if (filterFn) {
-      result = result.filter(filterFn);
+      try {
+        result = result.filter(filterFn);
+      } catch {
+        result = [];
+      }
     }
     if (sortFn) {
-      result = [...result].sort(sortFn);
+      try {
+        result = [...result].sort(sortFn);
+      } catch {
+        result = [];
+      }
     }
     return result;
-  }, [rawItems, filterFn, sortFn]);
+  }, [sanitizedItems, filterFn, sortFn]);
 
   // IntersectionObserver for infinite scroll (sentinel element)
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -96,13 +151,11 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
     <section className="mt-6" aria-label="Marketplace listings">
       <ul className="list-none p-0 m-0 grid grid-cols-3 gap-6 max-[1024px]:grid-cols-2 max-[720px]:grid-cols-1">
         {displayedItems.map((item) => {
-          const compareSelected = isComparePinned?.(item.id) ?? false;
+          const compareSelected = safeIsComparePinned(item.id);
           return (
             <li
               key={item.id}
               className="min-h-[280px]"
-              // content-visibility: auto defers rendering of off-screen list
-              // items; contain-intrinsic-size prevents scroll-bar jank.
               style={
                 isLargeList
                   ? { contentVisibility: 'auto', containIntrinsicSize: '0 320px' }
@@ -113,8 +166,8 @@ export const MarketplaceGrid = memo(function MarketplaceGrid({
                 {...item}
                 compareSelected={compareSelected}
                 compareDisabled={isCompareFull && !compareSelected}
-                onCompareToggle={onCompareToggle ? () => onCompareToggle(item) : undefined}
-                onView={onView}
+                {...(onCompareToggle ? { onCompareToggle: () => safeOnCompareToggle(item) } : {})}
+                onView={safeOnView}
               />
             </li>
           );
