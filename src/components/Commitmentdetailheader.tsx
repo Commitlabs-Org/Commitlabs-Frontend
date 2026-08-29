@@ -55,6 +55,8 @@ export default function CommitmentDetailHeader({
   const config = statusConfig[statusVariant as keyof typeof statusConfig] || statusConfig.active;
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle');
   const resetCopyStatusRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyRequestIdRef = useRef(0);
+  const shareRequestIdRef = useRef(0);
   const explorerUrl = useMemo(
     () => buildExplorerUrl('contract', commitmentId, explorerNetwork),
     [commitmentId, explorerNetwork],
@@ -82,18 +84,37 @@ export default function CommitmentDetailHeader({
   };
 
   const handleCopyCommitmentId = async () => {
+    const requestId = ++copyRequestIdRef.current;
     const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
 
     if (!clipboard?.writeText) {
-      showCopyStatus('unavailable');
+      if (requestId === copyRequestIdRef.current) {
+        showCopyStatus('unavailable');
+      }
       return;
     }
 
     try {
       await clipboard.writeText(commitmentId);
-      showCopyStatus('copied');
+      if (requestId === copyRequestIdRef.current) {
+        showCopyStatus('copied');
+      }
     } catch {
-      showCopyStatus('unavailable');
+      if (requestId === copyRequestIdRef.current) {
+        showCopyStatus('unavailable');
+      }
+    }
+  };
+
+  const handleShareClick = () => {
+    const requestId = ++shareRequestIdRef.current;
+    const result = onShare();
+    if (result && typeof (result as Promise<unknown>).then === 'function') {
+      (result as Promise<unknown>).catch(() => {
+        if (requestId !== shareRequestIdRef.current) {
+          return;
+        }
+      });
     }
   };
 
@@ -180,7 +201,7 @@ export default function CommitmentDetailHeader({
 
         {/* Right Section: Share Button */}
         <button
-          onClick={onShare}
+          onClick={handleShareClick}
           className="group flex items-center gap-2 px-4 py-2.5 bg-[#0a0a0a] border border-[#222] rounded-full text-[#f5f5f7] text-sm font-medium hover:border-[#0ff0fc]/40 hover:bg-[#0ff0fc]/5 hover:shadow-[0_0_20px_rgba(15,240,252,0.15)] hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:border-[#0ff0fc]/60 focus:shadow-[0_0_24px_rgba(15,240,252,0.25)] focus-visible:ring-2 focus-visible:ring-[#0ff0fc] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505] w-full sm:w-auto justify-center sm:justify-start"
           aria-label="Share commitment"
         >
