@@ -26,6 +26,7 @@ import {
   CHART_Y_AXIS_PROPS,
   LIFECYCLE_REF_LINE,
   formatDrawdownAxisTick,
+  sanitizeChartSeries,
 } from './chartConfig';
 
 export interface LifecycleEvent {
@@ -76,6 +77,7 @@ const HealthMetricsDrawdownChartComponent: React.FC<HealthMetricsDrawdownChartPr
   lifecycleEvents = [],
   exposure,
 }) => {
+  const safeData = React.useMemo(() => sanitizeChartSeries(data, 'drawdownPercent'), [data]);
   const yTickFormatter = useCallback((value: number) => formatDrawdownAxisTick(value), []);
 
   const renderLegend = useCallback(
@@ -98,7 +100,7 @@ const HealthMetricsDrawdownChartComponent: React.FC<HealthMetricsDrawdownChartPr
     <>
       <div className="w-full h-full min-h-[300px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222]">
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data} margin={CHART_MARGIN_COMPACT}>
+          <AreaChart data={safeData} margin={CHART_MARGIN_COMPACT}>
             <defs>
               <linearGradient id="drawdownGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={CHART_COLORS.red} stopOpacity={0.8} />

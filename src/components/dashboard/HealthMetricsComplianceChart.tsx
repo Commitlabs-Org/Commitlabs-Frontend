@@ -21,6 +21,7 @@ import {
   CHART_TOOLTIP_CURSOR_LINE,
   CHART_X_AXIS_PROPS,
   CHART_Y_AXIS_PROPS,
+  sanitizeChartSeries,
 } from './chartConfig';
 
 export interface HealthMetricsComplianceChartProps {
@@ -51,6 +52,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipPayload) => {
 const HealthMetricsComplianceChartComponent: React.FC<HealthMetricsComplianceChartProps> = ({
   data,
 }) => {
+  const safeData = React.useMemo(() => sanitizeChartSeries(data, 'complianceScore'), [data]);
+
   const renderLegend = useCallback(
     () => (
       <div className="flex items-center justify-center gap-2 mt-4">
@@ -64,7 +67,7 @@ const HealthMetricsComplianceChartComponent: React.FC<HealthMetricsComplianceCha
   return (
     <div className="w-full h-full min-h-[300px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222]">
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={CHART_MARGIN_COMPACT}>
+        <LineChart data={safeData} margin={CHART_MARGIN_COMPACT}>
           <CartesianGrid {...CHART_GRID_PROPS} />
           <XAxis {...CHART_X_AXIS_PROPS} />
           <YAxis {...CHART_Y_AXIS_PROPS} domain={[0, 100]} />

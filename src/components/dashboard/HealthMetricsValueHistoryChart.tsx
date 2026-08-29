@@ -29,6 +29,7 @@ import {
   CHART_Y_AXIS_PROPS,
   LIFECYCLE_REF_LINE,
   formatLocaleNumber,
+  sanitizeChartSeries,
 } from './chartConfig';
 
 export interface HealthMetricsValueHistoryChartProps {
@@ -80,21 +81,26 @@ const HealthMetricsValueHistoryChartComponent: React.FC<HealthMetricsValueHistor
   benchmarkLabel,
 }) => {
   const reducedMotion = useReducedMotion();
+  const safeData = useMemo(() => sanitizeChartSeries(data, 'currentValue'), [data]);
+  const safeBenchmarkData = useMemo(
+    () => sanitizeChartSeries(benchmarkData ?? [], 'benchmarkValue'),
+    [benchmarkData],
+  );
 
-  const hasBenchmark = Boolean(benchmarkData && benchmarkData.length > 0);
+  const hasBenchmark = Boolean(safeBenchmarkData.length > 0);
 
   const benchmarkByDate = useMemo(() => {
-    if (!hasBenchmark || !benchmarkData) return {};
-    return Object.fromEntries(benchmarkData.map((p) => [p.date, p.benchmarkValue]));
-  }, [benchmarkData, hasBenchmark]);
+    if (!hasBenchmark) return {};
+    return Object.fromEntries(safeBenchmarkData.map((p) => [p.date, p.benchmarkValue]));
+  }, [hasBenchmark, safeBenchmarkData]);
 
   const mergedData = useMemo(() => {
-    if (!hasBenchmark) return data;
-    return data.map((point) => ({
+    if (!hasBenchmark) return safeData;
+    return safeData.map((point) => ({
       ...point,
       benchmarkValue: benchmarkByDate[point.date] ?? null,
     }));
-  }, [data, hasBenchmark, benchmarkByDate]);
+  }, [safeData, hasBenchmark, benchmarkByDate]);
 
   const yTickFormatter = useCallback((value: number) => formatLocaleNumber(value), []);
 
