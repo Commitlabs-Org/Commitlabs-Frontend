@@ -25,6 +25,45 @@ import { RecentlyViewedCommitmentsRail } from '@/components/RecentlyViewedCommit
 import { useRegisterCommands } from '@/components/CommandPalette';
 import { buildCommitmentScopedCommands } from '@/components/CommandPalette/scopedActions';
 
+// ---------------------------------------------------------------------------
+// Bounds & constants
+// ---------------------------------------------------------------------------
+
+/** Maximum number of chart data points to render (bounds memory & rendering). */
+const MAX_CHART_POINTS = 500;
+
+/** Maximum number of attestations shown in the panel (bounds DOM nodes). */
+const MAX_VISIBLE_ATTESTATIONS = 50;
+
+/** Minimum ms between status-override transitions (prevents rapid toggling). */
+const STATUS_TRANSITION_DEBOUNCE_MS = 500;
+
+// ---------------------------------------------------------------------------
+// Structured diagnostics (never leaks secrets)
+// ---------------------------------------------------------------------------
+
+function emitPageTelemetry(
+  event: string,
+  meta: Record<string, string | number | boolean> = {},
+) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(`[CommitmentPage] ${event}`, meta);
+    }
+  } catch {
+    // Diagnostics must never break rendering.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bounded mock data helpers
+// ---------------------------------------------------------------------------
+
+function boundArray<T>(arr: T[], max: number): T[] {
+  return arr.length > max ? arr.slice(arr.length - max) : arr;
+}
+
 // Mock Commitments
 const MOCK_COMMITMENTS: Record<
   string,
@@ -55,7 +94,7 @@ const MOCK_COMMITMENTS: Record<
   },
 };
 
-// Mock dispute state — populated from /api/commitments/[id] status + history in production
+// Mock dispute state
 const MOCK_DISPUTES: Record<string, DisputeInfo | null> = {
   '1': {
     stage: 'under_review',
@@ -66,83 +105,98 @@ const MOCK_DISPUTES: Record<string, DisputeInfo | null> = {
   '2': null,
 };
 
-// Mock data for health metrics
-const MOCK_COMPLIANCE_DATA = [
-  { date: 'Jan 1', complianceScore: 98 },
-  { date: 'Jan 5', complianceScore: 97 },
-  { date: 'Jan 10', complianceScore: 99 },
-  { date: 'Jan 15', complianceScore: 95 },
-  { date: 'Jan 20', complianceScore: 98 },
-  { date: 'Jan 25', complianceScore: 100 },
-  { date: 'Jan 30', complianceScore: 99 },
-];
+// Bounded mock data for health metrics
+const MOCK_COMPLIANCE_DATA = boundArray(
+  [
+    { date: 'Jan 1', complianceScore: 98 },
+    { date: 'Jan 5', complianceScore: 97 },
+    { date: 'Jan 10', complianceScore: 99 },
+    { date: 'Jan 15', complianceScore: 95 },
+    { date: 'Jan 20', complianceScore: 98 },
+    { date: 'Jan 25', complianceScore: 100 },
+    { date: 'Jan 30', complianceScore: 99 },
+  ],
+  MAX_CHART_POINTS,
+);
 
-const MOCK_DRAWDOWN_DATA = [
-  { date: 'Jan 10', drawdownPercent: 0 },
-  { date: 'Jan 15', drawdownPercent: 0.35 },
-  { date: 'Jan 20', drawdownPercent: 0.58 },
-  { date: 'Jan 25', drawdownPercent: 0.52 },
-  { date: 'Jan 28', drawdownPercent: 0.78 },
-];
+const MOCK_DRAWDOWN_DATA = boundArray(
+  [
+    { date: 'Jan 10', drawdownPercent: 0 },
+    { date: 'Jan 15', drawdownPercent: 0.35 },
+    { date: 'Jan 20', drawdownPercent: 0.58 },
+    { date: 'Jan 25', drawdownPercent: 0.52 },
+    { date: 'Jan 28', drawdownPercent: 0.78 },
+  ],
+  MAX_CHART_POINTS,
+);
 
-const MOCK_VALUE_HISTORY_DATA = [
-  { date: 'Jan 10', currentValue: 50000, initialAmount: 50000 },
-  { date: 'Jan 15', currentValue: 52000, initialAmount: 50000 },
-  { date: 'Jan 20', currentValue: 51500, initialAmount: 50000 },
-  { date: 'Jan 25', currentValue: 53000, initialAmount: 50000 },
-  { date: 'Jan 28', currentValue: 54000, initialAmount: 50000 },
-];
+const MOCK_VALUE_HISTORY_DATA = boundArray(
+  [
+    { date: 'Jan 10', currentValue: 50000, initialAmount: 50000 },
+    { date: 'Jan 15', currentValue: 52000, initialAmount: 50000 },
+    { date: 'Jan 20', currentValue: 51500, initialAmount: 50000 },
+    { date: 'Jan 25', currentValue: 53000, initialAmount: 50000 },
+    { date: 'Jan 28', currentValue: 54000, initialAmount: 50000 },
+  ],
+  MAX_CHART_POINTS,
+);
 
-const MOCK_FEE_GENERATION_DATA = [
-  { date: 'Jan 10', feeAmount: 25 },
-  { date: 'Jan 15', feeAmount: 45 },
-  { date: 'Jan 20', feeAmount: 78 },
-  { date: 'Jan 25', feeAmount: 92 },
-  { date: 'Jan 28', feeAmount: 125 },
-];
+const MOCK_FEE_GENERATION_DATA = boundArray(
+  [
+    { date: 'Jan 10', feeAmount: 25 },
+    { date: 'Jan 15', feeAmount: 45 },
+    { date: 'Jan 20', feeAmount: 78 },
+    { date: 'Jan 25', feeAmount: 92 },
+    { date: 'Jan 28', feeAmount: 125 },
+  ],
+  MAX_CHART_POINTS,
+);
 
-const MOCK_ATTESTATIONS = [
-  {
-    id: '1',
-    title: 'Daily Compliance Check',
-    description: 'All parameters within acceptable ranges. No violations detected.',
-    txHash: '0xabcdef1234567890abcdef1234567890',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    severity: 'ok' as const,
-  },
-  {
-    id: '2',
-    title: 'Allocation Verified',
-    description: 'Portfolio allocation meets all constraints. Safe protocol usage confirmed.',
-    txHash: '0x123456789abcdef123456789abcdef',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    severity: 'ok' as const,
-  },
-  {
-    id: '3',
-    title: 'Increased Volatility',
-    description: 'Market volatility increased. Monitoring drawdown levels closely.',
-    txHash: '0x567890abcdef1234567890abcdef1234',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    severity: 'warning' as const,
-  },
-  {
-    id: '4',
-    title: 'Weekly Review',
-    description: 'Commitment performing well. All rules followed consistently.',
-    txHash: '0x90abcd1234567890abcd345678',
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    severity: 'ok' as const,
-  },
-  {
-    id: '5',
-    title: 'Commitment Created',
-    description: 'Initial commitment parameters set and validated on-chain.',
-    txHash: '0xdef1234567890abcdef890abc',
-    timestamp: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
-    severity: 'ok' as const,
-  },
-];
+const MOCK_ATTESTATIONS = boundArray(
+  [
+    {
+      id: '1',
+      title: 'Daily Compliance Check',
+      description: 'All parameters within acceptable ranges. No violations detected.',
+      txHash: '0xabcdef1234567890abcdef1234567890',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      severity: 'ok' as const,
+    },
+    {
+      id: '2',
+      title: 'Allocation Verified',
+      description: 'Portfolio allocation meets all constraints. Safe protocol usage confirmed.',
+      txHash: '0x123456789abcdef123456789abcdef',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      severity: 'ok' as const,
+    },
+    {
+      id: '3',
+      title: 'Increased Volatility',
+      description: 'Market volatility increased. Monitoring drawdown levels closely.',
+      txHash: '0x567890abcdef1234567890abcdef1234',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      severity: 'warning' as const,
+    },
+    {
+      id: '4',
+      title: 'Weekly Review',
+      description: 'Commitment performing well. All rules followed consistently.',
+      txHash: '0x90abcd1234567890abcd345678',
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      severity: 'ok' as const,
+    },
+    {
+      id: '5',
+      title: 'Commitment Created',
+      description: 'Initial commitment parameters set and validated on-chain.',
+      txHash: '0xdef1234567890abcdef890abc',
+      timestamp: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
+      severity: 'ok' as const,
+    },
+  ],
+  MAX_VISIBLE_ATTESTATIONS,
+);
 
 const MOCK_ATTESTATION_SUMMARY = {
   complianceCount: 4,
@@ -164,6 +218,10 @@ function getCommitmentById(id: string) {
   return MOCK_COMMITMENTS[id] ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Main page component
+// ---------------------------------------------------------------------------
+
 export default function CommitmentDetailPage({ params }: { params: { id: string } }) {
   const commitment = getCommitmentById(params.id);
   if (!commitment) notFound();
@@ -172,6 +230,9 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
     () => MOCK_DISPUTES[params.id] ?? null,
   );
   const [commitmentStatusOverride, setCommitmentStatusOverride] = useState<string | null>(null);
+
+  // Debounced status override transition to prevent rapid toggling
+  const statusTransitionRef = useRef(0);
 
   const durationLabel = `${commitment.duration} days`;
   const maxLossLabel = `${commitment.maxLoss}%`;
@@ -228,6 +289,15 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
   }, []);
 
   const handleDisputeSubmitted = useCallback(() => {
+    const now = Date.now();
+
+    // Debounce: prevent rapid successive dispute submissions
+    if (now - statusTransitionRef.current < STATUS_TRANSITION_DEBOUNCE_MS) {
+      emitPageTelemetry('dispute_submit_debounced', { commitmentId: params.id });
+      return;
+    }
+    statusTransitionRef.current = now;
+
     setDispute({
       stage: 'under_review',
       filedAt: new Date().toISOString(),
@@ -236,15 +306,22 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
     });
     setCommitmentStatusOverride('Disputed');
     setDisputeModalOpen(false);
-  }, []);
+
+    emitPageTelemetry('dispute_submitted', {
+      commitmentId: params.id,
+      newStatus: 'Disputed',
+    });
+  }, [params.id]);
 
   const handleEarlyExit = useCallback(() => {
+    emitPageTelemetry('early_exit_modal_open', { commitmentId: params.id });
     setEarlyExitModalOpen(true);
-  }, []);
+  }, [params.id]);
 
   const handleSettle = useCallback(() => {
+    emitPageTelemetry('settle_attempt', { commitmentId: params.id, available: false });
     showSuccess({ title: 'Coming Soon', description: 'Settlement is not yet available.' });
-  }, [showSuccess]);
+  }, [showSuccess, params.id]);
 
   const scopedCommands = useMemo(
     () =>
@@ -287,7 +364,7 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
             />
           </div>
 
-          <DisputeStatusTracker dispute={dispute} />
+          <DisputeStatusTracker dispute={dispute} commitmentId={commitment.id} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2 space-y-8">
@@ -306,8 +383,12 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
                 <RecentAttestationsPanel
                   attestations={MOCK_ATTESTATIONS}
                   summary={MOCK_ATTESTATION_SUMMARY}
-                  onSelectAttestation={(id) => console.log('Selected attestation:', id)}
-                  onViewAll={() => console.log('View all attestations')}
+                  onSelectAttestation={(id) =>
+                    emitPageTelemetry('attestation_selected', { attestationId: id })
+                  }
+                  onViewAll={() =>
+                    emitPageTelemetry('view_all_attestations', { commitmentId: params.id })
+                  }
                 />
               </div>
 
@@ -328,7 +409,9 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
                 mintDate={MOCK_NFT_DATA.mintDate}
                 onCopyTokenId={() => handleCopy(MOCK_NFT_DATA.tokenId, 'Token ID')}
                 onCopyOwner={() => handleCopy(MOCK_NFT_DATA.ownerAddress, 'Owner Address')}
-                onCopyContract={() => handleCopy(MOCK_NFT_DATA.contractAddress, 'Contract Address')}
+                onCopyContract={() =>
+                  handleCopy(MOCK_NFT_DATA.contractAddress, 'Contract Address')
+                }
                 onViewDetails={handleViewDetails}
                 onViewOnExplorer={handleViewExplorer}
                 onTransfer={handleTransfer}
@@ -380,6 +463,10 @@ export default function CommitmentDetailPage({ params }: { params: { id: string 
   );
 }
 
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
 function CommitmentDetailHeaderWithStatus({
   commitmentId,
   commitmentType,
@@ -387,7 +474,7 @@ function CommitmentDetailHeaderWithStatus({
 }: {
   commitmentId: string;
   commitmentType: string;
-  statusOverride?: string;
+  statusOverride?: string | undefined;
 }) {
   const router = useRouter();
   const { status, isLoading } = useCommitmentStatus();
@@ -425,8 +512,8 @@ function CommitmentDetailActionsUsingContext({
   onViewAttestations: () => void;
   onExportData: () => void;
   onReportIssue: () => void;
-  onSettle?: () => void;
-  commitmentId?: string;
+  onSettle?: (() => void) | undefined;
+  commitmentId?: string | undefined;
 }) {
   const { status } = useCommitmentStatus();
   const canEarlyExit = status
@@ -443,8 +530,8 @@ function CommitmentDetailActionsUsingContext({
       onViewAttestations={onViewAttestations}
       onExportData={onExportData}
       onReportIssue={onReportIssue}
-      onSettle={onSettle}
-      commitmentId={commitmentId}
+      {...(onSettle !== undefined ? { onSettle } : {})}
+      {...(commitmentId !== undefined ? { commitmentId } : {})}
       previewRefreshTrigger={previewRefreshTrigger}
     />
   );
