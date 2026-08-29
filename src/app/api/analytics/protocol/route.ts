@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { methodNotAllowed } from '@/lib/backend/apiResponse';
-import { ChainCommitment, getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
+import { ChainCommitment } from '@/lib/backend/services/contracts';
 import {
   applyCorsPolicy,
   createCorsOptionsHandler,
@@ -22,6 +22,17 @@ export interface ProtocolAnalyticsResponse {
   averageComplianceScore: number;
   totalViolations: number;
   uniqueOwners: number;
+  snapshot: {
+    generatedAt: string;
+    window: 'protocol-lifetime';
+    source: 'mock' | 'chain';
+    rejectedRecords: number;
+  };
+  invariants: {
+    statusTotalsMatch: true;
+    nonNegativeTotals: true;
+    complianceScoreBounded: true;
+  };
 }
 
 const ANALYTICS_PROTOCOL_CORS_POLICY = {
@@ -30,42 +41,125 @@ const ANALYTICS_PROTOCOL_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(ANALYTICS_PROTOCOL_CORS_POLICY);
 
-function sumNumericStringField(
-  commitments: ChainCommitment[],
-  field: 'amount' | 'feeEarned',
-): string {
-  const total = commitments.reduce((acc, commitment) => {
-    const value = Number(commitment[field]);
-    return Number.isFinite(value) ? acc + value : acc;
-  }, 0);
-  return total.toFixed(2);
+type ProtocolAnalyticsSource = 'mock' | 'chain';
+
+type CountedStatus = 'ACTIVE' | 'SETTLED' | 'VIOLATED';
+
+interface NormalizedCommitment {
+  id: string;
+  ownerAddress: string;
+  amount: number;
+  feeEarned: number;
+  status: CountedStatus | 'OTHER';
+  complianceScore: number;
+  violationCount: number;
 }
 
-export function buildProtocolAnalytics(commitments: ChainCommitment[]): ProtocolAnalyticsResponse {
-  const totalCommitments = commitments.length;
-  const activeCommitments = commitments.filter((c) => c.status === 'ACTIVE').length;
-  const settledCommitments = commitments.filter((c) => c.status === 'SETTLED').length;
-  const violatedCommitments = commitments.filter((c) => c.status === 'VIOLATED').length;
+interface ProtocolCommitmentSnapshot {
+  commitments: ChainCommitment[];
+  source: ProtocolAnalyticsSource;
+}
+
+const COUNTED_STATUSES = new Set<CountedStatus>(['ACTIVE', 'SETTLED', 'VIOLATED']);
+const MAX_COMPLIANCE_SCORE = 100;
+
+function parseNonNegativeFiniteNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = typeof value === 'string' ? Number(value.replace(/,/g, '')) : Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function normalizeCommitment(commitment: ChainCommitment): NormalizedCommitment | null {
+  const amount = parseNonNegativeFiniteNumber(commitment.amount);
+  const feeEarned = parseNonNegativeFiniteNumber(commitment.feeEarned);
+  const complianceScore = parseNonNegativeFiniteNumber(commitment.complianceScore);
+  const violationCount = parseNonNegativeFiniteNumber(commitment.violationCount);
+
+  if (
+    !commitment.id ||
+    amount === null ||
+    feeEarned === null ||
+    complianceScore === null ||
+    violationCount === null ||
+    complianceScore > MAX_COMPLIANCE_SCORE ||
+    !Number.isInteger(violationCount)
+  ) {
+    return null;
+  }
+
+  const status = COUNTED_STATUSES.has(commitment.status as CountedStatus)
+    ? (commitment.status as CountedStatus)
+    : 'OTHER';
+
+  return {
+    id: commitment.id,
+    ownerAddress: commitment.ownerAddress?.trim() ?? '',
+    amount,
+    feeEarned,
+    status,
+    complianceScore,
+    violationCount,
+  };
+}
+
+function formatCurrencyMetric(value: number): string {
+  return value.toFixed(2);
+}
+
+export function buildProtocolAnalytics(
+  commitments: ChainCommitment[],
+  source: ProtocolAnalyticsSource = 'chain',
+): ProtocolAnalyticsResponse {
+  const normalized = commitments.map(normalizeCommitment);
+  const validCommitments = normalized.filter((c): c is NormalizedCommitment => c !== null);
+  const rejectedRecords = normalized.length - validCommitments.length;
+
+  const totalCommitments = validCommitments.length;
+  const activeCommitments = validCommitments.filter((c) => c.status === 'ACTIVE').length;
+  const settledCommitments = validCommitments.filter((c) => c.status === 'SETTLED').length;
+  const violatedCommitments = validCommitments.filter((c) => c.status === 'VIOLATED').length;
 
   const averageComplianceScore =
     totalCommitments === 0
       ? 0
-      : commitments.reduce((acc, c) => acc + c.complianceScore, 0) / totalCommitments;
+      : validCommitments.reduce((acc, c) => acc + c.complianceScore, 0) / totalCommitments;
 
-  const totalViolations = commitments.reduce((acc, c) => acc + c.violationCount, 0);
+  const totalViolations = validCommitments.reduce((acc, c) => acc + c.violationCount, 0);
 
-  const uniqueOwners = new Set(commitments.map((c) => c.ownerAddress).filter(Boolean)).size;
+  const uniqueOwners = new Set(validCommitments.map((c) => c.ownerAddress).filter(Boolean)).size;
+  const statusTotal = activeCommitments + settledCommitments + violatedCommitments;
+
+  if (statusTotal > totalCommitments) {
+    throw new BackendError({
+      code: 'INTERNAL_ERROR',
+      message: 'Protocol analytics status invariant failed.',
+      status: 500,
+      details: { totalCommitments, statusTotal },
+    });
+  }
 
   return {
     totalCommitments,
     activeCommitments,
     settledCommitments,
     violatedCommitments,
-    totalValueLocked: sumNumericStringField(commitments, 'amount'),
-    totalFeesEarned: sumNumericStringField(commitments, 'feeEarned'),
+    totalValueLocked: formatCurrencyMetric(validCommitments.reduce((acc, c) => acc + c.amount, 0)),
+    totalFeesEarned: formatCurrencyMetric(validCommitments.reduce((acc, c) => acc + c.feeEarned, 0)),
     averageComplianceScore: Number(averageComplianceScore.toFixed(2)),
     totalViolations,
     uniqueOwners,
+    snapshot: {
+      generatedAt: new Date().toISOString(),
+      window: 'protocol-lifetime',
+      source,
+      rejectedRecords,
+    },
+    invariants: {
+      statusTotalsMatch: true,
+      nonNegativeTotals: true,
+      complianceScoreBounded: true,
+    },
   };
 }
 
@@ -75,21 +169,25 @@ export function buildProtocolAnalytics(commitments: ChainCommitment[]): Protocol
  * In chain mode we call `get_all_commitments` if supported, otherwise we
  * aggregate via stored owner addresses from the mock-db.
  */
-async function fetchAllCommitmentsForProtocol(): Promise<ChainCommitment[]> {
+async function fetchAllCommitmentsForProtocol(): Promise<ProtocolCommitmentSnapshot> {
   if (process.env.NEXT_PUBLIC_USE_MOCKS === 'true') {
     // In mock mode, pull from the shared mock-db and map to ChainCommitment
     const mockData = await getMockData();
-    return mockData.commitments.map((c) => ({
-      id: c.id,
-      ownerAddress: '',
-      asset: c.asset ?? '',
-      amount: typeof c.amount === 'string' ? c.amount.replace(/,/g, '') : String(c.amount ?? 0),
-      status: (c.status?.toUpperCase().replace(' ', '_') ?? 'UNKNOWN') as ChainCommitment['status'],
-      complianceScore: typeof c.complianceScore === 'number' ? c.complianceScore : 0,
-      currentValue: typeof c.currentValue === 'string' ? c.currentValue.replace(/,/g, '') : '0',
-      feeEarned: '0',
-      violationCount: 0,
-    }));
+    return {
+      source: 'mock',
+      commitments: mockData.commitments.map((c) => ({
+        id: String(c.id ?? ''),
+        ownerAddress: '',
+        asset: c.asset ?? '',
+        amount: typeof c.amount === 'string' ? c.amount.replace(/,/g, '') : String(c.amount ?? 0),
+        status: (c.status?.toUpperCase().replace(' ', '_') ??
+          'UNKNOWN') as ChainCommitment['status'],
+        complianceScore: typeof c.complianceScore === 'number' ? c.complianceScore : 0,
+        currentValue: typeof c.currentValue === 'string' ? c.currentValue.replace(/,/g, '') : '0',
+        feeEarned: '0',
+        violationCount: 0,
+      })),
+    };
   }
 
   // Production: attempt to get all commitments from chain via unique owner list.
@@ -104,9 +202,9 @@ async function fetchAllCommitmentsForProtocol(): Promise<ChainCommitment[]> {
     // Until the contract exposes a `get_all_commitment_ids` method the protocol
     // analytics endpoint returns zeros rather than failing. The frontend handles
     // zero-valued data gracefully (empty state).
-    return [];
+    return { commitments: [], source: 'chain' };
   } catch {
-    return [];
+    return { commitments: [], source: 'chain' };
   }
 }
 
@@ -141,10 +239,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const commitments = await fetchAllCommitmentsForProtocol();
+    const snapshot = await fetchAllCommitmentsForProtocol();
     return applyCorsPolicy(
       req,
-      NextResponse.json(buildProtocolAnalytics(commitments)),
+      NextResponse.json(buildProtocolAnalytics(snapshot.commitments, snapshot.source)),
       ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   } catch (error) {

@@ -120,9 +120,7 @@ export function isValidStellarAddress(value: unknown): value is string {
   return typeof value === 'string' && STELLAR_ADDRESS_PATTERN.test(value);
 }
 
-export function parseSearch(
-  search: ShellRouteInput['search'],
-): Record<string, string> {
+export function parseSearch(search: ShellRouteInput['search']): Record<string, string> {
   const out: Record<string, string> = {};
   if (!search) return out;
 
@@ -153,13 +151,15 @@ export function parseSearch(
 
 const NUMERIC_KEYS = ['page', 'limit', 'amount', 'step', 'offset'] as const;
 
-export function parseNumericParams(params: Record<string, string>): {
-  ok: true;
-  values: Record<string, number>;
-} | {
-  ok: false;
-  key: string;
-} {
+export function parseNumericParams(params: Record<string, string>):
+  | {
+      ok: true;
+      values: Record<string, number>;
+    }
+  | {
+      ok: false;
+      key: string;
+    } {
   const values: Record<string, number> = {};
   for (const key of NUMERIC_KEYS) {
     if (!(key in params)) continue;
@@ -244,11 +244,7 @@ export function evaluateNavigationBoundary(
     );
   }
   if (!network) {
-    return fail(
-      'WRONG_NETWORK',
-      'Wallet network could not be verified.',
-      true,
-    );
+    return fail('WRONG_NETWORK', 'Wallet network could not be verified.', true);
   }
 
   if (ownerHint && ownerHint !== claimedAddress) {
@@ -303,11 +299,7 @@ export function validateSessionSnapshot(
     return fail('MALFORMED_RESPONSE', 'Session snapshot address is malformed.', false);
   }
 
-  if (
-    expectedAddress &&
-    typeof address === 'string' &&
-    address !== expectedAddress
-  ) {
+  if (expectedAddress && typeof address === 'string' && address !== expectedAddress) {
     return fail('TAMPERED_OWNERSHIP', 'Session snapshot owner does not match the wallet.', false);
   }
 
@@ -321,16 +313,10 @@ export function validateSessionSnapshot(
   return {
     ok: true,
     route: { pathname, protected: false, ownerHint: null, numericParams: {} },
-    auth:
-      typeof address === 'string'
-        ? { address, networkPassphrase: network }
-        : null,
+    auth: typeof address === 'string' ? { address, networkPassphrase: network } : null,
   };
 }
 
-export function canActivateNavItem(
-  href: string,
-  authInput: ShellAuthInput,
-): BoundaryDecision {
+export function canActivateNavItem(href: string, authInput: ShellAuthInput): BoundaryDecision {
   return evaluateNavigationBoundary({ pathname: href }, authInput);
 }

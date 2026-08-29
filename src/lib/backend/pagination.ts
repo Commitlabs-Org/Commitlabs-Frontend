@@ -8,7 +8,7 @@
 
 import { fail } from './apiResponse';
 
-// ─── Bounds ───────────────────────────────────────────────────────────────
+// ─── Bounds ───────────────────────────────────────────
 
 /** Minimum allowed page number (1-indexed). */
 export const MIN_PAGE = 1;
@@ -136,7 +136,11 @@ export function parseSortParams<F extends readonly string[]>(
   let sortOrder: SortOrder = defaultOrder;
   if (rawSortOrder !== null && rawSortOrder !== '') {
     if (rawSortOrder !== 'asc' && rawSortOrder !== 'desc') {
-      throw new PaginationParseError(`'sortOrder' must be 'asc' or 'desc'.`, 'sortOrder', rawSortOrder);
+      throw new PaginationParseError(
+        `'sortOrder' must be 'asc' or 'desc'.`,
+        'sortOrder',
+        rawSortOrder,
+      );
     }
     sortOrder = rawSortOrder;
   }
@@ -175,5 +179,11 @@ export function paginationErrorResponse(
   err: PaginationParseError,
   correlationId?: string,
 ): Response {
-  return fail('VALIDATION_ERROR', err.message, { field: err.field, value: err.value }, 400, correlationId);
+  return fail(
+    'VALIDATION_ERROR',
+    err.message,
+    { field: err.field, value: err.value },
+    400,
+    correlationId,
+  );
 }

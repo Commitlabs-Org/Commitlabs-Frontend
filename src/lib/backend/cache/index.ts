@@ -142,14 +142,6 @@ export const CacheKey = {
   userCommitments: (ownerAddress: string) => `commitlabs:user-commitments:${ownerAddress}`,
   marketplaceListings: (queryHash: string) => `commitlabs:marketplace:listings:${queryHash}`,
   commitmentSearch: (queryHash: string) => `commitlabs:commitment-search:${queryHash}`,
-  marketplaceStats: () => 'commitlabs:marketplace:stats',
-  marketplaceStatsGeneration: () => 'commitlabs:marketplace:stats:generation',
-  marketplaceStatsLock: () => 'commitlabs:marketplace:stats:lock',
-  marketplaceStatsInvalidation: () => 'commitlabs:marketplace:stats:invalidation',
-} as const;
-
-export const CACHE_PREFIXES = {
-  MARKETPLACE_LISTINGS: 'commitlabs:marketplace:listings:',
 } as const;
 
 /** TTL in seconds — keep short so stale chain data doesn't linger. */
