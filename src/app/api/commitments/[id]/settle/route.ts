@@ -15,9 +15,14 @@ import { getCommitmentFromChain, settleCommitmentOnChain } from '@/lib/backend/s
 import { logCommitmentSettled } from '@/lib/backend/logger';
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
+import type { TransactionMetadata, TransactionType } from '@/lib/transaction/transactionTypes';
+import { TRANSACTION_BOUNDS, createTransactionError } from '@/lib/transaction/transactionTypes';
+import { TransactionStateMachine } from '@/lib/transaction/transactionStateMachine';
+import { validateTransactionMetadata } from '@/lib/transaction/transactionStateMachine';
 
 const SettleRequestSchema = z.object({
   callerAddress: z.string().optional(),
+  transactionId: z.string().optional(),
 });
 
 const COMMITMENT_SETTLE_CORS_POLICY = {
@@ -25,6 +30,13 @@ const COMMITMENT_SETTLE_CORS_POLICY = {
 } satisfies CorsRoutePolicy;
 
 export const OPTIONS = createCorsOptionsHandler(COMMITMENT_SETTLE_CORS_POLICY);
+
+/**
+ * Generate a unique transaction ID
+ */
+function generateTransactionId(commitmentId: string): string {
+  return `settle_${commitmentId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 export const POST = withApiHandler(
   async (req: NextRequest, { params }, correlationId) => {
@@ -57,19 +69,51 @@ export const POST = withApiHandler(
     }
 
     const callerAddress = validation.data.callerAddress;
+    const clientTransactionId = validation.data.transactionId;
+    
+    // Generate or use client-provided transaction ID
+    const transactionId = clientTransactionId || generateTransactionId(id);
+    
+    // Initialize state machine for this transaction
+    const stateMachine = new TransactionStateMachine('pending');
+    
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const commitment: any = await getCommitmentFromChain(id, { requestId: correlationId });
 
     if (!commitment) {
+      const error = createTransactionError(
+        'VALIDATION_ERROR' as any,
+        'Commitment not found',
+        transactionId,
+      );
+      stateMachine.transition('failed');
       throw new NotFoundError('Commitment', { commitmentId: id });
     }
     if (commitment.status === 'SETTLED') {
+      const error = createTransactionError(
+        'VALIDATION_ERROR' as any,
+        'Commitment has already been settled',
+        transactionId,
+      );
+      stateMachine.transition('rejected');
       throw new ConflictError('Commitment has already been settled');
     }
     if (commitment.status === 'VIOLATED') {
+      const error = createTransactionError(
+        'VALIDATION_ERROR' as any,
+        'Commitment has been violated and cannot be settled',
+        transactionId,
+      );
+      stateMachine.transition('rejected');
       throw new ConflictError('Commitment has been violated and cannot be settled');
     }
     if (commitment.status === 'EARLY_EXIT') {
+      const error = createTransactionError(
+        'VALIDATION_ERROR' as any,
+        'Commitment has already been exited early',
+        transactionId,
+      );
+      stateMachine.transition('rejected');
       throw new ConflictError('Commitment has already been exited early');
     }
     if (
@@ -77,35 +121,80 @@ export const POST = withApiHandler(
       commitment.ownerAddress &&
       callerAddress.toLowerCase() !== commitment.ownerAddress.toLowerCase()
     ) {
+      const error = createTransactionError(
+        'VALIDATION_ERROR' as any,
+        'You do not own this commitment',
+        transactionId,
+      );
+      stateMachine.transition('failed');
       throw new ForbiddenError('You do not own this commitment');
     }
 
-    const settlementResult = await settleCommitmentOnChain(
-      {
+    // Transition to confirming state before blockchain call
+    const transitionError = stateMachine.transition('confirming');
+    if (transitionError) {
+      throw new ConflictError(transitionError.message);
+    }
+
+    try {
+      const settlementResult = await settleCommitmentOnChain(
+        {
+          commitmentId: id,
+          callerAddress,
+        },
+        { requestId: correlationId },
+      );
+
+      // Transition to confirmed state on success
+      stateMachine.transition('confirmed');
+
+      logCommitmentSettled({
+        ip,
         commitmentId: id,
         callerAddress,
-      },
-      { requestId: correlationId },
-    );
+        settlementAmount: settlementResult.settlementAmount,
+        finalStatus: settlementResult.finalStatus,
+        txHash: settlementResult.txHash,
+      });
 
-    logCommitmentSettled({
-      ip,
-      commitmentId: id,
-      callerAddress,
-      settlementAmount: settlementResult.settlementAmount,
-      finalStatus: settlementResult.finalStatus,
-      txHash: settlementResult.txHash,
-    });
-
-    const responseData = {
-      commitmentId: id,
-      settlementAmount: settlementResult.settlementAmount,
-      finalStatus: settlementResult.finalStatus,
-      txHash: settlementResult.txHash,
-      reference: settlementResult.reference,
-      settledAt: new Date().toISOString(),
-    };
-    return ok(responseData, undefined, 200, correlationId);
+      const responseData = {
+        commitmentId: id,
+        settlementAmount: settlementResult.settlementAmount,
+        finalStatus: settlementResult.finalStatus,
+        txHash: settlementResult.txHash,
+        reference: settlementResult.reference,
+        settledAt: new Date().toISOString(),
+        transactionId,
+        transactionState: stateMachine.getState(),
+      };
+      
+      return ok(responseData, undefined, 200, correlationId);
+    } catch (error) {
+      // Transition to failed state on error
+      stateMachine.transition('failed');
+      
+      // Create transaction metadata for error tracking
+      const additionalFields: Partial<TransactionMetadata> = {
+        callerAddress,
+        error: error instanceof Error ? error.message : String(error),
+      };
+      
+      const transactionMetadata: TransactionMetadata = stateMachine.toMetadata(
+        transactionId,
+        'settlement' as TransactionType,
+        id,
+        additionalFields,
+      );
+      
+      // Validate metadata invariants
+      const validationError = validateTransactionMetadata(transactionMetadata);
+      if (validationError) {
+        // Log validation error but don't fail the request
+        console.error('[Transaction] Metadata validation failed:', validationError);
+      }
+      
+      throw error;
+    }
   },
   { cors: COMMITMENT_SETTLE_CORS_POLICY },
 );
