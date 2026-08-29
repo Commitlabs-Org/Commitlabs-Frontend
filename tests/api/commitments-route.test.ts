@@ -2,6 +2,10 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockRequest, parseResponse } from './helpers';
 
+vi.mock('@/lib/backend/requireAuth', () => ({
+  requireAuth: vi.fn(),
+}));
+
 vi.mock('@/lib/backend/csrf', () => ({
   assertMutationCsrf: vi.fn(),
 }));
@@ -26,6 +30,7 @@ vi.mock('@/lib/backend/validation', () => ({
 }));
 
 import { GET, POST } from '@/app/api/commitments/route';
+import { requireAuth } from '@/lib/backend/requireAuth';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import {
@@ -38,7 +43,9 @@ import type {
 } from '@/lib/backend/services/contracts';
 import { validateSupportedAsset, validateStellarAddress } from '@/lib/backend/validation';
 import { CsrfValidationError } from '@/lib/backend/errors';
+import { UnauthorizedError } from '@/lib/backend/errors';
 
+const mockedRequireAuth = vi.mocked(requireAuth);
 const mockedCheckRateLimit = vi.mocked(checkRateLimit);
 const mockedAssertMutationCsrf = vi.mocked(assertMutationCsrf);
 const mockedGetUserCommitmentsFromChain = vi.mocked(getUserCommitmentsFromChain);
@@ -108,8 +115,34 @@ function getUrlWithOwner(query: Record<string, string | number> = {}): string {
 describe('GET /api/commitments', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedRequireAuth.mockImplementation((req) => req as any);
     mockedCheckRateLimit.mockResolvedValue(true);
     mockedGetUserCommitmentsFromChain.mockResolvedValue(ALL_COMMITMENTS);
+  });
+
+  it('returns 401 when the caller has no valid session', async () => {
+    mockedRequireAuth.mockImplementation(() => {
+      throw new UnauthorizedError('No session token provided');
+    });
+
+    const response = await GET(createMockRequest(getUrlWithOwner()));
+    const result = await parseResponse(response);
+
+    expect(result.status).toBe(401);
+    expect(result.data.success).toBe(false);
+    expect(result.data.error.code).toBe('UNAUTHORIZED');
+    expect(mockedGetUserCommitmentsFromChain).not.toHaveBeenCalled();
+  });
+
+  it('checks authorization before rate limiting or chain reads', async () => {
+    mockedRequireAuth.mockImplementation(() => {
+      throw new UnauthorizedError('No session token provided');
+    });
+
+    await GET(createMockRequest(getUrlWithOwner()));
+
+    expect(mockedCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockedGetUserCommitmentsFromChain).not.toHaveBeenCalled();
   });
 
   it('returns paginated items with success envelope', async () => {

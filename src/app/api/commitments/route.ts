@@ -6,7 +6,10 @@ import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
+import { logInfo, logWarn } from '@/lib/backend/logger';
+import { MAX_PAGE_SIZE } from '@/lib/backend/pagination';
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
+import { requireAuth } from '@/lib/backend/requireAuth';
 import {
   getUserCommitmentsFromChain,
   createCommitmentOnChain,
@@ -17,11 +20,22 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 const CommitmentsQuerySchema = z.object({
   ownerAddress: z.string().min(1, 'ownerAddress is required'),
   page: z.coerce.number().min(1).default(1),
-  pageSize: z.coerce.number().min(1).max(100).default(10),
+  pageSize: z.coerce.number().min(1).max(MAX_PAGE_SIZE).default(10),
   status: z.enum(['ACTIVE', 'SETTLED', 'VIOLATED', 'EARLY_EXIT', 'UNKNOWN']).optional(),
   type: z.string().optional(),
   minCompliance: z.coerce.number().min(0).max(100).optional(),
 });
+
+/**
+ * Defensive upper bound on how many raw commitments from the chain a single
+ * request will map/filter/paginate over. `getUserCommitmentsFromChain`
+ * already caches and rate-limits the actual chain read, but this bounds the
+ * in-memory CPU/allocation cost of *this route's own* per-request work
+ * (map -> filter -> slice) regardless of how large a single owner's
+ * commitment set grows to. Exceeding it is logged (see `logWarn` below) so
+ * an unexpectedly large account is observable rather than just slow.
+ */
+const MAX_CHAIN_COMMITMENTS_PROCESSED = 5000;
 
 interface CreateCommitmentRequestBody {
   ownerAddress: string;
@@ -41,6 +55,13 @@ export const OPTIONS = createCorsOptionsHandler(COMMITMENTS_CORS_POLICY);
 
 export const GET = withApiHandler(
   async (req: NextRequest, _context, correlationId) => {
+    const startedAt = Date.now();
+
+    // Authorization before any query parsing or chain work: a request with
+    // no valid session is rejected immediately, not after we've already
+    // paid for parsing/rate-limit/chain-read work on its behalf.
+    requireAuth(req);
+
     const { searchParams } = new URL(req.url);
     const queryResult = CommitmentsQuerySchema.safeParse(
       Object.fromEntries(searchParams.entries()),
@@ -60,10 +81,26 @@ export const GET = withApiHandler(
       );
     }
 
+    const chainStartedAt = Date.now();
     const commitments = await getUserCommitmentsFromChain(ownerAddress, {
       requestId: correlationId,
     });
-    let mapped = commitments.map((c: any) => ({
+    const chainDurationMs = Date.now() - chainStartedAt;
+
+    let truncated = false;
+    let sourceCommitments = commitments;
+    if (commitments.length > MAX_CHAIN_COMMITMENTS_PROCESSED) {
+      truncated = true;
+      sourceCommitments = commitments.slice(0, MAX_CHAIN_COMMITMENTS_PROCESSED);
+      logWarn(req, '[api/commitments] chain result exceeded processing bound, truncating', {
+        correlationId,
+        ownerAddress,
+        rawCount: commitments.length,
+        boundApplied: MAX_CHAIN_COMMITMENTS_PROCESSED,
+      });
+    }
+
+    let mapped = sourceCommitments.map((c: any) => ({
       commitmentId: String(c.id ?? c.commitmentId),
       ownerAddress: c.ownerAddress,
       asset: c.asset,
@@ -87,6 +124,20 @@ export const GET = withApiHandler(
     const total = mapped.length;
     const start = (page - 1) * pageSize;
     const items = mapped.slice(start, start + pageSize);
+
+    logInfo(req, '[api/commitments] list served', {
+      correlationId,
+      ownerAddress,
+      durationMs: Date.now() - startedAt,
+      chainDurationMs,
+      rawCount: commitments.length,
+      filteredCount: total,
+      returnedCount: items.length,
+      page,
+      pageSize,
+      filters: { status: status ?? null, type: type ?? null, minCompliance: minCompliance ?? null },
+      truncated,
+    });
 
     return ok({ items, page, pageSize, total }, undefined, 200, correlationId);
   },
@@ -151,7 +202,7 @@ export const POST = withApiHandler(
         amount,
         durationDays,
         maxLossBps,
-        metadata,
+        ...(metadata !== undefined ? { metadata } : {}),
       },
       { requestId: correlationId },
     );

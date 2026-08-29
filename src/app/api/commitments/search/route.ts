@@ -10,7 +10,9 @@ import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
+import { logInfo, logWarn } from '@/lib/backend/logger';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { requireAuth } from '@/lib/backend/requireAuth';
 import { getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
 import type { ChainCommitmentStatus } from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
@@ -27,6 +29,13 @@ import { CacheKey, CacheTTL } from '@/lib/backend/cache/index';
 import { createHash } from 'crypto';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+/**
+ * Defensive upper bound on how many raw commitments a single search
+ * request will filter/sort/paginate over in memory. See the identical
+ * constant and rationale in `../route.ts`.
+ */
+const MAX_CHAIN_COMMITMENTS_PROCESSED = 5000;
 
 /**
  * Allowed `CommitmentStatus` filter values.
@@ -190,6 +199,11 @@ export const OPTIONS = createCorsOptionsHandler(SEARCH_CORS_POLICY);
 
 export const GET = withApiHandler(
   async (req: NextRequest, _context, correlationId) => {
+    const startedAt = Date.now();
+
+    // Authorization before any query parsing, cache lookup, or chain work.
+    requireAuth(req);
+
     // 1. Rate limit
     const ip = getClientIp(req);
     if (!(await checkRateLimit(ip, 'api/commitments/search'))) {
@@ -240,14 +254,35 @@ export const GET = withApiHandler(
     }>(cacheKey);
 
     if (cached !== null) {
+      logInfo(req, '[api/commitments/search] served from cache', {
+        correlationId,
+        ownerAddress,
+        durationMs: Date.now() - startedAt,
+        cacheHit: true,
+      });
       return ok(cached, undefined, 200, correlationId);
     }
 
     // 5. Fetch from chain
+    const chainStartedAt = Date.now();
     const commitments = await getUserCommitmentsFromChain(ownerAddress);
+    const chainDurationMs = Date.now() - chainStartedAt;
+
+    let truncated = false;
+    let sourceCommitments = commitments;
+    if (commitments.length > MAX_CHAIN_COMMITMENTS_PROCESSED) {
+      truncated = true;
+      sourceCommitments = commitments.slice(0, MAX_CHAIN_COMMITMENTS_PROCESSED);
+      logWarn(req, '[api/commitments/search] chain result exceeded processing bound, truncating', {
+        correlationId,
+        ownerAddress,
+        rawCount: commitments.length,
+        boundApplied: MAX_CHAIN_COMMITMENTS_PROCESSED,
+      });
+    }
 
     // 6. Map to search items
-    let items: CommitmentSearchItem[] = commitments.map((c: any) => ({
+    let items: CommitmentSearchItem[] = sourceCommitments.map((c: any) => ({
       commitmentId: String(c.id ?? c.commitmentId),
       ownerAddress: c.ownerAddress,
       asset: c.asset,
@@ -309,6 +344,18 @@ export const GET = withApiHandler(
 
     // 11. Cache for short TTL
     await cache.set(cacheKey, responsePayload, CacheTTL.COMMITMENT_SEARCH);
+
+    logInfo(req, '[api/commitments/search] served from chain', {
+      correlationId,
+      ownerAddress,
+      durationMs: Date.now() - startedAt,
+      chainDurationMs,
+      rawCount: commitments.length,
+      returnedCount: result.data.length,
+      total: result.meta.total,
+      cacheHit: false,
+      truncated,
+    });
 
     return ok(responsePayload, undefined, 200, correlationId);
   },
