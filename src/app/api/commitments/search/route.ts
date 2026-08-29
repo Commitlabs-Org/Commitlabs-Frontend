@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
-import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
+import { ForbiddenError, TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { logInfo, logWarn } from '@/lib/backend/logger';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
@@ -60,15 +60,21 @@ type SortableField = (typeof SORTABLE_FIELDS)[number];
 
 // ─── Zod validation schema ───────────────────────────────────────────────────
 
+const trimmedOptionalString = z
+  .string()
+  .trim()
+  .transform((value) => (value.length > 0 ? value : undefined))
+  .optional();
+
 const CommitmentSearchQuerySchema = z.object({
   /** Owner address – required to scope the search. */
-  ownerAddress: z.string().min(1, 'ownerAddress is required'),
+  ownerAddress: z.string().trim().min(1, 'ownerAddress is required'),
 
   /** Filter by asset code (e.g. "XLM", "USDC"). Case-insensitive match. */
-  asset: z.string().optional(),
+  asset: trimmedOptionalString,
 
   /** Free-text search by commitment ID. Case-insensitive substring match. */
-  commitmentId: z.string().optional(),
+  commitmentId: trimmedOptionalString,
 
   /**
    * Filter by commitment status.
@@ -112,6 +118,24 @@ export interface CommitmentSearchItem {
   expiresAt: string;
 }
 
+interface SearchInvariants {
+  authorizedOwner: true;
+  stableSort: true;
+  boundedPage: true;
+  duplicateCommitmentsRemoved: true;
+}
+
+interface SearchSnapshot {
+  queryKey: string;
+  generatedAt: string;
+  source: 'cache' | 'chain';
+  rawCount: number;
+  processedCount: number;
+  rejectedRecords: number;
+  duplicateRecords: number;
+  truncated: boolean;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -134,9 +158,78 @@ function buildSearchCacheKey(
   ownerAddress: string,
   filters: Record<string, string | number | undefined>,
 ): string {
-  const payload = JSON.stringify({ ownerAddress, ...filters });
+  const orderedFilters = Object.keys(filters)
+    .sort()
+    .reduce<Record<string, string | number | undefined>>((acc, key) => {
+      acc[key] = filters[key];
+      return acc;
+    }, {});
+  const payload = JSON.stringify({ ownerAddress, ...orderedFilters });
   const hash = createHash('sha256').update(payload).digest('hex').slice(0, 16);
   return CacheKey.commitmentSearch(hash);
+}
+
+function normalizeAddress(address: string): string {
+  return address.trim().toUpperCase();
+}
+
+function parseFiniteNumber(value: unknown, fallback = 0): number {
+  const parsed = typeof value === 'string' ? Number(value.replace(/,/g, '')) : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeSearchItem(raw: any): CommitmentSearchItem | null {
+  const commitmentId = String(raw.id ?? raw.commitmentId ?? '').trim();
+  const ownerAddress = String(raw.ownerAddress ?? '').trim();
+  const asset = String(raw.asset ?? '').trim();
+  const amount = parseFiniteNumber(raw.amount);
+  const complianceScore = parseFiniteNumber(raw.complianceScore);
+  const violationCount = parseFiniteNumber(raw.violationCount);
+
+  if (
+    !commitmentId ||
+    !ownerAddress ||
+    !asset ||
+    amount < 0 ||
+    complianceScore < 0 ||
+    complianceScore > 100 ||
+    violationCount < 0 ||
+    !Number.isInteger(violationCount)
+  ) {
+    return null;
+  }
+
+  return {
+    commitmentId,
+    ownerAddress,
+    asset,
+    amount: String(amount),
+    status: raw.status as ChainCommitmentStatus,
+    riskType: inferRiskType(raw),
+    complianceScore,
+    currentValue: String(parseFiniteNumber(raw.currentValue)),
+    feeEarned: String(parseFiniteNumber(raw.feeEarned)),
+    violationCount,
+    createdAt: raw.createdAt ?? new Date(0).toISOString(),
+    expiresAt: raw.expiresAt ?? new Date(0).toISOString(),
+  };
+}
+
+function dedupeByCommitmentId(items: CommitmentSearchItem[]): {
+  items: CommitmentSearchItem[];
+  duplicateRecords: number;
+} {
+  const seen = new Set<string>();
+  const deduped: CommitmentSearchItem[] = [];
+
+  for (const item of items) {
+    const key = item.commitmentId.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(item);
+  }
+
+  return { items: deduped, duplicateRecords: items.length - deduped.length };
 }
 
 /**
@@ -202,7 +295,7 @@ export const GET = withApiHandler(
     const startedAt = Date.now();
 
     // Authorization before any query parsing, cache lookup, or chain work.
-    requireAuth(req);
+    const authenticatedReq = requireAuth(req);
 
     // 1. Rate limit
     const ip = getClientIp(req);
@@ -220,6 +313,11 @@ export const GET = withApiHandler(
     }
 
     const { ownerAddress, asset, commitmentId, status, riskType, minCompliance } = queryResult.data;
+    const normalizedOwnerAddress = normalizeAddress(ownerAddress);
+
+    if (normalizeAddress(authenticatedReq.user.address) !== normalizedOwnerAddress) {
+      throw new ForbiddenError('Cannot search commitments for another wallet');
+    }
 
     // 3. Parse pagination & sort via pagination.ts helpers
     let paginationParams;
@@ -235,9 +333,9 @@ export const GET = withApiHandler(
     }
 
     // 4. Build cache key and check cache
-    const cacheKey = buildSearchCacheKey(ownerAddress, {
-      asset,
-      commitmentId,
+    const cacheKey = buildSearchCacheKey(normalizedOwnerAddress, {
+      asset: asset?.toUpperCase(),
+      commitmentId: commitmentId?.toUpperCase(),
       status,
       riskType,
       minCompliance,
@@ -256,16 +354,27 @@ export const GET = withApiHandler(
     if (cached !== null) {
       logInfo(req, '[api/commitments/search] served from cache', {
         correlationId,
-        ownerAddress,
+        ownerAddress: normalizedOwnerAddress,
         durationMs: Date.now() - startedAt,
         cacheHit: true,
       });
-      return ok(cached, undefined, 200, correlationId);
+      return ok(
+        {
+          ...cached,
+          snapshot: {
+            ...(cached as { snapshot?: SearchSnapshot }).snapshot,
+            source: 'cache',
+          },
+        },
+        undefined,
+        200,
+        correlationId,
+      );
     }
 
     // 5. Fetch from chain
     const chainStartedAt = Date.now();
-    const commitments = await getUserCommitmentsFromChain(ownerAddress);
+    const commitments = await getUserCommitmentsFromChain(normalizedOwnerAddress);
     const chainDurationMs = Date.now() - chainStartedAt;
 
     let truncated = false;
@@ -275,28 +384,19 @@ export const GET = withApiHandler(
       sourceCommitments = commitments.slice(0, MAX_CHAIN_COMMITMENTS_PROCESSED);
       logWarn(req, '[api/commitments/search] chain result exceeded processing bound, truncating', {
         correlationId,
-        ownerAddress,
+        ownerAddress: normalizedOwnerAddress,
         rawCount: commitments.length,
         boundApplied: MAX_CHAIN_COMMITMENTS_PROCESSED,
       });
     }
 
     // 6. Map to search items
-    let items: CommitmentSearchItem[] = sourceCommitments.map((c: any) => ({
-      commitmentId: String(c.id ?? c.commitmentId),
-      ownerAddress: c.ownerAddress,
-      asset: c.asset,
-      amount: typeof c.amount === 'bigint' ? String(c.amount) : String(c.amount),
-      status: c.status as ChainCommitmentStatus,
-      riskType: inferRiskType(c),
-      complianceScore: c.complianceScore ?? 0,
-      currentValue:
-        typeof c.currentValue === 'bigint' ? String(c.currentValue) : String(c.currentValue ?? '0'),
-      feeEarned: String(c.feeEarned ?? '0'),
-      violationCount: c.violationCount ?? 0,
-      createdAt: c.createdAt ?? new Date().toISOString(),
-      expiresAt: c.expiresAt ?? new Date().toISOString(),
-    }));
+    const normalizedItems = sourceCommitments.map(normalizeSearchItem);
+    const rejectedRecords = normalizedItems.filter((item) => item === null).length;
+    const { items: dedupedItems, duplicateRecords } = dedupeByCommitmentId(
+      normalizedItems.filter((item): item is CommitmentSearchItem => item !== null),
+    );
+    let items = dedupedItems;
 
     // 7. Apply filters
     if (asset) {
@@ -328,6 +428,22 @@ export const GET = withApiHandler(
     const result = paginateArray(items, paginationParams);
 
     // 10. Build response with applied filter metadata
+    const invariants: SearchInvariants = {
+      authorizedOwner: true,
+      stableSort: true,
+      boundedPage: true,
+      duplicateCommitmentsRemoved: true,
+    };
+    const snapshot: SearchSnapshot = {
+      queryKey: cacheKey,
+      generatedAt: new Date().toISOString(),
+      source: 'chain',
+      rawCount: commitments.length,
+      processedCount: sourceCommitments.length,
+      rejectedRecords,
+      duplicateRecords,
+      truncated,
+    };
     const responsePayload = {
       data: result.data,
       meta: result.meta,
@@ -340,6 +456,8 @@ export const GET = withApiHandler(
         sortBy: sortParams.sortBy,
         sortOrder: sortParams.sortOrder,
       },
+      snapshot,
+      invariants,
     };
 
     // 11. Cache for short TTL
@@ -347,7 +465,7 @@ export const GET = withApiHandler(
 
     logInfo(req, '[api/commitments/search] served from chain', {
       correlationId,
-      ownerAddress,
+      ownerAddress: normalizedOwnerAddress,
       durationMs: Date.now() - startedAt,
       chainDurationMs,
       rawCount: commitments.length,

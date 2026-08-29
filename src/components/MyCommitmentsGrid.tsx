@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useMemo, useRef } from 'react';
+import React, { memo, useEffect, useMemo, useRef } from 'react';
 import MyCommitmentCard from './MyCommitmentCard';
 import { Commitment } from '@/types/commitment';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -27,6 +27,34 @@ interface MyCommitmentsGridProps {
 // VIRTUALIZATION THRESHOLD — only engage virtual windowing when the list
 // exceeds this length to avoid overhead for typical (small) datasets.
 const VIRTUALIZE_THRESHOLD = 50;
+
+function buildDisplayCommitments(
+  commitments: Commitment[],
+  filterFn?: (c: Commitment) => boolean,
+  sortFn?: (a: Commitment, b: Commitment) => number,
+): Commitment[] {
+  const seenIds = new Set<string>();
+  const filtered: Commitment[] = [];
+
+  for (const commitment of commitments) {
+    const id = String(commitment.id ?? '').trim();
+    const normalizedId = id.toUpperCase();
+
+    if (!id || seenIds.has(normalizedId)) continue;
+    if (filterFn && !filterFn(commitment)) continue;
+
+    seenIds.add(normalizedId);
+    filtered.push(commitment);
+  }
+
+  if (!sortFn) return filtered;
+
+  return [...filtered].sort((a, b) => {
+    const result = sortFn(a, b);
+    if (result !== 0) return result;
+    return String(a.id).localeCompare(String(b.id));
+  });
+}
 
 /**
  * MyCommitmentsGrid
@@ -56,21 +84,15 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
     sortFn,
     filterFn,
   }) => {
-    // Memoize the derived list so filter+sort only run when inputs change.
+    // One atomic derived view: filter, dedupe, then stable-sort before
+    // selection state is reconciled with what is actually visible.
     const displayedCommitments = useMemo(() => {
-      let result = commitments;
-      if (filterFn) {
-        result = result.filter(filterFn);
-      }
-      if (sortFn) {
-        result = [...result].sort(sortFn);
-      }
-      return result;
+      return buildDisplayCommitments(commitments, filterFn, sortFn);
     }, [commitments, filterFn, sortFn]);
 
     const isLargeList = displayedCommitments.length > VIRTUALIZE_THRESHOLD;
 
-    const visibleIds = displayedCommitments.map((c) => c.id);
+    const visibleIds = useMemo(() => displayedCommitments.map((c) => c.id), [displayedCommitments]);
 
     const {
       selectedIds,
@@ -110,6 +132,15 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
       }
       return handler;
     };
+
+    useEffect(() => {
+      const visibleIdSet = new Set(visibleIds);
+      for (const id of toggleHandlersRef.current.keys()) {
+        if (!visibleIdSet.has(id)) {
+          toggleHandlersRef.current.delete(id);
+        }
+      }
+    }, [visibleIds]);
 
     return (
       <div className="flex flex-col gap-4">
