@@ -29,6 +29,7 @@ import {
   CHART_Y_AXIS_PROPS,
   LIFECYCLE_REF_LINE,
   formatLocaleNumber,
+  normalizeChartData,
 } from './chartConfig';
 
 export interface HealthMetricsValueHistoryChartProps {
@@ -80,21 +81,24 @@ const HealthMetricsValueHistoryChartComponent: React.FC<HealthMetricsValueHistor
   benchmarkLabel,
 }) => {
   const reducedMotion = useReducedMotion();
+  const safeData = useMemo(() => normalizeChartData(data), [data]);
 
   const hasBenchmark = Boolean(benchmarkData && benchmarkData.length > 0);
 
   const benchmarkByDate = useMemo(() => {
     if (!hasBenchmark || !benchmarkData) return {};
-    return Object.fromEntries(benchmarkData.map((p) => [p.date, p.benchmarkValue]));
+    return Object.fromEntries(
+      normalizeChartData(benchmarkData).map((p) => [p.date, p.benchmarkValue]),
+    );
   }, [benchmarkData, hasBenchmark]);
 
   const mergedData = useMemo(() => {
-    if (!hasBenchmark) return data;
-    return data.map((point) => ({
+    if (!hasBenchmark) return safeData;
+    return safeData.map((point) => ({
       ...point,
       benchmarkValue: benchmarkByDate[point.date] ?? null,
     }));
-  }, [data, hasBenchmark, benchmarkByDate]);
+  }, [safeData, hasBenchmark, benchmarkByDate]);
 
   const yTickFormatter = useCallback((value: number) => formatLocaleNumber(value), []);
 

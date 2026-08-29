@@ -93,17 +93,39 @@ export const LIFECYCLE_REF_LINE = {
   labelFontSize: 10,
 } as const;
 
+export const CHART_LIMITS = {
+  maxDataPoints: 180,
+} as const;
+
+/** Guard chart payloads from adversarial or oversized inputs before Recharts renders. */
+export function normalizeChartData<T>(
+  data: readonly T[] | null | undefined,
+  maxPoints = CHART_LIMITS.maxDataPoints,
+): T[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  const safeLimit = Number.isFinite(maxPoints)
+    ? Math.max(0, Math.trunc(maxPoints))
+    : CHART_LIMITS.maxDataPoints;
+  return data.slice(0, safeLimit);
+}
+
 /** Locale number formatter for value axes / tooltips — module-stable. */
 export function formatLocaleNumber(value: number): string {
-  return value.toLocaleString();
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return safeValue.toLocaleString();
 }
 
 /** Percent formatter for 0–1 drawdown domains. */
 export function formatDrawdownAxisTick(value: number): string {
-  return `${(value * 100).toFixed(0)}%`;
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return `${(safeValue * 100).toFixed(0)}%`;
 }
 
 /** Plain numeric tick (fee axis). */
 export function formatPlainNumberTick(value: number): string {
-  return `${value}`;
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return `${safeValue}`;
 }

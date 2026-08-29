@@ -24,6 +24,7 @@ import {
   CHART_X_AXIS_PROPS,
   CHART_Y_AXIS_PROPS,
   formatPlainNumberTick,
+  normalizeChartData,
 } from './chartConfig';
 
 export interface HealthMetricsFeeGenerationChartProps {
@@ -60,6 +61,7 @@ const HealthMetricsFeeGenerationChartComponent: React.FC<HealthMetricsFeeGenerat
   data,
   exposure,
 }) => {
+  const safeData = React.useMemo(() => normalizeChartData(data), [data]);
   const yTickFormatter = useCallback((value: number) => formatPlainNumberTick(value), []);
 
   const renderLegend = useCallback(
@@ -81,7 +83,7 @@ const HealthMetricsFeeGenerationChartComponent: React.FC<HealthMetricsFeeGenerat
     <>
       <div className="w-full h-full min-h-[350px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222] shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)]">
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data} margin={CHART_MARGIN_DEFAULT} barCategoryGap="20%">
+          <BarChart data={safeData} margin={CHART_MARGIN_DEFAULT} barCategoryGap="20%">
             <defs>
               <linearGradient id="feeBarGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={CHART_COLORS.teal} stopOpacity={1} />
