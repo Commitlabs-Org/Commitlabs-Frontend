@@ -46,6 +46,7 @@ import { requireAuth } from '@/lib/backend/requireAuth';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { BackendError, CsrfValidationError } from '@/lib/backend/errors';
+import { idempotencyService } from '@/lib/backend/idempotency';
 import {
   earlyExitCommitmentOnChain,
   getCommitmentFromChain,
@@ -57,6 +58,7 @@ const mockedAssertMutationCsrf = vi.mocked(assertMutationCsrf);
 const mockedCheckRateLimit = vi.mocked(checkRateLimit);
 const mockedEarlyExitCommitmentOnChain = vi.mocked(earlyExitCommitmentOnChain);
 const mockedGetCommitmentFromChain = vi.mocked(getCommitmentFromChain);
+const mockedIdempotency = vi.mocked(idempotencyService);
 
 // Cast handler to correct signature
 const POST = postHandler as (
@@ -94,6 +96,11 @@ describe('POST /api/commitments/[id]/early-exit', () => {
       txHash: 'abc123',
       reference: undefined,
     });
+
+    mockedIdempotency.getRecord.mockResolvedValue(null);
+    mockedIdempotency.start.mockResolvedValue(true);
+    mockedIdempotency.complete.mockResolvedValue(undefined);
+    mockedIdempotency.fail.mockResolvedValue(undefined);
   });
 
   it('returns 403 when CSRF token is missing or invalid', async () => {
@@ -302,5 +309,80 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     );
 
     expect(response.headers.get('x-correlation-id')).toBeDefined();
+  });
+
+  // ─── Idempotency / transactional recovery (issue #1765) ──────────────────
+
+  it('replays a COMPLETED idempotency key without exiting early on chain again', async () => {
+    mockedIdempotency.getRecord.mockResolvedValue({
+      key: 'k1',
+      status: 'COMPLETED',
+      response: { exitAmount: '950', txHash: 'original_tx', finalStatus: 'EARLY_EXIT' },
+      statusCode: 200,
+      createdAt: 1,
+      expiresAt: Number.MAX_SAFE_INTEGER,
+    });
+
+    const response = await POST(
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        headers: { 'idempotency-key': 'k1' },
+      }),
+      createMockRouteContext({ id: COMMITMENT_ID }),
+    );
+    const result = await parseResponse(response);
+
+    expect(result.status).toBe(200);
+    expect(result.data.data.txHash).toBe('original_tx');
+    expect(mockedEarlyExitCommitmentOnChain).not.toHaveBeenCalled();
+  });
+
+  it('does not exit early when a concurrent request already claimed the key (start race)', async () => {
+    mockedIdempotency.getRecord.mockResolvedValue(null);
+    mockedIdempotency.start.mockResolvedValue(false);
+
+    const response = await POST(
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        headers: { 'idempotency-key': 'k1' },
+      }),
+      createMockRouteContext({ id: COMMITMENT_ID }),
+    );
+    const result = await parseResponse(response);
+
+    expect(result.status).toBe(409);
+    expect(result.data.error.code).toBe('CONFLICT');
+    expect(mockedEarlyExitCommitmentOnChain).not.toHaveBeenCalled();
+  });
+
+  it('marks the key COMPLETED on success and releases it on failure (recovery)', async () => {
+    // Successful attempt → COMPLETED with the payload.
+    await POST(
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        headers: { 'idempotency-key': 'k1' },
+      }),
+      createMockRouteContext({ id: COMMITMENT_ID }),
+    );
+    expect(mockedIdempotency.complete).toHaveBeenCalledWith(
+      'k1',
+      expect.objectContaining({ exitAmount: '950', finalStatus: 'EARLY_EXIT' }),
+      200,
+    );
+
+    // Failed attempt → key released so a retry is safe.
+    mockedEarlyExitCommitmentOnChain.mockRejectedValue(new Error('chain unavailable'));
+    await POST(
+      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
+        method: 'POST',
+        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        headers: { 'idempotency-key': 'k2' },
+      }),
+      createMockRouteContext({ id: COMMITMENT_ID }),
+    );
+    expect(mockedIdempotency.fail).toHaveBeenCalledWith('k2');
   });
 });

@@ -55,11 +55,18 @@ export const POST = withApiHandler(
       if (record) {
         if (record.status === 'COMPLETED') {
           return ok(record.response, undefined, record.statusCode, correlationId);
-        } else if (record.status === 'STARTED') {
+        }
+        if (record.status === 'STARTED') {
           throw new ConflictError('A request with this Idempotency-Key is currently processing');
         }
       }
-      await idempotencyService.start(idempotencyKey);
+      // `start()` is atomic and only returns true for the first caller. A
+      // concurrent request may have written its STARTED marker between our
+      // `getRecord` read and this `start()` call; if we lost the race we must
+      // NOT submit a second on-chain early-exit for the same key.
+      if (!(await idempotencyService.start(idempotencyKey))) {
+        throw new ConflictError('A request with this Idempotency-Key is currently processing');
+      }
     }
 
     try {
