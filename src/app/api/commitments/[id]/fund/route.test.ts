@@ -33,10 +33,7 @@ vi.mock('@/lib/backend/config', () => ({
 }));
 vi.mock('@/lib/backend/validation', () => ({
   validateStellarAddress: vi.fn(),
-  validateCommitmentId: vi.fn((id: string) => {
-    if (!id?.trim()) throw new (require('@/lib/backend/errors').ValidationError)('Commitment ID is required');
-    return id;
-  }),
+  validateCommitmentId: vi.fn(),
 }));
 
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
@@ -141,7 +138,7 @@ function completedRecord(response: Record<string, unknown>, statusCode = 200) {
 
 describe('POST /api/commitments/[id]/fund', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     diagnosticsService.clear();
     mockCheckRateLimit.mockResolvedValue(true);
     mockGetRateLimitWindowSeconds.mockReturnValue(60);
@@ -169,7 +166,7 @@ describe('POST /api/commitments/[id]/fund', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     diagnosticsService.clear();
   });
 
@@ -698,9 +695,11 @@ describe('POST /api/commitments/[id]/fund', () => {
 
   describe('boundary and edge cases', () => {
     it('accepts a commitment id with special characters (URL-encoded)', async () => {
-      const [req, ctx] = makeRequest('cmt-abc_123-XYZ', {});
+      const specialId = 'cmt-abc_123-XYZ';
+      mockFundEscrowOnChain.mockResolvedValue({ ...MOCK_FUND_RESULT, commitmentId: specialId });
+      const [req, ctx] = makeRequest(specialId, {});
       const res = await POST(req, ctx);
-      expect(mockGetCommitmentFromChain).toHaveBeenCalledWith('cmt-abc_123-XYZ');
+      expect(mockGetCommitmentFromChain).toHaveBeenCalledWith(specialId);
       expect(res.status).toBe(200);
     });
 
