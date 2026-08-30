@@ -58,6 +58,12 @@ export interface FeaturedMarketplaceConfig {
   limit: number;
 }
 
+export interface PurchasePreflightResponse {
+  eligible: boolean;
+  /** Human-readable reason codes if not eligible. Empty when eligible. */
+  reasons: string[];
+}
+
 const MARKETPLACE_LISTING_COUNTER_KEY = "marketplace:listings:counter";
 
 const MOCK_LISTINGS: MarketplacePublicListing[] = [
@@ -490,7 +496,7 @@ class MarketplaceService {
       buyerAddress,
     });
 
-    const listing = this.listings.get(listingId);
+    const listing = await this.loadListing(listingId);
     if (!listing) {
       throw new NotFoundError("Listing", { listingId });
     }
@@ -505,8 +511,7 @@ class MarketplaceService {
       reasons.push("buyer_is_seller");
     }
 
-    // Example of how we might handle non-transferable commitments
-    // In a real app, this would check a property on the commitment or contract
+    // Non-transferable commitments cannot be purchased regardless of listing state
     if (listing.commitmentId.includes("non-transferable")) {
       reasons.push("non_transferable");
     }
@@ -515,6 +520,73 @@ class MarketplaceService {
       eligible: reasons.length === 0,
       reasons,
     };
+  }
+
+  /**
+   * Atomically marks a listing as Sold after a successful on-chain transfer.
+   *
+   * This is the idempotency boundary for the purchase flow: once a listing is
+   * marked Sold it cannot be purchased again regardless of concurrent requests.
+   *
+   * @throws ConflictError when the listing is already Sold or Cancelled.
+   * @throws NotFoundError when the listing does not exist.
+   */
+  async markSold(listingId: string, buyerAddress: string): Promise<void> {
+    logInfo(undefined, "[MarketplaceService] Marking listing as sold", {
+      listingId,
+      buyerAddress,
+    });
+
+    const listing = await this.loadListing(listingId);
+
+    if (!listing) {
+      throw new NotFoundError("Listing", { listingId });
+    }
+
+    if (listing.status === "Sold") {
+      // Idempotent: treat an already-sold listing as a duplicate purchase attempt
+      throw new ConflictError("Listing has already been sold.", {
+        listingId,
+        currentStatus: listing.status,
+      });
+    }
+
+    if (listing.status !== "Active") {
+      throw new ConflictError("Only active listings can be purchased.", {
+        listingId,
+        currentStatus: listing.status,
+      });
+    }
+
+    try {
+      const soldListing: MarketplaceListing = {
+        ...listing,
+        status: "Sold",
+        updatedAt: new Date().toISOString(),
+      };
+
+      await this.storage.set(getListingStorageKey(listingId), soldListing);
+
+      // Invalidate all cached listing queries — the set has changed.
+      await cache.invalidate(LISTINGS_PREFIX);
+      logInfo(undefined, "[cache] invalidated marketplace-listings after sold", {
+        listingId,
+      });
+
+      // Invalidate marketplace stats as the set of active listings changed.
+      await cache.delete(CacheKey.marketplaceStats());
+      logInfo(undefined, "[cache] invalidated marketplace-stats after sold", {
+        listingId,
+      });
+
+      logInfo(undefined, "[MarketplaceService] Listing marked as sold", {
+        listingId,
+        buyerAddress,
+      });
+    } catch (error) {
+      if (error instanceof ConflictError) throw error;
+      throw normalizeStorageError(error);
+    }
   }
 
   private validateCreateListingRequest(request: CreateListingRequest): void {

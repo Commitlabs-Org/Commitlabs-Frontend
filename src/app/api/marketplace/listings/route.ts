@@ -4,6 +4,7 @@ import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/co
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { requireAuth } from '@/lib/backend/requireAuth';
 import {
   getMarketplaceSortKeys,
   isMarketplaceSortBy,
@@ -127,6 +128,15 @@ export const GET = withApiHandler(async (req: NextRequest, _context, correlation
 }, { cors: MARKETPLACE_LISTINGS_CORS_POLICY, enableETag: true });
 
 export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
+  // Authentication required for listing creation
+  const authReq = requireAuth(req);
+  const sellerAddress = authReq.user.address;
+
+  // Rate-limit write operations per authenticated user
+  if (!(await checkRateLimit(sellerAddress, 'api/marketplace/listings/create'))) {
+    throw new TooManyRequestsError();
+  }
+
   const body = await parseJsonWithLimit(req, {
     limitBytes: JSON_BODY_LIMITS.marketplaceListingsCreate,
   });
@@ -136,7 +146,19 @@ export const POST = withApiHandler(async (req: NextRequest, _context, correlatio
   }
 
   const request = body as CreateListingRequest;
-  const listing = await marketplaceService.createListing(request);
+
+  // Enforce that the authenticated caller is the declared seller
+  if (request.sellerAddress && request.sellerAddress !== sellerAddress) {
+    throw new ValidationError('sellerAddress must match the authenticated caller.');
+  }
+
+  // Fill in sellerAddress from session when not provided in body
+  const enrichedRequest: CreateListingRequest = {
+    ...request,
+    sellerAddress: request.sellerAddress ?? sellerAddress,
+  };
+
+  const listing = await marketplaceService.createListing(enrichedRequest);
   const response: CreateListingResponse = { listing };
   return ok(response, undefined, 201, correlationId);
 }, { cors: MARKETPLACE_LISTINGS_CORS_POLICY });
