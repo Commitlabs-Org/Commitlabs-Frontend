@@ -48,11 +48,9 @@ const COMMITMENT_STATUS_VALUES = [
   'VIOLATED',
   'EARLY_EXIT',
 ] as const;
-type CommitmentStatusFilter = (typeof COMMITMENT_STATUS_VALUES)[number];
 
 /** Risk type filter – mirrors `CommitmentType` from domain types. */
 const RISK_TYPE_VALUES = ['Safe', 'Balanced', 'Aggressive'] as const;
-type RiskTypeFilter = (typeof RISK_TYPE_VALUES)[number];
 
 /** Fields available for `sortBy`. */
 const SORTABLE_FIELDS = ['createdAt', 'amount', 'complianceScore', 'status', 'asset'] as const;
@@ -260,7 +258,12 @@ export const GET = withApiHandler(
         durationMs: Date.now() - startedAt,
         cacheHit: true,
       });
-      return ok(cached, undefined, 200, correlationId);
+      const hit = ok(cached, undefined, 200, correlationId);
+      // Observable freshness markers so clients can detect and discard a stale
+      // in-flight response that finishes after a newer query (issue #1776).
+      hit.headers.set('X-Cache', 'HIT');
+      hit.headers.set('Age', '0');
+      return hit;
     }
 
     // 5. Fetch from chain
@@ -282,6 +285,9 @@ export const GET = withApiHandler(
     }
 
     // 6. Map to search items
+    // A single request-time timestamp makes fallback metadata deterministic:
+    // identical queries must yield identical results (issue #1776).
+    const now = new Date().toISOString();
     let items: CommitmentSearchItem[] = sourceCommitments.map((c: any) => ({
       commitmentId: String(c.id ?? c.commitmentId),
       ownerAddress: c.ownerAddress,
@@ -294,8 +300,8 @@ export const GET = withApiHandler(
         typeof c.currentValue === 'bigint' ? String(c.currentValue) : String(c.currentValue ?? '0'),
       feeEarned: String(c.feeEarned ?? '0'),
       violationCount: c.violationCount ?? 0,
-      createdAt: c.createdAt ?? new Date().toISOString(),
-      expiresAt: c.expiresAt ?? new Date().toISOString(),
+      createdAt: c.createdAt ?? now,
+      expiresAt: c.expiresAt ?? now,
     }));
 
     // 7. Apply filters
@@ -331,6 +337,7 @@ export const GET = withApiHandler(
     const responsePayload = {
       data: result.data,
       meta: result.meta,
+      generatedAt: now,
       filters: {
         asset: asset ?? null,
         commitmentId: commitmentId ?? null,
@@ -357,7 +364,9 @@ export const GET = withApiHandler(
       truncated,
     });
 
-    return ok(responsePayload, undefined, 200, correlationId);
+    const fresh = ok(responsePayload, undefined, 200, correlationId);
+    fresh.headers.set('X-Cache', 'MISS');
+    return fresh;
   },
   { cors: SEARCH_CORS_POLICY },
 );
