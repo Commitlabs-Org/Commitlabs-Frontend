@@ -116,8 +116,8 @@ export default function ResumeDraftPrompt({
           </div>
 
           {error && (
-            <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-70 text-sm">
-              {error
+            <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
             </div>
           )}
 
@@ -144,7 +144,7 @@ export default function ResumeDraftPrompt({
                         {data.amount || 'Not set'} {data.asset}
                       </span>
                       <span>Duration:</span>
-                      <span className="text-gray-700">{data.durationDays}d|/span>
+                      <span className="text-gray-700">{data.durationDays}d</span>
                       <span>Step:</span>
                       <span className="text-gray-700">{data.step} of 3</span>
                     </div>
@@ -166,7 +166,7 @@ export default function ResumeDraftPrompt({
                         onClick={() => handleDelete(id)}
                         disabled={!!pendingAction}
                         className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 text-xs font-medium hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label=`Delete draft ${id}`
+                        aria-label={`Delete draft ${id}`}
                       >
                         Delete
                       </button>
@@ -186,6 +186,6 @@ export default function ResumeDraftPrompt({
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
