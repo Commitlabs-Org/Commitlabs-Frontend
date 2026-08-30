@@ -17,13 +17,14 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: { params
     throw new BadRequestError('Missing listing ID');
   }
 
-  // 1. Load listing
+  // 1. Load listing — verifies it exists before any preflight or chain work.
   const listing = await marketplaceService.getListing(listingId);
   if (!listing) {
     throw new NotFoundError('Listing', { listingId });
   }
 
-  // 2. Preflight eligibility check
+  // 2. Preflight eligibility check — validates Active status, buyer ≠ seller,
+  //    non-transferable commitment guard, etc. before touching the chain.
   const preflight = await marketplaceService.getPurchasePreflight(listingId, buyerAddress);
   if (!preflight.eligible) {
     throw new ConflictError(
@@ -34,14 +35,22 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: { params
 
   logInfo(req, 'Marketplace purchase initiated', { listingId, buyerAddress });
 
-  // 3. On-chain ownership transfer
+  // 3. On-chain ownership transfer.
   const transfer = await transferOwnership({
     commitmentId: listing.commitmentId,
     fromAddress: listing.sellerAddress,
     toAddress: buyerAddress,
   });
 
-  // 4. Audit log
+  // 4. Atomically mark the listing as Sold in persistent storage.
+  //    This step re-validates Active status (guards concurrent purchases) and
+  //    is the definitive record that the listing has been fulfilled. If this
+  //    step fails after a successful chain transfer, the route returns 5xx,
+  //    allowing the caller to retry — markSold is idempotent-safe: a second
+  //    attempt on an already-Sold listing throws ConflictError (409).
+  await marketplaceService.markSold(listingId, buyerAddress);
+
+  // 5. Audit log — fire after all state mutations succeed.
   await appendAuditEvent({
     category: 'marketplace',
     action: 'marketplace.purchase',

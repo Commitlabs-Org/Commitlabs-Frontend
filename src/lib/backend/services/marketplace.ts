@@ -1,5 +1,6 @@
 import { logError, logInfo } from "../logger";
 import {
+  ApiError,
   ConflictError,
   InternalError,
   NotFoundError,
@@ -56,6 +57,17 @@ export interface FeaturedMarketplaceConfig {
   minComplianceScore: number;
   maxLoss: number;
   limit: number;
+}
+
+/**
+ * Response type for purchase preflight eligibility checks.
+ * eligible: true means the buyer may proceed with the purchase.
+ * reasons: populated when eligible is false, each entry is a machine-readable
+ * reason code for why the purchase cannot proceed.
+ */
+export interface PurchasePreflightResponse {
+  eligible: boolean;
+  reasons: string[];
 }
 
 const MARKETPLACE_LISTING_COUNTER_KEY = "marketplace:listings:counter";
@@ -162,6 +174,13 @@ function getActiveListingStorageKey(commitmentId: string): string {
 }
 
 function normalizeStorageError(error: unknown): InternalError {
+  // ApiError subclasses (ConflictError, ValidationError, NotFoundError, …)
+  // carry meaningful HTTP semantics — re-throw them unchanged so the caller
+  // and withApiHandler can map them to the correct status code.
+  if (error instanceof ApiError) {
+    throw error;
+  }
+
   const normalized = error instanceof Error ? error : new Error(String(error));
   logError(
     undefined,
@@ -428,6 +447,88 @@ class MarketplaceService {
     return this.loadListing(listingId);
   }
 
+  /**
+   * Atomically transitions a listing to Sold status.
+   *
+   * This is called by the purchase route after a successful on-chain ownership
+   * transfer. It re-validates that the listing is still Active (double-check
+   * against concurrent purchases) and writes the Sold state in a single
+   * storage operation, making the transition idempotent-safe: if the handler
+   * is retried after a partial failure, a second call with the same listingId
+   * will see status === 'Sold' and throw a ConflictError, preventing a
+   * double-transfer.
+   *
+   * @throws {NotFoundError}  When the listing does not exist.
+   * @throws {ConflictError}  When the listing is no longer Active (already Sold or Cancelled).
+   */
+  async markSold(
+    listingId: string,
+    buyerAddress: string,
+  ): Promise<MarketplaceListing> {
+    logInfo(undefined, "[MarketplaceService] Marking listing as sold", {
+      listingId,
+      buyerAddress,
+    });
+
+    const listing = await this.loadListing(listingId);
+
+    if (!listing) {
+      throw new NotFoundError("Listing", { listingId });
+    }
+
+    if (listing.status === "Sold") {
+      throw new ConflictError("Listing has already been sold.", {
+        listingId,
+        currentStatus: listing.status,
+      });
+    }
+
+    if (listing.status !== "Active") {
+      throw new ConflictError(
+        "Only active listings can be marked as sold.",
+        {
+          listingId,
+          currentStatus: listing.status,
+        },
+      );
+    }
+
+    try {
+      const soldListing: MarketplaceListing = {
+        ...listing,
+        status: "Sold",
+        updatedAt: new Date().toISOString(),
+      };
+
+      await this.storage.set(getListingStorageKey(listingId), soldListing);
+
+      // Invalidate all cached listing queries — the set has changed.
+      await cache.invalidate(LISTINGS_PREFIX);
+      logInfo(
+        undefined,
+        "[cache] invalidated marketplace-listings after sale",
+        { listingId },
+      );
+
+      // Invalidate marketplace stats as the set of active listings changed.
+      await cache.delete(CacheKey.marketplaceStats());
+      logInfo(
+        undefined,
+        "[cache] invalidated marketplace-stats after sale",
+        { listingId },
+      );
+
+      logInfo(undefined, "[MarketplaceService] Listing marked as sold", {
+        listingId,
+        buyerAddress,
+      });
+
+      return soldListing;
+    } catch (error) {
+      throw normalizeStorageError(error);
+    }
+  }
+
   async getFeaturedListings(): Promise<MarketplacePublicListing[]> {
     return selectFeaturedMarketplaceListings(MOCK_LISTINGS);
   }
@@ -490,7 +591,7 @@ class MarketplaceService {
       buyerAddress,
     });
 
-    const listing = this.listings.get(listingId);
+    const listing = await this.loadListing(listingId);
     if (!listing) {
       throw new NotFoundError("Listing", { listingId });
     }
