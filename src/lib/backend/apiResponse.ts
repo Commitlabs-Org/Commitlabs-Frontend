@@ -1,10 +1,7 @@
-import { randomBytes } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
 
-type NextRouteHandler = (
-  req: NextRequest,
-  ctx?: unknown,
-) => NextResponse | Promise<NextResponse>;
+type NextRouteHandler = (req: NextRequest, ctx?: unknown) => NextResponse | Promise<NextResponse>;
 
 export interface OkResponse<T> {
   success: true;
@@ -32,9 +29,9 @@ export type ApiResponse<T> = OkResponse<T> | FailResponse;
 
 export function getCorrelationId(req: NextRequest): string {
   return (
-    req.headers.get("x-correlation-id") ??
-    req.headers.get("x-request-id") ??
-    randomBytes(16).toString("hex")
+    req.headers.get('x-correlation-id') ??
+    req.headers.get('x-request-id') ??
+    randomBytes(16).toString('hex')
   );
 }
 
@@ -47,7 +44,7 @@ export function ok<T>(
   let resolvedMeta: Record<string, unknown> | undefined;
   let resolvedStatus = status;
 
-  if (typeof metaOrStatus === "number") {
+  if (typeof metaOrStatus === 'number') {
     resolvedStatus = metaOrStatus;
   } else {
     resolvedMeta = metaOrStatus;
@@ -72,21 +69,21 @@ export function ok<T>(
   );
 
   if (correlationId) {
-    response.headers.set("x-correlation-id", correlationId);
-    response.headers.set("x-request-id", correlationId);
+    response.headers.set('x-correlation-id', correlationId);
+    response.headers.set('x-request-id', correlationId);
   }
 
   return response;
 }
 
 export function methodNotAllowed(allowed: string[]): NextRouteHandler {
-  const allowHeader = allowed.join(", ");
+  const allowHeader = allowed.join(', ');
   return (): NextResponse<FailResponse> =>
     NextResponse.json(
       {
         success: false,
         error: {
-          code: "METHOD_NOT_ALLOWED",
+          code: 'METHOD_NOT_ALLOWED',
           message: `Method Not Allowed. Supported methods: ${allowHeader}`,
         },
       },
@@ -106,13 +103,9 @@ export function fail(
   correlationIdArg?: string,
 ): NextResponse<FailResponse> {
   const retryAfterSeconds =
-    typeof retryAfterOrCorrelationId === "number"
-      ? retryAfterOrCorrelationId
-      : undefined;
+    typeof retryAfterOrCorrelationId === 'number' ? retryAfterOrCorrelationId : undefined;
   const correlationId =
-    typeof retryAfterOrCorrelationId === "string"
-      ? retryAfterOrCorrelationId
-      : correlationIdArg;
+    typeof retryAfterOrCorrelationId === 'string' ? retryAfterOrCorrelationId : correlationIdArg;
 
   const response = NextResponse.json<FailResponse>(
     {
@@ -129,15 +122,13 @@ export function fail(
     {
       status,
       headers:
-        retryAfterSeconds !== undefined
-          ? { "Retry-After": String(retryAfterSeconds) }
-          : undefined,
+        retryAfterSeconds !== undefined ? { 'Retry-After': String(retryAfterSeconds) } : undefined,
     },
   );
 
   if (correlationId) {
-    response.headers.set("x-correlation-id", correlationId);
-    response.headers.set("x-request-id", correlationId);
+    response.headers.set('x-correlation-id', correlationId);
+    response.headers.set('x-request-id', correlationId);
   }
 
   return response;

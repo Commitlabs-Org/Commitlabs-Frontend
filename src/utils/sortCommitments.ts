@@ -1,9 +1,9 @@
 import { Commitment } from '@/types/commitment';
 
-export type SortOption = 
-  | 'Newest' 
-  | 'Oldest' 
-  | 'ValueHighLow' 
+export type SortOption =
+  | 'Newest'
+  | 'Oldest'
+  | 'ValueHighLow'
   | 'ValueLowHigh'
   | 'MaturitySoonest'
   | 'MaturityLatest'
@@ -12,43 +12,57 @@ export type SortOption =
   | 'YieldHighLow'
   | 'YieldLowHigh';
 
-export function sortCommitments(commitments: Commitment[], sortBy: SortOption): Commitment[] {
-  const sorted = [...commitments];
+function parseAmount(amount: unknown): number {
+  if (typeof amount !== 'string') return 0;
+  const parsed = Number(amount.replace(/,/g, ''));
+  return isNaN(parsed) ? 0 : parsed;
+}
 
+function parseNumeric(val: unknown): number {
+  if (val === undefined || val === null) return 0;
+  const parsed = Number(val);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+export function sortCommitments(commitments: Commitment[], sortBy: SortOption): Commitment[] {
   switch (sortBy) {
     case 'Newest':
-      sorted.sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
-      break;
+      return [...commitments].sort(
+        (a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
+      );
     case 'Oldest':
-      sorted.sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
-      break;
+      return [...commitments].sort(
+        (a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime(),
+      );
     case 'ValueHighLow':
-      sorted.sort((a, b) => Number(b.amount.replace(/,/g, '')) - Number(a.amount.replace(/,/g, '')));
-      break;
+      return [...commitments].sort((a, b) => parseAmount(b.amount) - parseAmount(a.amount));
     case 'ValueLowHigh':
-      sorted.sort((a, b) => Number(a.amount.replace(/,/g, '')) - Number(b.amount.replace(/,/g, '')));
-      break;
+      return [...commitments].sort((a, b) => parseAmount(a.amount) - parseAmount(b.amount));
     case 'MaturitySoonest':
-      sorted.sort((a, b) => a.daysRemaining - b.daysRemaining);
-      break;
+      return [...commitments].sort(
+        (a, b) => parseNumeric(a.daysRemaining) - parseNumeric(b.daysRemaining),
+      );
     case 'MaturityLatest':
-      sorted.sort((a, b) => b.daysRemaining - a.daysRemaining);
-      break;
+      return [...commitments].sort(
+        (a, b) => parseNumeric(b.daysRemaining) - parseNumeric(a.daysRemaining),
+      );
     case 'ComplianceHighLow':
-      sorted.sort((a, b) => b.complianceScore - a.complianceScore);
-      break;
+      return [...commitments].sort(
+        (a, b) => parseNumeric(b.complianceScore) - parseNumeric(a.complianceScore),
+      );
     case 'ComplianceLowHigh':
-      sorted.sort((a, b) => a.complianceScore - b.complianceScore);
-      break;
+      return [...commitments].sort(
+        (a, b) => parseNumeric(a.complianceScore) - parseNumeric(b.complianceScore),
+      );
     case 'YieldHighLow':
-      sorted.sort((a, b) => b.changePercent - a.changePercent);
-      break;
+      return [...commitments].sort(
+        (a, b) => parseNumeric(b.changePercent) - parseNumeric(a.changePercent),
+      );
     case 'YieldLowHigh':
-      sorted.sort((a, b) => a.changePercent - b.changePercent);
-      break;
+      return [...commitments].sort(
+        (a, b) => parseNumeric(a.changePercent) - parseNumeric(b.changePercent),
+      );
     default:
-      break;
+      return commitments;
   }
-
-  return sorted;
 }

@@ -1,3 +1,7 @@
 export { CommandPalette } from './CommandPalette';
-export type { CommandPaletteProps } from './CommandPalette';
-export { CommandPaletteProvider } from './CommandPaletteProvider';
+export {
+  CommandPaletteProvider,
+  useCommandPalette,
+  useRegisterCommands,
+} from './CommandPaletteProvider';
+export type { CommandItem, CommandPaletteContextValue } from './types';

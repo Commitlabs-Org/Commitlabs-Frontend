@@ -15,13 +15,15 @@ const mockSignMessage = vi.mocked(signMessage);
 describe('useWallet authentication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAddress.mockReset();
+    mockSignMessage.mockReset();
     vi.stubGlobal('fetch', vi.fn());
     window.localStorage.clear();
     window.sessionStorage.clear();
     // Clear cookies cleanly
     document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    
+
     // Default mock response to avoid unhandled TypeErrors in the background
     mockSignMessage.mockResolvedValue({ signedMessage: 'mock_signature' });
   });
@@ -191,6 +193,209 @@ describe('useWallet authentication', () => {
     expect(result.current.authError).toBe('Invalid signature supplied');
   });
 
+  it('re-fetches the address when signIn starts without a connected wallet', async () => {
+    mockGetAddress
+      .mockResolvedValueOnce({ error: 'User rejected request' })
+      .mockResolvedValueOnce({ address: 'GCONNECTED' });
+
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { verified: true, sessionToken: 'token' },
+      }),
+    } as Response);
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(result.current.error).toContain('rejected'));
+
+    await act(async () => {
+      await result.current.signIn();
+    });
+
+    expect(result.current.authenticated).toBe(true);
+    expect(result.current.address).toBe('GCONNECTED');
+  });
+
+  it('handles missing nonce message and no signature response', async () => {
+    mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
+
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n' },
+      }),
+    } as Response);
+
+    mockSignMessage.mockResolvedValueOnce(undefined as unknown as { signedMessage: string });
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    let signInError: any = null;
+    await act(async () => {
+      try {
+        await result.current.signIn();
+      } catch (err) {
+        signInError = err;
+      }
+    });
+
+    expect(signInError).not.toBeNull();
+    expect(signInError.message).toContain('challenge');
+  });
+
+  it('surfaces a generic fallback error for unknown Freighter failures', async () => {
+    mockGetAddress.mockRejectedValue(new Error('mystery wallet failure'));
+
+    const { result } = renderHook(() => useWallet());
+
+    await waitFor(() =>
+      expect(result.current.error).toBe('Unable to connect to Freighter. Please try again.'),
+    );
+    expect(result.current.connected).toBe(false);
+  });
+
+  it('reports getAddress errors during signIn as authentication errors', async () => {
+    mockGetAddress.mockResolvedValue({ error: 'Freighter is locked' });
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(result.current.error).toContain('Freighter'));
+
+    let signInError: any = null;
+    await act(async () => {
+      try {
+        await result.current.signIn();
+      } catch (err) {
+        signInError = err;
+      }
+    });
+
+    expect(signInError).not.toBeNull();
+    expect(signInError.message).toContain('Freighter');
+    expect(result.current.authError).toContain('Freighter');
+  });
+
+  it('reports missing wallet addresses during signIn', async () => {
+    mockGetAddress.mockResolvedValueOnce({}).mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(getAddress).toHaveBeenCalled());
+
+    let signInError: any = null;
+    await act(async () => {
+      try {
+        await result.current.signIn();
+      } catch (err) {
+        signInError = err;
+      }
+    });
+
+    expect(signInError).not.toBeNull();
+    expect(signInError.message).toContain('Unable to retrieve address');
+  });
+
+  it('reports missing signature responses from Freighter', async () => {
+    mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
+
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
+
+    mockSignMessage.mockResolvedValueOnce(undefined as unknown as { signedMessage: string });
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    let signInError: any = null;
+    await act(async () => {
+      try {
+        await result.current.signIn();
+      } catch (err) {
+        signInError = err;
+      }
+    });
+
+    expect(signInError).not.toBeNull();
+    expect(signInError.message).toContain('No response received');
+  });
+
+  it('reports missing signedMessage payloads during signIn', async () => {
+    mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
+
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
+
+    mockSignMessage.mockResolvedValueOnce({} as { signedMessage: string });
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    let signInError: any = null;
+    await act(async () => {
+      try {
+        await result.current.signIn();
+      } catch (err) {
+        signInError = err;
+      }
+    });
+
+    expect(signInError).not.toBeNull();
+    expect(signInError.message).toContain('rejected');
+  });
+
+  it('handles verification responses without a session token', async () => {
+    mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
+
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { nonce: 'n', message: 'msg' },
+      }),
+    } as Response);
+
+    mockSignMessage.mockResolvedValue({ signedMessage: 'sig' });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { verified: true, sessionToken: '' },
+      }),
+    } as Response);
+
+    const { result } = renderHook(() => useWallet());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    let signInError: any = null;
+    await act(async () => {
+      try {
+        await result.current.signIn();
+      } catch (err) {
+        signInError = err;
+      }
+    });
+
+    expect(signInError).not.toBeNull();
+    expect(signInError.message).toContain('Session token');
+  });
+
   it('successful sign-out clears storage, cookies, and state', async () => {
     mockGetAddress.mockResolvedValue({ address: 'GCONNECTED' });
 
@@ -246,9 +451,16 @@ describe('useWallet authentication', () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => new Promise(resolve => setTimeout(() => resolve({
-        data: { nonce: 'n', message: 'msg' },
-      }), 50)),
+      json: async () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                data: { nonce: 'n', message: 'msg' },
+              }),
+            50,
+          ),
+        ),
     } as Response);
 
     mockFetch.mockResolvedValueOnce({

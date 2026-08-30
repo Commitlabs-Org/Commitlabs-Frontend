@@ -17,15 +17,15 @@ export const DEFAULT_JSON_BODY_LIMIT_BYTES = 16 * 1024; // 16 KiB
  * limits are visible in one place for documentation / auditing.
  */
 export const JSON_BODY_LIMITS = {
-    commitmentsCreate: 8 * 1024, // 8 KiB — small set of fields + optional metadata
-    attestationsCreate: 16 * 1024, // 16 KiB — data object may carry attestation details
-    marketplaceListingsCreate: 4 * 1024, // 4 KiB — a handful of short fields
-    authVerify: 4 * 1024, // 4 KiB — address + signature + short message
+  commitmentsCreate: 8 * 1024, // 8 KiB — small set of fields + optional metadata
+  attestationsCreate: 16 * 1024, // 16 KiB — data object may carry attestation details
+  marketplaceListingsCreate: 4 * 1024, // 4 KiB — a handful of short fields
+  authVerify: 4 * 1024, // 4 KiB — address + signature + short message
 } as const;
 
 export interface ParseJsonWithLimitOptions {
-    /** Maximum allowed body size in bytes. Defaults to {@link DEFAULT_JSON_BODY_LIMIT_BYTES}. */
-    limitBytes?: number;
+  /** Maximum allowed body size in bytes. Defaults to {@link DEFAULT_JSON_BODY_LIMIT_BYTES}. */
+  limitBytes?: number;
 }
 
 /**
@@ -48,50 +48,50 @@ export interface ParseJsonWithLimitOptions {
  * of the parsed value (e.g. with zod or hand-written guards) before use.
  */
 export async function parseJsonWithLimit(
-    req: NextRequest | Request,
-    options: ParseJsonWithLimitOptions = {},
+  req: NextRequest | Request,
+  options: ParseJsonWithLimitOptions = {},
 ): Promise<unknown> {
-    const limit = options.limitBytes ?? DEFAULT_JSON_BODY_LIMIT_BYTES;
+  const limit = options.limitBytes ?? DEFAULT_JSON_BODY_LIMIT_BYTES;
 
-    if (!Number.isFinite(limit) || limit <= 0) {
-        throw new Error('parseJsonWithLimit: limitBytes must be a positive finite number.');
-    }
+  if (!Number.isFinite(limit) || limit <= 0) {
+    throw new Error('parseJsonWithLimit: limitBytes must be a positive finite number.');
+  }
 
-    const contentLengthHeader = req.headers.get('content-length');
-    if (contentLengthHeader !== null) {
-        const advertised = Number(contentLengthHeader);
-        if (Number.isFinite(advertised) && advertised > limit) {
-            throw new PayloadTooLargeError(
-                `Request body exceeds maximum allowed size of ${limit} bytes.`,
-                { limitBytes: limit, receivedBytes: advertised },
-            );
-        }
+  const contentLengthHeader = req.headers.get('content-length');
+  if (contentLengthHeader !== null) {
+    const advertised = Number(contentLengthHeader);
+    if (Number.isFinite(advertised) && advertised > limit) {
+      throw new PayloadTooLargeError(
+        `Request body exceeds maximum allowed size of ${limit} bytes.`,
+        { limitBytes: limit, receivedBytes: advertised },
+      );
     }
+  }
 
-    let text: string;
-    try {
-        text = await req.text();
-    } catch {
-        throw new ValidationError('Failed to read request body.');
-    }
+  let text: string;
+  try {
+    text = await req.text();
+  } catch {
+    throw new ValidationError('Failed to read request body.');
+  }
 
-    const actualBytes = byteLength(text);
-    if (actualBytes > limit) {
-        throw new PayloadTooLargeError(
-            `Request body exceeds maximum allowed size of ${limit} bytes.`,
-            { limitBytes: limit, receivedBytes: actualBytes },
-        );
-    }
+  const actualBytes = byteLength(text);
+  if (actualBytes > limit) {
+    throw new PayloadTooLargeError(`Request body exceeds maximum allowed size of ${limit} bytes.`, {
+      limitBytes: limit,
+      receivedBytes: actualBytes,
+    });
+  }
 
-    if (text.length === 0) {
-        throw new ValidationError('Request body is empty.');
-    }
+  if (text.length === 0) {
+    throw new ValidationError('Request body is empty.');
+  }
 
-    try {
-        return JSON.parse(text);
-    } catch {
-        throw new ValidationError('Invalid JSON in request body.');
-    }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new ValidationError('Invalid JSON in request body.');
+  }
 }
 
 /**
@@ -99,9 +99,9 @@ export async function parseJsonWithLimit(
  * `TextEncoder` is not available (very old runtimes / odd test shims).
  */
 function byteLength(value: string): number {
-    if (typeof TextEncoder !== 'undefined') {
-        return new TextEncoder().encode(value).byteLength;
-    }
-    // Node.js fallback — always available server-side.
-    return Buffer.byteLength(value, 'utf8');
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(value).byteLength;
+  }
+  // Node.js fallback — always available server-side.
+  return Buffer.byteLength(value, 'utf8');
 }

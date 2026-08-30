@@ -42,6 +42,15 @@
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                },
+                {
+                  "u32": 200
+                },
+                {
+                  "u32": 300
+                },
+                {
+                  "u32": 500
                 }
               ]
             }
@@ -93,7 +102,7 @@
                 {
                   "vec": [
                     {
-                      "symbol": "Aggressive"
+                      "symbol": "Safe"
                     }
                   ]
                 },
@@ -101,7 +110,10 @@
                   "u32": 30
                 },
                 {
-                  "u32": 500
+                  "u32": 200
+                },
+                {
+                  "map": []
                 }
               ]
             }
@@ -328,6 +340,14 @@
                   "map": [
                     {
                       "key": {
+                        "symbol": "accrued_yield"
+                      },
+                      "val": {
+                        "i128": "4"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "amount"
                       },
                       "val": {
@@ -376,6 +396,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "metadata"
+                      },
+                      "val": {
+                        "map": []
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "owner"
                       },
                       "val": {
@@ -387,7 +415,7 @@
                         "symbol": "penalty_bps"
                       },
                       "val": {
-                        "u32": 500
+                        "u32": 200
                       }
                     },
                     {
@@ -397,7 +425,7 @@
                       "val": {
                         "vec": [
                           {
-                            "symbol": "Aggressive"
+                            "symbol": "Safe"
                           }
                         ]
                       }
@@ -420,7 +448,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518500
         ]
       ],
       [
@@ -469,7 +497,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518500
         ]
       ],
       [
@@ -511,12 +539,81 @@
                         "key": {
                           "vec": [
                             {
+                              "symbol": "DefaultPenalty"
+                            },
+                            {
+                              "vec": [
+                                {
+                                  "symbol": "Aggressive"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 500
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "DefaultPenalty"
+                            },
+                            {
+                              "vec": [
+                                {
+                                  "symbol": "Balanced"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 300
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "DefaultPenalty"
+                            },
+                            {
+                              "vec": [
+                                {
+                                  "symbol": "Safe"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 200
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
                               "symbol": "FeeRecipient"
                             }
                           ]
                         },
                         "val": {
                           "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "GracePeriodSeconds"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u64": "0"
                         }
                       },
                       {

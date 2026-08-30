@@ -123,4 +123,22 @@ describe('sortCommitments', () => {
     expect(sorted[1].id).toBe('CMT-2');
     expect(sorted[2].id).toBe('CMT-3');
   });
+
+  it('returns the input order unchanged for an unrecognized sortBy value', () => {
+    const sorted = sortCommitments(mockCommitments, 'UnrecognizedOption' as SortOption);
+    expect(sorted).toEqual(mockCommitments);
+  });
+
+  it('handles malformed numeric field gracefully without breaking other elements ordering', () => {
+    const malformedCommitments: Commitment[] = [
+      { ...mockCommitments[0], amount: 'invalid-amount' },
+      { ...mockCommitments[1], amount: '20,000' },
+      { ...mockCommitments[2], amount: '10,000' },
+    ];
+    // 'invalid-amount' parsed as 0. Sorted High to Low should be: 20k (CMT-2), 10k (CMT-3), 0 (CMT-1)
+    const sorted = sortCommitments(malformedCommitments, 'ValueHighLow');
+    expect(sorted[0].id).toBe('CMT-2');
+    expect(sorted[1].id).toBe('CMT-3');
+    expect(sorted[2].id).toBe('CMT-1');
+  });
 });

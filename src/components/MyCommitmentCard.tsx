@@ -1,312 +1,215 @@
-import React from "react";
-import { Commitment } from "@/types/commitment";
-import { MaturityCountdown } from './MaturityCountdown';
-import type { MarketplaceListing } from "@/types/marketplace";
-import RelistPriceEditor from './marketplace/RelistPriceEditor';
-import Link from "next/link";
-import {
-  SafeIcon,
-  BalancedIcon,
-  AggressiveIcon,
-  EyeIcon,
-  FileTextIcon,
-  AlertIcon,
-} from "./icons/CommitmentIcons";
-import { TrendingUp as Increase, TrendingDown as Decrease, Tag } from "lucide-react";
+'use client';
+
+import React, { memo } from 'react';
+import Link from 'next/link';
+import { Commitment } from '@/types/commitment';
 
 interface MyCommitmentCardProps {
   commitment: Commitment;
-  listing?: MarketplaceListing;
-  sellerAddress?: string;
+  isSelected?: boolean;
+  onSelect?: () => void;
   onDetails?: (id: string) => void;
   onAttestations?: (id: string) => void;
   onEarlyExit?: (id: string) => void;
   onListForSale?: (id: string) => void;
-  onListingPriceUpdated?: (id: string, newPrice: string) => void;
 }
 
-const MyCommitmentCard: React.FC<MyCommitmentCardProps> = ({
-  commitment,
-  listing,
-  sellerAddress,
-  onDetails,
-  onAttestations,
-  onEarlyExit,
-  onListForSale,
-  onListingPriceUpdated,
-}) => {
-  const {
-    id,
-    type,
-    status,
-    asset,
-    amount,
-    currentValue,
-    changePercent,
-    durationProgress,
-    complianceScore,
-    maxLoss,
-    currentDrawdown,
-    createdDate,
-    expiryDate,
-  } = commitment;
+/**
+ * MyCommitmentCard
+ *
+ * Renders a single user-owned commitment in the grid.
+ * Wrapped in React.memo so the card only re-renders when its own
+ * props change — avoiding cascading re-renders when siblings are selected.
+ */
+const MyCommitmentCard: React.FC<MyCommitmentCardProps> = memo(
+  ({
+    commitment,
+    isSelected = false,
+    onSelect,
+    onDetails,
+    onAttestations,
+    onEarlyExit,
+    onListForSale,
+  }) => {
+    const {
+      id,
+      type,
+      status,
+      asset,
+      amount,
+      complianceScore,
+      daysRemaining,
+      currentValue,
+      changePercent,
+    } = commitment;
 
-  const TypeIcon =
-    type === "Safe"
-      ? SafeIcon
-      : type === "Balanced"
-      ? BalancedIcon
-      : AggressiveIcon;
-  const typeBadgeClass =
-    type === "Safe"
-      ? "border border-[rgba(16,185,129,0.5)] text-[#05DF72] font-roboto"
-      : type === "Balanced"
-      ? "border border-[rgba(59,130,246,0.5)] text-[#51a2ff] font-roboto"
-      : "border border-[rgba(245,158,11,0.5)] text-[#ff8904] font-roboto";
-  const statusBadgeClass =
-    status === "Active"
-      ? "bg-[rgba(16,185,129,0.1)] text-[#05DF72] font-roboto"
-      : status === "Settled"
-      ? "bg-[rgba(59,130,246,0.1)] text-[#51a2ff] font-roboto"
-      : status === "Early Exit"
-      ? "bg-[rgba(245,158,11,0.1)] text-[#ff8904] font-roboto"
-      : "bg-[rgba(239,68,68,0.1)] text-[#ef4444] font-roboto";
-  const isPositive = changePercent >= 0;
+    const statusColour: Record<string, string> = {
+      Active: 'text-emerald-400',
+      Settled: 'text-blue-400',
+      Violated: 'text-red-400',
+      'Early Exit': 'text-amber-400',
+    };
 
-  // Dynamic colors
-  const durationColorClass =
-    "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
+    const typeColour: Record<string, string> = {
+      Safe: 'bg-emerald-500/10 text-emerald-400',
+      Balanced: 'bg-amber-500/10 text-amber-400',
+      Aggressive: 'bg-red-500/10 text-red-400',
+    };
 
-  const complianceColorClass =
-    complianceScore > 80
-      ? "bg-[#05DF72]"
-      : "bg-[linear-gradient(180deg,#0FF0FC_0%,#0A7A82_100%)]";
-
-  return (
-    <div 
-      className={`relative flex flex-col gap-5 rounded-[16px] border bg-[rgba(13,13,13,0.8)] p-6 text-white backdrop-blur-[10px] overflow-hidden transition-[transform,border-color] duration-200 ease-[ease] ${
-        isSelected 
-          ? 'border-[#0FF0FC]/50 ring-2 ring-[#0FF0FC]/20' 
-          : 'border-white/10 hover:border-[rgba(15,240,252,0.3)]'
-      }`}
-    >
-      {/* Selection checkbox */}
-      <div className="absolute top-4 right-4 z-10">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onSelect}
-          onClick={(e) => e.stopPropagation()}
-          className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#0FF0FC] focus:ring-2 focus:ring-[#0FF0FC] focus:ring-offset-0 focus:ring-offset-[#0a0a0a] cursor-pointer"
-          aria-label={`Select commitment ${id}`}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${typeBadgeClass}`}
-        >
-          <TypeIcon size={14} />
-          <span>{type}</span>
-        </div>
-        <div
-          className={`rounded-full px-3 py-1 text-[12px] font-semibold ${statusBadgeClass}`}
-        >
-          {status}
-        </div>
-      </div>
-
-      <div className="mt-1">
-        <Link
-          href={`/commitments/${id}`}
-          className="font-mono text-[12px] text-[#0FF0FC] opacity-80"
-        >
-          {id}
-        </Link>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <div className="flex items-baseline gap-2 text-[32px] font-bold font-roboto">
-          {amount}{" "}
-          <span
-            className="text-[16px] font-medium text-[#8892a0]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
+    return (
+      <article
+        className={[
+          'relative flex flex-col gap-4 rounded-xl border p-5 transition-all',
+          'bg-white/[0.03] hover:bg-white/[0.05]',
+          isSelected
+            ? 'border-[#0FF0FC]/50 ring-1 ring-[#0FF0FC]/30'
+            : 'border-white/10 hover:border-white/20',
+        ].join(' ')}
+        aria-label={`Commitment ${id}`}
+      >
+        {/* Selection checkbox */}
+        {onSelect && (
+          <button
+            onClick={onSelect}
+            aria-pressed={isSelected}
+            aria-label={isSelected ? `Deselect commitment ${id}` : `Select commitment ${id}`}
+            className="absolute top-3 right-3 p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
           >
-            {asset}
+            <span
+              className={[
+                'flex h-4 w-4 items-center justify-center rounded border',
+                isSelected
+                  ? 'border-[#0FF0FC] bg-[#0FF0FC]/20'
+                  : 'border-white/20 bg-white/5',
+              ].join(' ')}
+            >
+              {isSelected && (
+                <svg className="h-3 w-3 text-[#0FF0FC]" viewBox="0 0 12 12" fill="none">
+                  <path
+                    d="M2 6l3 3 5-5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </span>
+          </button>
+        )}
+
+        {/* Header */}
+        <div className="flex items-start justify-between pr-6">
+          <div className="flex flex-col gap-1">
+            <Link
+              href={`/commitments/${id}`}
+              className="text-[15px] font-semibold text-white hover:text-[#0FF0FC] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0FF0FC] rounded"
+            >
+              {id}
+            </Link>
+            <span className="text-[13px] text-[#94A3B8]">{asset}</span>
+          </div>
+
+          <span
+            className={[
+              'text-[11px] font-medium px-2 py-0.5 rounded-full',
+              typeColour[type] ?? 'bg-white/5 text-white/60',
+            ].join(' ')}
+          >
+            {type}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[14px]">
-          <span className="text-[#94A3B8]">Current Value:</span>
-          <span style={{ fontWeight: 600, fontFamily: "Roboto Mono" }}>
-            {currentValue} {asset}
-          </span>
+
+        {/* Metrics */}
+        <dl className="grid grid-cols-2 gap-3">
+          <div>
+            <dt className="text-[11px] text-[#94A3B8] uppercase tracking-wide">Amount</dt>
+            <dd className="text-[14px] font-semibold text-white mt-0.5">{amount}</dd>
+          </div>
+
+          {currentValue !== undefined && (
+            <div>
+              <dt className="text-[11px] text-[#94A3B8] uppercase tracking-wide">Value</dt>
+              <dd className="text-[14px] font-semibold text-white mt-0.5">
+                {currentValue}
+                {changePercent !== undefined && (
+                  <span
+                    className={changePercent >= 0 ? 'text-emerald-400 text-[11px] ml-1' : 'text-red-400 text-[11px] ml-1'}
+                  >
+                    {changePercent >= 0 ? '+' : ''}
+                    {changePercent.toFixed(2)}%
+                  </span>
+                )}
+              </dd>
+            </div>
+          )}
+
+          {complianceScore !== undefined && (
+            <div>
+              <dt className="text-[11px] text-[#94A3B8] uppercase tracking-wide">Compliance</dt>
+              <dd className="text-[14px] font-semibold text-white mt-0.5">{complianceScore}%</dd>
+            </div>
+          )}
+
+          {daysRemaining !== undefined && (
+            <div>
+              <dt className="text-[11px] text-[#94A3B8] uppercase tracking-wide">Days Left</dt>
+              <dd className="text-[14px] font-semibold text-white mt-0.5">{daysRemaining}d</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Status */}
+        <div className="flex items-center gap-2">
           <span
-            className={isPositive ? "text-[#05DF72]" : "text-[#EF4444]"}
-            style={{ fontWeight: 600, fontFamily: "'Roboto Mono', sans-serif" }}
-          >
-            {isPositive ? (
-              <Increase
-                size={12}
-                style={{ display: "inline", marginRight: 4 }}
-              />
-            ) : (
-              <Decrease
-                size={12}
-                style={{ display: "inline", marginRight: 4 }}
-              />
+            className={['text-[12px] font-medium', statusColour[status] ?? 'text-white/60'].join(
+              ' ',
             )}
-            {isPositive ? "+" : ""}
-            {changePercent.toFixed(2)}%
+          >
+            ● {status}
           </span>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between text-[12px]">
-            <span
-              className="text-[#94A3B8] font-normal font-['Inter', sans-serif]"
-              style={{
-                fontFamily: "Inter, sans-serif",
-                fontSize: "12px",
-                letterSpacing: "0.05em",
-              }}
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
+          {onDetails && (
+            <button
+              onClick={() => onDetails(id)}
+              className="text-[12px] text-[#94A3B8] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0FF0FC] rounded"
             >
-              Duration Progress
-            </span>
-            <span className="text-white font-medium font-roboto">
-              <MaturityCountdown maturityTimestamp={new Date(expiryDate).getTime()} />
-            </span>
-          </div>
-          <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
-            <div
-              className={`h-full rounded-full ${durationColorClass}`}
-              style={{ width: `${durationProgress}%` }}
-            />
-          </div>
-          <span
-            className="text-[#94A3B8] font-roboto"
-            style={{ fontSize: "12px", marginTop: "-4px" }}
-          >
-            {durationProgress}%
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between text-[12px]">
-            <span
-              className="text-[#94A3B8]"
-              style={{
-                fontFamily: "Inter, sans-serif",
-                fontSize: "12px",
-                letterSpacing: "0.05em",
-              }}
+              Details
+            </button>
+          )}
+          {onAttestations && (
+            <button
+              onClick={() => onAttestations(id)}
+              className="text-[12px] text-[#94A3B8] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0FF0FC] rounded"
             >
-              Compliance Score
-            </span>
-            <span className="text-white font-semibold">{complianceScore}%</span>
-          </div>
-          <div className="h-[6px] rounded-full bg-white/10 overflow-hidden">
-            <div
-              className={`h-full rounded-full ${complianceColorClass}`}
-              style={{ width: `${complianceScore}%` }}
-            />
-          </div>
+              Attestations
+            </button>
+          )}
+          {onEarlyExit && status === 'Active' && (
+            <button
+              onClick={() => onEarlyExit(id)}
+              className="text-[12px] text-amber-400 hover:text-amber-300 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 rounded"
+            >
+              Early Exit
+            </button>
+          )}
+          {onListForSale && status === 'Active' && (
+            <button
+              onClick={() => onListForSale(id)}
+              className="text-[12px] text-[#0FF0FC] hover:text-[#0FF0FC]/80 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0FF0FC] rounded"
+            >
+              List for Sale
+            </button>
+          )}
         </div>
-      </div>
+      </article>
+    );
+  },
+);
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex h-full w-full flex-col gap-[3.99px] rounded-[10px] bg-[#FFFFFF05] px-3 py-3">
-          <span
-            className="text-[12px] tracking-[0.05em] text-[#94A3B8]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Max Loss
-          </span>
-          <span className="text-[16px] font-semibold font-roboto">
-            {maxLoss}
-          </span>
-        </div>
-        <div className="flex h-full w-full flex-col gap-[3.99px] rounded-[10px] bg-[#FFFFFF05] px-3 py-3">
-          <span
-            className="text-[12px] tracking-[0.05em] text-[#94A3B8]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Current Drawdown
-          </span>
-          <span className="text-[16px] font-semibold font-roboto">
-            {currentDrawdown}
-          </span>
-        </div>
-      </div>
+MyCommitmentCard.displayName = 'MyCommitmentCard';
 
-      <div className="flex justify-between text-[12px]">
-        <div className="flex flex-col gap-1">
-          <span
-            className="text-[12px] tracking-[0.05em] text-[#94A3B8]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Created
-          </span>
-          <span className="text-white font-roboto">{createdDate}</span>
-        </div>
-        <div className="flex flex-col gap-1 items-end">
-          <span
-            className="text-[12px] tracking-[0.05em] text-[#94A3B8]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Expires
-          </span>
-          <span className="text-white font-roboto">{expiryDate}</span>
-        </div>
-      </div>
-
-      {listing && sellerAddress && (
-        <div className="rounded-[10px] border border-white/5 bg-[#FFFFFF05] px-3 py-2.5">
-          <RelistPriceEditor
-            listing={listing}
-            sellerAddress={sellerAddress}
-            commitmentAsset={asset}
-            onPriceUpdated={(newPrice) => onListingPriceUpdated?.(id, newPrice)}
-          />
-        </div>
-      )}
-
-      <div className="mt-2 flex flex-col gap-2">
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            className="flex items-center justify-center gap-2 rounded-[8px] border border-[rgba(15,240,252,0.2)] bg-[rgba(15,240,252,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#0FF0FC] transition-all duration-200 ease-[ease] hover:bg-[rgba(15,240,252,0.1)]"
-            onClick={() => onDetails?.(id)}
-          >
-            <EyeIcon size={16} /> Details
-          </button>
-          <button
-            className="flex items-center justify-center gap-2 rounded-[10px] border-[0.56px] border-t-[0.56px] border-t-[#FFFFFF1A] border-[#FFFFFF1A] bg-[#FFFFFF0D] px-2.5 py-2 text-[14px] font-semibold text-white transition-all duration-200 ease-[ease] hover:bg-[#FFFFFF1A]"
-            onClick={() => onAttestations?.(id)}
-          >
-            <FileTextIcon size={16} /> Attestations
-          </button>
-        </div>
-        {status === "Active" && (
-          <button
-            className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[rgba(15,240,252,0.2)] bg-[rgba(15,240,252,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#0FF0FC] transition-all duration-200 ease-[ease] hover:bg-[rgba(15,240,252,0.1)]"
-            onClick={() => onListForSale?.(id)}
-            aria-label={`List ${id} for sale on the marketplace`}
-          >
-            <Tag size={16} /> List for sale
-          </button>
-        )}
-        {status === "Active" && (
-          <button
-            className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] px-2.5 py-2 text-[14px] font-semibold text-[#ff8904] transition-all duration-200 ease-[ease] hover:bg-[rgba(245,158,11,0.1)]"
-            onClick={() => onEarlyExit?.(id)}
-          >
-            <AlertIcon size={16} /> Early Exit (Penalty Applies)
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default React.memo(MyCommitmentCard);
+export default MyCommitmentCard;

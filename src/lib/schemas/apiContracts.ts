@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // ─── Envelope schemas ─────────────────────────────────────────────────────────
 
@@ -8,6 +8,8 @@ export const ErrorBodySchema = z.object({
     code: z.string().min(1),
     message: z.string().min(1),
     details: z.unknown().optional(),
+    retryAfterSeconds: z.number().optional(),
+    correlationId: z.string().optional(),
   }),
 });
 
@@ -110,9 +112,7 @@ export const CommitmentDetailSchema = z.object({
   contractVersion: z.string().optional(),
 });
 
-export const CommitmentDetailResponseSchema = OkBodySchema(
-  CommitmentDetailSchema,
-);
+export const CommitmentDetailResponseSchema = OkBodySchema(CommitmentDetailSchema);
 
 export const MarketplaceListingCardSchema = z.object({
   id: z.string(),
@@ -150,6 +150,33 @@ export const AttestationPostResponseSchema = OkBodySchema(
   }),
 );
 
+export const ProtocolConstantsSchema = z.object({
+  protocolVersion: z.string().min(1),
+  network: z.string().min(1),
+  fees: z.object({
+    networkBaseFeeStroops: z.number().int().nonnegative(),
+    platformFeePercent: z.number().finite(),
+  }),
+  penalties: z.array(
+    z.object({
+      type: z.string().min(1),
+      earlyExitPenaltyPercent: z.number().finite(),
+      description: z.string().min(1),
+    }),
+  ),
+  commitmentLimits: z.object({
+    minAmountXlm: z.number().finite(),
+    maxAmountXlm: z.number().finite(),
+    minDurationDays: z.number().int().nonnegative(),
+    maxDurationDays: z.number().int().nonnegative(),
+    maxLossPercentCeiling: z.number().finite(),
+    earlyExitGracePeriodDays: z.number().int().nonnegative(),
+  }),
+  cachedAt: z.string().datetime(),
+});
+
+export const ProtocolConstantsResponseSchema = OkBodySchema(ProtocolConstantsSchema);
+
 // ─── Early-exit request validation ──────────────────────────────────────────
 
 /**
@@ -163,16 +190,13 @@ export const EarlyExitRequestBodySchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(1, "Reason is required")
-    .max(500, "Reason must be 500 characters or less"),
+    .min(1, 'Reason is required')
+    .max(500, 'Reason must be 500 characters or less'),
   callerAddress: z
     .string()
     .trim()
-    .min(1, "Caller address is required")
-    .regex(
-      /^[A-Z0-9]{56}$/,
-      "Caller address must be a valid Stellar public key",
-    ),
+    .min(1, 'Caller address is required')
+    .regex(/^[A-Z0-9]{56}$/, 'Caller address must be a valid Stellar public key'),
 });
 
 export type EarlyExitRequestBody = z.infer<typeof EarlyExitRequestBodySchema>;

@@ -13,85 +13,96 @@ export interface TourStepConfig {
 export const TOUR_STEPS: TourStepConfig[] = [
   {
     targetSelector: '[data-testid="wizard-stepper"]',
-    title: "Wizard Steps",
-    content: "This stepper guides you through the three phases of creating a commitment: choosing a type, configuring parameters, and final review.",
+    title: 'Wizard Steps',
+    content:
+      'This stepper guides you through the three phases of creating a commitment: choosing a type, configuring parameters, and final review.',
     wizardStep: 1,
     position: 'bottom',
   },
   {
     targetSelector: '[role="radiogroup"]',
-    title: "Choose Commitment Type",
-    content: "Select a risk profile that fits your strategy. 'Safe' offers loss protection and shorter lock-in, while 'Aggressive' offers high yields with no protection.",
+    title: 'Choose Commitment Type',
+    content:
+      "Select a risk profile that fits your strategy. 'Safe' offers loss protection and shorter lock-in, while 'Aggressive' offers high yields with no protection.",
     wizardStep: 1,
     position: 'top',
   },
   {
     targetSelector: '[data-testid="select-type-continue"]',
-    title: "Continue to Parameters",
-    content: "Once you have selected a commitment type, click here to move on and customize your parameters.",
+    title: 'Continue to Parameters',
+    content:
+      'Once you have selected a commitment type, click here to move on and customize your parameters.',
     wizardStep: 1,
     position: 'top',
   },
   {
     targetSelector: '#amount',
-    title: "Commitment Amount",
-    content: "Specify the amount you want to commit and select the asset. Make sure you don't exceed your available wallet balance.",
+    title: 'Commitment Amount',
+    content:
+      "Specify the amount you want to commit and select the asset. Make sure you don't exceed your available wallet balance.",
     wizardStep: 2,
     position: 'bottom',
   },
   {
     targetSelector: '#duration',
-    title: "Lock-in Duration",
-    content: "Define the duration in days. Shorter durations lower your yield potential, and early exits before the end date will incur a penalty.",
+    title: 'Lock-in Duration',
+    content:
+      'Define the duration in days. Shorter durations lower your yield potential, and early exits before the end date will incur a penalty.',
     wizardStep: 2,
     position: 'bottom',
   },
   {
     targetSelector: '#maxLoss',
-    title: "Automatic Stop-Loss",
-    content: "Configure your maximum acceptable loss percentage. If your position reaches this threshold, it is automatically closed on-chain to protect your principal.",
+    title: 'Automatic Stop-Loss',
+    content:
+      'Configure your maximum acceptable loss percentage. If your position reaches this threshold, it is automatically closed on-chain to protect your principal.',
     wizardStep: 2,
     position: 'top',
   },
   {
     targetSelector: '[data-testid="advanced-toggle"]',
-    title: "Advanced Risk Settings",
-    content: "Optional: Expand this to configure your slippage tolerance and liquidation buffers for fine-grained risk control.",
+    title: 'Advanced Risk Settings',
+    content:
+      'Optional: Expand this to configure your slippage tolerance and liquidation buffers for fine-grained risk control.',
     wizardStep: 2,
     position: 'top',
   },
   {
     targetSelector: '[data-testid="derived-section"]',
-    title: "Derived Values",
-    content: "Review your calculated early exit penalty and estimated network fees before proceeding.",
+    title: 'Derived Values',
+    content:
+      'Review your calculated early exit penalty and estimated network fees before proceeding.',
     wizardStep: 2,
     position: 'top',
   },
   {
     targetSelector: '[data-testid="configure-continue"]',
-    title: "Proceed to Review",
-    content: "Click continue to review your final configuration details.",
+    title: 'Proceed to Review',
+    content: 'Click continue to review your final configuration details.',
     wizardStep: 2,
     position: 'top',
   },
   {
     targetSelector: '[data-testid="review-sections"]',
-    title: "Review Parameters",
-    content: "Double-check your parameters. All settings are enforced on-chain via smart contracts and cannot be modified after creation.",
+    title: 'Review Parameters',
+    content:
+      'Double-check your parameters. All settings are enforced on-chain via smart contracts and cannot be modified after creation.',
     wizardStep: 3,
     position: 'bottom',
   },
   {
     targetSelector: '[data-testid="review-checkboxes"]',
-    title: "Accept Terms & Risks",
-    content: "You must check these boxes to agree to the smart contract terms and acknowledge the risks before creating your commitment.",
+    title: 'Accept Terms & Risks',
+    content:
+      'You must check these boxes to agree to the smart contract terms and acknowledge the risks before creating your commitment.',
     wizardStep: 3,
     position: 'top',
   },
   {
     targetSelector: '[data-testid="create-commitment-submit"]',
-    title: "Create Commitment",
-    content: "Ready? Click here to submit your transaction and deploy your on-chain liquidity commitment.",
+    title: 'Create Commitment',
+    content:
+      'Ready? Click here to submit your transaction and deploy your on-chain liquidity commitment.',
     wizardStep: 3,
     position: 'top',
   },
@@ -120,14 +131,13 @@ export function useGuidedTour({
       localStorage.setItem('commitlabs:seen-wizard-tour', 'true');
     }
 
-    if (walletAddress) {
-      const token = localStorage.getItem('sessionToken') || `session_${walletAddress}_${Date.now()}`;
+    const hasRealSession = typeof document !== 'undefined' && document.cookie.includes('session=');
+    if (walletAddress && hasRealSession) {
       try {
         await fetch('/api/user/preferences', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ seenWizardTour: true }),
         });
@@ -150,14 +160,11 @@ export function useGuidedTour({
         seen = localStorage.getItem('commitlabs:seen-wizard-tour') === 'true';
       }
 
-      if (walletAddress) {
-        const token = localStorage.getItem('sessionToken') || `session_${walletAddress}_${Date.now()}`;
+      const hasRealSession =
+        typeof document !== 'undefined' && document.cookie.includes('session=');
+      if (walletAddress && hasRealSession) {
         try {
-          const res = await fetch('/api/user/preferences', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const res = await fetch('/api/user/preferences');
           if (res.ok) {
             const data = await res.json();
             if (data?.data?.preferences?.seenWizardTour) {
@@ -193,7 +200,7 @@ export function useGuidedTour({
     if (currentStepConfig && currentStepConfig.wizardStep !== activeWizardStep) {
       // Find the first tour step index matching the active wizard step
       const firstMatchingIndex = TOUR_STEPS.findIndex(
-        (step) => step.wizardStep === activeWizardStep
+        (step) => step.wizardStep === activeWizardStep,
       );
       if (firstMatchingIndex !== -1) {
         setCurrentStepIndex(firstMatchingIndex);
@@ -224,7 +231,11 @@ export function useGuidedTour({
     const nextStepConfig = TOUR_STEPS[nextIndex];
 
     // If next tour step belongs to a different wizard step, transition wizard step
-    if (currentStepConfig && nextStepConfig && currentStepConfig.wizardStep !== nextStepConfig.wizardStep) {
+    if (
+      currentStepConfig &&
+      nextStepConfig &&
+      currentStepConfig.wizardStep !== nextStepConfig.wizardStep
+    ) {
       // Auto-fill a type selection in step 1 if proceeding to step 2 without selection
       if (currentStepConfig.wizardStep === 1 && onSelectDefaultType) {
         onSelectDefaultType();
@@ -243,7 +254,11 @@ export function useGuidedTour({
     const prevStepConfig = TOUR_STEPS[prevIndex];
 
     // If previous tour step belongs to a different wizard step, transition wizard step
-    if (currentStepConfig && prevStepConfig && currentStepConfig.wizardStep !== prevStepConfig.wizardStep) {
+    if (
+      currentStepConfig &&
+      prevStepConfig &&
+      currentStepConfig.wizardStep !== prevStepConfig.wizardStep
+    ) {
       setWizardStep(prevStepConfig.wizardStep);
     }
 

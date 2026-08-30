@@ -1,71 +1,56 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 interface UseGridSelectionOptions {
-  /** All visible item IDs (used for select all functionality) */
+  /** The currently visible IDs. Selection is bounded to these. */
   visibleIds: string[];
-  /** Optional initial selected IDs */
-  initialSelectedIds?: Set<string>;
 }
 
-interface UseGridSelectionReturn {
-  /** Set of currently selected IDs */
+interface UseGridSelectionResult {
+  /** Set of currently selected commitment IDs. */
   selectedIds: Set<string>;
-  /** Number of selected items */
+  /** Count of currently selected items. */
   selectedCount: number;
-  /** Whether all visible items are selected */
+  /** True when every visible item is selected. */
   isAllSelected: boolean;
-  /** Whether some (but not all) visible items are selected */
+  /** True when some (but not all) visible items are selected. */
   isIndeterminate: boolean;
-  /** Toggle selection of a single item */
+  /** Toggle a single item by id. */
   toggleSelection: (id: string) => void;
-  /** Select all visible items */
+  /** Select all visible items. */
   selectAll: () => void;
-  /** Clear all selections */
+  /** Deselect all items. */
   clearSelection: () => void;
-  /** Set selected IDs to a specific set */
-  setSelectedIds: (ids: Set<string>) => void;
 }
 
 /**
- * Hook for managing multi-select state in a grid component.
- * 
- * Features:
- * - Per-item selection toggle
- * - Select all visible items
- * - Clear all selections
- * - Selection survives filtering (persists across visible ID changes)
- * - Indeterminate state for partial selection
- * 
- * @example
- * ```tsx
- * const { selectedIds, toggleSelection, selectAll, clearSelection, isAllSelected } = useGridSelection({
- *   visibleIds: commitments.map(c => c.id),
- * });
- * ```
+ * useGridSelection
+ *
+ * Manages a Set-based selection state for a grid of items. Selection is
+ * always bounded to the currently visible IDs: items that are scrolled out
+ * of the rendered list or filtered out are automatically excluded from
+ * "select-all" coverage so the caller never receives stale IDs.
+ *
+ * All mutators are referentially stable (wrapped in useCallback) so they can
+ * be passed down to memoized child components without triggering re-renders.
  */
-export function useGridSelection({
-  visibleIds,
-  initialSelectedIds = new Set(),
-}: UseGridSelectionOptions): UseGridSelectionReturn {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(initialSelectedIds);
+export function useGridSelection({ visibleIds }: UseGridSelectionOptions): UseGridSelectionResult {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Memoize selection state calculations
-  const selectedCount = selectedIds.size;
-  
-  const isAllSelected = useMemo(() => {
-    if (visibleIds.length === 0) return false;
-    return visibleIds.every(id => selectedIds.has(id));
-  }, [visibleIds, selectedIds]);
+  const selectedCount = useMemo(() => {
+    // Only count ids that are still visible.
+    let count = 0;
+    for (const id of selectedIds) {
+      if (visibleIds.includes(id)) count++;
+    }
+    return count;
+  }, [selectedIds, visibleIds]);
 
-  const isIndeterminate = useMemo(() => {
-    if (visibleIds.length === 0) return false;
-    const visibleSelectedCount = visibleIds.filter(id => selectedIds.has(id)).length;
-    return visibleSelectedCount > 0 && visibleSelectedCount < visibleIds.length;
-  }, [visibleIds, selectedIds]);
+  const isAllSelected = visibleIds.length > 0 && selectedCount === visibleIds.length;
 
-  // Toggle selection of a single item
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
+
   const toggleSelection = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -76,12 +61,17 @@ export function useGridSelection({
     });
   }, []);
 
-  // Select all visible items
   const selectAll = useCallback(() => {
-    setSelectedIds(new Set(visibleIds));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of visibleIds) {
+        next.add(id);
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleIds]);
 
-  // Clear all selections
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
@@ -94,6 +84,5 @@ export function useGridSelection({
     toggleSelection,
     selectAll,
     clearSelection,
-    setSelectedIds,
   };
 }

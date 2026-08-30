@@ -9,10 +9,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockRequest, createMockRouteContext, parseResponse } from './helpers';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
-vi.mock('@/lib/backend/requireAuth', () => ({
-  requireAuth: vi.fn(),
+vi.mock('@/lib/backend/rateLimit', () => ({
+  checkRateLimit: vi.fn(),
+  getRateLimitWindowSeconds: vi.fn(() => 60),
 }));
 
 vi.mock('@/lib/backend/rateLimit', () => ({
@@ -31,8 +30,13 @@ vi.mock('@/lib/backend/services/contracts', () => ({
   transferOwnership: vi.fn(),
 }));
 
-vi.mock('@/lib/backend/auditLog', () => ({
-  appendAuditEvent: vi.fn(),
+vi.mock('@/lib/backend/idempotency', () => ({
+  idempotencyService: {
+    getRecord: vi.fn(),
+    start: vi.fn(),
+    complete: vi.fn(),
+    fail: vi.fn(),
+  },
 }));
 
 vi.mock('@/lib/backend/logger', () => ({
@@ -48,20 +52,32 @@ import { requireAuth } from '@/lib/backend/requireAuth';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { marketplaceService } from '@/lib/backend/services/marketplace';
 import { transferOwnership } from '@/lib/backend/services/contracts';
-import { appendAuditEvent } from '@/lib/backend/auditLog';
+import { idempotencyService } from '@/lib/backend/idempotency';
+import { marketplaceService } from '@/lib/backend/services/marketplace';
+import { idempotencyService } from '@/lib/backend/idempotency';
+import { verifyAuth } from '@/lib/backend/requireAuth';
+import { CsrfValidationError, ConflictError, UnauthorizedError } from '@/lib/backend/errors';
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
+const mockedCheckRateLimit = vi.mocked(checkRateLimit);
+const mockedAssertMutationCsrf = vi.mocked(assertMutationCsrf);
+const mockedTransferOwnership = vi.mocked(transferOwnership);
+const mockedGetListing = vi.mocked(marketplaceService.getListing);
+const mockedCompletePurchase = vi.mocked(marketplaceService.completePurchase);
+const mockedIdempotencyGetRecord = vi.mocked(idempotencyService.getRecord);
+const mockedIdempotencyStart = vi.mocked(idempotencyService.start);
 
-const BUYER = 'GBUYERADDRESS000000000000000000000000000000000000000000000';
-const SELLER = 'GSELLERADDRESS00000000000000000000000000000000000000000000';
+const mockPOST = POST as (
+  req: NextRequest,
+  context: { params: Record<string, string> },
+) => Promise<Response>;
 
 const activeListing = {
   id: 'listing_1',
   commitmentId: 'cm_abc',
   price: '52000',
   currencyAsset: 'USDC',
-  sellerAddress: SELLER,
-  status: 'Active',
+  sellerAddress: SELLER_ADDRESS,
+  status: 'Active' as const,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
@@ -77,22 +93,47 @@ const mockTransfer = {
   reference: 'ref-001',
 };
 
-function makeRequest(listingId = 'listing_1') {
-  return createMockRequest(
-    `http://localhost:3000/api/marketplace/listings/${listingId}/purchase`,
-    { method: 'POST' },
-  );
-}
+const TRANSFER_RESULT = {
+  commitmentId: 'commitment_123',
+  fromAddress: SELLER_ADDRESS,
+  toAddress: BUYER_ADDRESS,
+  txHash: '0xabc123',
+};
 
-function makeContext(id = 'listing_1') {
-  return createMockRouteContext({ id });
+function purchaseRequest(
+  listingId: string,
+  body: Record<string, unknown> = {
+    buyerAddress: BUYER_ADDRESS,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  },
+  headers: Record<string, string> = { authorization: 'Bearer valid-session' },
+) {
+  return [
+    createMockRequest(`http://localhost:3000/api/marketplace/listings/${listingId}/purchase`, {
+      method: 'POST',
+      body,
+      headers,
+    }),
+    createMockRouteContext({ id: listingId }),
+  ] as const;
 }
-
-// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('POST /api/marketplace/listings/[id]/purchase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedCheckRateLimit.mockResolvedValue(true);
+    mockedAssertMutationCsrf.mockImplementation(() => {});
+    mockedVerifyAuth.mockReturnValue({ address: BUYER_ADDRESS, isAdmin: false });
+    mockedIdempotencyGetRecord.mockResolvedValue(null);
+    mockedIdempotencyStart.mockResolvedValue(true);
+    mockedIdempotencyComplete.mockResolvedValue(undefined);
+    mockedIdempotencyFail.mockResolvedValue(undefined);
+    mockedGetListing.mockResolvedValue(ACTIVE_LISTING as any);
+    mockedTransferOwnership.mockResolvedValue(TRANSFER_RESULT);
+    mockedCompletePurchase.mockResolvedValue(SOLD_LISTING as any);
+    mockedIdempotencyGetRecord.mockResolvedValue(null);
+    mockedIdempotencyStart.mockResolvedValue(true);
+  });
 
     // Default: authenticated buyer, rate-limit passes
     vi.mocked(requireAuth).mockReturnValue({
@@ -147,13 +188,45 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
     expect(data.data.reference).toBeNull();
   });
 
-  it('calls transferOwnership with correct params', async () => {
-    await POST(makeRequest(), makeContext());
+    it('applies per-IP rate limiting', async () => {
+      const [req, ctx] = purchaseRequest('listing_1_123');
+      await mockPOST(req, ctx);
 
-    expect(transferOwnership).toHaveBeenCalledWith({
-      commitmentId: 'cm_abc',
-      fromAddress: SELLER,
-      toAddress: BUYER,
+      expect(mockedCheckRateLimit).toHaveBeenCalledWith(
+        expect.any(String),
+        'api/marketplace/listings/purchase',
+      );
+    });
+
+    it('replays a completed idempotent purchase response', async () => {
+      mockedIdempotencyGetRecord.mockResolvedValue({
+        key: 'purchase-key',
+        status: 'COMPLETED',
+        response: {
+          listingId: 'listing_1_123',
+          commitmentId: 'commitment_123',
+          buyerAddress: BUYER_ADDRESS,
+          sellerAddress: SELLER_ADDRESS,
+          txHash: '0xcached',
+          purchasedAt: '2026-01-02T00:00:00.000Z',
+        },
+        statusCode: 200,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 86400000,
+      });
+
+      const [req, ctx] = purchaseRequest('listing_1_123', { buyerAddress: BUYER_ADDRESS });
+      Object.defineProperty(req, 'headers', {
+        value: new Headers({ 'idempotency-key': 'purchase-key' }),
+        configurable: true,
+      });
+
+      const response = await mockPOST(req, ctx);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(200);
+      expect(result.data.data.txHash).toBe('0xcached');
+      expect(mockedTransferOwnership).not.toHaveBeenCalled();
     });
   });
 
@@ -166,16 +239,11 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
   it('records an audit event on success', async () => {
     await POST(makeRequest(), makeContext());
 
-    expect(appendAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        category: 'marketplace',
-        action: 'marketplace.purchase',
-        severity: 'info',
-        actor: BUYER,
-        resourceId: 'listing_1',
-      }),
-    );
-  });
+      const [req, ctx] = purchaseRequest('listing_1_123', { buyerAddress: BUYER_ADDRESS });
+      Object.defineProperty(req, 'headers', {
+        value: new Headers({ 'idempotency-key': 'purchase-key' }),
+        configurable: true,
+      });
 
   it('includes full purchase metadata in audit event', async () => {
     await POST(makeRequest(), makeContext());
@@ -201,8 +269,12 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
       throw new UnauthorizedError('No session token provided');
     });
 
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
+    it('rejects a missing buyerAddress', async () => {
+      const [req, ctx] = purchaseRequest('listing_1_123', {
+        networkPassphrase: NETWORK_PASSPHRASE,
+      });
+      const response = await mockPOST(req, ctx);
+      const result = await parseResponse(response);
 
     expect(status).toBe(401);
     expect(data.success).toBe(false);
@@ -258,8 +330,10 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
       reasons: ['listing_inactive'],
     });
 
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
+    it('rejects malformed listing ids before service lookup', async () => {
+      const [req, ctx] = purchaseRequest('../listing_1_123');
+      const response = await mockPOST(req, ctx);
+      const result = await parseResponse(response);
 
     expect(status).toBe(409);
     expect(data.success).toBe(false);
@@ -307,8 +381,13 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
       reasons: ['buyer_is_seller'],
     });
 
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
+    it('rejects invalid buyer wallet addresses', async () => {
+      const [req, ctx] = purchaseRequest('listing_1_123', {
+        buyerAddress: 'not-a-wallet',
+        networkPassphrase: NETWORK_PASSPHRASE,
+      });
+      const response = await mockPOST(req, ctx);
+      const result = await parseResponse(response);
 
     expect(status).toBe(409);
     expect(data.error.message).toContain('buyer_is_seller');
@@ -349,7 +428,13 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
       reasons: ['listing_inactive'],
     });
 
-    await POST(makeRequest(), makeContext());
+    it('rejects a wallet connected to the wrong network', async () => {
+      const [req, ctx] = purchaseRequest('listing_1_123', {
+        buyerAddress: BUYER_ADDRESS,
+        networkPassphrase: 'Public Global Stellar Network ; September 2015',
+      });
+      const response = await mockPOST(req, ctx);
+      const result = await parseResponse(response);
 
     expect(transferOwnership).not.toHaveBeenCalled();
   });
@@ -371,7 +456,14 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
       reasons: ['listing_inactive'],
     });
 
-    await POST(makeRequest(), makeContext());
+    it('rejects tampered extra request fields', async () => {
+      const [req, ctx] = purchaseRequest('listing_1_123', {
+        buyerAddress: BUYER_ADDRESS,
+        networkPassphrase: NETWORK_PASSPHRASE,
+        sellerAddress: OTHER_ADDRESS,
+      });
+      const response = await mockPOST(req, ctx);
+      const result = await parseResponse(response);
 
     expect(appendAuditEvent).not.toHaveBeenCalled();
   });
@@ -414,8 +506,17 @@ describe('POST /api/marketplace/listings/[id]/purchase', () => {
       reasons: ['listing_inactive', 'non_transferable'],
     });
 
-    const res = await POST(makeRequest(), makeContext());
-    const { data } = await parseResponse(res);
+    it('rejects invalid JSON body', async () => {
+      const req = createMockRequest(
+        'http://localhost:3000/api/marketplace/listings/listing_1_123/purchase',
+        { method: 'POST', headers: { authorization: 'Bearer valid-session' } },
+      );
+      // Force an invalid JSON body.
+      Object.defineProperty(req, 'json', {
+        value: () => Promise.reject(new Error('bad json')),
+      });
+      const response = await mockPOST(req, createMockRouteContext({ id: 'listing_1_123' }));
+      const result = await parseResponse(response);
 
     expect(data.error.message).toContain('listing_inactive');
     expect(data.error.message).toContain('non_transferable');

@@ -67,5 +67,10 @@
       "price": "$105,000",
       "forSale": true
     }
-  ]
+  ],
+  "preferences": {
+    "GTESTSTORE123456789": {
+      "displayCurrency": "GBP"
+    }
+  }
 }

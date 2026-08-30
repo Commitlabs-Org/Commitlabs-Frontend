@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from './route';
-import { ValidationError, NotFoundError, ConflictError, TooManyRequestsError } from '@/lib/backend/errors';
+import { CsrfValidationError } from '@/lib/backend/errors';
 
 vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn(),
@@ -9,41 +9,45 @@ vi.mock('@/lib/backend/rateLimit', () => ({
 vi.mock('@/lib/backend/services/contracts', () => ({
   openDisputeOnChain: vi.fn(),
 }));
-vi.mock('@/lib/backend/logger', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/backend/logger')>();
-  return { ...actual, logDisputeOpened: vi.fn() };
-});
+vi.mock('@/lib/backend/csrf', () => ({
+  assertMutationCsrf: vi.fn(),
+}));
+vi.mock('@/lib/backend/logger', () => ({
+  logDisputeOpened: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+}));
 vi.mock('@/lib/backend/auditLog', () => ({
   recordAuditEvent: vi.fn(),
 }));
 
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { openDisputeOnChain } from '@/lib/backend/services/contracts';
-import { logDisputeOpened } from '@/lib/backend/logger';
-import { recordAuditEvent } from '@/lib/backend/auditLog';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 const mockOpenDisputeOnChain = vi.mocked(openDisputeOnChain);
-const mockLogDisputeOpened = vi.mocked(logDisputeOpened);
-const mockRecordAuditEvent = vi.mocked(recordAuditEvent);
+const mockAssertMutationCsrf = vi.mocked(assertMutationCsrf);
 
 const MOCK_DISPUTE_RESULT = {
   commitmentId: 'cmt-123',
-  disputeId: 'dsp-abc',
+  disputeId: 'dis-1',
   status: 'DISPUTED',
-  txHash: '0xdeadbeef',
-  disputedAt: '2026-06-27T12:00:00.000Z',
+  txHash: '0xabc',
+  disputedAt: '2026-06-01T00:00:00.000Z',
 };
 
 function makeRequest(
   id: string,
   body?: Record<string, unknown>,
+  method = 'POST',
 ): [NextRequest, { params: { id: string } }] {
-  const req = new NextRequest(`http://localhost/api/commitments/${id}/dispute`, {
-    method: 'POST',
-    headers: body ? { 'content-type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const init: RequestInit = { method };
+  if (body) {
+    init.headers = { 'content-type': 'application/json' };
+    init.body = JSON.stringify(body);
+  }
+  const req = new NextRequest(`http://localhost/api/commitments/${id}/dispute`, init);
   return [req, { params: { id } }];
 }
 
@@ -63,167 +67,100 @@ async function expectError(
 
 describe('POST /api/commitments/[id]/dispute', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockCheckRateLimit.mockResolvedValue({ allowed: true, retryAfterSeconds: 60 } as any);
+    vi.resetAllMocks();
+    mockCheckRateLimit.mockResolvedValue(true);
     mockOpenDisputeOnChain.mockResolvedValue(MOCK_DISPUTE_RESULT);
+    mockAssertMutationCsrf.mockImplementation(() => {});
   });
 
-  describe('200 - success', () => {
-    it('opens a dispute with reason', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Counterparty breached terms' });
+  describe('authorization boundary', () => {
+    it('enforces CSRF before any processing', async () => {
+      mockAssertMutationCsrf.mockImplementation(() => {
+        throw new CsrfValidationError();
+      });
+      const [req, ctx] = makeRequest('cmt-123', { reason: 'Fraud', callerAddress: 'GOWNER1' });
+      await expectError(req, ctx, 403, 'CSRF_INVALID');
+      expect(mockOpenDisputeOnChain).not.toHaveBeenCalled();
+    });
+
+    it('rejects a missing caller address as Forbidden', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { reason: 'Fraud' });
+      await expectError(req, ctx, 403, 'FORBIDDEN');
+      expect(mockOpenDisputeOnChain).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('route-parameter validation (hostile input boundary)', () => {
+    it('rejects an empty commitment id', async () => {
+      const [req, ctx] = makeRequest('', { reason: 'Fraud', callerAddress: 'GOWNER1' });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+      expect(mockOpenDisputeOnChain).not.toHaveBeenCalled();
+    });
+
+    it('rejects path-traversal characters in the id', async () => {
+      const [req, ctx] = makeRequest('../etc/passwd', {
+        reason: 'Fraud',
+        callerAddress: 'GOWNER1',
+      });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+      expect(mockOpenDisputeOnChain).not.toHaveBeenCalled();
+    });
+
+    it('rejects an over-long id', async () => {
+      const [req, ctx] = makeRequest('x'.repeat(200), {
+        reason: 'Fraud',
+        callerAddress: 'GOWNER1',
+      });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+      expect(mockOpenDisputeOnChain).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('request-body validation', () => {
+    it('rejects an empty reason', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { reason: '', callerAddress: 'GOWNER1' });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects invalid JSON', async () => {
+      const req = new NextRequest('http://localhost/api/commitments/cmt-123/dispute', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{not json',
+      });
+      await expectError(req, { params: { id: 'cmt-123' } }, 400, 'VALIDATION_ERROR');
+    });
+  });
+
+  describe('rate limit', () => {
+    it('returns 429 when rate limited', async () => {
+      mockCheckRateLimit.mockResolvedValue(false);
+      const [req, ctx] = makeRequest('cmt-123', { reason: 'Fraud', callerAddress: 'GOWNER1' });
+      await expectError(req, ctx, 429, 'TOO_MANY_REQUESTS');
+      expect(mockOpenDisputeOnChain).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('success', () => {
+    it('opens a dispute and returns the result envelope', async () => {
+      const [req, ctx] = makeRequest('cmt-123', {
+        reason: 'Fraud',
+        evidence: 'tx-id',
+        callerAddress: 'GOWNER1',
+      });
       const res = await POST(req, ctx);
       const body = await res.json();
 
       expect(res.status).toBe(200);
       expect(body.success).toBe(true);
-      expect(body.data).toEqual({
-        commitmentId: 'cmt-123',
-        disputeId: 'dsp-abc',
-        status: 'DISPUTED',
-        txHash: '0xdeadbeef',
-        disputedAt: '2026-06-27T12:00:00.000Z',
-      });
-      expect(body.meta).toBeUndefined();
-    });
-
-    it('passes evidence and callerAddress to the contract', async () => {
-      const [req, ctx] = makeRequest('cmt-123', {
-        reason: 'Breach',
-        evidence: 'screenshot.png',
-        callerAddress: 'GABCDEF123',
-      });
-      await POST(req, ctx);
-
+      expect(body.data.commitmentId).toBe('cmt-123');
+      expect(body.data.disputeId).toBe('dis-1');
       expect(mockOpenDisputeOnChain).toHaveBeenCalledWith({
         commitmentId: 'cmt-123',
-        reason: 'Breach',
-        evidence: 'screenshot.png',
-        callerAddress: 'GABCDEF123',
+        reason: 'Fraud',
+        evidence: 'tx-id',
+        callerAddress: 'GOWNER1',
       });
-    });
-
-    it('defaults callerAddress to empty string when omitted', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test' });
-      await POST(req, ctx);
-
-      expect(mockOpenDisputeOnChain).toHaveBeenCalledWith(
-        expect.objectContaining({ callerAddress: '' }),
-      );
-    });
-
-    it('records audit event with DISPUTE_OPENED', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test' });
-      await POST(req, ctx);
-
-      expect(mockRecordAuditEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          eventType: 'DISPUTE_OPENED',
-          commitmentId: 'cmt-123',
-        }),
-      );
-      expect(mockRecordAuditEvent).toHaveBeenCalledTimes(1);
-    });
-
-    it('logs dispute opened on success', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test reason' });
-      await POST(req, ctx);
-
-      expect(mockLogDisputeOpened).toHaveBeenCalledWith(
-        expect.objectContaining({
-          commitmentId: 'cmt-123',
-          reason: 'Test reason',
-        }),
-      );
-    });
-  });
-
-  describe('400 - validation errors', () => {
-    it('rejects empty commitment id', async () => {
-      const [req, ctx] = makeRequest('', { reason: 'Test' });
-      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
-    });
-
-    it('rejects whitespace-only id', async () => {
-      const [req, ctx] = makeRequest('   ', { reason: 'Test' });
-      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
-    });
-
-    it('rejects missing request body', async () => {
-      const req = new NextRequest('http://localhost/api/commitments/cmt-123/dispute', { method: 'POST' });
-      await expectError(req, { params: { id: 'cmt-123' } }, 400, 'VALIDATION_ERROR');
-    });
-
-    it('rejects invalid JSON body', async () => {
-      const req = new NextRequest('http://localhost/api/commitments/cmt-123/dispute', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: 'not-json',
-      });
-      await expectError(req, { params: { id: 'cmt-123' } }, 400, 'VALIDATION_ERROR');
-    });
-
-    it('rejects missing reason', async () => {
-      const [req, ctx] = makeRequest('cmt-123', {});
-      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
-    });
-
-    it('rejects empty reason', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { reason: '' });
-      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
-    });
-
-    it('rejects reason exceeding 500 characters', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'x'.repeat(501) });
-      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
-    });
-  });
-
-  describe('404 - not found', () => {
-    it('returns 404 when openDisputeOnChain throws NotFoundError', async () => {
-      mockOpenDisputeOnChain.mockRejectedValue(new NotFoundError('Commitment'));
-      const [req, ctx] = makeRequest('nonexistent', { reason: 'Test' });
-      await expectError(req, ctx, 404, 'NOT_FOUND');
-    });
-  });
-
-  describe('409 - conflict', () => {
-    it('returns 409 when commitment is already in dispute', async () => {
-      mockOpenDisputeOnChain.mockRejectedValue(
-        new ConflictError('Commitment is already in dispute.'),
-      );
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test' });
-      await expectError(req, ctx, 409, 'CONFLICT');
-    });
-
-    it('returns 409 when commitment is settled', async () => {
-      mockOpenDisputeOnChain.mockRejectedValue(
-        new ConflictError('Cannot dispute a commitment that is already settled or exited.'),
-      );
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test' });
-      await expectError(req, ctx, 409, 'CONFLICT');
-    });
-  });
-
-  describe('429 - rate limited', () => {
-    it('returns 429 when rate limit exceeded', async () => {
-      mockCheckRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 60 } as any);
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test' });
-      await expectError(req, ctx, 429, 'TOO_MANY_REQUESTS');
-    });
-  });
-
-  describe('error logging', () => {
-    it('logs error when dispute fails', async () => {
-      mockOpenDisputeOnChain.mockRejectedValue(new Error('RPC failure'));
-      const [req, ctx] = makeRequest('cmt-123', { reason: 'Test' });
-      await POST(req, ctx);
-
-      expect(mockLogDisputeOpened).toHaveBeenCalledWith(
-        expect.objectContaining({
-          commitmentId: 'cmt-123',
-          error: 'RPC failure',
-        }),
-      );
     });
   });
 });

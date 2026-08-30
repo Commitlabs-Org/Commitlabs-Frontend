@@ -1,249 +1,189 @@
-import { NextResponse } from 'next/server';
+// src/lib/backend/pagination.ts
+//
+// Shared pagination & sorting utilities for list/search API routes.
+//
+// Centralizes bound-setting (page/pageSize limits, allowed sort fields) so
+// every list endpoint enforces the same invariants instead of each route
+// re-implementing — and potentially drifting on — its own limits.
 
-export const DEFAULT_PAGE = 1;
-export const DEFAULT_PAGE_SIZE = 10;
+import { fail } from './apiResponse';
+
+// ─── Bounds ───────────────────────────────────────────
+
+/** Minimum allowed page number (1-indexed). */
+export const MIN_PAGE = 1;
+/** Minimum allowed page size. */
+export const MIN_PAGE_SIZE = 1;
+/**
+ * Maximum allowed page size. Keeps a single request's response payload and
+ * in-memory sort/filter work bounded, regardless of how many total items
+ * exist for the caller.
+ */
 export const MAX_PAGE_SIZE = 100;
+/** Page size used when the caller omits `pageSize`. */
+export const DEFAULT_PAGE_SIZE = 10;
+/** Page used when the caller omits `page`. */
+export const DEFAULT_PAGE = 1;
+
 export type SortOrder = 'asc' | 'desc';
 
 export interface PaginationParams {
-    page: number;
-    pageSize: number;
-    offset: number;
+  page: number;
+  pageSize: number;
 }
 
-export interface SortParams<TField extends string> {
-    sortBy: TField;
-    sortOrder: SortOrder;
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 export interface PaginatedResult<T> {
-    data: T[];
-    meta: {
-        page: number;
-        pageSize: number;
-        total: number;
-        totalPages: number;
-        hasNextPage: boolean;
-        hasPrevPage: boolean;
-    };
+  data: T[];
+  meta: PaginationMeta;
 }
 
-interface ParseError {
-    param: string;
-    message: string;
-}
+type PaginationField = 'page' | 'pageSize' | 'sortBy' | 'sortOrder';
 
 /**
- * Thrown internally when a query param fails validation.
- * Caught by the route helpers below and converted to a 400 response.
+ * Thrown when a caller-supplied pagination/sort query param is present but
+ * invalid (non-numeric, non-integer, out of range, or not an allowed sort
+ * field). Deliberately distinct from silently clamping: a request for
+ * `pageSize=99999` should fail loudly, not quietly become `pageSize=100`,
+ * so the caller's own bound-checking (e.g. "did I get everything I asked
+ * for?") isn't fooled by a mismatch it never sees.
  */
 export class PaginationParseError extends Error {
-    constructor(public readonly errors: ParseError[]) {
-        super(errors.map((e) => e.message).join('; '));
-        this.name = 'PaginationParseError';
-    }
+  constructor(
+    message: string,
+    public readonly field: PaginationField,
+    public readonly value: string | null,
+  ) {
+    super(message);
+    this.name = 'PaginationParseError';
+  }
 }
 
-/**
- * Parse `page` and `pageSize` from URLSearchParams with safe defaults.
- *
- * @throws {PaginationParseError} if either value is non-numeric or out of range.
- */
-export function parsePaginationParams(
-    searchParams: URLSearchParams,
-    options: { defaultPageSize?: number; maxPageSize?: number } = {}
-): PaginationParams {
-    const { defaultPageSize = DEFAULT_PAGE_SIZE, maxPageSize = MAX_PAGE_SIZE } = options;
-
-    const rawPage = searchParams.get('page');
-    const rawPageSize = searchParams.get('pageSize');
-
-    const page =
-        rawPage !== null ? parsePositiveInt(rawPage, 'page') : DEFAULT_PAGE;
-    const pageSize =
-        rawPageSize !== null
-            ? parsePositiveInt(rawPageSize, 'pageSize', { max: maxPageSize })
-            : defaultPageSize;
-
-    return { page, pageSize, offset: (page - 1) * pageSize };
-}
-
-/**
- * Parse `sortBy` and `sortOrder` query params.
- *
- * @param searchParams     URLSearchParams from the request URL.
- * @param allowedFields    Whitelist of valid `sortBy` values.
- * @param defaultSortBy    Fallback when the param is absent.
- * @param defaultSortOrder Fallback order when the param is absent (default: 'asc').
- *
- * @throws {PaginationParseError} if a value is not in its whitelist.
- */
-export function parseSortParams<TField extends string>(
-    searchParams: URLSearchParams,
-    allowedFields: readonly TField[],
-    defaultSortBy: TField,
-    defaultSortOrder: SortOrder = 'asc'
-): SortParams<TField> {
-    const rawSortBy = searchParams.get('sortBy');
-    const rawSortOrder = searchParams.get('sortOrder');
-
-    let sortBy: TField = defaultSortBy;
-    if (rawSortBy !== null) {
-        if (!allowedFields.includes(rawSortBy as TField)) {
-            throw new PaginationParseError([
-                {
-                    param: 'sortBy',
-                    message: `Invalid 'sortBy' value: "${rawSortBy}". Allowed: ${allowedFields.join(', ')}.`,
-                },
-            ]);
-        }
-        sortBy = rawSortBy as TField;
-    }
-
-    let sortOrder: SortOrder = defaultSortOrder;
-    if (rawSortOrder !== null) {
-        if (rawSortOrder !== 'asc' && rawSortOrder !== 'desc') {
-            throw new PaginationParseError([
-                {
-                    param: 'sortOrder',
-                    message: `Invalid 'sortOrder' value: "${rawSortOrder}". Must be "asc" or "desc".`,
-                },
-            ]);
-        }
-        sortOrder = rawSortOrder;
-    }
-
-    return { sortBy, sortOrder };
-}
-
-/**
- * Parse a single enum-style filter param.
- * Returns `undefined` when the param is absent (no filter applied).
- *
- * @throws {PaginationParseError} if the value is present but not in the allowed set.
- */
-export function parseEnumFilter<T extends string>(
-    searchParams: URLSearchParams,
-    paramName: string,
-    allowedValues: readonly T[]
-): T | undefined {
-    const raw = searchParams.get(paramName);
-    if (raw === null) return undefined;
-
-    if (!allowedValues.includes(raw as T)) {
-        throw new PaginationParseError([
-            {
-                param: paramName,
-                message: `Invalid '${paramName}' value: "${raw}". Allowed: ${allowedValues.join(', ')}.`,
-            },
-        ]);
-    }
-
-    return raw as T;
-}
-
-/**
- * Parse a numeric range filter (`${paramName}Min` / `${paramName}Max`).
- *
- * @throws {PaginationParseError} if a value is non-numeric, out of bounds, or min > max.
- */
-export function parseRangeFilter(
-    searchParams: URLSearchParams,
-    paramName: string,
-    options: { min?: number; max?: number } = {}
-): { min: number | undefined; max: number | undefined } {
-    const rawMin = searchParams.get(`${paramName}Min`);
-    const rawMax = searchParams.get(`${paramName}Max`);
-
-    const errors: ParseError[] = [];
-
-    const min = rawMin !== null ? parseFloat(rawMin) : undefined;
-    const max = rawMax !== null ? parseFloat(rawMax) : undefined;
-
-    if (rawMin !== null && isNaN(min!)) {
-        errors.push({ param: `${paramName}Min`, message: `'${paramName}Min' must be a valid number.` });
-    }
-    if (rawMax !== null && isNaN(max!)) {
-        errors.push({ param: `${paramName}Max`, message: `'${paramName}Max' must be a valid number.` });
-    }
-    if (errors.length) throw new PaginationParseError(errors);
-
-    if (min !== undefined && options.min !== undefined && min < options.min) {
-        errors.push({ param: `${paramName}Min`, message: `'${paramName}Min' must be at least ${options.min}.` });
-    }
-    if (max !== undefined && options.max !== undefined && max > options.max) {
-        errors.push({ param: `${paramName}Max`, message: `'${paramName}Max' must be at most ${options.max}.` });
-    }
-    if (min !== undefined && max !== undefined && min > max) {
-        errors.push({
-            param: paramName,
-            message: `'${paramName}Min' (${min}) cannot be greater than '${paramName}Max' (${max}).`,
-        });
-    }
-
-    if (errors.length) throw new PaginationParseError(errors);
-
-    return { min, max };
-}
-
-/**
- * Apply pagination to an already-sorted / filtered in-memory array and wrap
- * the result in the standard `PaginatedResult` envelope.
- */
-export function paginateArray<T>(
-    items: T[],
-    { page, pageSize, offset }: PaginationParams
-): PaginatedResult<T> {
-    const total = items.length;
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-    return {
-        data: items.slice(offset, offset + pageSize),
-        meta: {
-            page,
-            pageSize,
-            total,
-            totalPages,
-            hasNextPage: page < totalPages,
-            hasPrevPage: page > 1,
-        },
-    };
-}
-
-/**
- * Convert a `PaginationParseError` into a standard 400 JSON response.
- */
-export function paginationErrorResponse(err: PaginationParseError): NextResponse {
-    return NextResponse.json(
-        {
-            success: false,
-            error: {
-                code: 'VALIDATION_ERROR',
-                message: 'Invalid query parameters.',
-                details: err.errors,
-            },
-        },
-        { status: 400 }
-    );
-}
-
-function parsePositiveInt(
-    raw: string,
-    paramName: string,
-    options: { max?: number } = {}
+function parseBoundedInt(
+  raw: string | null,
+  fallback: number,
+  min: number,
+  max: number,
+  field: 'page' | 'pageSize',
 ): number {
-    const value = parseInt(raw, 10);
+  if (raw === null || raw === '') return fallback;
 
-    if (isNaN(value) || value < 1) {
-        throw new PaginationParseError([
-            { param: paramName, message: `'${paramName}' must be a positive integer.` },
-        ]);
-    }
-    if (options.max !== undefined && value > options.max) {
-        throw new PaginationParseError([
-            { param: paramName, message: `'${paramName}' must not exceed ${options.max}.` },
-        ]);
-    }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+    throw new PaginationParseError(`'${field}' must be an integer.`, field, raw);
+  }
+  if (parsed < min || parsed > max) {
+    throw new PaginationParseError(`'${field}' must be between ${min} and ${max}.`, field, raw);
+  }
+  return parsed;
+}
 
-    return value;
+/**
+ * Parses and bounds `page`/`pageSize` from a query string. Both are
+ * optional and fall back to the defaults above when omitted.
+ */
+export function parsePaginationParams(searchParams: URLSearchParams): PaginationParams {
+  const page = parseBoundedInt(
+    searchParams.get('page'),
+    DEFAULT_PAGE,
+    MIN_PAGE,
+    Number.MAX_SAFE_INTEGER,
+    'page',
+  );
+  const pageSize = parseBoundedInt(
+    searchParams.get('pageSize'),
+    DEFAULT_PAGE_SIZE,
+    MIN_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    'pageSize',
+  );
+
+  return { page, pageSize };
+}
+
+/**
+ * Parses `sortBy`/`sortOrder`, restricting `sortBy` to `allowedFields` so a
+ * caller can't force a sort on an arbitrary/unexpected field.
+ */
+export function parseSortParams<F extends readonly string[]>(
+  searchParams: URLSearchParams,
+  allowedFields: F,
+  defaultField: F[number],
+  defaultOrder: SortOrder,
+): { sortBy: F[number]; sortOrder: SortOrder } {
+  const rawSortBy = searchParams.get('sortBy');
+  let sortBy: F[number] = defaultField;
+  if (rawSortBy !== null && rawSortBy !== '') {
+    if (!(allowedFields as readonly string[]).includes(rawSortBy)) {
+      throw new PaginationParseError(
+        `'sortBy' must be one of: ${allowedFields.join(', ')}.`,
+        'sortBy',
+        rawSortBy,
+      );
+    }
+    sortBy = rawSortBy;
+  }
+
+  const rawSortOrder = searchParams.get('sortOrder');
+  let sortOrder: SortOrder = defaultOrder;
+  if (rawSortOrder !== null && rawSortOrder !== '') {
+    if (rawSortOrder !== 'asc' && rawSortOrder !== 'desc') {
+      throw new PaginationParseError(
+        `'sortOrder' must be 'asc' or 'desc'.`,
+        'sortOrder',
+        rawSortOrder,
+      );
+    }
+    sortOrder = rawSortOrder;
+  }
+
+  return { sortBy, sortOrder };
+}
+
+/**
+ * Slices an already-filtered/sorted in-memory array into one page.
+ *
+ * A page past the end returns an empty `data` array rather than an error —
+ * pagination past the last page is a normal, valid empty-state, not a
+ * client mistake.
+ */
+export function paginateArray<T>(items: T[], params: PaginationParams): PaginatedResult<T> {
+  const total = items.length;
+  const totalPages = total === 0 ? 0 : Math.ceil(total / params.pageSize);
+  const start = (params.page - 1) * params.pageSize;
+  const data = start >= total ? [] : items.slice(start, start + params.pageSize);
+
+  return {
+    data,
+    meta: {
+      page: params.page,
+      pageSize: params.pageSize,
+      total,
+      totalPages,
+      hasNextPage: params.page < totalPages,
+      hasPreviousPage: params.page > 1,
+    },
+  };
+}
+
+/** Builds the standard 400 response body for a `PaginationParseError`. */
+export function paginationErrorResponse(
+  err: PaginationParseError,
+  correlationId?: string,
+): Response {
+  return fail(
+    'VALIDATION_ERROR',
+    err.message,
+    { field: err.field, value: err.value },
+    400,
+    correlationId,
+  );
 }

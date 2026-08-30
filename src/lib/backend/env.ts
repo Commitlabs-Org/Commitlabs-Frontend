@@ -3,13 +3,13 @@
 // In production the module validates eagerly (fail fast); in dev/test it is
 // lazy and lenient (only URL format and minimum-length constraints apply).
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /** Env var names whose raw values must never appear in error output */
 const SENSITIVE_ENV_KEYS = new Set([
-  "SOROBAN_SERVER_SECRET_KEY",
-  "SESSION_SECRET",
-  "STORAGE_CONNECTION",
+  'SOROBAN_SERVER_SECRET_KEY',
+  'SESSION_SECRET',
+  'STORAGE_CONNECTION',
 ]);
 
 /** URL validation that works with Zod v4 */
@@ -22,7 +22,7 @@ const urlSchema = z.string().refine(
       return false;
     }
   },
-  { message: "Must be a valid URL (e.g. https://example.com)" },
+  { message: 'Must be a valid URL (e.g. https://example.com)' },
 );
 
 /**
@@ -32,12 +32,8 @@ const urlSchema = z.string().refine(
  */
 const envSchema = z.object({
   // Runtime environment
-  NODE_ENV: z
-    .enum(["development", "test", "production"] as const)
-    .default("development"),
-  VERCEL_ENV: z
-    .enum(["production", "preview", "development"] as const)
-    .optional(),
+  NODE_ENV: z.enum(['development', 'test', 'production'] as const).default('development'),
+  VERCEL_ENV: z.enum(['production', 'preview', 'development'] as const).optional(),
 
   // Soroban RPC endpoints — format-validated when present
   SOROBAN_RPC_URL: urlSchema.optional(),
@@ -60,10 +56,7 @@ const envSchema = z.object({
   SOROBAN_SOURCE_ACCOUNT: z.string().optional(),
 
   // Session signing secret — SENSITIVE, min 32 chars when provided
-  SESSION_SECRET: z
-    .string()
-    .min(32, "SESSION_SECRET must be at least 32 characters")
-    .optional(),
+  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters').optional(),
 
   // Blob / database connection string — SENSITIVE
   STORAGE_CONNECTION: z.string().optional(),
@@ -85,12 +78,6 @@ const envSchema = z.object({
 
   // Mock-mode flag
   NEXT_PUBLIC_USE_MOCKS: z.string().optional(),
-
-  // Per-call Soroban RPC timeout in milliseconds (default: 30000)
-  SOROBAN_RPC_TIMEOUT_MS: z
-    .string()
-    .regex(/^\d+$/, "Must be a positive integer")
-    .optional(),
 });
 
 /** Fully validated, type-safe environment object */
@@ -104,26 +91,20 @@ export class EnvValidationError extends Error {
   readonly issues: ReadonlyArray<{ path: string; message: string }>;
 
   constructor(issues: Array<{ path: string; message: string }>) {
-    const lines = issues
-      .map(({ path, message }) => `  - ${path}: ${message}`)
-      .join("\n");
+    const lines = issues.map(({ path, message }) => `  - ${path}: ${message}`).join('\n');
     super(`Environment validation failed:\n${lines}`);
-    this.name = "EnvValidationError";
+    this.name = 'EnvValidationError';
     this.issues = issues;
   }
 }
 
-function formatZodIssues(
-  zodError: z.ZodError,
-): Array<{ path: string; message: string }> {
+function formatZodIssues(zodError: z.ZodError): Array<{ path: string; message: string }> {
   return zodError.issues.map((issue) => {
-    const path = issue.path.join(".") || "(root)";
+    const path = issue.path.join('.') || '(root)';
     const isSensitive = SENSITIVE_ENV_KEYS.has(path);
     return {
       path,
-      message: isSensitive
-        ? `${issue.message} (value redacted)`
-        : issue.message,
+      message: isSensitive ? `${issue.message} (value redacted)` : issue.message,
     };
   });
 }
@@ -132,11 +113,8 @@ function formatZodIssues(
  * Returns additional issues that are only enforced in production
  * (NODE_ENV=production or VERCEL_ENV=production).
  */
-function checkProductionRequirements(
-  data: ValidatedEnv,
-): Array<{ path: string; message: string }> {
-  const isProduction =
-    data.NODE_ENV === "production" || data.VERCEL_ENV === "production";
+function checkProductionRequirements(data: ValidatedEnv): Array<{ path: string; message: string }> {
+  const isProduction = data.NODE_ENV === 'production' || data.VERCEL_ENV === 'production';
 
   if (!isProduction) return [];
 
@@ -144,32 +122,31 @@ function checkProductionRequirements(
 
   if (!data.SESSION_SECRET) {
     issues.push({
-      path: "SESSION_SECRET",
+      path: 'SESSION_SECRET',
       message:
-        "Required in production — generate a secure random secret of at least 32 characters (value redacted)",
+        'Required in production — generate a secure random secret of at least 32 characters (value redacted)',
     });
   }
 
   if (!data.SOROBAN_RPC_URL_ALLOWLIST) {
     issues.push({
-      path: "SOROBAN_RPC_URL_ALLOWLIST",
+      path: 'SOROBAN_RPC_URL_ALLOWLIST',
       message:
-        "Required in production — provide a comma-separated list of permitted Soroban RPC URLs",
+        'Required in production — provide a comma-separated list of permitted Soroban RPC URLs',
     });
   } else {
     // Verify the active RPC URL is within the allowlist
-    const rpcUrl =
-      data.SOROBAN_RPC_URL ?? data.NEXT_PUBLIC_SOROBAN_RPC_URL;
+    const rpcUrl = data.SOROBAN_RPC_URL ?? data.NEXT_PUBLIC_SOROBAN_RPC_URL;
     if (rpcUrl) {
-      const allowlist = data.SOROBAN_RPC_URL_ALLOWLIST.split(",")
+      const allowlist = data.SOROBAN_RPC_URL_ALLOWLIST.split(',')
         .map((u) => u.trim())
         .filter(Boolean);
       if (!allowlist.includes(rpcUrl)) {
         issues.push({
-          path: "SOROBAN_RPC_URL",
+          path: 'SOROBAN_RPC_URL',
           message:
-            "Configured RPC URL is not in SOROBAN_RPC_URL_ALLOWLIST — " +
-            "add it to the allowlist or correct the URL",
+            'Configured RPC URL is not in SOROBAN_RPC_URL_ALLOWLIST — ' +
+            'add it to the allowlist or correct the URL',
         });
       }
     }
@@ -231,9 +208,6 @@ export function _resetEnvCache(): void {
 // Fail fast in production: validate at module load time so a misconfigured
 // deployment crashes immediately rather than at the first inbound request.
 /* c8 ignore next 5 */
-if (
-  process.env.NODE_ENV === "production" ||
-  process.env.VERCEL_ENV === "production"
-) {
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
   getValidatedEnv();
 }

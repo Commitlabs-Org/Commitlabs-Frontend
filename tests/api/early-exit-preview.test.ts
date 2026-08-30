@@ -1,9 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  createMockRequest,
-  createMockRouteContext,
-  parseResponse,
-} from './helpers';
+import { createMockRequest, createMockRouteContext, parseResponse } from './helpers';
 
 vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn(),
@@ -74,7 +71,9 @@ describe('GET /api/commitments/[id]/early-exit/preview', () => {
     } as any);
 
     const response = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`),
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`,
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
@@ -100,7 +99,9 @@ describe('GET /api/commitments/[id]/early-exit/preview', () => {
     } as any);
 
     const maturedResponse = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`),
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`,
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const maturedResult = await parseResponse(maturedResponse);
@@ -123,7 +124,9 @@ describe('GET /api/commitments/[id]/early-exit/preview', () => {
     } as any);
 
     const nearMaturityResponse = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`),
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`,
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const nearMaturityResult = await parseResponse(nearMaturityResponse);
@@ -139,7 +142,9 @@ describe('GET /api/commitments/[id]/early-exit/preview', () => {
     mockedGetCommitmentFromChain.mockResolvedValue(null as any);
 
     const response = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`),
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`,
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
@@ -157,7 +162,9 @@ describe('GET /api/commitments/[id]/early-exit/preview', () => {
     } as any);
 
     const response = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`),
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`,
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
@@ -175,7 +182,9 @@ describe('GET /api/commitments/[id]/early-exit/preview', () => {
     } as any);
 
     const response = await GET(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`),
+      createMockRequest(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit/preview`,
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);

@@ -19,13 +19,13 @@ The settlement UI represents two high-level states through `SettlementModalState
 
 The ineligible state is intentionally specific. `getSettlementIneligibleReasonCopy(reason)` maps backend or orchestration copy into a stable reason category, tone, badge, title, message, and CTA label. Keep this mapping synchronized with API error messages so users see actionable guidance instead of a generic failure.
 
-| Category | Tone | User Meaning | Typical Next Action |
-| --- | --- | --- | --- |
-| `not_matured` | `temporary` | The commitment has not reached maturity yet. | Return later and retry settlement after maturity. |
-| `already_settled` | `terminal` | Settlement already completed for this commitment. | Review the settlement details rather than retrying. |
-| `disputed` | `terminal` | A dispute or violation state prevents normal settlement. | Review the commitment detail page for dispute handling. |
-| `early_exit` | `terminal` | The commitment was already closed by early exit. | Review exit details; do not offer settlement again. |
-| `unknown` | `unknown` | The UI could not classify the backend reason. | Show a review-oriented message and avoid destructive action. |
+| Category          | Tone        | User Meaning                                             | Typical Next Action                                          |
+| ----------------- | ----------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| `not_matured`     | `temporary` | The commitment has not reached maturity yet.             | Return later and retry settlement after maturity.            |
+| `already_settled` | `terminal`  | Settlement already completed for this commitment.        | Review the settlement details rather than retrying.          |
+| `disputed`        | `terminal`  | A dispute or violation state prevents normal settlement. | Review the commitment detail page for dispute handling.      |
+| `early_exit`      | `terminal`  | The commitment was already closed by early exit.         | Review exit details; do not offer settlement again.          |
+| `unknown`         | `unknown`   | The UI could not classify the backend reason.            | Show a review-oriented message and avoid destructive action. |
 
 ### Settlement API Contract
 
@@ -33,7 +33,7 @@ The ineligible state is intentionally specific. `getSettlementIneligibleReasonCo
 
 ```json
 {
-  "ok": true,
+  "success": true,
   "data": {
     "commitmentId": "test-id",
     "settlementAmount": "1000.50",
@@ -41,6 +41,10 @@ The ineligible state is intentionally specific. `getSettlementIneligibleReasonCo
     "txHash": "abc123...",
     "reference": "TODO_CHAIN_CALL_SETTLE_COMMITMENT",
     "settledAt": "2026-02-26T11:30:00.000Z"
+  },
+  "meta": {
+    "correlationId": "abc123...",
+    "timestamp": "2026-02-26T11:30:00.000Z"
   }
 }
 ```

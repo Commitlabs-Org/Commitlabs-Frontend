@@ -30,12 +30,24 @@ function TestConsumer() {
   return React.createElement(
     'div',
     null,
-    React.createElement('button', { onClick: () => toast.success({ title: 'Saved' }) }, 'add success'),
-    React.createElement('button', { onClick: () => toast.error({ title: 'Failed', description: 'Something went wrong' }) }, 'add error'),
+    React.createElement(
+      'button',
+      { onClick: () => toast.success({ title: 'Saved' }) },
+      'add success',
+    ),
+    React.createElement(
+      'button',
+      { onClick: () => toast.error({ title: 'Failed', description: 'Something went wrong' }) },
+      'add error',
+    ),
     React.createElement('button', { onClick: () => toast.info({ title: 'FYI' }) }, 'add info'),
-    React.createElement('button', { onClick: () => toast.warning({ title: 'Heads up' }) }, 'add warning'),
+    React.createElement(
+      'button',
+      { onClick: () => toast.warning({ title: 'Heads up' }) },
+      'add warning',
+    ),
     React.createElement('button', { onClick: () => toast.dismissAll() }, 'dismiss all'),
-    React.createElement(ToastHistory, null)
+    React.createElement(ToastHistory, null),
   );
 }
 
@@ -46,7 +58,11 @@ function UnreadConsumer() {
     'div',
     null,
     React.createElement('span', { 'data-testid': 'unread-count' }, String(count)),
-    React.createElement('button', { onClick: () => toast.success({ title: 'Hello', duration: 1 }) }, 'add')
+    React.createElement(
+      'button',
+      { onClick: () => toast.success({ title: 'Hello', duration: 1 }) },
+      'add',
+    ),
   );
 }
 
@@ -60,8 +76,12 @@ describe('ToastHistory', () => {
 
   it('shows empty state when no toasts have been dismissed', () => {
     render(React.createElement(Wrapper, null, React.createElement(ToastHistory, null)));
-    expect(screen.getByTestId ? document.querySelector('[data-toast-history-empty]') : null).not.toBeUndefined();
-    expect(document.querySelector('[data-toast-history-empty]')?.textContent).toBe('No notifications yet.');
+    expect(
+      screen.getByTestId ? document.querySelector('[data-toast-history-empty]') : null,
+    ).not.toBeUndefined();
+    expect(document.querySelector('[data-toast-history-empty]')?.textContent).toBe(
+      'No notifications yet.',
+    );
   });
 
   it('records a dismissed toast in history', () => {
@@ -91,7 +111,9 @@ describe('ToastHistory', () => {
     act(() => screen.getByText('add error').click());
     act(() => vi.advanceTimersByTime(5000));
 
-    expect(document.querySelector('.toast-history-description')?.textContent).toBe('Something went wrong');
+    expect(document.querySelector('.toast-history-description')?.textContent).toBe(
+      'Something went wrong',
+    );
   });
 
   it('history entries are tagged source=toast (not server notifications)', () => {
@@ -120,7 +142,9 @@ describe('ToastHistory', () => {
     expect(markBtn).not.toBeNull();
     act(() => markBtn!.click());
 
-    expect(document.querySelector('[data-toast-history-item]')?.getAttribute('data-read')).toBe('true');
+    expect(document.querySelector('[data-toast-history-item]')?.getAttribute('data-read')).toBe(
+      'true',
+    );
   });
 
   it('marks all entries as read', () => {
@@ -181,18 +205,30 @@ describe('ToastHistory', () => {
 
   it('maxEntries prop limits rendered entries', () => {
     render(
-      React.createElement(Wrapper, null,
+      React.createElement(
+        Wrapper,
+        null,
         React.createElement(() => {
           const toast = useToast();
           return React.createElement(
             'div',
             null,
-            React.createElement('button', { onClick: () => { toast.success({ title: 'A' }); toast.success({ title: 'B' }); toast.success({ title: 'C' }); } }, 'add three'),
+            React.createElement(
+              'button',
+              {
+                onClick: () => {
+                  toast.success({ title: 'A' });
+                  toast.success({ title: 'B' });
+                  toast.success({ title: 'C' });
+                },
+              },
+              'add three',
+            ),
             React.createElement('button', { onClick: () => toast.dismissAll() }, 'dismiss all'),
-            React.createElement(ToastHistory, { maxEntries: 2 })
+            React.createElement(ToastHistory, { maxEntries: 2 }),
           );
-        }, null)
-      )
+        }, null),
+      ),
     );
 
     act(() => screen.getByText('add three').click());
@@ -204,23 +240,29 @@ describe('ToastHistory', () => {
 
   it('history is bounded to MAX_HISTORY_ENTRIES (50)', () => {
     render(
-      React.createElement(Wrapper, null,
+      React.createElement(
+        Wrapper,
+        null,
         React.createElement(() => {
           const toast = useToast();
           return React.createElement(
             'div',
             null,
-            React.createElement('button', {
-              onClick: () => {
-                for (let i = 0; i < 60; i++) {
-                  toast.success({ title: `Toast ${i}`, duration: 1 });
-                }
+            React.createElement(
+              'button',
+              {
+                onClick: () => {
+                  for (let i = 0; i < 60; i++) {
+                    toast.success({ title: `Toast ${i}`, duration: 1 });
+                  }
+                },
               },
-            }, 'add 60'),
-            React.createElement(ToastHistory, null)
+              'add 60',
+            ),
+            React.createElement(ToastHistory, null),
           );
-        }, null)
-      )
+        }, null),
+      ),
     );
 
     act(() => screen.getByText('add 60').click());
