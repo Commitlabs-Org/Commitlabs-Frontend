@@ -360,4 +360,56 @@ describe('GET /api/commitments/search', () => {
       expect(mockedGetUserCommitmentsFromChain).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('freshness contract (issue #1776)', () => {
+    const CONTEXT = { params: {} };
+    const CORRELATION = 'mock-correlation';
+
+    it('annotates a freshly computed response with X-Cache: MISS', async () => {
+      const response = await GET(
+        createMockRequest(getUrl({ status: 'ACTIVE' })),
+        CONTEXT,
+        CORRELATION,
+      );
+      expect(response.headers.get('X-Cache')).toBe('MISS');
+    });
+
+    it('annotates a cached response with X-Cache: HIT', async () => {
+      await GET(createMockRequest(getUrl({ status: 'ACTIVE' })), CONTEXT, CORRELATION);
+      const response = await GET(
+        createMockRequest(getUrl({ status: 'ACTIVE' })),
+        CONTEXT,
+        CORRELATION,
+      );
+      const result = await parseResponse(response);
+
+      expect(response.headers.get('X-Cache')).toBe('HIT');
+      // Cache only serves the whole stored payload, so the body is a full relay.
+      expect(result.data.data.data).toHaveLength(2);
+      expect(mockedGetUserCommitmentsFromChain).toHaveBeenCalledTimes(1);
+    });
+
+    it('exposes a generatedAt marker for stale-response detection', async () => {
+      const response = await GET(createMockRequest(getUrl()), CONTEXT, CORRELATION);
+      const result = await parseResponse(response);
+      expect(typeof result.data.data.generatedAt).toBe('string');
+    });
+
+    it('produces identical repeatable results across an identical query retry', async () => {
+      await cache.invalidate('commitlabs:commitment-search:');
+      const first = await parseResponse(
+        await GET(createMockRequest(getUrl({ sortBy: 'amount' })), CONTEXT, CORRELATION),
+      );
+      // Second identical request is served from cache: same stable ordering.
+      const second = await parseResponse(
+        await GET(createMockRequest(getUrl({ sortBy: 'amount' })), CONTEXT, CORRELATION),
+      );
+
+      expect(first.data.data.data.map((c: any) => c.commitmentId)).toEqual(
+        second.data.data.data.map((c: any) => c.commitmentId),
+      );
+      expect(first.headers.get('X-Cache')).toBe('MISS');
+      expect(second.headers.get('X-Cache')).toBe('HIT');
+    });
+  });
 });

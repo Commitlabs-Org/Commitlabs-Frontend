@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import CreateCommitmentStepSelectType from '@/components/CreateCommitmentStepSelectType';
 import CreateCommitmentStepConfigure from '@/components/CreateCommitmentStepConfigure';
@@ -18,6 +18,31 @@ import { usePrefillFromCommitment } from '@/hooks/usePrefillFromCommitment';
 import { type CommitmentPreset } from '@/components/create/commitmentPresets';
 
 type CommitmentType = 'safe' | 'balanced' | 'aggressive';
+
+type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
+
+// Submission state machine invariants:
+// - idle is the resting state; submitting may only be entered from idle or error.
+// - success is terminal, clears the draft and prevents duplicate submissions.
+// - error is recoverable, preserves the draft, and allows retry from the same state.
+// - Any cancellation (back navigation) invalidates in-flight responses by incrementing the epoch.
+const SUBMIT_TRANSITIONS: Record<SubmitStatus, ReadonlyArray<SubmitStatus>> = {
+  idle: ['submitting', 'error'],
+  submitting: ['success', 'error', 'idle'],
+  success: ['idle'],
+  error: ['submitting', 'idle'],
+};
+
+function canTransitionSubmitStatus(from: SubmitStatus, to: SubmitStatus): boolean {
+  return SUBMIT_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+const VALIDATION = {
+  DURATION_MIN: 1,
+  DURATION_MAX: 365,
+  MAX_LOSS_MIN: 0,
+  MAX_LOSS_MAX: 100,
+} as const;
 
 // Generate a random commitment ID (in production, this comes from the blockchain)
 function generateCommitmentId(): string {
@@ -67,6 +92,13 @@ export default function CreateCommitment() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [commitmentId, setCommitmentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitStatusRef = useRef<SubmitStatus>('idle');
+  const submissionEpoch = useRef(0);
+  const suppressDraftSave = useRef(false);
+  const isMounted = useRef(true);
+  const wasSubmittingRef = useRef(false);
 
   // In production this would come from the connected wallet hook.
   // Passed as undefined while wallet integration is pending; the fund
@@ -74,7 +106,33 @@ export default function CreateCommitment() {
   const callerAddress: string | undefined = undefined;
 
   useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      submissionEpoch.current += 1;
+    };
+  }, []);
+
+  const updateSubmitStatus = (next: SubmitStatus): boolean => {
+    if (!canTransitionSubmitStatus(submitStatusRef.current, next)) return false;
+    submitStatusRef.current = next;
+    setSubmitStatus(next);
+    return true;
+  };
+
+  useEffect(() => {
+    if (submitStatus === 'error' && isSubmitting) {
+      setIsSubmitting(false);
+    }
+    if (wasSubmittingRef.current && submitStatus === 'error') {
+      suppressDraftSave.current = false;
+    }
+    wasSubmittingRef.current = isSubmitting && submitStatus === 'submitting';
+  }, [isSubmitting, submitStatus]);
+
+  useEffect(() => {
     if (draft) {
+      suppressDraftSave.current = true;
       setShowResumePrompt(true);
     }
   }, [draft]);
@@ -85,6 +143,9 @@ export default function CreateCommitment() {
   // configurable parameters that the user is free to edit.
   useEffect(() => {
     if (!prefill) return;
+    suppressDraftSave.current = false;
+    updateSubmitStatus('idle');
+    setSubmitError(null);
     setSelectedType(prefill.commitmentType);
     setCommitmentType(prefill.commitmentType);
     setAmount(prefill.amount);
@@ -109,6 +170,9 @@ export default function CreateCommitment() {
 
   const handleResumeDraft = () => {
     if (draft) {
+      suppressDraftSave.current = false;
+      updateSubmitStatus('idle');
+      setSubmitError(null);
       setStep(draft.step);
       setSelectedType(draft.selectedType);
       setCommitmentType(draft.commitmentType);
@@ -121,11 +185,27 @@ export default function CreateCommitment() {
   };
 
   const handleStartFresh = () => {
+    suppressDraftSave.current = false;
+    updateSubmitStatus('idle');
+    setSubmitError(null);
     clearDraft();
     setShowResumePrompt(false);
+    setSelectedType(null);
+    setCommitmentType('balanced');
+    setAmount('');
+    setAsset('XLM');
+    setDurationDays(90);
+    setMaxLossPercent(100);
+    setStep(1);
   };
 
   useEffect(() => {
+    if (suppressDraftSave.current || showSuccessModal || isSubmitting) {
+      return;
+    }
+    if (step === 1 && !selectedType) {
+      return;
+    }
     const currentDraft: DraftState = {
       step,
       selectedType,
@@ -136,7 +216,7 @@ export default function CreateCommitment() {
       maxLossPercent,
     };
     saveDraft(currentDraft);
-  }, [step, selectedType, commitmentType, amount, asset, durationDays, maxLossPercent, saveDraft]);
+  }, [step, selectedType, commitmentType, amount, asset, durationDays, maxLossPercent, saveDraft, showSuccessModal, isSubmitting]);
 
   // Build review data from actual configured values
   const getReviewData = () => {
@@ -190,10 +270,12 @@ export default function CreateCommitment() {
     return (
       numAmount > 0 &&
       numAmount <= availableBalance &&
-      durationDays >= 1 &&
-      durationDays <= 365 &&
-      maxLossPercent >= 0 &&
-      maxLossPercent <= 100
+      Number.isInteger(durationDays) &&
+      durationDays >= VALIDATION.DURATION_MIN &&
+      durationDays <= VALIDATION.DURATION_MAX &&
+      Number.isInteger(maxLossPercent) &&
+      maxLossPercent >= VALIDATION.MAX_LOSS_MIN &&
+      maxLossPercent <= VALIDATION.MAX_LOSS_MAX
     );
   }, [amount, availableBalance, durationDays, maxLossPercent]);
 
@@ -213,6 +295,9 @@ export default function CreateCommitment() {
   };
 
   const handleNextStep = () => {
+    if (isSubmitting) return;
+    if (step === 1 && !selectedType) return;
+    if (step === 2 && !isStep2Valid) return;
     if (step < 3) {
       setStep(step + 1);
     }
@@ -221,6 +306,14 @@ export default function CreateCommitment() {
   // Navigation handlers
   // Note: These control the wizard step flow
   const handleBack = () => {
+    if (submitStatusRef.current === 'submitting' || isSubmitting) {
+      // Cancel any in-flight submission to avoid stale completion.
+      submissionEpoch.current += 1;
+      setIsSubmitting(false);
+      suppressDraftSave.current = false;
+    }
+    setSubmitError(null);
+    updateSubmitStatus('idle');
     if (step > 1) {
       setStep(step - 1);
     } else {
@@ -229,17 +322,62 @@ export default function CreateCommitment() {
   };
 
   const handleSubmit = () => {
+    if (isSubmitting || showSuccessModal || submitStatusRef.current === 'submitting' || submitStatusRef.current === 'success') {
+      return;
+    }
+    if (showResumePrompt) {
+      setSubmitError('Resume or discard your existing draft before creating a new commitment.');
+      updateSubmitStatus('error');
+      return;
+    }
+    if (!selectedType) {
+      setSubmitError('Select a commitment type before submitting.');
+      updateSubmitStatus('error');
+      return;
+    }
+    if (!isStep2Valid) {
+      setSubmitError('Review the configuration and fix invalid fields before submitting.');
+      updateSubmitStatus('error');
+      return;
+    }
+    if (!walletAddress) {
+      setSubmitError('Connect your wallet to create a commitment.');
+      updateSubmitStatus('error');
+      return;
+    }
+    setSubmitError(null);
+    if (!updateSubmitStatus('submitting')) return;
+    suppressDraftSave.current = true;
+    submissionEpoch.current += 1;
+    const currentEpoch = submissionEpoch.current;
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const newCommitmentId = generateCommitmentId();
-      setCommitmentId(newCommitmentId);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('commitlabs:created-commitment', 'true');
-      }
-      setShowSuccessModal(true);
-      clearDraft();
-    }, 2000);
+
+    new Promise<string>((resolve) => {
+      setTimeout(() => {
+        // Simulated on-chain submission. Replace with real contract interaction.
+        // If the wallet rejects the transaction, reject with an error.
+        resolve(generateCommitmentId());
+      }, 2000);
+    })
+      .then((newCommitmentId) => {
+        if (!isMounted.current || submissionEpoch.current !== currentEpoch) return;
+        setIsSubmitting(false);
+        setCommitmentId(newCommitmentId);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('commitlabs:created-commitment', 'true');
+        }
+        updateSubmitStatus('success');
+        setShowSuccessModal(true);
+        suppressDraftSave.current = false;
+        clearDraft();
+      })
+      .catch((error: Error) => {
+        if (!isMounted.current || submissionEpoch.current !== currentEpoch) return;
+        setIsSubmitting(false);
+        setSubmitError(error.message);
+        updateSubmitStatus('error');
+        suppressDraftSave.current = false;
+      });
   };
 
   const handleViewCommitment = () => {
@@ -248,6 +386,9 @@ export default function CreateCommitment() {
   };
 
   const handleCreateAnother = () => {
+    suppressDraftSave.current = false;
+    setSubmitError(null);
+    updateSubmitStatus('idle');
     setShowSuccessModal(false);
     setSelectedType(null);
     setStep(1);
@@ -271,6 +412,8 @@ export default function CreateCommitment() {
     setShowSuccessModal(false);
     const numericId = commitmentId.split('-')[1] || '1';
     router.push(`/commitments/${numericId}`);
+  };entId.split('-')[1] || '1';
+    router.push(`/commitments/${numericId}`);
   };
 
   const handleViewOnExplorer = () => {
@@ -280,6 +423,9 @@ export default function CreateCommitment() {
   const commitmentExplorerUrl = buildExplorerUrl('tx', commitmentId, 'testnet');
 
   const handleEditStep = (targetStep: 1 | 2, fieldId?: string) => {
+    if (isSubmitting) return;
+    setSubmitError(null);
+    updateSubmitStatus('idle');
     if (fieldId) {
       setInitialFocusField(fieldId);
     } else {
@@ -348,6 +494,14 @@ export default function CreateCommitment() {
 
         {!showResumePrompt && step === 3 && selectedType && (
           <>
+            {submitError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+              >
+                {submitError}
+              </div>
+            )}
             <CreateCommitmentStepReview
               {...getReviewData()}
               isSubmitting={isSubmitting}

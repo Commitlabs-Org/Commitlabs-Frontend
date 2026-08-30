@@ -2,19 +2,15 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
-import {
-  TooManyRequestsError,
-  ValidationError,
-  ConflictError,
-  ForbiddenError,
-  InternalError,
-} from '@/lib/backend/errors';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
+import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { resolveDisputeOnChain } from '@/lib/backend/services/contracts';
 import { logDisputeResolved } from '@/lib/backend/logger';
 import { recordAuditEvent } from '@/lib/backend/auditLog';
 import { requireAdmin } from '@/lib/backend/requireAuth';
+import { validateCommitmentId } from '@/lib/backend/validation';
 
 const ResolveDisputeRequestSchema = z.object({
   resolution: z.enum([
@@ -25,26 +21,29 @@ const ResolveDisputeRequestSchema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
-interface Params {
-  params: { id: string };
-}
-
-export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
-  const { id } = params;
-  const ip = getClientIp(req);
-
-  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/commitments/resolve');
-  if (!allowed) {
-    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
-  }
-
-  if (!id || id.trim().length === 0) {
-    throw new ValidationError('Commitment ID is required');
-  }
+/**
+ * POST /api/commitments/[id]/resolve
+ *
+ * Admin-only. Enforces, in order of increasing cost:
+ * 1. CSRF / same-origin boundary for cookie-session mutations.
+ * 2. Admin authorization (requireAdmin) before any parsing or chain work.
+ * 3. Rate limit on the caller.
+ * 4. Route-parameter (commitment id) validation against hostile input.
+ * 5. Request-body validation.
+ */
+export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  assertMutationCsrf(req);
 
   const admin = requireAdmin(req);
 
-  let body;
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(ip, 'api/commitments/resolve'))) {
+    throw new TooManyRequestsError();
+  }
+
+  const id = validateCommitmentId(params.id, 'Commitment ID');
+
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -53,7 +52,7 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
 
   const validation = ResolveDisputeRequestSchema.safeParse(body);
   if (!validation.success) {
-    throw new ValidationError('Invalid request data', validation.error.errors);
+    throw new ValidationError('Invalid request data', validation.error.issues);
   }
 
   const { resolution, notes } = validation.data;
@@ -62,7 +61,7 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
     const resolveResult = await resolveDisputeOnChain({
       commitmentId: id,
       resolution,
-      notes,
+      notes: notes ?? '',
       resolverAddress: admin.address,
     });
 
@@ -87,14 +86,19 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
       },
     });
 
-    return ok({
-      commitmentId: id,
-      disputeId: resolveResult.disputeId,
-      resolution: resolveResult.resolution,
-      finalStatus: resolveResult.finalStatus,
-      txHash: resolveResult.txHash,
-      resolvedAt: resolveResult.resolvedAt,
-    });
+    return ok(
+      {
+        commitmentId: id,
+        disputeId: resolveResult.disputeId,
+        resolution: resolveResult.resolution,
+        finalStatus: resolveResult.finalStatus,
+        txHash: resolveResult.txHash,
+        resolvedAt: resolveResult.resolvedAt,
+      },
+      undefined,
+      200,
+      correlationId,
+    );
   } catch (error) {
     logDisputeResolved({
       ip,
@@ -107,3 +111,6 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
     throw error;
   }
 });
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };
