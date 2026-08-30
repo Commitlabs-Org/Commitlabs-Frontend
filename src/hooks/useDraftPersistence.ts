@@ -11,6 +11,10 @@ export interface DraftState {
   asset: string;
   durationDays: number;
   maxLossPercent: number;
+  // Optional binding for wallet-scoped recovery & integrity (added, backward compatible)
+  walletAddress?: string;
+  networkPassphrase?: string | null;
+  version?: number;
 }
 
 export interface NamedDraft {
@@ -26,21 +30,30 @@ const DRAFT_STORAGE_KEY = 'commitlabs-create-draft';
 const DRAFT_MULTI_STORAGE_KEY = 'commitlabs-create-drafts';
 export const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+export const SUPPORTED_ASSETS = ['XLM', 'USDC'] as const;
+
 const DraftStateSchema = z.object({
-  step: z.number(),
+  step: z.number().int().min(1).max(3),
   selectedType: z.enum(['safe', 'balanced', 'aggressive']).nullable(),
   commitmentType: z.enum(['safe', 'balanced', 'aggressive']),
-  amount: z.string(),
-  asset: z.string(),
-  durationDays: z.number(),
-  maxLossPercent: z.number(),
+  amount: z.string().max(64),
+  asset: z.string().min(1).max(16),
+  durationDays: z.number().int().min(1).max(365),
+  maxLossPercent: z.number().min(0).max(100),
+  walletAddress: z.string().optional(),
+  networkPassphrase: z.string().nullable().optional(),
+  version: z.number().int().optional(),
 });
 
 const NamedDraftSchema = z.object({
-  id: z.string(),
+  id: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/),
   data: DraftStateSchema,
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
 });
 
 const DraftMapSchema = z.record(NamedDraftSchema);
@@ -49,6 +62,14 @@ const LegacyDraftSchema = z.object({
   version: z.literal(1),
   data: DraftStateSchema,
 });
+
+export function isValidDraftId(id: string): boolean {
+  return /^[A-Za-z0-9_-]{1,64}$/.test(id);
+}
+
+export function isDraftExpired(updatedAt: number, ttlMs: number = DRAFT_TTL_MS): boolean {
+  return Date.now() - updatedAt >= ttlMs;
+}
 
 export function pruneExpiredDrafts(drafts: DraftMap, ttlMs: number): DraftMap {
   const now = Date.now();
@@ -75,15 +96,32 @@ export function migrateLegacyDraft(): DraftMap | null {
   }
 }
 
+export function validateDraftData(data: unknown): data is DraftState {
+  return DraftStateSchema.safeParse(data).success;
+}
+
 export function loadDraftsFromStorage(): DraftMap {
   try {
     const stored = localStorage.getItem(DRAFT_MULTI_STORAGE_KEY);
     if (!stored) {
       const migrated = migrateLegacyDraft();
-      if (migrated) return migrated;
+      if (migrated) {
+        const pruned = pruneExpiredDrafts(migrated, DRAFT_TTL_MS);
+        // Re-validate each migrated draft strictly
+        const filtered: DraftMap = {};
+        for (const [k, v] of Object.entries(pruned)) {
+          if (NamedDraftSchema.safeParse(v).success) filtered[k] = v;
+        }
+        return filtered;
+      }
       return {};
     }
     const parsed = JSON.parse(stored);
+    // Guard against prototype pollution / non-object
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      localStorage.removeItem(DRAFT_MULTI_STORAGE_KEY);
+      return {};
+    }
     const result = DraftMapSchema.safeParse(parsed);
     if (!result.success) {
       localStorage.removeItem(DRAFT_MULTI_STORAGE_KEY);
@@ -104,22 +142,42 @@ export function useDraftPersistence(draftId?: string) {
     const loaded = loadDraftsFromStorage();
     setDrafts(loaded);
     if (Object.keys(loaded).length > 0) {
-      localStorage.setItem(DRAFT_MULTI_STORAGE_KEY, JSON.stringify(loaded));
+      try {
+        localStorage.setItem(DRAFT_MULTI_STORAGE_KEY, JSON.stringify(loaded));
+      } catch {
+        // quota exceeded — keep in-memory only
+      }
     }
   }, []);
 
   const draft = draftId ? (drafts[draftId]?.data ?? null) : null;
 
+  const persist = useCallback((next: DraftMap) => {
+    try {
+      localStorage.setItem(DRAFT_MULTI_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      console.warn('Failed to save draft to localStorage');
+    }
+  }, []);
+
   const saveDraft = useCallback(
     (data: DraftState, id?: string) => {
-      const targetId = id ?? draftId ?? `draft-${Date.now()}`;
+      // Validate before scheduling write — discard tampered/invalid drafts
+      if (!DraftStateSchema.safeParse(data).success) {
+        console.warn('Refusing to save invalid draft', data);
+        return;
+      }
+      const rawId = id ?? draftId ?? `draft-${Date.now()}`;
+      const targetId = isValidDraftId(rawId) ? rawId : `draft-${Date.now()}`;
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
         setDrafts((prev) => {
           const now = Date.now();
           const existing = prev[targetId];
+          // Prune expired entries on write to bound growth
+          const pruned = pruneExpiredDrafts(prev, DRAFT_TTL_MS);
           const updated: DraftMap = {
-            ...prev,
+            ...pruned,
             [targetId]: {
               id: targetId,
               data,
@@ -127,35 +185,37 @@ export function useDraftPersistence(draftId?: string) {
               updatedAt: now,
             },
           };
-          try {
-            localStorage.setItem(DRAFT_MULTI_STORAGE_KEY, JSON.stringify(updated));
-          } catch {
-            console.warn('Failed to save draft to localStorage');
-          }
+          persist(updated);
           return updated;
         });
       }, 500);
     },
-    [draftId],
+    [draftId, persist],
   );
+
+  // Flush any pending debounced save synchronously (call before submit/navigation)
+  const flushDraft = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+  }, []);
 
   const clearDraft = useCallback(
     (id?: string) => {
       const targetId = id ?? draftId;
+      if (!targetId) return;
+      if (!isValidDraftId(targetId)) return;
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       setDrafts((prev) => {
-        if (!targetId) return prev;
+        if (!(targetId in prev)) return prev;
         const updated = { ...prev };
         delete updated[targetId];
-        try {
-          localStorage.setItem(DRAFT_MULTI_STORAGE_KEY, JSON.stringify(updated));
-        } catch {
-          console.warn('Failed to update localStorage after clearing draft');
-        }
+        persist(updated);
         return updated;
       });
     },
-    [draftId],
+    [draftId, persist],
   );
 
   const clearAllDrafts = useCallback(() => {
@@ -167,8 +227,12 @@ export function useDraftPersistence(draftId?: string) {
   const resumeDraft = useCallback(
     (id?: string) => {
       const targetId = id ?? draftId;
-      if (!targetId) return null;
-      return drafts[targetId]?.data ?? null;
+      if (!targetId || !isValidDraftId(targetId)) return null;
+      const found = drafts[targetId];
+      if (!found) return null;
+      if (isDraftExpired(found.updatedAt)) return null;
+      if (!DraftStateSchema.safeParse(found.data).success) return null;
+      return found.data;
     },
     [drafts, draftId],
   );
@@ -180,6 +244,7 @@ export function useDraftPersistence(draftId?: string) {
     drafts,
     allDrafts,
     saveDraft,
+    flushDraft,
     clearDraft,
     clearAllDrafts,
     resumeDraft,

@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import CreateCommitmentStepSelectType from '@/components/CreateCommitmentStepSelectType';
 import CreateCommitmentStepConfigure from '@/components/CreateCommitmentStepConfigure';
 import CreateCommitmentStepReview from '@/components/CreateCommitmentStepReview';
 import CommitmentCreatedModal from '@/components/modals/CommitmentCreatedModal';
-import { buildExplorerUrl, openExplorerUrl } from '@/utils/explorerLinks';
+import {
+  buildExplorerUrl,
+  openExplorerUrl,
+  getExplorerNetworkFromPassphrase,
+} from '@/utils/explorerLinks';
 import { useWallet } from '@/hooks/useWallet';
 import { AppShellLayout } from '@/components/shell/AppShellLayout';
 import { useDraftPersistence, type DraftState } from '@/hooks/useDraftPersistence';
@@ -16,23 +20,39 @@ import { GuidedTour } from '@/components/onboarding/GuidedTour';
 import { HelpCircle } from 'lucide-react';
 import { usePrefillFromCommitment } from '@/hooks/usePrefillFromCommitment';
 import { type CommitmentPreset } from '@/components/create/commitmentPresets';
+import { checkWalletBoundary } from '@/lib/validation/walletBoundary';
+import { parseAmountStrict, AssetSchema } from '@/lib/validation/createCommitment';
+import { z } from 'zod';
 
 type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
-// Generate a random commitment ID (in production, this comes from the blockchain)
-function generateCommitmentId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let id = 'CMT-';
-  for (let i = 0; i < 7; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
+const SUPPORTED_ASSETS = new Set(['XLM', 'USDC']);
+
+function generateIdempotencyKey(): string {
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `create-${Date.now()}-${rand}`;
+}
+
+function getExpectedNetwork(): string | null {
+  if (typeof process !== 'undefined') {
+    const v = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE;
+    if (v?.trim()) return v.trim();
   }
-  return id;
+  return null;
+}
+
+function getCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)csrfToken=([^;]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  return null;
 }
 
 export default function CreateCommitment() {
   const router = useRouter();
-  const { address: ownerAddress } = useWallet();
-  const { draft, saveDraft, clearDraft } = useDraftPersistence();
+  const searchParams = useSearchParams();
+  const { address: ownerAddress, connected, walletNetwork, authenticated, connect } = useWallet();
+  const { drafts, allDrafts, saveDraft, clearDraft, clearAllDrafts } = useDraftPersistence();
   const prefill = usePrefillFromCommitment();
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [step, setStep] = useState(1);
@@ -67,17 +87,35 @@ export default function CreateCommitment() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [commitmentId, setCommitmentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
-  // In production this would come from the connected wallet hook.
-  // Passed as undefined while wallet integration is pending; the fund
-  // API accepts an optional callerAddress and validates it on-chain.
-  const callerAddress: string | undefined = undefined;
+  // Filter drafts visible to current wallet: show only drafts that match current address or have no bound address (legacy)
+  const visibleDrafts = useMemo(() => {
+    if (!allDrafts.length) return [];
+    // If wallet connected, filter to own drafts; if not connected, show all but Resume will be gated
+    if (!ownerAddress) return allDrafts;
+    return allDrafts.filter((d) => {
+      const bound = (d.data as DraftState & { walletAddress?: string }).walletAddress;
+      if (!bound) return true; // legacy draft - allow but will be rebound on resume
+      return bound === ownerAddress;
+    });
+  }, [allDrafts, ownerAddress]);
+
+  const explorerNetwork = useMemo(() => {
+    return getExplorerNetworkFromPassphrase(walletNetwork ?? getExpectedNetwork());
+  }, [walletNetwork]);
+
+  const isWrongNetwork = useMemo(() => {
+    const expected = getExpectedNetwork();
+    return !!(expected && walletNetwork && walletNetwork !== expected);
+  }, [walletNetwork]);
 
   useEffect(() => {
-    if (draft) {
+    if (visibleDrafts.length > 0 && !prefill) {
       setShowResumePrompt(true);
     }
-  }, [draft]);
+  }, [visibleDrafts.length, prefill]);
 
   // When a source commitment is loaded via ?sourceId=, prefill the wizard fields
   // and skip straight to step 2 so the user can review / adjust the copied parameters.
@@ -97,35 +135,79 @@ export default function CreateCommitment() {
   }, [prefill]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('startTour') === 'true') {
-        startTour();
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
+    const params = searchParams;
+    if (params?.get('startTour') === 'true') {
+      startTour();
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
-  }, [startTour]);
+  }, [searchParams, startTour]);
 
-  const handleResumeDraft = () => {
-    if (draft) {
-      setStep(draft.step);
-      setSelectedType(draft.selectedType);
-      setCommitmentType(draft.commitmentType);
-      setAmount(draft.amount);
-      setAsset(draft.asset);
-      setDurationDays(draft.durationDays);
-      setMaxLossPercent(draft.maxLossPercent);
+  const handleResumeDraft = useCallback(
+    (draftId: string) => {
+      const found = drafts[draftId];
+      if (!found) return;
+      // Re-validate draft invariants before resuming (tampering, boundary)
+      const d = found.data;
+      if (d.step < 1 || d.step > 3) {
+        setFieldError('Draft is corrupted — invalid step. Starting fresh.');
+        clearDraft(draftId);
+        return;
+      }
+      if (d.durationDays < 1 || d.durationDays > 365) {
+        setFieldError('Draft is corrupted — invalid duration. Discarded.');
+        clearDraft(draftId);
+        return;
+      }
+      if (d.maxLossPercent < 0 || d.maxLossPercent > 100) {
+        setFieldError('Draft is corrupted — invalid max loss. Discarded.');
+        clearDraft(draftId);
+        return;
+      }
+      if (d.asset && !SUPPORTED_ASSETS.has(d.asset)) {
+        setFieldError('Draft is corrupted — unsupported asset. Discarded.');
+        clearDraft(draftId);
+        return;
+      }
+      if (d.amount && parseAmountStrict(d.amount) === null && d.amount !== '') {
+        setFieldError('Draft is corrupted — invalid amount. Discarded.');
+        clearDraft(draftId);
+        return;
+      }
+      // Ownership check: draft bound to different wallet -> block
+      const bound = (d as DraftState & { walletAddress?: string }).walletAddress;
+      if (bound && ownerAddress && bound !== ownerAddress) {
+        setFieldError(
+          'Draft belongs to a different wallet. Connect with the original wallet or start fresh.',
+        );
+        return;
+      }
+      setStep(d.step);
+      setSelectedType(d.selectedType);
+      setCommitmentType(d.commitmentType);
+      setAmount(d.amount);
+      setAsset(d.asset);
+      setDurationDays(d.durationDays);
+      setMaxLossPercent(d.maxLossPercent);
       setShowResumePrompt(false);
-    }
-  };
+      setFieldError(null);
+    },
+    [drafts, ownerAddress],
+  );
 
   const handleStartFresh = () => {
-    clearDraft();
+    clearAllDrafts();
     setShowResumePrompt(false);
+    setFieldError(null);
+  };
+
+  const handleDeleteDraft = (draftId: string) => {
+    clearDraft(draftId);
+    if (visibleDrafts.length <= 1) setShowResumePrompt(false);
   };
 
   useEffect(() => {
+    // Save draft with wallet binding for ownership check
     const currentDraft: DraftState = {
       step,
       selectedType,
@@ -134,9 +216,37 @@ export default function CreateCommitment() {
       asset,
       durationDays,
       maxLossPercent,
+      ...(ownerAddress ? { walletAddress: ownerAddress } : {}),
+      ...(walletNetwork || getExpectedNetwork()
+        ? { networkPassphrase: (walletNetwork ?? getExpectedNetwork()) as string }
+        : {}),
+      version: 1,
     };
+    // Validate before saving (reuse schema strictness)
+    const schema = z.object({
+      step: z.number().int().min(1).max(3),
+      durationDays: z.number().int().min(1).max(365),
+      maxLossPercent: z.number().min(0).max(100),
+      asset: z.string().min(1),
+      amount: z.string(),
+    });
+    if (!schema.safeParse(currentDraft).success) return;
+    if (amount && amount !== '' && parseAmountStrict(amount) === null) return;
+    if (!SUPPORTED_ASSETS.has(asset)) return;
     saveDraft(currentDraft);
-  }, [step, selectedType, commitmentType, amount, asset, durationDays, maxLossPercent, saveDraft]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    step,
+    selectedType,
+    commitmentType,
+    amount,
+    asset,
+    durationDays,
+    maxLossPercent,
+    saveDraft,
+    ownerAddress,
+    walletNetwork,
+  ]);
 
   // Build review data from actual configured values
   const getReviewData = () => {
@@ -173,29 +283,36 @@ export default function CreateCommitment() {
   // Derived values
   const earlyExitPenalty = useMemo(() => {
     const penalty = commitmentType === 'aggressive' ? 5 : commitmentType === 'balanced' ? 3 : 2;
-    return `${((Number(amount) || 0) * penalty) / 100} ${asset}`;
+    const parsed = parseAmountStrict(amount);
+    const base = parsed ?? 0;
+    return `${(base * penalty) / 100} ${asset}`;
   }, [amount, asset, commitmentType]);
 
   const estimatedFees = useMemo(() => `0.00 ${asset}`, [asset]);
 
   const amountError = useMemo(() => {
-    const numAmount = Number(amount);
-    if (amount && numAmount <= 0) return 'Amount must be greater than 0';
-    if (numAmount > availableBalance) return 'Amount exceeds available balance';
+    if (!amount) return undefined;
+    const parsed = parseAmountStrict(amount);
+    if (parsed === null) return 'Invalid amount format';
+    if (parsed <= 0) return 'Amount must be greater than 0';
+    if (parsed > availableBalance) return 'Amount exceeds available balance';
     return undefined;
   }, [amount, availableBalance]);
 
   const isStep2Valid = useMemo(() => {
-    const numAmount = Number(amount);
+    const parsed = parseAmountStrict(amount);
+    if (parsed === null) return false;
+    if (AssetSchema.safeParse(asset).success === false) return false;
     return (
-      numAmount > 0 &&
-      numAmount <= availableBalance &&
+      parsed > 0 &&
+      parsed <= availableBalance &&
+      Number.isInteger(durationDays) &&
       durationDays >= 1 &&
       durationDays <= 365 &&
       maxLossPercent >= 0 &&
       maxLossPercent <= 100
     );
-  }, [amount, availableBalance, durationDays, maxLossPercent]);
+  }, [amount, availableBalance, durationDays, maxLossPercent, asset]);
 
   const maxLossWarning = maxLossPercent > 80;
 
@@ -228,23 +345,153 @@ export default function CreateCommitment() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+    setSubmitError(null);
+
+    // Authorization & validation boundary
+    if (!connected || !ownerAddress) {
+      setSubmitError('Wallet is not connected. Please connect your wallet to continue.');
+      return;
+    }
+    if (isWrongNetwork) {
+      setSubmitError(
+        'Your wallet is connected to the wrong network. Switch network and try again.',
+      );
+      return;
+    }
+    const gate = checkWalletBoundary({
+      connected: !!connected,
+      address: ownerAddress,
+      authenticated: !!authenticated,
+      walletNetwork: walletNetwork ?? null,
+      expectedNetwork: getExpectedNetwork(),
+    });
+    if (!gate.ok) {
+      setSubmitError(gate.message ?? 'Authorization failed.');
+      return;
+    }
+
+    const parsedAmount = parseAmountStrict(amount);
+    if (parsedAmount === null) {
+      setSubmitError('Invalid amount format.');
+      return;
+    }
+    if (!SUPPORTED_ASSETS.has(asset)) {
+      setSubmitError('Unsupported asset. Supported: XLM, USDC.');
+      return;
+    }
+    if (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 365) {
+      setSubmitError('Duration must be between 1 and 365 days.');
+      return;
+    }
+    if (maxLossPercent < 0 || maxLossPercent > 100) {
+      setSubmitError('Max loss must be between 0 and 100.');
+      return;
+    }
+    if (!selectedType) {
+      setSubmitError('Commitment type is required.');
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const newCommitmentId = generateCommitmentId();
-      setCommitmentId(newCommitmentId);
+    const idempotencyKey = generateIdempotencyKey();
+    try {
+      const csrfToken = getCsrfToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      };
+      if (csrfToken) headers['x-csrf-token'] = csrfToken;
+      // If bearer token available via localStorage/session, send it for auth (defense-in-depth)
+      let bearer: string | null = null;
+      try {
+        bearer =
+          localStorage.getItem('commitlabs.sessionToken') ??
+          sessionStorage.getItem('commitlabs.sessionToken');
+      } catch {}
+      if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
+
+      const res = await fetch('/api/commitments', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          ownerAddress,
+          asset,
+          amount,
+          durationDays,
+          maxLossBps: Math.round(maxLossPercent * 100),
+        }),
+      });
+
+      let json: unknown = null;
+      try {
+        json = await res.json();
+      } catch {
+        throw new Error('Malformed server response');
+      }
+
+      if (!res.ok) {
+        const errMsg =
+          (json as { error?: { message?: string }; message?: string })?.error?.message ??
+          (json as { message?: string })?.message ??
+          `Request failed with ${res.status}`;
+        // 401/403/409/429 are handled as submit errors with retry
+        if (res.status === 409) {
+          throw new Error(
+            'A commitment creation is already in progress. Please wait and try again.',
+          );
+        }
+        if (res.status === 429) {
+          throw new Error('Too many requests. Please try again later.');
+        }
+        throw new Error(errMsg);
+      }
+
+      // Validate response shape
+      const data = (json as { data?: { commitmentId?: string; id?: string } })?.data ?? json;
+      const candidateId =
+        (data as { commitmentId?: string })?.commitmentId ?? (data as { id?: string })?.id ?? '';
+      const commitmentIdStr = String(candidateId || '').trim();
+      if (!commitmentIdStr) {
+        throw new Error('Malformed server response: missing commitmentId');
+      }
+      // Accept either CMT- pattern or generic id, but validate non-empty and safe
+      if (commitmentIdStr.length > 128 || /[<>]/.test(commitmentIdStr)) {
+        throw new Error('Malformed server response: invalid commitmentId');
+      }
+
+      setCommitmentId(commitmentIdStr);
       if (typeof window !== 'undefined') {
         localStorage.setItem('commitlabs:created-commitment', 'true');
       }
       setShowSuccessModal(true);
-      clearDraft();
-    }, 2000);
-  };
+      // Clear drafts only on success to avoid data loss on failure
+      clearAllDrafts();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create commitment. Please try again.';
+      setSubmitError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    isSubmitting,
+    connected,
+    ownerAddress,
+    isWrongNetwork,
+    authenticated,
+    walletNetwork,
+    amount,
+    asset,
+    durationDays,
+    maxLossPercent,
+    selectedType,
+    clearAllDrafts,
+  ]);
 
   const handleViewCommitment = () => {
-    const numericId = commitmentId.split('-')[1] || '1';
-    router.push(`/commitments/${numericId}`);
+    router.push(`/commitments/${encodeURIComponent(commitmentId)}`);
   };
 
   const handleCreateAnother = () => {
@@ -257,7 +504,8 @@ export default function CreateCommitment() {
     setAsset('XLM');
     setDurationDays(90);
     setMaxLossPercent(100);
-    clearDraft();
+    setSubmitError(null);
+    clearAllDrafts();
   };
 
   const handleCloseModal = () => {
@@ -269,15 +517,14 @@ export default function CreateCommitment() {
   // user can fund the escrow from there at any time.
   const handleFundLater = () => {
     setShowSuccessModal(false);
-    const numericId = commitmentId.split('-')[1] || '1';
-    router.push(`/commitments/${numericId}`);
+    router.push(`/commitments/${encodeURIComponent(commitmentId || '1')}`);
   };
 
   const handleViewOnExplorer = () => {
-    openExplorerUrl('tx', commitmentId, 'testnet');
+    openExplorerUrl('tx', commitmentId, explorerNetwork);
   };
 
-  const commitmentExplorerUrl = buildExplorerUrl('tx', commitmentId, 'testnet');
+  const commitmentExplorerUrl = buildExplorerUrl('tx', commitmentId, explorerNetwork);
 
   const handleEditStep = (targetStep: 1 | 2, fieldId?: string) => {
     if (fieldId) {
@@ -291,6 +538,51 @@ export default function CreateCommitment() {
   return (
     <AppShellLayout>
       <main id="main-content" className="flex flex-col flex-1 relative">
+        {/* Authorization banners */}
+        {!connected && (
+          <div
+            role="alert"
+            data-testid="wallet-disconnected-banner"
+            className="mx-auto mb-4 max-w-2xl rounded-xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-800"
+          >
+            Wallet not connected — connect your wallet to create a commitment.
+            <button
+              type="button"
+              onClick={() => connect()}
+              className="ml-3 underline font-semibold"
+              data-testid="banner-connect-wallet"
+            >
+              Connect
+            </button>
+          </div>
+        )}
+        {isWrongNetwork && (
+          <div
+            role="alert"
+            data-testid="wrong-network-banner"
+            className="mx-auto mb-4 max-w-2xl rounded-xl border border-red-300 bg-red-50 px-5 py-3 text-sm text-red-700"
+          >
+            Wrong network — switch your wallet to the correct network and try again.
+          </div>
+        )}
+        {fieldError && (
+          <div
+            role="alert"
+            data-testid="field-error-banner"
+            className="mx-auto mb-4 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700"
+          >
+            {fieldError}
+          </div>
+        )}
+        {submitError && (
+          <div
+            role="alert"
+            data-testid="submit-error-banner"
+            className="mx-auto mb-4 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700"
+          >
+            {submitError}
+          </div>
+        )}
         {/* Duplicate-mode banner: shown when the wizard was opened from an existing commitment */}
         {prefill && (
           <div
@@ -303,11 +595,12 @@ export default function CreateCommitment() {
           </div>
         )}
 
-        {showResumePrompt && draft && (
+        {showResumePrompt && visibleDrafts.length > 0 && (
           <ResumeDraftPrompt
-            draft={draft}
+            drafts={visibleDrafts}
             onResume={handleResumeDraft}
             onStartFresh={handleStartFresh}
+            onDeleteDraft={handleDeleteDraft}
           />
         )}
 
@@ -359,7 +652,7 @@ export default function CreateCommitment() {
             <CommitmentCreatedModal
               isOpen={showSuccessModal}
               commitmentId={commitmentId}
-              {...(callerAddress ? { callerAddress } : {})}
+              {...(ownerAddress ? { callerAddress: ownerAddress } : {})}
               onViewCommitment={handleViewCommitment}
               onCreateAnother={handleCreateAnother}
               onClose={handleCloseModal}
