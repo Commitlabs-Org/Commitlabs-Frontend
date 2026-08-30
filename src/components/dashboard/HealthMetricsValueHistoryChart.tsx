@@ -29,7 +29,9 @@ import {
   CHART_Y_AXIS_PROPS,
   LIFECYCLE_REF_LINE,
   formatLocaleNumber,
+  normalizeChartData,
 } from './chartConfig';
+import { downsampleSeries } from '../../utils/downsample';
 
 export interface HealthMetricsValueHistoryChartProps {
   data: Array<{ date: string; currentValue: number; initialAmount?: number }>;
@@ -80,21 +82,24 @@ const HealthMetricsValueHistoryChartComponent: React.FC<HealthMetricsValueHistor
   benchmarkLabel,
 }) => {
   const reducedMotion = useReducedMotion();
+  const safeData = useMemo(() => normalizeChartData(data), [data]);
 
-  const hasBenchmark = Boolean(benchmarkData && benchmarkData.length > 0);
+  const hasBenchmark = Boolean(safeBenchmarkData.length > 0);
 
   const benchmarkByDate = useMemo(() => {
     if (!hasBenchmark || !benchmarkData) return {};
-    return Object.fromEntries(benchmarkData.map((p) => [p.date, p.benchmarkValue]));
+    return Object.fromEntries(
+      normalizeChartData(benchmarkData).map((p) => [p.date, p.benchmarkValue]),
+    );
   }, [benchmarkData, hasBenchmark]);
 
   const mergedData = useMemo(() => {
-    if (!hasBenchmark) return data;
-    return data.map((point) => ({
+    if (!hasBenchmark) return safeData;
+    return safeData.map((point) => ({
       ...point,
       benchmarkValue: benchmarkByDate[point.date] ?? null,
     }));
-  }, [data, hasBenchmark, benchmarkByDate]);
+  }, [safeData, hasBenchmark, benchmarkByDate]);
 
   const yTickFormatter = useCallback((value: number) => formatLocaleNumber(value), []);
 
@@ -130,7 +135,7 @@ const HealthMetricsValueHistoryChartComponent: React.FC<HealthMetricsValueHistor
     <>
       <div className="w-full h-full min-h-[350px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222] shadow-sm">
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={mergedData} margin={CHART_MARGIN_DEFAULT}>
+          <LineChart data={boundedData} margin={CHART_MARGIN_DEFAULT}>
             <CartesianGrid {...CHART_GRID_PROPS} />
             <XAxis {...CHART_X_AXIS_PROPS} />
             <YAxis {...CHART_Y_AXIS_PROPS} tickFormatter={yTickFormatter} />

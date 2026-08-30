@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { retryableFromCode, startLatencyTimer, trackApiCall } from '@/lib/telemetry';
 
 type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
@@ -37,17 +38,35 @@ export function usePrefillFromCommitment(): PrefillData | null {
       return;
     }
 
+    const controller = new AbortController();
     let cancelled = false;
 
     async function load() {
+      const stop = startLatencyTimer();
       try {
-        const res = await fetch(`/api/commitments/${encodeURIComponent(sourceId!)}`);
+        const res = await fetch(`/api/commitments/${encodeURIComponent(sourceId!)}`, {
+          signal: controller.signal,
+        });
         if (!res.ok) {
+          trackApiCall({
+            path: '/api/commitments/[id]',
+            method: 'GET',
+            latencyMs: stop(),
+            ok: false,
+            status: res.status,
+          });
           setPrefill(null);
           return;
         }
         const json = await res.json();
         const data = json?.data ?? json;
+        trackApiCall({
+          path: '/api/commitments/[id]',
+          method: 'GET',
+          latencyMs: stop(),
+          ok: true,
+          status: res.status,
+        });
 
         const commitmentType: CommitmentType = isCommitmentType(data?.commitmentType)
           ? data.commitmentType
@@ -70,7 +89,22 @@ export function usePrefillFromCommitment(): PrefillData | null {
         if (!cancelled) {
           setPrefill(prefillData);
         }
-      } catch {
+      } catch (error) {
+        // Ignore abort-induced rejection: the request was intentionally
+        // cancelled by a route change or unmount.
+        if ((error as Error)?.name === 'AbortError') return;
+
+        const latencyMs = stop();
+        const status = (error as { status?: number })?.status;
+        const retryable = retryableFromCode(undefined, status);
+        trackApiCall({
+          path: '/api/commitments/[id]',
+          method: 'GET',
+          latencyMs,
+          ok: false,
+          ...(status !== undefined ? { status } : {}),
+          ...(retryable ? { code: 'RETRIABLE' } : {}),
+        });
         if (!cancelled) {
           setPrefill(null);
         }
@@ -81,6 +115,7 @@ export function usePrefillFromCommitment(): PrefillData | null {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [sourceId]);
 
