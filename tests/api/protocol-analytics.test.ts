@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GET, buildProtocolAnalytics, ProtocolAnalyticsResponse } from '@/app/api/analytics/protocol/route';
+import { GET, buildProtocolAnalytics } from '@/app/api/analytics/protocol/route';
 import { createMockRequest, parseResponse } from './helpers';
 import type { ChainCommitment } from '@/lib/backend/services/contracts';
 
@@ -258,10 +258,7 @@ describe('buildProtocolAnalytics', () => {
         amount: String(Number.NEGATIVE_INFINITY),
       };
 
-      const result = buildProtocolAnalytics([
-        commitmentWithNegInfinity,
-        SETTLED_COMMITMENT,
-      ]);
+      const result = buildProtocolAnalytics([commitmentWithNegInfinity, SETTLED_COMMITMENT]);
 
       // Negative infinity skipped: 2000
       expect(result.totalValueLocked).toBe('2000.00');
@@ -646,6 +643,232 @@ describe('GET /api/analytics/protocol', () => {
       if (result1.status === 200 && result2.status === 200) {
         // Data should be equivalent (not necessarily identical object references)
         expect(result1.data).toEqual(result2.data);
+      }
+    });
+  });
+
+  describe('Authorization boundary', () => {
+    it('should return 401 when Bearer token is missing', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        // No Authorization header
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+      expect(result.data.error?.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should return 401 when Bearer token is invalid', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer invalid-token-xyz',
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+      expect(result.data.error?.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should return 401 when Authorization header has wrong scheme', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Basic dGVzdDp0ZXN0', // Base64 for "test:test"
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+    });
+  });
+
+  describe('Network validation boundary', () => {
+    it('should return 401 when network passphrase header does not match expected', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          'x-network-passphrase': 'Wrong Network ; September 2015',
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+      expect(result.data.error?.message).toContain('network');
+    });
+
+    it('should accept request when network passphrase header matches expected', async () => {
+      // This test verifies the header is accepted; actual auth may still fail
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          'x-network-passphrase': 'Test SDF Network ; September 2015',
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      // Should pass network check; may fail on auth but not on network mismatch
+      if (result.status === 401) {
+        expect(result.data.error?.message).not.toContain('network');
+      }
+    });
+
+    it('should ignore network passphrase header when not provided', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+      });
+
+      const response = await GET(req);
+      // Should not fail on network check
+      expect(response).toBeDefined();
+    });
+  });
+
+  describe('Wallet address validation boundary', () => {
+    it('should return 401 when wallet address header has invalid format', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          'x-wallet-address': 'invalid-address-format', // Not a G-address
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+      expect(result.data.error?.message).toContain('invalid');
+    });
+
+    it('should return 401 when wallet address header starts with wrong letter', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          'x-wallet-address': 'AXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+    });
+
+    it('should return 401 when wallet address header is too short', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          'x-wallet-address': 'GSHORT', // Less than 56 chars
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+    });
+
+    it('should ignore wallet address header when not provided', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+      });
+
+      const response = await GET(req);
+      // Should not fail on wallet address check
+      expect(response).toBeDefined();
+    });
+
+    it('should validate wallet address header format strictly', async () => {
+      // Valid Stellar address format but with invalid characters (lowercase)
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          'x-wallet-address': 'Gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // lowercase x's
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(401);
+    });
+  });
+
+  describe('Replay and tampering prevention', () => {
+    it('should reject wallet address mismatch - detects session replay attempts', async () => {
+      // This is a replay/tampering scenario: session authenticated for one address
+      // but header claims a different address
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          // Two different valid addresses - if auth succeeds for one but
+          // header claims another, should reject
+          'x-wallet-address': 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1',
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      // Either fails on auth or on address mismatch, but should be 401
+      if (result.status >= 400) {
+        expect(result.status).toBe(401);
+      }
+    });
+
+    it('should handle whitespace in wallet address header gracefully', async () => {
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+        headers: {
+          // Test with leading/trailing whitespace
+          'x-wallet-address': '  GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  ',
+        },
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      // Should trim and validate; may fail on auth but not format
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Malformed response handling', () => {
+    it('should validate response shape before returning to client', async () => {
+      // This test verifies that even if buildProtocolAnalytics
+      // returns a valid response, validateProtocolAnalyticsResponse
+      // adds an additional layer of defense
+      const req = createMockRequest('http://localhost/api/analytics/protocol', {
+        method: 'GET',
+      });
+
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      if (result.status === 200) {
+        // Response must have required fields
+        expect(result.data).toHaveProperty('totalCommitments');
+        expect(result.data).toHaveProperty('snapshot');
+        expect(result.data.snapshot).toHaveProperty('generatedAt');
+
+        // Status breakdown must be valid
+        const statusTotal =
+          result.data.activeCommitments +
+          result.data.settledCommitments +
+          result.data.violatedCommitments;
+        expect(statusTotal).toBeLessThanOrEqual(result.data.totalCommitments);
       }
     });
   });

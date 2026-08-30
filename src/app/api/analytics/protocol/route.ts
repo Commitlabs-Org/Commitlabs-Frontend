@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { methodNotAllowed } from '@/lib/backend/apiResponse';
+import { methodNotAllowed, attachSecurityHeaders } from '@/lib/backend/apiResponse';
 import { ChainCommitment } from '@/lib/backend/services/contracts';
 import {
   applyCorsPolicy,
@@ -9,8 +9,10 @@ import {
   type CorsRoutePolicy,
 } from '@/lib/backend/cors';
 import { BackendError, normalizeBackendError, toBackendErrorResponse } from '@/lib/backend/errors';
+import { UnauthorizedError } from '@/lib/backend/errors';
 import { isFeatureEnabled } from '@/lib/backend/config';
 import { getMockData } from '@/lib/backend/mockDb';
+import { verifyAuth } from '@/lib/backend/requireAuth';
 
 export interface ProtocolAnalyticsResponse {
   totalCommitments: number;
@@ -34,6 +36,15 @@ export interface ProtocolAnalyticsResponse {
     complianceScoreBounded: true;
   };
 }
+
+/**
+ * Expected network passphrase. Drawn from the same env vars as the marketplace
+ * boundary so wallet-network validation is consistent across the app.
+ */
+export const EXPECTED_ANALYTICS_NETWORK_PASSPHRASE =
+  process.env.SOROBAN_NETWORK_PASSPHRASE ??
+  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
+  'Test SDF Network ; September 2015';
 
 const ANALYTICS_PROTOCOL_CORS_POLICY = {
   GET: { access: 'first-party' },
@@ -62,6 +73,73 @@ interface ProtocolCommitmentSnapshot {
 
 const COUNTED_STATUSES = new Set<CountedStatus>(['ACTIVE', 'SETTLED', 'VIOLATED']);
 const MAX_COMPLIANCE_SCORE = 100;
+
+/**
+ * Validate the network passphrase header sent by the client.
+ *
+ * The header is optional — first-party SPA calls typically omit it — but when
+ * present it MUST match the expected passphrase. This prevents a compromised
+ * or misconfigured client on the wrong network from querying the protocol
+ * analytics endpoint as if it were on the correct network.
+ *
+ * Throws an `UnauthorizedError` (HTTP 401) on a mismatch.
+ */
+export function validateNetworkPassphrase(req: NextRequest): void {
+  const provided = req.headers.get('x-network-passphrase');
+  if (!provided) {
+    // Header is optional — absence means the client is not asserting a network.
+    return;
+  }
+  if (provided.trim() !== EXPECTED_ANALYTICS_NETWORK_PASSPHRASE) {
+    throw new UnauthorizedError('Wallet is connected to an unsupported Stellar network.', {
+      provided: provided.trim(),
+    });
+  }
+}
+
+/**
+ * Validate the wallet address header when the client forwards it.
+ *
+ * Like the network passphrase, this header is optional. When present it must
+ * be a plausible Stellar G-address (56 chars, starts with G) so the server can
+ * at minimum reject obviously forged / injected values before any downstream
+ * use.
+ *
+ * Throws an `UnauthorizedError` (HTTP 401) on a malformed value.
+ */
+export function validateWalletAddressHeader(req: NextRequest): string | null {
+  const raw = req.headers.get('x-wallet-address');
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  // Stellar public key: 56-character base32 string starting with 'G'
+  if (!/^G[A-Z2-7]{55}$/.test(trimmed)) {
+    throw new UnauthorizedError('x-wallet-address header contains an invalid Stellar address.', {
+      provided: trimmed,
+    });
+  }
+  return trimmed;
+}
+
+/**
+ * Cross-check the authenticated session address against the optional
+ * x-wallet-address header. Prevents a valid session from being replayed by a
+ * client that swapped its wallet address in the header (replay / tampering
+ * scenario).
+ *
+ * Throws a `UnauthorizedError` (HTTP 401) when the addresses do not match.
+ */
+export function assertSessionMatchesWalletHeader(
+  sessionAddress: string,
+  walletAddress: string | null,
+): void {
+  if (walletAddress === null) return;
+  if (sessionAddress !== walletAddress) {
+    throw new UnauthorizedError(
+      'Session wallet address does not match the x-wallet-address header.',
+      { hint: 'Ensure you are signed in with the same wallet you are querying from.' },
+    );
+  }
+}
 
 function parseNonNegativeFiniteNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return 0;
@@ -166,6 +244,105 @@ export function buildProtocolAnalytics(
 }
 
 /**
+ * Validate and normalize the analytics response body returned from an upstream
+ * service or the internal aggregation layer.
+ *
+ * Guards against malformed responses by asserting that mandatory numeric fields
+ * are finite non-negative numbers and that the snapshot shape is present.
+ * Throws a `BackendError` with code `INTERNAL_ERROR` when the shape is invalid
+ * so callers receive a 500 rather than silently propagating corrupt data to the
+ * client.
+ */
+export function validateProtocolAnalyticsResponse(data: unknown): ProtocolAnalyticsResponse {
+  if (typeof data !== 'object' || data === null) {
+    throw new BackendError({
+      code: 'INTERNAL_ERROR',
+      message: 'Protocol analytics response is not an object.',
+      status: 500,
+    });
+  }
+
+  const d = data as Record<string, unknown>;
+
+  const numericFields = [
+    'totalCommitments',
+    'activeCommitments',
+    'settledCommitments',
+    'violatedCommitments',
+    'averageComplianceScore',
+    'totalViolations',
+    'uniqueOwners',
+  ] as const;
+
+  for (const field of numericFields) {
+    const v = d[field];
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
+      throw new BackendError({
+        code: 'INTERNAL_ERROR',
+        message: `Protocol analytics response has invalid field: ${field}.`,
+        status: 500,
+        details: { field, value: v },
+      });
+    }
+  }
+
+  const stringCurrencyFields = ['totalValueLocked', 'totalFeesEarned'] as const;
+  for (const field of stringCurrencyFields) {
+    const v = d[field];
+    if (typeof v !== 'string') {
+      throw new BackendError({
+        code: 'INTERNAL_ERROR',
+        message: `Protocol analytics response has invalid currency field: ${field}.`,
+        status: 500,
+        details: { field, value: v },
+      });
+    }
+    const parsed = Number(v);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new BackendError({
+        code: 'INTERNAL_ERROR',
+        message: `Protocol analytics response has non-numeric currency value for: ${field}.`,
+        status: 500,
+        details: { field, value: v },
+      });
+    }
+  }
+
+  if (typeof d.snapshot !== 'object' || d.snapshot === null) {
+    throw new BackendError({
+      code: 'INTERNAL_ERROR',
+      message: 'Protocol analytics response is missing the snapshot field.',
+      status: 500,
+    });
+  }
+
+  const snap = d.snapshot as Record<string, unknown>;
+  if (typeof snap.generatedAt !== 'string' || isNaN(Date.parse(snap.generatedAt))) {
+    throw new BackendError({
+      code: 'INTERNAL_ERROR',
+      message: 'Protocol analytics snapshot.generatedAt is missing or not a valid ISO date.',
+      status: 500,
+    });
+  }
+
+  // Cross-validate status totals: status sub-counts must not exceed total
+  const statusTotal =
+    (d.activeCommitments as number) +
+    (d.settledCommitments as number) +
+    (d.violatedCommitments as number);
+  if (statusTotal > (d.totalCommitments as number)) {
+    throw new BackendError({
+      code: 'INTERNAL_ERROR',
+      message: 'Protocol analytics response status totals exceed totalCommitments.',
+      status: 500,
+      details: { totalCommitments: d.totalCommitments, statusTotal },
+    });
+  }
+
+  return data as ProtocolAnalyticsResponse;
+}
+
+/**
  * Fetch all commitments from the mock-db (dev/test) or chain (production).
  * In mock mode commitments are keyed by owner; we iterate unique owners.
  * In chain mode we call `get_all_commitments` if supported, otherwise we
@@ -215,8 +392,19 @@ async function fetchAllCommitmentsForProtocol(): Promise<ProtocolCommitmentSnaps
  *
  * Returns aggregate protocol-wide analytics. No query parameters required.
  *
- * Requires the `analyticsProtocol` feature flag to be enabled
- * (env: COMMITLABS_FEATURE_ANALYTICS_PROTOCOL=true).
+ * Authorization:
+ *   Requires an authenticated session — either an `Authorization: Bearer <token>`
+ *   header (wallet-auth session token) OR a `cl_auth_session` cookie set by the
+ *   wallet-auth flow. Unauthenticated requests receive HTTP 401.
+ *
+ * Optional validation headers (checked when present):
+ *   - `x-network-passphrase`: must match the configured Stellar network passphrase.
+ *   - `x-wallet-address`: must be a valid Stellar G-address and must match the
+ *     authenticated session address (replay / tampering guard).
+ *
+ * Feature flag:
+ *   Requires the `analyticsProtocol` feature flag to be enabled
+ *   (env: COMMITLABS_FEATURE_ANALYTICS_PROTOCOL=true).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -225,6 +413,7 @@ export async function GET(req: NextRequest) {
     return toCorsErrorResponse(error);
   }
 
+  // ── Feature flag guard ────────────────────────────────────────────────────
   if (!isFeatureEnabled('analyticsProtocol')) {
     const error = new BackendError({
       code: 'NOT_FOUND',
@@ -235,16 +424,72 @@ export async function GET(req: NextRequest) {
 
     return applyCorsPolicy(
       req,
-      NextResponse.json(toBackendErrorResponse(error), { status: error.status }),
+      attachSecurityHeaders(
+        NextResponse.json(toBackendErrorResponse(error), { status: error.status }),
+      ),
       ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   }
 
+  // ── Authorization boundary ────────────────────────────────────────────────
+  // Verify caller holds a valid session (cookie or Bearer token). This is the
+  // primary gate: no valid session → 401 before any data is read.
+  let sessionAddress: string;
   try {
-    const snapshot = await fetchAllCommitmentsForProtocol();
+    const auth = verifyAuth(req);
+    sessionAddress = auth.address;
+  } catch (authError) {
+    // Re-throw UnauthorizedError / ForbiddenError as BackendError so the
+    // existing CORS-aware error-response path handles them uniformly.
+    const normalized = new BackendError({
+      code: 'UNAUTHORIZED',
+      message:
+        authError instanceof Error
+          ? authError.message
+          : 'Authentication required to access protocol analytics.',
+      status: 401,
+    });
     return applyCorsPolicy(
       req,
-      NextResponse.json(buildProtocolAnalytics(snapshot.commitments, snapshot.source)),
+      attachSecurityHeaders(NextResponse.json(toBackendErrorResponse(normalized), { status: 401 })),
+      ANALYTICS_PROTOCOL_CORS_POLICY,
+    );
+  }
+
+  // ── Optional header validation ────────────────────────────────────────────
+  // Validate optional x-network-passphrase and x-wallet-address headers when
+  // present. This defends against wrong-network calls and session replay.
+  try {
+    validateNetworkPassphrase(req);
+    const walletAddress = validateWalletAddressHeader(req);
+    assertSessionMatchesWalletHeader(sessionAddress, walletAddress);
+  } catch (validationError) {
+    const normalized = new BackendError({
+      code: 'UNAUTHORIZED',
+      message:
+        validationError instanceof Error ? validationError.message : 'Request validation failed.',
+      status: 401,
+    });
+    return applyCorsPolicy(
+      req,
+      attachSecurityHeaders(NextResponse.json(toBackendErrorResponse(normalized), { status: 401 })),
+      ANALYTICS_PROTOCOL_CORS_POLICY,
+    );
+  }
+
+  // ── Data fetch and aggregation ────────────────────────────────────────────
+  try {
+    const snapshot = await fetchAllCommitmentsForProtocol();
+    const analytics = buildProtocolAnalytics(snapshot.commitments, snapshot.source);
+
+    // Validate the response shape before returning it to the client. Catches
+    // any invariant violation introduced by future refactors of the aggregation
+    // logic that the buildProtocolAnalytics invariant check does not cover.
+    const validated = validateProtocolAnalyticsResponse(analytics);
+
+    return applyCorsPolicy(
+      req,
+      attachSecurityHeaders(NextResponse.json(validated)),
       ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   } catch (error) {
@@ -256,9 +501,11 @@ export async function GET(req: NextRequest) {
 
     return applyCorsPolicy(
       req,
-      NextResponse.json(toBackendErrorResponse(normalized), {
-        status: normalized.status,
-      }),
+      attachSecurityHeaders(
+        NextResponse.json(toBackendErrorResponse(normalized), {
+          status: normalized.status,
+        }),
+      ),
       ANALYTICS_PROTOCOL_CORS_POLICY,
     );
   }
