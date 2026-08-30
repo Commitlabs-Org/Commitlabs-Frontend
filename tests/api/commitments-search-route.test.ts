@@ -199,9 +199,7 @@ describe('GET /api/commitments/search', () => {
     });
 
     it('combines multiple filters', async () => {
-      const response = await GET(
-        createMockRequest(getUrl({ asset: 'USDC', status: 'ACTIVE' })),
-      );
+      const response = await GET(createMockRequest(getUrl({ asset: 'USDC', status: 'ACTIVE' })));
       const result = await parseResponse(response);
 
       expect(result.data.data.data).toHaveLength(1);
@@ -233,7 +231,9 @@ describe('GET /api/commitments/search', () => {
     });
 
     it('sorts by amount descending', async () => {
-      const response = await GET(createMockRequest(getUrl({ sortBy: 'amount', sortOrder: 'desc' })));
+      const response = await GET(
+        createMockRequest(getUrl({ sortBy: 'amount', sortOrder: 'desc' })),
+      );
       const result = await parseResponse(response);
 
       expect(result.data.data.data.map((c: any) => c.commitmentId)).toEqual([

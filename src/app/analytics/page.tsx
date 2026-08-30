@@ -14,7 +14,7 @@
  * States handled: loading, error (per endpoint), empty (zero data).
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Activity,
@@ -81,10 +81,94 @@ export interface ProtocolAnalyticsData {
   averageComplianceScore: number;
   totalViolations: number;
   uniqueOwners: number;
+  snapshot?: {
+    generatedAt: string;
+    window: 'protocol-lifetime';
+    source: 'mock' | 'chain';
+    rejectedRecords: number;
+  };
+  invariants?: {
+    statusTotalsMatch: true;
+    nonNegativeTotals: true;
+    complianceScoreBounded: true;
+  };
 }
 
 type ViewMode = 'user' | 'protocol';
 type LoadState = 'idle' | 'loading' | 'success' | 'error';
+
+interface ProtocolRequestState {
+  state: LoadState;
+  data: ProtocolAnalyticsData | null;
+  requestId: number;
+  retryIntent: boolean;
+  errorMessage: string | null;
+}
+
+type ProtocolRequestAction =
+  | { type: 'request'; requestId: number; retryIntent: boolean }
+  | { type: 'success'; requestId: number; data: ProtocolAnalyticsData }
+  | { type: 'failure'; requestId: number; message: string }
+  | { type: 'cancel'; requestId: number }
+  | { type: 'retry_intent' };
+
+const initialProtocolRequestState: ProtocolRequestState = {
+  state: 'idle',
+  data: null,
+  requestId: 0,
+  retryIntent: false,
+  errorMessage: null,
+};
+
+function isFreshProtocolAction(state: ProtocolRequestState, requestId: number): boolean {
+  return state.requestId === requestId;
+}
+
+function protocolRequestReducer(
+  state: ProtocolRequestState,
+  action: ProtocolRequestAction,
+): ProtocolRequestState {
+  switch (action.type) {
+    case 'request':
+      if (action.requestId <= state.requestId) return state;
+      return {
+        ...state,
+        state: 'loading',
+        requestId: action.requestId,
+        retryIntent: action.retryIntent,
+        errorMessage: null,
+      };
+    case 'success':
+      if (!isFreshProtocolAction(state, action.requestId)) return state;
+      return {
+        state: 'success',
+        data: action.data,
+        requestId: action.requestId,
+        retryIntent: false,
+        errorMessage: null,
+      };
+    case 'failure':
+      if (!isFreshProtocolAction(state, action.requestId)) return state;
+      return {
+        ...state,
+        state: 'error',
+        retryIntent: true,
+        errorMessage: action.message,
+      };
+    case 'cancel':
+      if (!isFreshProtocolAction(state, action.requestId)) return state;
+      return {
+        ...state,
+        state: state.data ? 'success' : 'idle',
+        retryIntent: true,
+        errorMessage: 'The protocol analytics refresh was cancelled before it completed.',
+      };
+    case 'retry_intent':
+      return { ...state, retryIntent: true };
+    default:
+      return state;
+  }
+}
 
 // ============================================================================
 // HELPERS
@@ -197,17 +281,21 @@ function ViewToggle({ value, onChange, disabled }: ViewToggleProps) {
 
 interface ErrorBannerProps {
   message: string;
+  detail?: string | null;
   onRetry?: () => void;
 }
 
-function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
+function ErrorBanner({ message, detail, onRetry }: ErrorBannerProps) {
   return (
     <div
       role="alert"
       className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#ff444415] border border-[#ff4444]/30 text-[#ff8888] text-sm"
     >
       <AlertTriangle size={16} className="flex-shrink-0" />
-      <span>{message}</span>
+      <span>
+        {message}
+        {detail && <span className="block text-[#ffb3b3] text-xs mt-1">{detail}</span>}
+      </span>
       {onRetry && (
         <button
           type="button"
@@ -366,10 +454,18 @@ function UserAnalyticsView({ data, state, onRetry, hasWallet }: UserAnalyticsVie
 interface ProtocolAnalyticsViewProps {
   data: ProtocolAnalyticsData | null;
   state: LoadState;
+  errorMessage?: string | null;
+  retryIntent?: boolean;
   onRetry: () => void;
 }
 
-function ProtocolAnalyticsView({ data, state, onRetry }: ProtocolAnalyticsViewProps) {
+function ProtocolAnalyticsView({
+  data,
+  state,
+  errorMessage,
+  retryIntent,
+  onRetry,
+}: ProtocolAnalyticsViewProps) {
   if (state === 'loading') {
     return (
       <div className="space-y-6">
@@ -380,7 +476,18 @@ function ProtocolAnalyticsView({ data, state, onRetry }: ProtocolAnalyticsViewPr
   }
 
   if (state === 'error') {
-    return <ErrorBanner message="Failed to load protocol analytics." onRetry={onRetry} />;
+    return (
+      <ErrorBanner
+        message="Failed to load protocol analytics."
+        detail={
+          retryIntent
+            ? errorMessage ??
+              'Your retry is saved. Use Retry to refresh analytics; no wallet action will be repeated.'
+            : errorMessage
+        }
+        onRetry={onRetry}
+      />
+    );
   }
 
   if (!data || data.totalCommitments === 0) {
@@ -505,9 +612,12 @@ export default function AnalyticsPage() {
 
   const [userData, setUserData] = useState<UserAnalyticsData | null>(null);
   const [userState, setUserState] = useState<LoadState>('idle');
-
-  const [protocolData, setProtocolData] = useState<ProtocolAnalyticsData | null>(null);
-  const [protocolState, setProtocolState] = useState<LoadState>('idle');
+  const [protocolRequest, dispatchProtocolRequest] = useReducer(
+    protocolRequestReducer,
+    initialProtocolRequestState,
+  );
+  const protocolAbortRef = useRef<AbortController | null>(null);
+  const protocolRequestIdRef = useRef(0);
 
   const {
     isActive: isTourActive,
@@ -537,15 +647,39 @@ export default function AnalyticsPage() {
 
   // ─── Fetch protocol analytics ─────────────────────────────────────────────
   const fetchProtocolAnalytics = useCallback(async () => {
-    setProtocolState('loading');
+    protocolAbortRef.current?.abort();
+    const requestId = protocolRequestIdRef.current + 1;
+    protocolRequestIdRef.current = requestId;
+    const controller = new AbortController();
+    protocolAbortRef.current = controller;
+    dispatchProtocolRequest({ type: 'request', requestId, retryIntent: true });
+
     try {
-      const res = await fetch('/api/analytics/protocol');
+      const res = await fetch('/api/analytics/protocol', {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      setProtocolData(json as ProtocolAnalyticsData);
-      setProtocolState('success');
-    } catch {
-      setProtocolState('error');
+      dispatchProtocolRequest({
+        type: 'success',
+        requestId,
+        data: json as ProtocolAnalyticsData,
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        dispatchProtocolRequest({ type: 'cancel', requestId });
+        return;
+      }
+      dispatchProtocolRequest({
+        type: 'failure',
+        requestId,
+        message: error instanceof Error ? error.message : 'Unknown protocol analytics error',
+      });
+    } finally {
+      if (protocolAbortRef.current === controller) {
+        protocolAbortRef.current = null;
+      }
     }
   }, []);
 
@@ -557,14 +691,20 @@ export default function AnalyticsPage() {
   }, [address, userState, fetchUserAnalytics]);
 
   useEffect(() => {
-    if (protocolState === 'idle') {
+    if (protocolRequest.state === 'idle') {
       void fetchProtocolAnalytics();
     }
-  }, [protocolState, fetchProtocolAnalytics]);
+  }, [protocolRequest.state, fetchProtocolAnalytics]);
+
+  useEffect(() => {
+    return () => {
+      protocolAbortRef.current?.abort();
+    };
+  }, []);
 
   // Allow toggle while fetches are in flight, but flag it
   const handleViewChange = (mode: ViewMode) => {
-    const isLoading = userState === 'loading' || protocolState === 'loading';
+    const isLoading = userState === 'loading' || protocolRequest.state === 'loading';
     if (isLoading) setIsTogglingWhileLoading(true);
     else setIsTogglingWhileLoading(false);
     setView(mode);
@@ -623,10 +763,12 @@ export default function AnalyticsPage() {
           />
         ) : (
           <ProtocolAnalyticsView
-            data={protocolData}
-            state={protocolState}
+            data={protocolRequest.data}
+            state={protocolRequest.state}
+            errorMessage={protocolRequest.errorMessage}
+            retryIntent={protocolRequest.retryIntent}
             onRetry={() => {
-              setProtocolState('idle');
+              dispatchProtocolRequest({ type: 'retry_intent' });
               void fetchProtocolAnalytics();
             }}
           />
