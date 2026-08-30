@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import CreateCommitmentStepSelectType from '@/components/CreateCommitmentStepSelectType';
 import CreateCommitmentStepConfigure from '@/components/CreateCommitmentStepConfigure';
@@ -16,6 +16,7 @@ import { GuidedTour } from '@/components/onboarding/GuidedTour';
 import { HelpCircle } from 'lucide-react';
 import { usePrefillFromCommitment } from '@/hooks/usePrefillFromCommitment';
 import { type CommitmentPreset } from '@/components/create/commitmentPresets';
+import { trackApiCall, startLatencyTimer } from '@/lib/telemetry';
 
 type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
@@ -44,6 +45,9 @@ const VALIDATION = {
   MAX_LOSS_MAX: 100,
 } as const;
 
+/** Maximum wall-clock ms to wait for on-chain submission before timing out. */
+const SUBMISSION_TIMEOUT_MS = 30_000;
+
 // Generate a random commitment ID (in production, this comes from the blockchain)
 function generateCommitmentId(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -57,7 +61,7 @@ function generateCommitmentId(): string {
 export default function CreateCommitment() {
   const router = useRouter();
   const { address: ownerAddress } = useWallet();
-  const { draft, saveDraft, clearDraft } = useDraftPersistence();
+  const { allDrafts, saveDraft, clearDraft, clearAllDrafts } = useDraftPersistence();
   const prefill = usePrefillFromCommitment();
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [step, setStep] = useState(1);
@@ -99,6 +103,7 @@ export default function CreateCommitment() {
   const suppressDraftSave = useRef(false);
   const isMounted = useRef(true);
   const wasSubmittingRef = useRef(false);
+  const submissionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // In production this would come from the connected wallet hook.
   // Passed as undefined while wallet integration is pending; the fund
@@ -110,6 +115,7 @@ export default function CreateCommitment() {
     return () => {
       isMounted.current = false;
       submissionEpoch.current += 1;
+      if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
     };
   }, []);
 
@@ -130,12 +136,15 @@ export default function CreateCommitment() {
     wasSubmittingRef.current = isSubmitting && submitStatus === 'submitting';
   }, [isSubmitting, submitStatus]);
 
+  // Show the resume prompt when there are saved drafts on mount (and no prefill sourceId).
   useEffect(() => {
-    if (draft) {
+    if (allDrafts.length > 0 && !prefill) {
       suppressDraftSave.current = true;
       setShowResumePrompt(true);
     }
-  }, [draft]);
+    // Only run on mount; allDrafts is stable after initial load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // When a source commitment is loaded via ?sourceId=, prefill the wizard fields
   // and skip straight to step 2 so the user can review / adjust the copied parameters.
@@ -168,27 +177,29 @@ export default function CreateCommitment() {
     }
   }, [startTour]);
 
-  const handleResumeDraft = () => {
-    if (draft) {
-      suppressDraftSave.current = false;
-      updateSubmitStatus('idle');
-      setSubmitError(null);
-      setStep(draft.step);
-      setSelectedType(draft.selectedType);
-      setCommitmentType(draft.commitmentType);
-      setAmount(draft.amount);
-      setAsset(draft.asset);
-      setDurationDays(draft.durationDays);
-      setMaxLossPercent(draft.maxLossPercent);
-      setShowResumePrompt(false);
-    }
-  };
-
-  const handleStartFresh = () => {
+  const handleResumeDraft = useCallback((draftId: string) => {
+    const target = allDrafts.find((d) => d.id === draftId);
+    if (!target) return;
+    const data = target.data;
     suppressDraftSave.current = false;
     updateSubmitStatus('idle');
     setSubmitError(null);
-    clearDraft();
+    setStep(data.step);
+    setSelectedType(data.selectedType);
+    setCommitmentType(data.commitmentType);
+    setAmount(data.amount);
+    setAsset(data.asset);
+    setDurationDays(data.durationDays);
+    setMaxLossPercent(data.maxLossPercent);
+    setShowResumePrompt(false);
+    trackApiCall({ path: 'draft/resume', method: 'READ', latencyMs: 0, ok: true });
+  }, [allDrafts]);
+
+  const handleStartFresh = useCallback(() => {
+    suppressDraftSave.current = false;
+    updateSubmitStatus('idle');
+    setSubmitError(null);
+    clearAllDrafts();
     setShowResumePrompt(false);
     setSelectedType(null);
     setCommitmentType('balanced');
@@ -197,7 +208,13 @@ export default function CreateCommitment() {
     setDurationDays(90);
     setMaxLossPercent(100);
     setStep(1);
-  };
+    trackApiCall({ path: 'draft/discard', method: 'DELETE', latencyMs: 0, ok: true });
+  }, [clearAllDrafts]);
+
+  const handleDeleteDraft = useCallback((draftId: string) => {
+    clearDraft(draftId);
+    trackApiCall({ path: 'draft/delete', method: 'DELETE', latencyMs: 0, ok: true });
+  }, [clearDraft]);
 
   useEffect(() => {
     if (suppressDraftSave.current || showSuccessModal || isSubmitting) {
@@ -309,6 +326,10 @@ export default function CreateCommitment() {
     if (submitStatusRef.current === 'submitting' || isSubmitting) {
       // Cancel any in-flight submission to avoid stale completion.
       submissionEpoch.current += 1;
+      if (submissionTimeoutRef.current) {
+        clearTimeout(submissionTimeoutRef.current);
+        submissionTimeoutRef.current = null;
+      }
       setIsSubmitting(false);
       suppressDraftSave.current = false;
     }
@@ -352,6 +373,25 @@ export default function CreateCommitment() {
     const currentEpoch = submissionEpoch.current;
     setIsSubmitting(true);
 
+    const stop = startLatencyTimer();
+
+    // Enforce a hard submission timeout so the UI never hangs indefinitely.
+    submissionTimeoutRef.current = setTimeout(() => {
+      if (!isMounted.current || submissionEpoch.current !== currentEpoch) return;
+      submissionEpoch.current += 1; // invalidate any late response
+      setIsSubmitting(false);
+      setSubmitError('Submission timed out. Please check your wallet and try again.');
+      updateSubmitStatus('error');
+      suppressDraftSave.current = false;
+      trackApiCall({
+        path: 'commitment/submit',
+        method: 'POST',
+        latencyMs: stop(),
+        ok: false,
+        code: 'TIMEOUT',
+      });
+    }, SUBMISSION_TIMEOUT_MS);
+
     new Promise<string>((resolve) => {
       setTimeout(() => {
         // Simulated on-chain submission. Replace with real contract interaction.
@@ -361,6 +401,11 @@ export default function CreateCommitment() {
     })
       .then((newCommitmentId) => {
         if (!isMounted.current || submissionEpoch.current !== currentEpoch) return;
+        if (submissionTimeoutRef.current) {
+          clearTimeout(submissionTimeoutRef.current);
+          submissionTimeoutRef.current = null;
+        }
+        const latencyMs = stop();
         setIsSubmitting(false);
         setCommitmentId(newCommitmentId);
         if (typeof window !== 'undefined') {
@@ -370,13 +415,20 @@ export default function CreateCommitment() {
         setShowSuccessModal(true);
         suppressDraftSave.current = false;
         clearDraft();
+        trackApiCall({ path: 'commitment/submit', method: 'POST', latencyMs, ok: true, status: 200 });
       })
       .catch((error: Error) => {
         if (!isMounted.current || submissionEpoch.current !== currentEpoch) return;
+        if (submissionTimeoutRef.current) {
+          clearTimeout(submissionTimeoutRef.current);
+          submissionTimeoutRef.current = null;
+        }
+        const latencyMs = stop();
         setIsSubmitting(false);
         setSubmitError(error.message);
         updateSubmitStatus('error');
         suppressDraftSave.current = false;
+        trackApiCall({ path: 'commitment/submit', method: 'POST', latencyMs, ok: false, code: 'SUBMIT_ERROR' });
       });
   };
 
@@ -411,8 +463,6 @@ export default function CreateCommitment() {
   const handleFundLater = () => {
     setShowSuccessModal(false);
     const numericId = commitmentId.split('-')[1] || '1';
-    router.push(`/commitments/${numericId}`);
-  };entId.split('-')[1] || '1';
     router.push(`/commitments/${numericId}`);
   };
 
@@ -449,11 +499,12 @@ export default function CreateCommitment() {
           </div>
         )}
 
-        {showResumePrompt && draft && (
+        {showResumePrompt && allDrafts.length > 0 && (
           <ResumeDraftPrompt
-            draft={draft}
+            drafts={allDrafts}
             onResume={handleResumeDraft}
             onStartFresh={handleStartFresh}
+            onDeleteDraft={handleDeleteDraft}
           />
         )}
 
