@@ -8,21 +8,23 @@ We are committed to resolving security vulnerabilities quickly and carefully. Cu
 | ------- | ------------------ |
 | 0.1.x   | :white_check_mark: |
 
-*Older versions may not receive security updates. Please ensure you are running the latest version.*
+_Older versions may not receive security updates. Please ensure you are running the latest version._
 
 ## Reporting a Vulnerability
 
 We take the security of CommitLabs very seriously. If you discover a security vulnerability, please do **not** open a public issue.
 
-Instead, please report it privately to our security team via email:
-**[placeholder: security@commitlabs.com]**
+Instead, please report it privately to our security team through GitHub Security Advisories:
+[Report a vulnerability](https://github.com/Commitlabs-Org/Commitlabs-Frontend/security/advisories/new)
 
 When reporting a vulnerability, please include:
+
 - A detailed description of the vulnerability and its potential impact.
 - Step-by-step instructions or a proof-of-concept to reproduce the issue.
 - Any suggested mitigations or fixes, if you have them.
 
 ### What to Expect
+
 - We will acknowledge receipt of your vulnerability report within 48 hours.
 - We will provide a status update as we investigate and work on a fix.
 - We will notify you when the vulnerability is patched and a release is available.

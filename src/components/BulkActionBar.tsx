@@ -4,76 +4,58 @@ import React from 'react';
 import { Download, X } from 'lucide-react';
 
 interface BulkActionBarProps {
-  /** Number of selected items */
   selectedCount: number;
-  /** Callback to clear all selections */
   onClear: () => void;
-  /** Callback to export selected items */
-  onExportSelected: () => void;
-  /** Optional label for the export action */
-  exportLabel?: string;
-  /** Whether the export action is loading */
+  onExportSelected?: () => void;
   isExporting?: boolean;
 }
 
 /**
- * Bulk action bar that appears when items are selected in a grid.
- * Shows selection count and provides bulk actions like export.
- * 
- * Accessibility:
- * - Uses role="status" for live region announcements
- * - Proper ARIA labels on all interactive elements
- * - Keyboard accessible buttons
+ * BulkActionBar
+ *
+ * Floats at the bottom of the grid when one or more items are selected.
+ * Hidden (aria-hidden) when nothing is selected so it doesn't pollute
+ * the accessibility tree during normal browsing.
  */
 export function BulkActionBar({
   selectedCount,
   onClear,
   onExportSelected,
-  exportLabel = 'Export selected',
   isExporting = false,
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
 
   return (
     <div
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up"
+      role="toolbar"
+      aria-label="Bulk actions"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl border border-white/15 bg-[#0d0d0d]/90 backdrop-blur-md px-5 py-3 shadow-lg shadow-black/40"
     >
-      <div className="flex items-center gap-4 rounded-xl border border-[#0FF0FC]/30 bg-[#0a0a0a] px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-        {/* Selection count */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-white">
-            {selectedCount} commitment{selectedCount !== 1 ? 's' : ''} selected
-          </span>
-        </div>
+      <span className="text-[13px] text-[#94A3B8]">
+        <span className="font-semibold text-white">{selectedCount}</span>{' '}
+        {selectedCount === 1 ? 'item' : 'items'} selected
+      </span>
 
-        {/* Divider */}
-        <div className="h-6 w-px bg-white/10" />
+      {onExportSelected && (
+        <button
+          onClick={onExportSelected}
+          disabled={isExporting}
+          aria-label="Export selected commitments"
+          className="flex items-center gap-1.5 rounded-lg bg-[#0FF0FC]/10 border border-[#0FF0FC]/30 px-3 py-1.5 text-[12px] font-medium text-[#0FF0FC] hover:bg-[#0FF0FC]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        >
+          <Download size={13} aria-hidden="true" />
+          {isExporting ? 'Exporting…' : 'Export'}
+        </button>
+      )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onExportSelected}
-            disabled={isExporting}
-            className="flex items-center gap-2 rounded-lg border border-[#0FF0FC]/20 bg-[#0FF0FC]/10 px-4 py-2 text-sm font-medium text-[#0FF0FC] transition-all hover:bg-[#0FF0FC]/20 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
-            aria-label={`Export ${selectedCount} selected commitment${selectedCount !== 1 ? 's' : ''}`}
-          >
-            <Download size={16} />
-            <span>{isExporting ? 'Exporting...' : exportLabel}</span>
-          </button>
-
-          <button
-            onClick={onClear}
-            className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition-all hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0FF0FC]"
-            aria-label="Clear selection"
-          >
-            <X size={16} />
-            <span>Clear</span>
-          </button>
-        </div>
-      </div>
+      <button
+        onClick={onClear}
+        aria-label="Clear selection"
+        className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-[12px] font-medium text-[#94A3B8] hover:text-white hover:border-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+      >
+        <X size={13} aria-hidden="true" />
+        Clear
+      </button>
     </div>
   );
 }

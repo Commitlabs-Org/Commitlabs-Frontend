@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+build
+coverage
+.pnpm-store
+contracts/target
+pnpm-lock.yaml
+package-lock.json
+*.tsbuildinfo
+next-env.d.ts
+
+# Files with pre-existing syntax errors that Prettier cannot parse
+src/components/CreateCommitmentStepConfigure.tsx
+src/components/MarketplaceHeader/MarketplaceHeader.tsx
+src/lib/backend/kv.ts

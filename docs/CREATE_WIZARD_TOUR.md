@@ -11,11 +11,11 @@ The guided tour is built with a modular, highly testable structure:
    - Fetches and stores the "seen" flag off-chain via the `GET / PUT /api/user/preferences` user-preferences API.
    - Falls back to `localStorage` when no wallet is connected.
    - Triggers step transitions automatically when moving across wizard steps.
-   - Location: [useGuidedTour.ts](file:///home/sudodave/Commitlabs-Frontend/src/hooks/useGuidedTour.ts)
+   - Location: [useGuidedTour.ts](../src/hooks/useGuidedTour.ts)
 
 2. **`GuidedTour` (Container Component)**
    - A declarative wrapper component that receives tour status and configuration, rendering the active step.
-   - Location: [GuidedTour.tsx](file:///home/sudodave/Commitlabs-Frontend/src/components/onboarding/GuidedTour.tsx)
+   - Location: [GuidedTour.tsx](../src/components/onboarding/GuidedTour.tsx)
 
 3. **`TourStep` (UI component)**
    - Tracks target selectors in the DOM and anchors tooltips dynamically (handles window resizes, scrolling, viewport constraints).
@@ -23,18 +23,20 @@ The guided tour is built with a modular, highly testable structure:
    - Focus traps keyboard navigation inside the tooltip (loops focus between controls).
    - Listens to global keyboard keys (`Escape` to skip/dismiss, `ArrowLeft` / `ArrowRight` for back/next navigation).
    - Respects `prefers-reduced-motion` to disable transitions for users with motion sensitivities.
-   - Location: [TourStep.tsx](file:///home/sudodave/Commitlabs-Frontend/src/components/onboarding/TourStep.tsx)
+   - Location: [TourStep.tsx](../src/components/onboarding/TourStep.tsx)
 
 ## Step Flow
 
 The tour traverses 12 specific target zones across the 3 wizard steps:
 
 ### Step 1: Select Type
+
 1. **Wizard Steps Stepper**: Highlights the progress navigation.
 2. **Commitment Types Cards**: Explains the difference between Safe, Balanced, and Aggressive profiles.
 3. **Continue Button**: Directs the user on how to advance.
 
 ### Step 2: Configure Parameters
+
 4. **Commitment Amount**: Explains selecting the amount and currency.
 5. **Duration Slider**: Explains lock-in periods, yields, and early exit penalties.
 6. **Max Loss Stop-Loss**: Teaches how automatic stop-loss protects capital on-chain.
@@ -43,6 +45,7 @@ The tour traverses 12 specific target zones across the 3 wizard steps:
 9. **Configure Continue Button**: Directs the user to the review stage.
 
 ### Step 3: Review & Confirm
+
 10. **Review Details**: Explains verifying the immutable parameters.
 11. **Terms Checkboxes**: Emphasizes reading exit rules and agreeing to DeFi risks.
 12. **Create Commitment Button**: Explains triggering the blockchain transaction.

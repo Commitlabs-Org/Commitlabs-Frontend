@@ -97,7 +97,7 @@ This is the complete registry of all error codes. Each code maps to:
 ```javascript
 // Check request headers, content-type, and method
 // Do not retry — the error will persist until request is fixed
-console.error("Check your request format and headers");
+console.error('Check your request format and headers');
 ```
 
 **Retriable**: ❌ No
@@ -215,11 +215,11 @@ redirectToLogin();
 
 ```javascript
 // Display permission denied message
-toast.error("You lack permission for this action.");
+toast.error('You lack permission for this action.');
 
 // Log for audit purposes
-auditLog.warn("Unauthorized access attempt", {
-  action: "settle_commitment",
+auditLog.warn('Unauthorized access attempt', {
+  action: 'settle_commitment',
   user_id: getCurrentUserId(),
 });
 
@@ -379,7 +379,7 @@ suggestAlternatives(response.error.details);
 
 ```javascript
 // Display generic message
-showErrorToast("Something went wrong. Please try again.");
+showErrorToast('Something went wrong. Please try again.');
 
 // Implement exponential backoff
 await backoffAndRetry({
@@ -389,7 +389,7 @@ await backoffAndRetry({
 });
 
 // Log request ID for support
-console.error("Request ID:", response.error.details.request_id);
+console.error('Request ID:', response.error.details.request_id);
 ```
 
 **Retriable**: ✅ Yes (with exponential backoff)
@@ -410,7 +410,7 @@ console.error("Request ID:", response.error.details.request_id);
 
 ```javascript
 // Display service unavailable message
-showErrorToast("Service temporarily unavailable. Retrying...");
+showErrorToast('Service temporarily unavailable. Retrying...');
 
 // Implement exponential backoff
 await backoffAndRetry();
@@ -585,22 +585,22 @@ import {
   NotFoundError,
   ConflictError,
   ForbiddenError,
-} from "@/lib/backend/errors";
+} from '@/lib/backend/errors';
 
 // ✅ Good: Throw typed error with context
-throw new ValidationError("Email must be unique.", {
-  field: "email",
+throw new ValidationError('Email must be unique.', {
+  field: 'email',
   value: userEmail,
 });
 
-throw new NotFoundError("Commitment", { commitmentId });
+throw new NotFoundError('Commitment', { commitmentId });
 
-throw new ConflictError("Commitment already settled.", {
+throw new ConflictError('Commitment already settled.', {
   settled_at: new Date().toISOString(),
 });
 
 // ❌ Bad: Ad-hoc error codes or messages
-throw new Error("Something is wrong"); // No error code!
+throw new Error('Something is wrong'); // No error code!
 ```
 
 ### Enforcing Registry Usage
@@ -609,10 +609,10 @@ All error codes **must** be registered in `ERROR_CODE_REGISTRY`. The registry is
 
 ```typescript
 // In test suite
-import { validateErrorCodeRegistry } from "@/lib/backend/errorCodes";
+import { validateErrorCodeRegistry } from '@/lib/backend/errorCodes';
 
-describe("Error Code Registry", () => {
-  it("should contain no duplicates", () => {
+describe('Error Code Registry', () => {
+  it('should contain no duplicates', () => {
     const validation = validateErrorCodeRegistry();
     expect(validation.valid).toBe(true);
     expect(validation.duplicates).toHaveLength(0);
@@ -631,12 +631,12 @@ To add a new error code:
    export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeDefinition> = {
      // ... existing codes
      MY_NEW_ERROR: {
-       code: "MY_NEW_ERROR",
+       code: 'MY_NEW_ERROR',
        statusCode: 400,
-       meaning: "Clear description...",
-       clientHandling: "How clients should handle this...",
+       meaning: 'Clear description...',
+       clientHandling: 'How clients should handle this...',
        retriable: false,
-       description: "When this error is triggered...",
+       description: 'When this error is triggered...',
      },
    };
    ```
@@ -645,9 +645,9 @@ To add a new error code:
 
    ```typescript
    export class MyNewError extends ApiError {
-     constructor(message = "Default message.", details?: unknown) {
-       super(message, "MY_NEW_ERROR", 400, details);
-       this.name = "MyNewError";
+     constructor(message = 'Default message.', details?: unknown) {
+       super(message, 'MY_NEW_ERROR', 400, details);
+       this.name = 'MyNewError';
      }
    }
    ```
@@ -666,23 +666,23 @@ import {
   ERROR_CODE_REGISTRY,
   validateErrorCodeRegistry,
   getErrorCodesByStatus,
-} from "@/lib/backend/errorCodes";
+} from '@/lib/backend/errorCodes';
 
-describe("ERROR_CODE_REGISTRY", () => {
-  it("should contain all required error codes", () => {
+describe('ERROR_CODE_REGISTRY', () => {
+  it('should contain all required error codes', () => {
     const requiredCodes = [
-      "BAD_REQUEST",
-      "VALIDATION_ERROR",
-      "UNAUTHORIZED",
-      "FORBIDDEN",
-      "NOT_FOUND",
-      "CONFLICT",
-      "UNPROCESSABLE_ENTITY",
-      "TOO_MANY_REQUESTS",
-      "INTERNAL_ERROR",
-      "BAD_GATEWAY",
-      "SERVICE_UNAVAILABLE",
-      "GATEWAY_TIMEOUT",
+      'BAD_REQUEST',
+      'VALIDATION_ERROR',
+      'UNAUTHORIZED',
+      'FORBIDDEN',
+      'NOT_FOUND',
+      'CONFLICT',
+      'UNPROCESSABLE_ENTITY',
+      'TOO_MANY_REQUESTS',
+      'INTERNAL_ERROR',
+      'BAD_GATEWAY',
+      'SERVICE_UNAVAILABLE',
+      'GATEWAY_TIMEOUT',
     ];
 
     requiredCodes.forEach((code) => {
@@ -690,27 +690,27 @@ describe("ERROR_CODE_REGISTRY", () => {
     });
   });
 
-  it("should have no duplicate error codes", () => {
+  it('should have no duplicate error codes', () => {
     const validation = validateErrorCodeRegistry();
     expect(validation.valid).toBe(true);
     expect(validation.duplicates).toHaveLength(0);
   });
 
-  it("should have all required fields in each definition", () => {
+  it('should have all required fields in each definition', () => {
     const validation = validateErrorCodeRegistry();
     expect(validation.errors).toHaveLength(0);
   });
 
-  it("should group codes by status correctly", () => {
+  it('should group codes by status correctly', () => {
     const grouped = getErrorCodesByStatus();
     expect(grouped[400]).toBeDefined(); // Client errors
     expect(grouped[500]).toBeDefined(); // Server errors
   });
 
-  it("should retrieve definition by code", () => {
-    const { getErrorCodeDefinition } = require("@/lib/backend/errorCodes");
-    const def = getErrorCodeDefinition("VALIDATION_ERROR");
-    expect(def.code).toBe("VALIDATION_ERROR");
+  it('should retrieve definition by code', () => {
+    const { getErrorCodeDefinition } = require('@/lib/backend/errorCodes');
+    const def = getErrorCodeDefinition('VALIDATION_ERROR');
+    expect(def.code).toBe('VALIDATION_ERROR');
     expect(def.statusCode).toBe(400);
     expect(def.retriable).toBe(false);
   });
@@ -721,16 +721,16 @@ describe("ERROR_CODE_REGISTRY", () => {
 
 ```typescript
 // tests/api/sample.test.ts
-describe("API Error Responses", () => {
-  it("should return VALIDATION_ERROR for invalid input", async () => {
-    const response = await fetch("/api/commitments", {
-      method: "POST",
-      body: JSON.stringify({ amount: "invalid" }),
+describe('API Error Responses', () => {
+  it('should return VALIDATION_ERROR for invalid input', async () => {
+    const response = await fetch('/api/commitments', {
+      method: 'POST',
+      body: JSON.stringify({ amount: 'invalid' }),
     });
 
     expect(response.status).toBe(400);
     const data = await response.json();
-    expect(data.error.code).toBe("VALIDATION_ERROR");
+    expect(data.error.code).toBe('VALIDATION_ERROR');
     expect(data.success).toBe(false);
   });
 });

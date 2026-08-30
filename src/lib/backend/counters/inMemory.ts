@@ -6,19 +6,19 @@ export class InMemoryCounters implements CountersAdapter {
   private chainFailures = 0;
   private successfulActions = 0;
 
-  incrementRateLimitBlocks(): void {
+  async incrementRateLimitBlocks(): Promise<void> {
     this.rateLimitBlocks++;
   }
 
-  incrementAuthFailures(): void {
+  async incrementAuthFailures(): Promise<void> {
     this.authFailures++;
   }
 
-  incrementChainFailures(): void {
+  async incrementChainFailures(): Promise<void> {
     this.chainFailures++;
   }
 
-  incrementSuccessfulActions(): void {
+  async incrementSuccessfulActions(): Promise<void> {
     this.successfulActions++;
   }
 
@@ -38,7 +38,7 @@ export class InMemoryCounters implements CountersAdapter {
     };
   }
 
-  reset(): void {
+  async reset(): Promise<void> {
     this.rateLimitBlocks = 0;
     this.authFailures = 0;
     this.chainFailures = 0;

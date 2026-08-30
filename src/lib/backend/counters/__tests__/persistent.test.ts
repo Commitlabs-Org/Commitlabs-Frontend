@@ -10,23 +10,23 @@ vi.mock('ioredis', () => {
       constructor() {
         // No-op constructor
       }
-      incr(key) {
+      incr(key: string) {
         const val = mockRedisData.get(key) || 0;
         mockRedisData.set(key, val + 1);
         return Promise.resolve(val + 1);
       }
-      mget(...keys) {
-        const values = keys.map(key => mockRedisData.get(key) || null);
+      mget(...keys: string[]) {
+        const values = keys.map((key) => mockRedisData.get(key) || null);
         return Promise.resolve(values);
       }
-      del(...keys) {
-        keys.forEach(key => mockRedisData.delete(key));
+      del(...keys: string[]) {
+        keys.forEach((key) => mockRedisData.delete(key));
         return Promise.resolve(keys.length);
       }
       quit() {
         return Promise.resolve();
       }
-    }
+    },
   };
 });
 
@@ -43,7 +43,7 @@ describe('PersistentCounters', () => {
     it('should increment the rate limit blocks counter in Redis', async () => {
       await counters.incrementRateLimitBlocks();
       await counters.incrementRateLimitBlocks();
-      
+
       const key = `commitlabs:metrics:rate_limit_blocks`;
       const value = mockRedisData.get(key);
       expect(value).toBe(2);
@@ -54,7 +54,7 @@ describe('PersistentCounters', () => {
     it('should increment the auth failures counter in Redis', async () => {
       await counters.incrementAuthFailures();
       await counters.incrementAuthFailures();
-      
+
       const key = `commitlabs:metrics:auth_failures`;
       const value = mockRedisData.get(key);
       expect(value).toBe(2);
@@ -65,7 +65,7 @@ describe('PersistentCounters', () => {
     it('should increment the chain failures counter in Redis', async () => {
       await counters.incrementChainFailures();
       await counters.incrementChainFailures();
-      
+
       const key = `commitlabs:metrics:chain_failures`;
       const value = mockRedisData.get(key);
       expect(value).toBe(2);
@@ -76,7 +76,7 @@ describe('PersistentCounters', () => {
     it('should increment the successful actions counter in Redis', async () => {
       await counters.incrementSuccessfulActions();
       await counters.incrementSuccessfulActions();
-      
+
       const key = `commitlabs:metrics:successful_actions`;
       const value = mockRedisData.get(key);
       expect(value).toBe(2);
@@ -104,7 +104,7 @@ describe('PersistentCounters', () => {
       await counters.incrementChainFailures();
       await counters.incrementSuccessfulActions();
       await counters.incrementSuccessfulActions();
-      
+
       const metrics = await counters.getMetrics();
       expect(metrics).toEqual({
         rate_limit_blocks: 2,
@@ -122,9 +122,9 @@ describe('PersistentCounters', () => {
       await counters.incrementAuthFailures();
       await counters.incrementChainFailures();
       await counters.incrementSuccessfulActions();
-      
+
       await counters.reset();
-      
+
       const metrics = await counters.getMetrics();
       expect(metrics).toEqual({
         rate_limit_blocks: 0,

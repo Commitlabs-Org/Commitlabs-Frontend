@@ -18,6 +18,7 @@ graph TD
 ```
 
 ## 1. Custom Hook: `usePaginatedListings`
+
 - **Location:** `src/hooks/usePaginatedListings.ts`
 - **Responsibilities:**
   - Manages lists, loading state, next page cursor, and whether more pages exist.
@@ -27,6 +28,7 @@ graph TD
   - Standardizes error handling and cleans up in-flight requests on fast parameter updates.
 
 ## 2. Component: `MarketplaceGrid`
+
 - **Location:** `src/components/MarketplaceGrid.tsx`
 - **Responsibilities:**
   - Consumes `usePaginatedListings` hook to load items.
@@ -35,13 +37,17 @@ graph TD
   - Renders inline loading indicator states and gracefully handles empty/end-of-list scenarios.
 
 ## 3. Integration: `Marketplace` Page
+
 - **Location:** `src/app/marketplace/page.tsx`
 - **Responsibilities:**
   - Renders `MarketplaceGrid` by forwarding the filters and sorting options inside a reactive `queryParams` object.
   - Synchronizes filter resets immediately, enabling seamless switching between filters and infinite scrolling.
 
 ## Verification
+
 - Unit tests are located at `src/hooks/__tests__/usePaginatedListings.test.ts`.
 - The tests verify:
   1. The hook fetches the first page of listings and appends subsequent pages upon `loadMore()` triggers.
   2. The hook terminates and sets `hasMore: false` once a page returning fewer items than the page size is received.
+  3. On fetch failure, the hook surfaces the error message via the `error` field distinctly from `hasMore: false`, so callers can distinguish a failed request from a genuine end-of-results state.
+  4. On a successful fetch, the `error` field is `null`.

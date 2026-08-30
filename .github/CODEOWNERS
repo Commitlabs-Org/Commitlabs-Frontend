@@ -9,6 +9,9 @@
 # Fallback owner for anything not matched by a more specific rule below.
 *                       @Commitlabs-Org/maintainers
 
+# Markdown files not in specific areas
+*.md                    @Commitlabs-Org/docs
+
 # Frontend: app router, UI components and styles
 /src/app/               @Commitlabs-Org/frontend
 /src/components/        @Commitlabs-Org/frontend
@@ -23,4 +26,3 @@
 
 # Documentation
 /docs/                  @Commitlabs-Org/docs
-*.md                    @Commitlabs-Org/docs

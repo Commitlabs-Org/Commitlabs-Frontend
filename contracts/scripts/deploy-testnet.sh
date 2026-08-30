@@ -53,6 +53,14 @@ validate_contract_id() {
   fi
 }
 
+validate_penalty_bps() {
+  local value="$1"
+  local label="$2"
+  if [[ ! "${value}" =~ ^[0-9]+$ ]] || (( value > 10000 )); then
+    fail "${label} must be an integer between 0 and 10000 (basis points)."
+  fi
+}
+
 upsert_env_var() {
   local key="$1"
   local value="$2"
@@ -143,6 +151,9 @@ initialize_contract() {
     --admin "${COMMITLABS_ADMIN_ADDRESS}"
     --token "${COMMITLABS_TOKEN_CONTRACT_ID}"
     --fee_recipient "${COMMITLABS_FEE_RECIPIENT_ADDRESS}"
+    --safe_default_penalty_bps "${COMMITLABS_SAFE_DEFAULT_PENALTY_BPS}"
+    --balanced_default_penalty_bps "${COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS}"
+    --aggressive_default_penalty_bps "${COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS}"
   )
 
   if [[ "${DRY_RUN}" == "1" ]]; then
@@ -158,12 +169,18 @@ main() {
   require_env COMMITLABS_ADMIN_ADDRESS
   require_env COMMITLABS_TOKEN_CONTRACT_ID
   require_env COMMITLABS_FEE_RECIPIENT_ADDRESS
+  require_env COMMITLABS_SAFE_DEFAULT_PENALTY_BPS
+  require_env COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS
+  require_env COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS
 
   [[ -f "${MANIFEST_PATH}" ]] || fail "Contract manifest not found at ${MANIFEST_PATH}"
 
   validate_stellar_address "${COMMITLABS_ADMIN_ADDRESS}" "COMMITLABS_ADMIN_ADDRESS"
   validate_contract_id "${COMMITLABS_TOKEN_CONTRACT_ID}" "COMMITLABS_TOKEN_CONTRACT_ID"
   validate_stellar_address "${COMMITLABS_FEE_RECIPIENT_ADDRESS}" "COMMITLABS_FEE_RECIPIENT_ADDRESS"
+  validate_penalty_bps "${COMMITLABS_SAFE_DEFAULT_PENALTY_BPS}" "COMMITLABS_SAFE_DEFAULT_PENALTY_BPS"
+  validate_penalty_bps "${COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS}" "COMMITLABS_BALANCED_DEFAULT_PENALTY_BPS"
+  validate_penalty_bps "${COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS}" "COMMITLABS_AGGRESSIVE_DEFAULT_PENALTY_BPS"
 
   if [[ "${DRY_RUN}" != "1" ]]; then
     require_command stellar

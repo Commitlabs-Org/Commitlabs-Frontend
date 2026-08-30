@@ -154,7 +154,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: #0a0a0a;
-  color: #99A1AF;
+  color: #99a1af;
 }
 
 .cardSafe {
@@ -257,13 +257,13 @@
 }
 
 .statLabel {
-  color: #99A1AF;
+  color: #99a1af;
   font-size: 0.85rem;
   font-weight: 400;
 }
 
 .statValue {
-  color: #99A1AF;
+  color: #99a1af;
   font-weight: 500;
   font-size: 0.85rem;
 }
@@ -294,7 +294,7 @@
 }
 
 .description {
-  color: #99A1AF;
+  color: #99a1af;
   font-size: 0.85rem;
   line-height: 1.5;
 }
@@ -331,7 +331,9 @@
   border-radius: 0.5rem;
   background-color: rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   border: 1px solid rgba(255, 255, 255, 0.2);
   font-size: 0.9rem;
   font-weight: 500;
@@ -349,7 +351,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
   border: none;
   font-size: 0.9rem;
   font-weight: 500;
@@ -375,7 +379,59 @@
 
 .continueBtnDisabled {
   background: rgba(255, 255, 255, 0.1);
-  color: #99A1AF;
+  color: #99a1af;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* Preset / Template Picker */
+.presetsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  justify-content: center;
+}
+
+.presetBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.625rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d1d5db;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  min-width: 13rem;
+  max-width: 18rem;
+}
+
+.presetBtn:hover {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: rgba(20, 184, 166, 0.07);
+}
+
+.presetBtnSelected {
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.12);
+  color: #ffffff;
+}
+
+.presetLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.presetDesc {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  line-height: 1.4;
 }

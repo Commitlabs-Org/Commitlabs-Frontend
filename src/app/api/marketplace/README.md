@@ -96,17 +96,18 @@ Create a new marketplace listing for a Commitment NFT.
 
 ## Cancel Listing
 
-**DELETE** `/api/marketplace/listings/[id]?sellerAddress=GXXX...`
+**DELETE** `/api/marketplace/listings/[id]`
 
-Cancel an existing marketplace listing.
+Cancel an existing marketplace listing. The caller must be the listing's seller, authenticated via a Bearer session token — the seller address is derived from the token, not supplied by the client.
 
 ### URL Parameters
 
 - `id`: Listing ID (required)
 
-### Query Parameters
+### Headers
 
-- `sellerAddress`: Address of the seller (required)
+- `Authorization: Bearer <sessionToken>` (required) — the seller's address is derived from this token via `verifySessionToken`. There is no `sellerAddress` query parameter; any such parameter is ignored.
+- A valid CSRF token is required on this mutation (see `assertMutationCsrf`), consistent with other mutating marketplace endpoints.
 
 ### Response (200 OK)
 
@@ -123,9 +124,57 @@ Cancel an existing marketplace listing.
 
 ### Error Responses
 
-- **400 Bad Request**: Missing required parameters or invalid seller
+- **400 Bad Request**: Missing listing ID
+- **401 Unauthorized**: Missing/malformed `Authorization` header, or an invalid/expired session token
+- **403 Forbidden**: The authenticated session's address does not match the listing's `sellerAddress`
 - **404 Not Found**: Listing not found
 - **409 Conflict**: Listing is not active
+
+### Example
+
+```bash
+curl -X DELETE "https://<host>/api/marketplace/listings/listing_1_1234567890" \
+  -H "Authorization: Bearer <sessionToken>" \
+  -H "X-CSRF-Token: <csrfToken>"
+```
+
+---
+
+## Marketplace Stats
+
+**GET** `/api/marketplace/stats`
+
+Returns aggregate statistics for the marketplace for use in header KPIs and analytics.
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "activeListings": 6,
+    "averageYield": 12.43,
+    "medianPrice": 130000,
+    "typeBreakdown": {
+      "Safe": 2,
+      "Balanced": 2,
+      "Aggressive": 2
+    }
+  }
+}
+```
+
+### Metrics Definitions
+
+- **activeListings**: Total number of active listings currently on the marketplace.
+- **averageYield**: The arithmetic mean of `currentYield` across all active listings.
+- **medianPrice**: The middle price value among all active listings, ensuring outliers don't skew the KPI.
+- **typeBreakdown**: Count of listings categorized by commitment type (Safe, Balanced, Aggressive).
+
+### Performance
+
+- **Cacheable**: Includes `Cache-Control` headers (`public, s-maxage=60, stale-while-revalidate=30`) for high performance and low origin load.
+- **Rate Limited**: Protected by IP-based rate limiting to prevent abuse.
 
 ---
 

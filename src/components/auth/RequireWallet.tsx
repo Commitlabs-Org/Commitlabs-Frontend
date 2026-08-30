@@ -1,103 +1,92 @@
-'use client'
+'use client';
 
-import React, { useMemo, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
-import { ArrowRight, ShieldCheck, Wallet } from 'lucide-react'
-import Dialog from '@/components/ui/Dialog'
-import { useWallet } from '@/components/auth/WalletProvider'
+import { ReactNode, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useWallet } from '../../hooks/useWallet';
 
 interface RequireWalletProps {
-  children: React.ReactNode
+  children: ReactNode;
+  redirectTo?: string;
 }
 
-function formatRouteLabel(pathname: string) {
-  if (pathname === '/create') {
-    return 'create a commitment'
-  }
+/**
+ * RequireWallet - Auth guard that ensures wallet is connected
+ *
+ * If wallet is not connected, shows a connect prompt instead of children.
+ * Optionally redirects to a specified path.
+ */
+export function RequireWallet({ children, redirectTo }: RequireWalletProps) {
+  const router = useRouter();
+  const { isConnected, isConnecting, connect, error } = useWallet();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
-  if (pathname === '/settings') {
-    return 'manage your settings'
-  }
-
-  if (pathname.startsWith('/commitments')) {
-    return 'view your commitments'
-  }
-
-  return 'continue'
-}
-
-export default function RequireWallet({ children }: RequireWalletProps) {
-  const pathname = usePathname()
-  const { connected, connect, error, status } = useWallet()
-  const [connectError, setConnectError] = useState<string | null>(null)
-  const connectButtonRef = useRef<HTMLButtonElement>(null)
-
-  const routeAction = useMemo(() => formatRouteLabel(pathname), [pathname])
-
-  if (connected) {
-    return <>{children}</>
-  }
-
-  const handleConnect = async () => {
-    setConnectError(null)
-
-    try {
-      await connect()
-    } catch (nextError) {
-      setConnectError(nextError instanceof Error ? nextError.message : 'Unable to connect wallet.')
+  // Check connection status
+  useEffect(() => {
+    if (redirectTo && !isConnected && !isConnecting) {
+      setShouldRedirect(true);
     }
-  }
+  }, [isConnected, isConnecting, redirectTo]);
 
-  return (
-    <Dialog
-      open
-      title="Connect your wallet to continue"
-      description={`You need a connected wallet to ${routeAction}. Once connected, you’ll stay on ${pathname} and we’ll continue right where you left off.`}
-      initialFocusRef={connectButtonRef}
-    >
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-[#0ff0fc1f] bg-[linear-gradient(180deg,rgba(15,240,252,0.12),rgba(15,240,252,0.04))] p-5">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#0ff0fc59] bg-[#0ff0fc14]">
-              <ShieldCheck className="h-6 w-6 text-[#0ff0fc]" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#0ff0fc]">Protected route</p>
-              <p className="text-sm leading-6 text-white/80">
-                CommitLabs uses your wallet connection to load your commitments, preserve drafts, and personalize secure actions on this route.
-              </p>
-            </div>
-          </div>
-        </div>
+  // Handle redirect
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.push(redirectTo);
+    }
+  }, [shouldRedirect, router, redirectTo]);
 
-        <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Requested route</p>
-          <p className="mt-2 font-mono text-[15px] text-[#d9f9fb]">{pathname}</p>
-        </div>
-
-        {(connectError || error) ? (
-          <p className="rounded-2xl border border-[#ff7b7b3b] bg-[#ff7b7b14] px-4 py-3 text-sm leading-6 text-[#ffd7d7]">
-            {connectError || error}
-          </p>
-        ) : null}
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <button
-            ref={connectButtonRef}
-            type="button"
-            onClick={handleConnect}
-            disabled={status === 'connecting'}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#0ff0fc] px-5 py-4 text-sm font-semibold text-[#071014] transition hover:bg-[#6ff7ff] disabled:cursor-not-allowed disabled:bg-[#0ff0fc80]"
-          >
-            <Wallet className="h-4 w-4" />
-            {status === 'connecting' ? 'Connecting...' : 'Connect Wallet'}
-          </button>
-          <span className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-white/72">
-            Return after connect
-            <ArrowRight className="h-4 w-4" />
-          </span>
+  // Show loading state while connecting
+  if (isConnecting) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Connecting wallet...</p>
         </div>
       </div>
-    </Dialog>
-  )
+    );
+  }
+
+  // Show connect prompt if not connected
+  if (!isConnected) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="max-w-md w-full mx-auto p-8 bg-white rounded-xl shadow-lg text-center">
+          <div className="mb-6">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Wallet Required</h2>
+          <p className="text-gray-600 mb-6">Please connect your wallet to access this page.</p>
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          <button
+            onClick={connect}
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200"
+          >
+            Connect Wallet
+          </button>
+          <p className="mt-4 text-sm text-gray-500">
+            <a href="/" className="text-blue-600 hover:underline">
+              Return to home
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Wallet is connected, render children
+  return <>{children}</>;
 }

@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { ArrowRight, CheckCircle, Copy, ExternalLink, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
+import { buildExplorerUrl, type ExplorerNetwork } from '@/utils/explorerLinks';
 
 export interface PurchaseSuccessModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ export interface PurchaseSuccessModalProps {
   commitmentType: string;
   pricePaid: string;
   txHash?: string;
+  network?: ExplorerNetwork;
   onViewCommitments: () => void;
 }
 
@@ -26,6 +28,7 @@ export default function PurchaseSuccessModal({
   commitmentType,
   pricePaid,
   txHash,
+  network = 'public',
   onViewCommitments,
 }: PurchaseSuccessModalProps) {
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
@@ -39,9 +42,7 @@ export default function PurchaseSuccessModal({
     });
   }
 
-  const explorerUrl = txHash
-    ? `https://stellar.expert/explorer/testnet/tx/${txHash}`
-    : null;
+  const explorerUrl = buildExplorerUrl('tx', txHash, network);
 
   return (
     <Dialog
@@ -104,17 +105,13 @@ export default function PurchaseSuccessModal({
               <dt className="text-[13px] font-bold uppercase tracking-[0.15em] text-white/40">
                 Type
               </dt>
-              <dd className="m-0 text-[14px] font-semibold text-white/90">
-                {commitmentType}
-              </dd>
+              <dd className="m-0 text-[14px] font-semibold text-white/90">{commitmentType}</dd>
             </div>
             <div className="flex items-center justify-between gap-4">
               <dt className="text-[13px] font-bold uppercase tracking-[0.15em] text-white/40">
                 Price Paid
               </dt>
-              <dd className="m-0 text-[20px] font-bold text-white">
-                {pricePaid}
-              </dd>
+              <dd className="m-0 text-[20px] font-bold text-white">{pricePaid}</dd>
             </div>
           </dl>
         </div>

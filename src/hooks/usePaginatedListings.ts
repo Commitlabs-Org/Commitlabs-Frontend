@@ -1,23 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard';
 
-/**
- * Hook to fetch marketplace listings with page-based pagination.
- * It appends new pages to the existing list and provides helpers for
- * loading more data, resetting when filters change, and exposing loading
- * and end-of-list states.
- */
+interface PaginatedListingsResult {
+  listings: MarketplaceCardProps[];
+  isLoading: boolean;
+  hasMore: boolean;
+  loadMore: () => void;
+}
+
 export function usePaginatedListings(
-  /**
-   * Optional query parameters (filters, sort, etc.) that will be serialized
-   * into the request URL. Changing this object will reset pagination.
-   */
-  params: Record<string, any> = {},
-  /** Number of items per page - defaults to 9 to match the UI grid */
+  params: Record<string, unknown> = {},
   pageSize: number = 9,
-  /** If true, the hook will not fetch or reset state */
   disabled: boolean = false,
-) {
+): PaginatedListingsResult {
   const serializedParams = JSON.stringify(params);
   const [listings, setListings] = useState<MarketplaceCardProps[]>([]);
   const [page, setPage] = useState(1);
@@ -25,7 +20,6 @@ export function usePaginatedListings(
   const [hasMore, setHasMore] = useState(true);
   const [prevParams, setPrevParams] = useState(serializedParams);
 
-  // Synchronously reset pagination state during render when query parameters change
   if (!disabled && prevParams !== serializedParams) {
     setPrevParams(serializedParams);
     setPage(1);
@@ -39,7 +33,6 @@ export function usePaginatedListings(
     let active = true;
 
     async function fetchData() {
-      // If we are beyond page 1 and there is no more data, don't fetch
       if (page > 1 && !hasMore) return;
 
       setIsLoading(true);
@@ -47,7 +40,7 @@ export function usePaginatedListings(
         const searchParams = new URLSearchParams({
           page: String(page),
           pageSize: String(pageSize),
-          ...JSON.parse(serializedParams),
+          ...params,
         });
         const res = await fetch(`/api/marketplace/listings?${searchParams.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch listings');
@@ -55,19 +48,15 @@ export function usePaginatedListings(
 
         if (!active) return;
 
-        const newCards: MarketplaceCardProps[] = data.cards ?? [];
-        setListings(prev => {
-          if (page === 1) {
-            return newCards;
-          }
-          // Avoid duplicate items by checking IDs
-          const existingIds = new Set(prev.map(item => item.id));
-          const filteredNewCards = newCards.filter(item => !existingIds.has(item.id));
-          return [...prev, ...filteredNewCards];
+        const newCards: MarketplaceCardProps[] = Array.isArray(data.cards) ? data.cards : [];
+        setListings((prev) => {
+          if (page === 1) return newCards;
+          const existingIds = new Set(prev.map((item) => item.id));
+          const filtered = newCards.filter((item) => !existingIds.has(item.id));
+          return [...prev, ...filtered];
         });
         setHasMore(newCards.length === pageSize);
-      } catch (e) {
-        console.error(e);
+      } catch (_e) {
         if (active) {
           setHasMore(false);
         }
@@ -83,11 +72,11 @@ export function usePaginatedListings(
     return () => {
       active = false;
     };
-  }, [page, serializedParams, pageSize, disabled]);
+  }, [page, serializedParams, pageSize, disabled, hasMore, params]);
 
   const loadMore = useCallback(() => {
     if (!disabled && !isLoading && hasMore) {
-      setPage(prev => prev + 1);
+      setPage((prev) => prev + 1);
     }
   }, [isLoading, hasMore, disabled]);
 

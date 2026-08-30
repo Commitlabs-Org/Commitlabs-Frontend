@@ -9,13 +9,7 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import {
-  Toast,
-  ToastOptions,
-  ToastContextValue,
-  ToastSeverity,
-  ToastHistoryEntry,
-} from './types';
+import { Toast, ToastOptions, ToastContextValue, ToastSeverity, ToastHistoryEntry } from './types';
 import ToastItem from './ToastItem';
 import './toast.css';
 
@@ -69,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       id: toast.id,
       severity: toast.severity,
       title: toast.title,
-      description: toast.description,
+      ...(toast.description !== undefined && { description: toast.description }),
       createdAt: toast.createdAt,
       dismissedAt: Date.now(),
       read: false,
@@ -106,7 +100,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         recordHistory(toast);
       }
     },
-    [recordHistory]
+    [recordHistory],
   );
 
   const dismissAll = useCallback(() => {
@@ -132,7 +126,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }, duration);
       timersRef.current.set(id, timer);
     },
-    [dismiss]
+    [dismiss],
   );
 
   const showToast = useCallback(
@@ -143,10 +137,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         id,
         severity,
         title: options.title,
-        description: options.description,
         duration,
         createdAt: Date.now(),
-        action: options.action,
+        ...(options.description !== undefined && { description: options.description }),
+        ...(options.action !== undefined && { action: options.action }),
       };
 
       setToasts((prev) => {
@@ -186,7 +180,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
       return id;
     },
-    [startTimer]
+    [startTimer],
   );
 
   const pauseTimer = useCallback((id: string) => {
@@ -210,15 +204,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         startTimer(id, remaining);
       }
     },
-    [toasts, startTimer]
+    [toasts, startTimer],
   );
 
   const clearHistory = useCallback(() => setHistory([]), []);
 
   const markHistoryRead = useCallback((id: string) => {
-    setHistory((prev) =>
-      prev.map((entry) => (entry.id === id ? { ...entry, read: true } : entry))
-    );
+    setHistory((prev) => prev.map((entry) => (entry.id === id ? { ...entry, read: true } : entry)));
   }, []);
 
   const markAllHistoryRead = useCallback(() => {
@@ -227,19 +219,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const success = useCallback(
     (options: ToastOptions) => showToast('success', options),
-    [showToast]
+    [showToast],
   );
-  const error = useCallback(
-    (options: ToastOptions) => showToast('error', options),
-    [showToast]
-  );
-  const info = useCallback(
-    (options: ToastOptions) => showToast('info', options),
-    [showToast]
-  );
+  const error = useCallback((options: ToastOptions) => showToast('error', options), [showToast]);
+  const info = useCallback((options: ToastOptions) => showToast('info', options), [showToast]);
   const warning = useCallback(
     (options: ToastOptions) => showToast('warning', options),
-    [showToast]
+    [showToast],
   );
 
   const value: ToastContextValue = {
@@ -295,11 +281,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       >
         {announcer.assertive}
       </div>
-      <div
-        className="toast-container"
-        role="region"
-        aria-label="Notifications"
-      >
+      <div className="toast-container" role="region" aria-label="Notifications">
         <div className="toast-viewport" data-toast-viewport>
           {toasts.map((toast) => (
             <ToastItem

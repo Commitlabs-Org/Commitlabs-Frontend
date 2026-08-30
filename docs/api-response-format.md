@@ -4,23 +4,25 @@
 
 All API routes in this project return a consistent JSON envelope so that the frontend and any consumers can handle responses uniformly.
 
+> **Canonical reference:** For the full response contract (including correlation IDs, metadata, testing patterns, and migration guide), see [unified-api-response-contract.md](./unified-api-response-contract.md).
+
 ---
 
 ## Success shape
 
 ```json
 {
-  "ok": true,
+  "success": true,
   "data": { ... },
   "meta": { "total": 42, "page": 1 }
 }
 ```
 
-| Field  | Type                      | Always present | Description                              |
-|--------|---------------------------|----------------|------------------------------------------|
-| `ok`   | `true`                    | ✅              | Discriminant — always `true` on success  |
-| `data` | `T`                       | ✅              | The response payload                     |
-| `meta` | `Record<string, unknown>` | ❌              | Optional pagination / extra context      |
+| Field     | Type                      | Always present | Description                             |
+| --------- | ------------------------- | -------------- | --------------------------------------- |
+| `success` | `true`                    | ✅             | Discriminant — always `true` on success |
+| `data`    | `T`                       | ✅             | The response payload                    |
+| `meta`    | `Record<string, unknown>` | ❌             | Optional pagination / extra context     |
 
 ---
 
@@ -28,7 +30,7 @@ All API routes in this project return a consistent JSON envelope so that the fro
 
 ```json
 {
-  "ok": false,
+  "success": false,
   "error": {
     "code": "NOT_FOUND",
     "message": "Commitment not found.",
@@ -38,26 +40,26 @@ All API routes in this project return a consistent JSON envelope so that the fro
 ```
 
 | Field           | Type      | Always present | Description                                      |
-|-----------------|-----------|----------------|--------------------------------------------------|
-| `ok`            | `false`   | ✅              | Discriminant — always `false` on error           |
-| `error.code`    | `string`  | ✅              | Short machine-readable code (see table below)    |
-| `error.message` | `string`  | ✅              | Human-readable message safe for UI display       |
-| `error.details` | `unknown` | ❌              | Extra context (never expose sensitive data here) |
+| --------------- | --------- | -------------- | ------------------------------------------------ |
+| `success`       | `false`   | ✅             | Discriminant — always `false` on error           |
+| `error.code`    | `string`  | ✅             | Short machine-readable code (see table below)    |
+| `error.message` | `string`  | ✅             | Human-readable message safe for UI display       |
+| `error.details` | `unknown` | ❌             | Extra context (never expose sensitive data here) |
 
 ---
 
 ## Error codes
 
-| Code                   | HTTP status | Error class           |
-|------------------------|-------------|-----------------------|
-| `BAD_REQUEST`          | 400         | `BadRequestError`     |
-| `VALIDATION_ERROR`     | 400         | `ValidationError`     |
-| `UNAUTHORIZED`         | 401         | `UnauthorizedError`   |
-| `FORBIDDEN`            | 403         | `ForbiddenError`      |
-| `NOT_FOUND`            | 404         | `NotFoundError`       |
-| `CONFLICT`             | 409         | `ConflictError`       |
-| `TOO_MANY_REQUESTS`    | 429         | `TooManyRequestsError`|
-| `INTERNAL_ERROR`       | 500         | `InternalError`       |
+| Code                | HTTP status | Error class            |
+| ------------------- | ----------- | ---------------------- |
+| `BAD_REQUEST`       | 400         | `BadRequestError`      |
+| `VALIDATION_ERROR`  | 400         | `ValidationError`      |
+| `UNAUTHORIZED`      | 401         | `UnauthorizedError`    |
+| `FORBIDDEN`         | 403         | `ForbiddenError`       |
+| `NOT_FOUND`         | 404         | `NotFoundError`        |
+| `CONFLICT`          | 409         | `ConflictError`        |
+| `TOO_MANY_REQUESTS` | 429         | `TooManyRequestsError` |
+| `INTERNAL_ERROR`    | 500         | `InternalError`        |
 
 ---
 
@@ -76,8 +78,8 @@ messages consistently:
     "details": {
       "fieldErrors": [
         { "field": "user.profile.name", "message": "Expected string, received number" },
-        { "field": "items[0].qty",      "message": "Number must be greater than 0" },
-        { "field": "",                  "message": "Password and confirmation do not match" }
+        { "field": "items[0].qty", "message": "Number must be greater than 0" },
+        { "field": "", "message": "Password and confirmation do not match" }
       ]
     }
   }
@@ -102,14 +104,14 @@ In any route wrapped with `withApiHandler`, convert the `ZodError` using
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { validationErrorFromZod } from '@/lib/backend/validationErrors';
 
-const BodySchema = z.object({ /* ... */ });
+const BodySchema = z.object({/* ... */});
 
 export const POST = withApiHandler(async (req) => {
-    const parsed = BodySchema.safeParse(await req.json());
-    if (!parsed.success) {
-        throw validationErrorFromZod(parsed.error);
-    }
-    // ... happy path
+  const parsed = BodySchema.safeParse(await req.json());
+  if (!parsed.success) {
+    throw validationErrorFromZod(parsed.error);
+  }
+  // ... happy path
 });
 ```
 
@@ -128,12 +130,14 @@ import { ok } from '@/lib/backend/apiResponse';
 
 // Simple success
 return ok({ status: 'healthy' });
-// → { ok: true, data: { status: 'healthy' } }
+// → { success: true, data: { status: 'healthy' } }
 
 // With meta (e.g. pagination)
 return ok(items, { total: 100, page: 2, pageSize: 20 });
-// → { ok: true, data: [...], meta: { total: 100, page: 2, pageSize: 20 } }
+// → { success: true, data: [...], meta: { total: 100, page: 2, pageSize: 20 } }
 ```
+
+> **Note:** The `ok()` helper function produces a response with `"success": true` in the JSON body. The function name `ok` and the JSON field name `success` are intentionally different — the function name is a convenience shorthand, while `success` is the canonical discriminant field in the response envelope.
 
 ### Returning an error response
 
@@ -141,7 +145,7 @@ return ok(items, { total: 100, page: 2, pageSize: 20 });
 import { fail } from '@/lib/backend/apiResponse';
 
 return fail('NOT_FOUND', 'Commitment not found.', undefined, 404);
-// → { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
+// → { success: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
 ```
 
 ### Using typed error classes (recommended)
@@ -154,27 +158,27 @@ import { ok } from '@/lib/backend/apiResponse';
 import { NotFoundError, ValidationError } from '@/lib/backend/errors';
 
 export const GET = withApiHandler(async (req) => {
-    const commitment = await findCommitment(id);
-    if (!commitment) {
-        throw new NotFoundError('Commitment');
-        // → 404: { ok: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
-    }
-    return ok(commitment);
+  const commitment = await findCommitment(id);
+  if (!commitment) {
+    throw new NotFoundError('Commitment');
+    // → 404: { success: false, error: { code: 'NOT_FOUND', message: 'Commitment not found.' } }
+  }
+  return ok(commitment);
 });
 ```
 
 Available error classes (all from `@/lib/backend/errors`):
 
-| Class                 | Default status |
-|-----------------------|----------------|
-| `BadRequestError`     | 400            |
-| `ValidationError`     | 400            |
-| `UnauthorizedError`   | 401            |
-| `ForbiddenError`      | 403            |
-| `NotFoundError`       | 404            |
-| `ConflictError`       | 409            |
-| `TooManyRequestsError`| 429            |
-| `InternalError`       | 500            |
+| Class                  | Default status |
+| ---------------------- | -------------- |
+| `BadRequestError`      | 400            |
+| `ValidationError`      | 400            |
+| `UnauthorizedError`    | 401            |
+| `ForbiddenError`       | 403            |
+| `NotFoundError`        | 404            |
+| `ConflictError`        | 409            |
+| `TooManyRequestsError` | 429            |
+| `InternalError`        | 500            |
 
 ### Full route example (health check)
 
@@ -184,8 +188,8 @@ import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok } from '@/lib/backend/apiResponse';
 
 export const GET = withApiHandler(async () => {
-    return ok({ status: 'healthy' });
-    // GET /api/health → 200 { ok: true, data: { status: 'healthy' } }
+  return ok({ status: 'healthy' });
+  // GET /api/health → 200 { success: true, data: { status: 'healthy' } }
 });
 ```
 
@@ -194,8 +198,9 @@ export const GET = withApiHandler(async () => {
 ## Client-side Fetch Helper (`apiClient.ts`)
 
 A shared client-side fetch wrapper (`src/lib/apiClient.ts`) is available to make API requests with built-in:
+
 - **Request Timeout**: Aborts automatically after a timeout (default 5000ms).
-- **Consistent Envelope Parsing**: Automatically unwraps `{ ok: true, data: T }` envelopes or parses standard error envelopes.
+- **Consistent Envelope Parsing**: Automatically unwraps `{ success: true, data: T }` envelopes or parses standard error envelopes.
 - **Typed Errors**: Throws a subclass of `Error` called `ApiError` containing the API-returned error code, message, and details.
 
 ### Basic Usage
@@ -237,7 +242,7 @@ const data = await apiFetch<MyResponseType>(
     method: 'PATCH',
     headers: { 'X-Custom-Header': 'value' },
   },
-  10000 // custom 10s timeout
+  10000, // custom 10s timeout
 );
 ```
 
@@ -245,15 +250,14 @@ const data = await apiFetch<MyResponseType>(
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/apiClient.ts`            | Client-side API fetch client with timeout & typed errors |
-| `src/lib/backend/apiResponse.ts` | `ok()` and `fail()` response helpers |
-| `src/lib/backend/errors.ts`      | Typed error classes with HTTP status codes |
-| `src/lib/backend/withApiHandler.ts` | HOF that catches `ApiError` and calls `fail()` |
-| `docs/api-response-format.md`    | This document |
+| File                                | Purpose                                                  |
+| ----------------------------------- | -------------------------------------------------------- |
+| `src/lib/apiClient.ts`              | Client-side API fetch client with timeout & typed errors |
+| `src/lib/backend/apiResponse.ts`    | `ok()` and `fail()` response helpers                     |
+| `src/lib/backend/errors.ts`         | Typed error classes with HTTP status codes               |
+| `src/lib/backend/withApiHandler.ts` | HOF that catches `ApiError` and calls `fail()`           |
+| `docs/api-response-format.md`       | This document                                            |
 
 ---
 
-*Created as part of issue #105. Update this document when new error codes are introduced.*
-
+_Created as part of issue #105. Update this document when new error codes are introduced._

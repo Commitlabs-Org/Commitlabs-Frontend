@@ -1,217 +1,294 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import type { DisputeInfo } from '@/types/dispute';
 import { useDisputeSSE } from '@/hooks/useDisputeSSE';
 
-export type DisputeStage = 'filed' | 'under_review' | 'resolved';
-export type DisputeResolution =
-  | 'resolved_in_favor_of_owner'
-  | 'resolved_in_favor_of_counterparty'
-  | 'dismissed';
+// ---------------------------------------------------------------------------
+// Re-export the type so consumers can import it from the component module
+// ---------------------------------------------------------------------------
+export type { DisputeInfo };
 
-export interface DisputeInfo {
-  stage: DisputeStage;
-  filedAt?: string;
-  reasonCategory?: string;
-  reviewStartedAt?: string;
-  resolvedAt?: string;
-  resolution?: DisputeResolution;
-}
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
-interface DisputeStatusTrackerProps {
-  dispute: DisputeInfo | null;
+export interface DisputeStatusTrackerProps {
   /**
-   * When provided, the component subscribes to /api/events?commitmentId=<id>
-   * via SSE and live-updates the displayed dispute status.
+   * The current dispute information.
+   * Pass `null` when no dispute is active — the stepper will show an idle state.
+   */
+  dispute: DisputeInfo | null;
+
+  /**
+   * Optional commitment ID. When provided, the component subscribes to live
+   * SSE events for this commitment and overlays live dispute-stage updates
+   * on top of the `dispute` prop, plus renders a connection-status badge.
    */
   commitmentId?: string;
 }
 
-const STAGE_INDEX: Record<DisputeStage, number> = {
-  filed: 0,
-  under_review: 1,
-  resolved: 2,
-};
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-const RESOLUTION_LABELS: Record<DisputeResolution, string> = {
-  resolved_in_favor_of_owner: 'Resolved in your favor',
-  resolved_in_favor_of_counterparty: 'Resolved against you',
+const STAGES: readonly DisputeInfo['stage'][] = [
+  'filed',
+  'under_review',
+  'escalated',
+  'resolved',
+  'dismissed',
+] as const;
+
+const STAGE_LABELS: Record<DisputeInfo['stage'], string> = {
+  filed: 'Filed',
+  under_review: 'Under Review',
+  escalated: 'Escalated',
+  resolved: 'Resolved',
   dismissed: 'Dismissed',
 };
 
-function formatTimestamp(iso: string | undefined): string {
-  if (!iso) return '';
-  try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+const STAGE_ORDER: Record<DisputeInfo['stage'], number> = {
+  filed: 0,
+  under_review: 1,
+  escalated: 2,
+  resolved: 3,
+  dismissed: 3,
+};
+
+/** Returns the index of the current active stage (0-based). */
+function activeStageIndex(stage: DisputeInfo['stage']): number {
+  return STAGE_ORDER[stage] ?? 0;
 }
 
-type StepState = 'completed' | 'current' | 'pending';
+const BADGE_STYLES: Record<string, { bg: string; dot: string; label: string }> = {
+  live: {
+    bg: 'rgba(34,197,94,0.12)',
+    dot: '#22c55e',
+    label: 'Live',
+  },
+  connecting: {
+    bg: 'rgba(250,204,21,0.12)',
+    dot: '#facc15',
+    label: 'Connecting…',
+  },
+  reconnecting: {
+    bg: 'rgba(251,146,60,0.12)',
+    dot: '#fb923c',
+    label: 'Reconnecting…',
+  },
+};
 
-function getStepState(stepIndex: number, currentIndex: number): StepState {
-  if (stepIndex < currentIndex) return 'completed';
-  if (stepIndex === currentIndex) return 'current';
-  return 'pending';
-}
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-interface StepIndicatorProps {
-  state: StepState;
-}
+export default function DisputeStatusTracker({
+  dispute: initialDispute,
+  commitmentId,
+}: DisputeStatusTrackerProps) {
+  // --- SSE live updates (only when commitmentId is provided) ---------------
+  const { liveDispute, connectionState } = useDisputeSSE(commitmentId ?? '');
 
-function StepIndicator({ state }: StepIndicatorProps) {
-  if (state === 'completed') {
-    return (
-      <span
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0ff0fc]/20 border border-[#0ff0fc]"
-        aria-hidden="true"
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path
-            d="M2 7l4 4 6-7"
-            stroke="#0ff0fc"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    );
-  }
+  // Merge initial/mock dispute with any live SSE data.
+  // Live data takes precedence when available.
+  const dispute = useMemo<DisputeInfo | null>(() => {
+    if (commitmentId && liveDispute) {
+      return liveDispute;
+    }
+    return initialDispute;
+  }, [commitmentId, liveDispute, initialDispute]);
 
-  if (state === 'current') {
-    return (
-      <span
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF8A04]/20 border-2 border-[#FF8A04]"
-        aria-hidden="true"
-      >
-        <span className="h-3 w-3 rounded-full bg-[#FF8A04]" />
-      </span>
-    );
-  }
+  const currentStage = dispute?.stage ?? null;
+  const activeIdx = currentStage ? activeStageIndex(currentStage) : -1;
 
-  return (
-    <span
-      className="flex h-8 w-8 items-center justify-center rounded-full border border-[#333] bg-[#111]"
-      aria-hidden="true"
-    >
-      <span className="h-2 w-2 rounded-full bg-[#444]" />
-    </span>
-  );
-}
+  // --- Badge for SSE status -------------------------------------------------
+  const badge = commitmentId ? BADGE_STYLES[connectionState] : null;
 
-export default function DisputeStatusTracker({ dispute: initialDispute, commitmentId }: DisputeStatusTrackerProps) {
-  const { dispute, connected, error } = useDisputeSSE({
-    commitmentId: commitmentId ?? '',
-    initialDispute,
-  });
-
-  if (!dispute) return null;
-
-  const currentIndex = STAGE_INDEX[dispute.stage];
-
-  const steps = [
-    {
-      key: 'filed' as const,
-      label: 'Filed',
-      timestamp: formatTimestamp(dispute.filedAt),
-      detail: dispute.reasonCategory,
-    },
-    {
-      key: 'under_review' as const,
-      label: 'Under Review',
-      timestamp: formatTimestamp(dispute.reviewStartedAt),
-    },
-    {
-      key: 'resolved' as const,
-      label: 'Resolved',
-      timestamp: formatTimestamp(dispute.resolvedAt),
-      detail: dispute.resolution ? RESOLUTION_LABELS[dispute.resolution] : undefined,
-    },
-  ];
+  // --------------------------------------------------------------------------
+  // Render
+  // --------------------------------------------------------------------------
 
   return (
     <section
-      aria-labelledby="dispute-tracker-heading"
-      className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#FF8A04]/20"
+      className="bg-[#0a0a0a] rounded-2xl p-6 border border-[#222]"
+      aria-label="Dispute status tracker"
     >
+      {/* Header row */}
       <div className="flex items-center justify-between mb-6">
-        <h2
-          id="dispute-tracker-heading"
-          className="text-sm font-semibold uppercase tracking-[0.18em] text-[#FF8A04]"
-        >
-          Dispute Status
-        </h2>
-        {commitmentId && (
+        <h2 className="text-lg font-semibold text-[#f5f5f7]">Dispute Tracker</h2>
+
+        {badge && (
           <span
-            className={`text-xs px-2 py-0.5 rounded-full border ${
-              error
-                ? 'border-red-500/30 text-red-400'
-                : connected
-                  ? 'border-green-500/30 text-green-400'
-                  : 'border-[#333] text-[#99a1af]'
-            }`}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+            style={{ backgroundColor: badge.bg, color: badge.dot }}
+            role="status"
             aria-live="polite"
+            aria-label={`SSE connection: ${badge.label}`}
           >
-            {error ? 'Reconnecting…' : connected ? 'Live' : 'Connecting…'}
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{
+                backgroundColor: badge.dot,
+                animation:
+                  connectionState === 'live' ? 'pulse-dot 2s ease-in-out infinite' : undefined,
+              }}
+            />
+            {badge.label}
           </span>
         )}
       </div>
 
-      <ol className="flex items-start" aria-label="Dispute lifecycle steps">
-        {steps.map((step, index) => {
-          const state = getStepState(index, currentIndex);
-          const isCurrent = state === 'current';
-          const isLast = index === steps.length - 1;
+      {/* Stepper */}
+      {dispute ? (
+        <div className="space-y-4">
+          {/* Step indicators */}
+          <ol className="flex items-center w-full" aria-label="Dispute stages">
+            {STAGES.map((stage, idx) => {
+              const isCompleted = idx < activeIdx;
+              const isCurrent = idx === activeIdx;
+              const isFuture = idx > activeIdx;
 
-          return (
-            <React.Fragment key={step.key}>
-              <li
-                className="flex flex-col items-center"
-                aria-current={isCurrent ? 'step' : undefined}
-              >
-                <StepIndicator state={state} />
-                <div className="mt-2 flex flex-col items-center text-center w-24">
-                  <span
-                    className={`text-xs font-semibold ${
-                      state === 'pending'
-                        ? 'text-[#555]'
-                        : state === 'current'
-                          ? 'text-[#FF8A04]'
-                          : 'text-[#0ff0fc]'
-                    }`}
-                  >
-                    {step.label}
-                  </span>
-                  {step.timestamp && (
-                    <span className="mt-1 text-[10px] leading-tight text-[#666]">
-                      {step.timestamp}
+              return (
+                <li
+                  key={stage}
+                  className={`flex items-center ${idx < STAGES.length - 1 ? 'flex-1' : ''}`}
+                >
+                  {/* Step circle + label */}
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`
+                        relative flex h-8 w-8 items-center justify-center rounded-full
+                        text-xs font-bold transition-colors duration-300
+                        ${isCompleted ? 'bg-[#22c55e] text-[#050505]' : ''}
+                        ${isCurrent ? 'bg-[#3b82f6] text-white' : ''}
+                        ${isFuture ? 'bg-[#222] text-[#888]' : ''}
+                      `}
+                      aria-current={isCurrent ? 'step' : undefined}
+                    >
+                      {isCompleted ? (
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                          aria-hidden="true"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        idx + 1
+                      )}
+                    </div>
+                    <span
+                      className={`
+                        mt-1.5 text-[11px] leading-tight text-center max-w-[64px]
+                        ${isCurrent ? 'text-[#f5f5f7] font-medium' : 'text-[#666]'}
+                      `}
+                    >
+                      {STAGE_LABELS[stage]}
                     </span>
+                  </div>
+
+                  {/* Connector line */}
+                  {idx < STAGES.length - 1 && (
+                    <div
+                      className={`
+                        flex-1 h-0.5 mx-1 mb-6 rounded-full transition-colors duration-300
+                        ${isCompleted ? 'bg-[#22c55e]' : 'bg-[#222]'}
+                      `}
+                      aria-hidden="true"
+                    />
                   )}
-                  {step.detail && (
-                    <span className="mt-1 text-[10px] leading-tight text-[#888] italic">
-                      {step.detail}
-                    </span>
-                  )}
-                </div>
-              </li>
-              {!isLast && (
-                <div
-                  className={`mt-4 flex-1 h-px min-w-[32px] ${
-                    index < currentIndex ? 'bg-[#0ff0fc]/40' : 'bg-[#2a2a2a]'
-                  }`}
-                  aria-hidden="true"
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </ol>
+                </li>
+              );
+            })}
+          </ol>
+
+          {/* Dispute details card */}
+          <div className="bg-[#111] rounded-xl p-4 border border-[#1a1a1a] text-sm space-y-1.5">
+            <div className="flex justify-between text-[#888]">
+              <span>Filed</span>
+              <span className="text-[#f5f5f7]">
+                {new Date(dispute.filedAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            </div>
+            <div className="flex justify-between text-[#888]">
+              <span>Category</span>
+              <span className="text-[#f5f5f7]">{dispute.reasonCategory}</span>
+            </div>
+            {dispute.reviewStartedAt && (
+              <div className="flex justify-between text-[#888]">
+                <span>Review started</span>
+                <span className="text-[#f5f5f7]">
+                  {new Date(dispute.reviewStartedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
+              </div>
+            )}
+            {dispute.resolvedAt && (
+              <div className="flex justify-between text-[#888]">
+                <span>Resolved</span>
+                <span className="text-[#f5f5f7]">
+                  {new Date(dispute.resolvedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
+              </div>
+            )}
+            {dispute.resolution && (
+              <div className="pt-2 mt-2 border-t border-[#1a1a1a] text-[#a3a3a3]">
+                {dispute.resolution}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* No active dispute */
+        <div className="text-center py-10 text-[#666] text-sm">
+          <svg
+            className="mx-auto h-10 w-10 mb-3 text-[#333]"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+            />
+          </svg>
+          <p className="font-medium text-[#888]">No active dispute</p>
+          <p className="mt-1 text-[#555]">
+            This commitment is in good standing with no disputes on file.
+          </p>
+        </div>
+      )}
+
+      {/* Inline keyframes for the pulse animation */}
+      <style jsx>{`
+        @keyframes pulse-dot {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.4;
+          }
+        }
+      `}</style>
     </section>
   );
 }
