@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server';
 /**
  * POST /api/commitments/[id]/fund
  *
@@ -38,7 +37,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Keys are capped at MAX_IDEMPOTENCY_KEY_LENGTH characters to prevent
  *   storage inflation from hostile oversized values.
  */
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
@@ -143,6 +142,10 @@ export const POST = withApiHandler(
       return response;
     }
 
+    // Hoist idempotencyKey so the catch block can call fail() regardless of
+    // where in the try block the error was thrown.
+    const idempotencyKey = req.headers.get('idempotency-key');
+
     try {
       // --- CSRF ---------------------------------------------------------------
       assertMutationCsrf(req);
@@ -161,7 +164,6 @@ export const POST = withApiHandler(
       const id = validateCommitmentId(params.id);
 
       // --- Idempotency key validation ------------------------------------------
-      const idempotencyKey = req.headers.get('idempotency-key');
       let isIdempotentRetry = false;
 
       if (idempotencyKey) {
