@@ -30,13 +30,23 @@ vi.mock('@/lib/backend/idempotency', () => ({
     fail: vi.fn(),
   },
 }));
+vi.mock('@/lib/backend/requireAuth', () => ({
+  verifyAuth: vi.fn(),
+}));
+vi.mock('@/lib/backend/config', () => ({
+  getBackendConfig: vi.fn(),
+}));
 
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { fundEscrowOnChain, getCommitmentFromChain } from '@/lib/backend/services/contracts';
 import { idempotencyService } from '@/lib/backend/idempotency';
+import { verifyAuth } from '@/lib/backend/requireAuth';
+import { getBackendConfig } from '@/lib/backend/config';
+import { UnauthorizedError } from '@/lib/backend/errors';
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
+<<<<<<< HEAD
 const mockAssertCsrf = vi.mocked(assertMutationCsrf);
 const mockFundEscrow = vi.mocked(fundEscrowOnChain);
 const mockGetCommitment = vi.mocked(getCommitmentFromChain);
@@ -89,6 +99,31 @@ const COMMITMENT_ID = 'commitment-fund-test-123';
 const MOCK_COMMITMENT_CREATED = {
   id: COMMITMENT_ID,
   ownerAddress: VALID_ADDRESS,
+=======
+const mockGetRateLimitWindowSeconds = vi.mocked(getRateLimitWindowSeconds);
+const mockFundEscrowOnChain = vi.mocked(fundEscrowOnChain);
+const mockGetCommitmentFromChain = vi.mocked(getCommitmentFromChain);
+const mockAssertMutationCsrf = vi.mocked(assertMutationCsrf);
+const mockIdempotencyGetRecord = vi.mocked(idempotencyService.getRecord);
+const mockIdempotencyStart = vi.mocked(idempotencyService.start);
+const mockIdempotencyComplete = vi.mocked(idempotencyService.complete);
+const mockIdempotencyFail = vi.mocked(idempotencyService.fail);
+const mockVerifyAuth = vi.mocked(verifyAuth);
+const mockGetBackendConfig = vi.mocked(getBackendConfig);
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+// Valid Stellar public keys: G + 55 chars from [A-Z2-7] (base32 alphabet, no 0/1/8/9)
+const OWNER_ADDRESS     = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; // 56 chars
+const NON_OWNER_ADDRESS = 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'; // different valid key
+const TAMPERED_ADDRESS  = 'GCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC'; // another valid key
+
+const MOCK_COMMITMENT = {
+  id: 'cmt-123',
+  ownerAddress: OWNER_ADDRESS,
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
   asset: 'USDC',
   amount: '10000',
   status: 'CREATED' as const,
@@ -107,6 +142,12 @@ const MOCK_FUND_RESULT = {
   reference: undefined,
 };
 
+const TEST_NETWORK = 'Test SDF Network ; September 2015';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function makeRequest(
   id: string,
   body?: Record<string, unknown>,
@@ -115,6 +156,11 @@ function makeRequest(
 ): [NextRequest, { params: { id: string } }] {
   const reqHeaders: Record<string, string> = {
     ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+<<<<<<< HEAD
+=======
+    // Provide a default Bearer token so verifyAuth mock can resolve
+    authorization: 'Bearer test-token',
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
     ...headers,
   };
   const req = new NextRequest(`http://localhost/api/commitments/${id}/fund`, {
@@ -139,6 +185,7 @@ async function expectError(
   if (code) expect(body.error.code).toBe(code);
 }
 
+<<<<<<< HEAD
 // ─── Helper to build a completed idempotency record ──────────────────────────
 
 function completedRecord(response: Record<string, unknown>, statusCode = 200) {
@@ -151,6 +198,11 @@ function completedRecord(response: Record<string, unknown>, statusCode = 200) {
     expiresAt: Date.now() + 86400000,
   };
 }
+=======
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
 describe('POST /api/commitments/[id]/fund', () => {
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -160,6 +212,7 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     vi.clearAllMocks();
     diagnosticsService.clear();
     mockCheckRateLimit.mockResolvedValue(true);
+<<<<<<< HEAD
     mockGetCommitment.mockResolvedValue(MOCK_COMMITMENT_CREATED);
     mockFundEscrow.mockResolvedValue({
       txHash: 'abc123def456',
@@ -172,6 +225,32 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
   });
 
   // ─── 200 Success ─────────────────────────────────────────────────────────
+=======
+    mockGetRateLimitWindowSeconds.mockReturnValue(60);
+    mockGetCommitmentFromChain.mockResolvedValue(MOCK_COMMITMENT);
+    mockFundEscrowOnChain.mockResolvedValue(MOCK_FUND_RESULT);
+    mockIdempotencyGetRecord.mockResolvedValue(null);
+    mockIdempotencyStart.mockResolvedValue(true);
+    // Default: authenticated as the commitment owner
+    mockVerifyAuth.mockReturnValue({ address: OWNER_ADDRESS, isAdmin: false });
+    mockGetBackendConfig.mockReturnValue({
+      networkPassphrase: TEST_NETWORK,
+      sorobanRpcUrl: 'https://soroban-testnet.stellar.org:443',
+      contractAddresses: {
+        commitmentNFT: 'contract-nft',
+        commitmentCore: 'contract-core',
+        attestationEngine: 'contract-attest',
+      },
+      environment: 'test',
+      chainWritesEnabled: false,
+      activeVersion: '1.0.0',
+    } as ReturnType<typeof getBackendConfig>);
+  });
+
+  // =========================================================================
+  // 200 - success
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('200 - success', () => {
     it('funds a commitment escrow', async () => {
@@ -192,7 +271,13 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     diagnosticsService.clear();
   });
 
+<<<<<<< HEAD
   // ── Success Cases ──────────────────────────────────────────────────────────
+=======
+    it('calls fundEscrowOnChain with the session-resolved callerAddress', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { callerAddress: OWNER_ADDRESS });
+      await POST(req, ctx);
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   it('successfully funds a commitment in CREATED state', async () => {
     const req = createMockRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/fund`, {
@@ -298,7 +383,21 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
       expect(res.status).toBe(200);
       expect(mockFundEscrowOnChain).toHaveBeenCalledWith({
         commitmentId: 'cmt-123',
+<<<<<<< HEAD
         callerAddress: undefined,
+=======
+        callerAddress: OWNER_ADDRESS,
+      });
+    });
+
+    it('uses session address when callerAddress is omitted from body', async () => {
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await POST(req, ctx);
+
+      expect(mockFundEscrowOnChain).toHaveBeenCalledWith({
+        commitmentId: 'cmt-123',
+        callerAddress: OWNER_ADDRESS,
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       });
     });
 
@@ -340,9 +439,21 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
       expect(mockIdempotencyComplete).not.toHaveBeenCalled();
       expect(mockIdempotencyFail).not.toHaveBeenCalled();
     });
+
+    it('accepts a matching network passphrase in the body', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { network: TEST_NETWORK });
+      const res = await POST(req, ctx);
+      expect(res.status).toBe(200);
+    });
   });
 
+<<<<<<< HEAD
   // ─── 200 Success with idempotency ────────────────────────────────────────
+=======
+  // =========================================================================
+  // 200 - success with idempotency
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('200 - success with idempotency', () => {
     it('returns cached response when idempotency key is COMPLETED', async () => {
@@ -455,13 +566,20 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     });
   });
 
+<<<<<<< HEAD
   // ─── 400 Validation ──────────────────────────────────────────────────────
+=======
+  // =========================================================================
+  // 400 - validation errors
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('400 - validation errors', () => {
     it('rejects empty commitment id', async () => {
       const [req, ctx] = makeRequest('', {});
       await expectError(req, ctx, 400, 'VALIDATION_ERROR');
     });
+<<<<<<< HEAD
     const result = await parseResponse(response);
     expect(result.status).toBe(409);
     expect(result.data.error.code).toBe('CONFLICT_ERROR');
@@ -492,10 +610,174 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
   });
 
   // ─── 403 Forbidden ───────────────────────────────────────────────────────
+=======
+
+    it('rejects whitespace-only id', async () => {
+      const [req, ctx] = makeRequest('   ', {});
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects invalid JSON body', async () => {
+      const req = new NextRequest('http://localhost/api/commitments/cmt-123/fund', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: 'Bearer test-token',
+        },
+        body: 'not-json',
+      });
+      await expectError(req, { params: { id: 'cmt-123' } }, 400, 'VALIDATION_ERROR');
+    });
+
+    // --- Stellar address format -----------------------------------------------
+
+    it('rejects callerAddress that is too short', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { callerAddress: 'GSHORT' });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects callerAddress that does not start with G', async () => {
+      // 56-char key but starts with 'S' (secret key, not public key)
+      const [req, ctx] = makeRequest('cmt-123', {
+        callerAddress: 'SOWNER1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ234567890ABCDE',
+      });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects callerAddress with invalid base32 characters', async () => {
+      const [req, ctx] = makeRequest('cmt-123', {
+        // 56 chars, starts with G, but contains invalid chars (1, 8, 9)
+        callerAddress: 'G1111111111111111111111111111111111111111111111111111111',
+      });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    // --- Network passphrase mismatch ------------------------------------------
+
+    it('rejects a body network passphrase that differs from server config', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { network: 'Public Global Stellar Network ; September 2015' });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects an empty network passphrase in body', async () => {
+      const [req, ctx] = makeRequest('cmt-123', { network: '' });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    // --- Idempotency key length -----------------------------------------------
+
+    it('rejects an idempotency key longer than 128 characters', async () => {
+      const oversizedKey = 'k'.repeat(129);
+      const [req, ctx] = makeRequest('cmt-123', {}, 'POST', { 'idempotency-key': oversizedKey });
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('accepts an idempotency key at exactly the 128-char limit', async () => {
+      const maxKey = 'k'.repeat(128);
+      const [req, ctx] = makeRequest('cmt-123', {}, 'POST', { 'idempotency-key': maxKey });
+      const res = await POST(req, ctx);
+      expect(res.status).toBe(200);
+    });
+
+    // --- Numeric amount boundary ---------------------------------------------
+
+    it('rejects commitment whose amount from chain is zero', async () => {
+      mockGetCommitmentFromChain.mockResolvedValue({ ...MOCK_COMMITMENT, amount: '0' });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects commitment whose amount from chain is negative', async () => {
+      mockGetCommitmentFromChain.mockResolvedValue({ ...MOCK_COMMITMENT, amount: '-500' });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects commitment whose amount from chain is NaN text', async () => {
+      mockGetCommitmentFromChain.mockResolvedValue({ ...MOCK_COMMITMENT, amount: 'not-a-number' });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    // --- Server response shape ------------------------------------------------
+
+    it('rejects a chain response where commitmentId does not match the requested id', async () => {
+      mockFundEscrowOnChain.mockResolvedValue({
+        ...MOCK_FUND_RESULT,
+        commitmentId: 'cmt-DIFFERENT',
+      });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+
+    it('rejects a chain response where txHash is a non-string truthy value', async () => {
+      mockFundEscrowOnChain.mockResolvedValue({
+        ...MOCK_FUND_RESULT,
+        // @ts-expect-error deliberate hostile value
+        txHash: 12345,
+      });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+    });
+  });
+
+  // =========================================================================
+  // 401 - unauthorized (disconnected wallet / missing session)
+  // =========================================================================
+
+  describe('401 - unauthorized', () => {
+    it('rejects when no session token is present', async () => {
+      mockVerifyAuth.mockImplementation(() => {
+        throw new UnauthorizedError('Bearer token required');
+      });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 401, 'UNAUTHORIZED');
+    });
+
+    it('rejects when session token is expired or invalid', async () => {
+      mockVerifyAuth.mockImplementation(() => {
+        throw new UnauthorizedError('Invalid or expired session');
+      });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 401, 'UNAUTHORIZED');
+    });
+
+    it('rejects a disconnected wallet scenario (no auth header)', async () => {
+      mockVerifyAuth.mockImplementation(() => {
+        throw new UnauthorizedError('Bearer token required');
+      });
+      // Request without authorization header
+      const req = new NextRequest('http://localhost/api/commitments/cmt-123/fund', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      await expectError(req, { params: { id: 'cmt-123' } }, 401, 'UNAUTHORIZED');
+    });
+  });
+
+  // =========================================================================
+  // 403 - forbidden
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('403 - forbidden', () => {
-    it('rejects callerAddress that does not match owner', async () => {
-      const [req, ctx] = makeRequest('cmt-123', { callerAddress: 'GWRONGADDRESS' });
+    it('rejects when session address does not match commitment owner (ownership check)', async () => {
+      // Session belongs to a different valid Stellar address
+      mockVerifyAuth.mockReturnValue({ address: NON_OWNER_ADDRESS, isAdmin: false });
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 403, 'FORBIDDEN');
+    });
+
+    it('rejects when callerAddress in body does not match the session identity', async () => {
+      // Session is valid (owner) but body tries to assert a different address
+      const [req, ctx] = makeRequest('cmt-123', { callerAddress: NON_OWNER_ADDRESS });
+      await expectError(req, ctx, 403, 'FORBIDDEN');
+    });
+
+    it('rejects a tampered callerAddress that matches owner format but is a different key', async () => {
+      // Session authenticates as OWNER_ADDRESS; body asserts another valid-format address
+      const [req, ctx] = makeRequest('cmt-123', { callerAddress: TAMPERED_ADDRESS });
       await expectError(req, ctx, 403, 'FORBIDDEN');
   // ── State Invariant Tests ──────────────────────────────────────────────────
 
@@ -518,7 +800,13 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     expect(result.data.error.message).toContain('Only CREATED commitments can be funded');
   });
 
+<<<<<<< HEAD
   // ─── 404 Not Found ───────────────────────────────────────────────────────
+=======
+  // =========================================================================
+  // 404 - not found
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('404 - not found', () => {
     it('returns 404 when commitment does not exist', async () => {
@@ -541,6 +829,7 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     expect(result.data.error.message).toContain('Only the commitment owner may fund');
   });
 
+<<<<<<< HEAD
   // ─── 409 Conflict ────────────────────────────────────────────────────────
 
   describe('409 - conflict: non-CREATED commitment statuses', () => {
@@ -565,6 +854,41 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     }
 
     it('rejects duplicate idempotency key that is still processing (STARTED)', async () => {
+=======
+  // =========================================================================
+  // 409 - conflict
+  // =========================================================================
+
+  describe('409 - conflict', () => {
+    it('rejects funding a non-CREATED commitment (replay guard)', async () => {
+      mockGetCommitmentFromChain.mockResolvedValue({
+        ...MOCK_COMMITMENT,
+        status: 'ACTIVE',
+      } as typeof MOCK_COMMITMENT);
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 409, 'CONFLICT');
+    });
+
+    it('rejects a SETTLED commitment (replay — already funded and settled)', async () => {
+      mockGetCommitmentFromChain.mockResolvedValue({
+        ...MOCK_COMMITMENT,
+        status: 'SETTLED',
+      } as typeof MOCK_COMMITMENT);
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 409, 'CONFLICT');
+    });
+
+    it('rejects a FUNDED commitment that is in VIOLATED state', async () => {
+      mockGetCommitmentFromChain.mockResolvedValue({
+        ...MOCK_COMMITMENT,
+        status: 'VIOLATED',
+      } as typeof MOCK_COMMITMENT);
+      const [req, ctx] = makeRequest('cmt-123', {});
+      await expectError(req, ctx, 409, 'CONFLICT');
+    });
+
+    it('rejects duplicate idempotency key that is still processing', async () => {
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       mockIdempotencyGetRecord.mockResolvedValue({
         key: 'idem-004',
         status: 'STARTED',
@@ -588,7 +912,13 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     expect(result.data.error.code).toBe('NOT_FOUND_ERROR');
   });
 
+<<<<<<< HEAD
   // ─── 429 Rate Limited ────────────────────────────────────────────────────
+=======
+  // =========================================================================
+  // 429 - rate limited
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('429 - rate limited', () => {
     it('returns 429 when rate limit exceeded', async () => {
@@ -608,6 +938,7 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     });
   });
 
+<<<<<<< HEAD
   // ─── 502 Blockchain error ─────────────────────────────────────────────────
 
   describe('502 - blockchain error', () => {
@@ -646,6 +977,11 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
   });
 
   // ─── 405 Method Not Allowed ──────────────────────────────────────────────
+=======
+  // =========================================================================
+  // 405 - method not allowed
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('405 - method not allowed', () => {
     it('rejects GET requests', async () => {
@@ -669,6 +1005,7 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     expect(result.data.error.code).toBe('VALIDATION_ERROR');
   });
 
+<<<<<<< HEAD
   it('rejects malformed JSON in request body', async () => {
     const req = createMockRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/fund`, {
       method: 'POST',
@@ -724,6 +1061,11 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
   });
 
   // ─── OPTIONS preflight ───────────────────────────────────────────────────
+=======
+  // =========================================================================
+  // OPTIONS
+  // =========================================================================
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
   describe('OPTIONS', () => {
     it('returns 204 for OPTIONS preflight', async () => {
@@ -750,10 +1092,19 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
     expect(result.data.error.code).toBe('TOO_MANY_REQUESTS_ERROR');
   });
 
+<<<<<<< HEAD
   // ─── Error handling and idempotency failure path ──────────────────────────
 
   describe('error handling', () => {
     it('fails idempotency key when getCommitmentFromChain throws', async () => {
+=======
+  // =========================================================================
+  // Error handling / idempotency cleanup
+  // =========================================================================
+
+  describe('error handling', () => {
+    it('fails idempotency key on RPC error', async () => {
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       mockGetCommitmentFromChain.mockRejectedValue(new Error('RPC failure'));
       const [req, ctx] = makeRequest('cmt-123', {}, 'POST', { 'idempotency-key': 'idem-005' });
       await POST(req, ctx);
@@ -778,6 +1129,16 @@ describe('POST /api/commitments/[id]/fund - Idempotency & Concurrent Request Bou
       await POST(req, ctx);
 
       expect(mockIdempotencyFail).not.toHaveBeenCalled();
+    });
+
+    it('fails idempotency key when authorization is rejected', async () => {
+      mockVerifyAuth.mockImplementation(() => {
+        throw new UnauthorizedError('Invalid or expired session');
+      });
+      const [req, ctx] = makeRequest('cmt-123', {}, 'POST', { 'idempotency-key': 'idem-006' });
+      await POST(req, ctx);
+
+      expect(mockIdempotencyFail).toHaveBeenCalledWith('idem-006');
     });
 
     it('returns 500 for unexpected errors', async () => {

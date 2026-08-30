@@ -44,13 +44,57 @@ import { fundEscrowOnChain, getCommitmentFromChain } from '@/lib/backend/service
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { idempotencyService } from '@/lib/backend/idempotency';
+<<<<<<< HEAD
 import { diagnosticsService } from '@/lib/backend/diagnostics';
 import { randomUUID } from 'crypto';
+=======
+import { verifyAuth } from '@/lib/backend/requireAuth';
+import { getBackendConfig } from '@/lib/backend/config';
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Stellar public keys are always exactly 56 characters and begin with 'G'.
+ * This regex rejects obviously-malformed addresses before they reach the chain
+ * service, preventing tampered or placeholder values from being forwarded.
+ */
+const STELLAR_ADDRESS_RE = /^G[A-Z2-7]{55}$/;
+
+/**
+ * Maximum byte length for an idempotency key.  Unbounded keys could be used
+ * to inflate in-memory/KV storage without meaningful semantic value.
+ */
+const MAX_IDEMPOTENCY_KEY_LENGTH = 128;
+
+// ---------------------------------------------------------------------------
+// Schema
+// ---------------------------------------------------------------------------
+
+/**
+ * Body schema for POST /api/commitments/[id]/fund.
+ *
+ * `callerAddress` is optional here: when omitted the route falls back to the
+ * address extracted from the verified server-side session token.  When
+ * provided it must be a syntactically-valid Stellar public key; the route
+ * then additionally checks it matches the session identity, preventing a
+ * client from spoofing a different owner address.
+ *
+ * `network` is optional: when supplied by the client it must equal the
+ * server-configured network passphrase, catching wrong-network submissions
+ * before any on-chain call is attempted.
+ */
 const FundRequestSchema = z.object({
-  callerAddress: z.string().min(1, 'callerAddress is required'),
+  callerAddress: z
+    .string()
+    .regex(STELLAR_ADDRESS_RE, 'callerAddress must be a valid Stellar public key (G…, 56 chars)')
+    .optional(),
+  network: z.string().optional(),
 });
 
+<<<<<<< HEAD
 /**
  * Bound for concurrent funding operations.
  * Prevents resource exhaustion during high load or DDoS.
@@ -63,6 +107,11 @@ const MAX_CONCURRENT_FUNDING_OPS = 100;
  * Used for SLO tracking and alerting in production.
  */
 const FUND_OPERATION_SLOW_THRESHOLD_MS = 30000; // 30 seconds
+=======
+// ---------------------------------------------------------------------------
+// CORS
+// ---------------------------------------------------------------------------
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
 
 const COMMITMENT_FUND_CORS_POLICY = {
   POST: { access: 'first-party' },
@@ -70,8 +119,13 @@ const COMMITMENT_FUND_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(COMMITMENT_FUND_CORS_POLICY);
 
+// ---------------------------------------------------------------------------
+// Handler
+// ---------------------------------------------------------------------------
+
 export const POST = withApiHandler(
   async (req: NextRequest, { params }, correlationId) => {
+<<<<<<< HEAD
     // Generate unique operation ID for telemetry tracking
     const operationId = randomUUID();
 
@@ -153,6 +207,48 @@ export const POST = withApiHandler(
       }
 
       // ─── Request Validation ───────────────────────────────────────────────────
+=======
+    // --- CSRF -----------------------------------------------------------------
+    assertMutationCsrf(req);
+
+    // --- Rate limit -----------------------------------------------------------
+    const ip = getClientIp(req);
+    if (!(await checkRateLimit(ip, 'api/commitments/fund'))) {
+      throw new TooManyRequestsError(
+        'Too many requests. Please try again later.',
+        undefined,
+        getRateLimitWindowSeconds('api/commitments/fund'),
+      );
+    }
+
+    // --- Route parameter validation -------------------------------------------
+    const id = params.id;
+    if (!id?.trim()) {
+      throw new ValidationError('Commitment ID is required');
+    }
+
+    // --- Idempotency key validation --------------------------------------------
+    const idempotencyKey = req.headers.get('idempotency-key');
+    if (idempotencyKey !== null) {
+      if (idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+        throw new ValidationError(
+          `Idempotency-Key must not exceed ${MAX_IDEMPOTENCY_KEY_LENGTH} characters`,
+        );
+      }
+      const record = await idempotencyService.getRecord(idempotencyKey);
+      if (record) {
+        if (record.status === 'COMPLETED') {
+          return ok(record.response, undefined, record.statusCode, correlationId);
+        } else if (record.status === 'STARTED') {
+          throw new ConflictError('A request with this Idempotency-Key is currently processing');
+        }
+      }
+      await idempotencyService.start(idempotencyKey);
+    }
+
+    try {
+      // --- Body parsing -------------------------------------------------------
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       let body: unknown;
       try {
         body = await req.json();
@@ -165,9 +261,53 @@ export const POST = withApiHandler(
         throw new ValidationError('Invalid request data', validation.error.issues);
       }
 
+<<<<<<< HEAD
       const callerAddress = validation.data.callerAddress;
 
       // ─── Commitment State Check (Precondition Invariant) ───────────────────────
+=======
+      const { callerAddress: bodyAddress, network: clientNetwork } = validation.data;
+
+      // --- Network passphrase check -------------------------------------------
+      // When the client supplies a `network` hint we verify it matches the
+      // server-configured passphrase.  A mismatch indicates a wrong-network
+      // wallet or a tampered payload; reject early rather than broadcasting a
+      // transaction to the wrong network.
+      if (clientNetwork !== undefined) {
+        const { networkPassphrase } = getBackendConfig();
+        if (clientNetwork !== networkPassphrase) {
+          throw new ValidationError(
+            'Client network passphrase does not match server configuration',
+            { expected: networkPassphrase, received: clientNetwork },
+          );
+        }
+      }
+
+      // --- Session-based authorization ----------------------------------------
+      // Derive the authenticated wallet identity from the server-side session
+      // token (Bearer header or session cookie).  We do NOT rely solely on the
+      // client-supplied callerAddress to establish identity — a tampered body
+      // would otherwise allow any address to be asserted as the caller.
+      //
+      // When the client also supplies callerAddress we cross-check it against
+      // the session identity.  This ensures both:
+      //   1. The session is valid (not disconnected or expired).
+      //   2. The body address has not been tampered to impersonate a different owner.
+      const auth = verifyAuth(req);
+      const sessionAddress = auth.address;
+
+      if (bodyAddress !== undefined && bodyAddress !== sessionAddress) {
+        throw new ForbiddenError(
+          'callerAddress in request body does not match the authenticated session identity',
+          { commitmentId: id },
+        );
+      }
+
+      // Resolved caller: prefer the session-verified address.
+      const callerAddress = sessionAddress;
+
+      // --- Commitment state validation ----------------------------------------
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       const commitment = await getCommitmentFromChain(id);
 
       if (!commitment) {
@@ -189,6 +329,7 @@ export const POST = withApiHandler(
         throw statusError;
       }
 
+<<<<<<< HEAD
       // INVARIANT: Ownership immutability - only owner can fund
       if (callerAddress && callerAddress !== commitment.ownerAddress) {
         const authError = new ForbiddenError(
@@ -206,17 +347,60 @@ export const POST = withApiHandler(
 
       // ─── Execute Funding on Chain ──────────────────────────────────────────────
       // This is the critical operation - any failure here should not create ledger effects
+=======
+      // --- Ownership check (server-side) --------------------------------------
+      // Ownership is verified against the on-chain record, not inferred from
+      // client state.  The session address must match the ownerAddress stored
+      // on-chain; a mismatch means replay/tampering with another user's ID.
+      if (callerAddress !== commitment.ownerAddress) {
+        throw new ForbiddenError('Only the commitment owner may fund this commitment', {
+          commitmentId: id,
+        });
+      }
+
+      // --- Numeric commitment amount sanity check -----------------------------
+      // `commitment.amount` is a string from the chain.  Validate it is a
+      // finite, positive number before proceeding; a malformed chain response
+      // (zero, NaN, negative) would silently create a bogus funding record.
+      const numericAmount = Number(commitment.amount);
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+        throw new ValidationError('Commitment amount from chain is invalid or non-positive', {
+          amount: commitment.amount,
+          commitmentId: id,
+        });
+      }
+
+      // --- On-chain funding ---------------------------------------------------
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       const funded = await fundEscrowOnChain({
         commitmentId: id,
         callerAddress,
       });
 
+<<<<<<< HEAD
       // Capture fundedAt once so the idempotency cache stores the exact
       // same timestamp that is returned in the response body — a retry with
       // the same Idempotency-Key will replay this stable value.
       const fundedAt = new Date().toISOString();
 
       // ─── Success Response & Idempotency Caching ───────────────────────────────
+=======
+      // --- Server response shape validation -----------------------------------
+      // Validate that the chain service returned a structurally-sound response
+      // before we persist the idempotency record and return it to the client.
+      // A missing txHash is acceptable (mock / dry-run mode returns undefined),
+      // but the commitmentId echo must match to prevent a confused-deputy bug.
+      if (funded.commitmentId !== id) {
+        throw new ValidationError('Chain service returned mismatched commitmentId', {
+          expected: id,
+          received: funded.commitmentId,
+        });
+      }
+      if (funded.txHash !== undefined && typeof funded.txHash !== 'string') {
+        throw new ValidationError('Chain service returned invalid txHash type');
+      }
+
+>>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       const responseData = {
         commitmentId: id,
         txHash: funded.txHash,

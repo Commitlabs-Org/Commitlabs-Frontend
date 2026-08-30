@@ -124,9 +124,14 @@ const trimmedOptionalString = z
   .transform((value) => (value.length > 0 ? value : undefined))
   .optional();
 
+const STELLAR_PUBLIC_KEY_REGEX = /^G[A-HJ-NP-Z0-9]{55}$/;
+
 const CommitmentSearchQuerySchema = z.object({
   /** Owner address – required to scope the search. */
-  ownerAddress: z.string().trim().min(1, 'ownerAddress is required'),
+  ownerAddress: z
+    .string()
+    .trim()
+    .regex(STELLAR_PUBLIC_KEY_REGEX, 'ownerAddress must be a valid Stellar public key (G... format)'),
 
   /** Filter by asset code (e.g. "XLM", "USDC"). Case-insensitive match. */
   asset: trimmedOptionalString,
