@@ -25,12 +25,6 @@ export default defineConfig({
       '__tests__/auth/wallet-guard.test.tsx',
       'src/app/__tests__/protected-route-layouts.test.tsx',
       'src/app/create/DuplicateCommitment.test.tsx',
-<<<<<<< HEAD
-      'src/app/api/commitments/[id]/fund/route.test.ts',
-
-=======
-      'src/components/__tests__/CommitmentDetailActions.test.tsx',
->>>>>>> c0494997 ([#1762] Improve funding route idempotency: authorization and hostile-input boundary)
       'src/components/auth/RequireWallet.test.tsx',
       'src/components/create/CreateTemplates.test.tsx',
       'src/components/dashboard/OverviewWidgetGrid.test.tsx',
