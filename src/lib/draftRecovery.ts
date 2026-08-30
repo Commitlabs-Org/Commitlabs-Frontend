@@ -76,7 +76,7 @@ export function reduce(state: DraftState | undefined, event: DraftEvent): DraftS
       if (s.status === 'submitting' || s.status === 'confirmed') return s;
       return ok({ status: 'draft', draftId: event.draftId, step: event.step, data: event.data, id: null, error: null });
 
-    case 'RECOVER:':
+    case 'RECOVER':
       if (s.status === 'submitting' || s.status === 'confirmed') return s;
       const from = event.from;
       if (from && typeof from === 'object') {
