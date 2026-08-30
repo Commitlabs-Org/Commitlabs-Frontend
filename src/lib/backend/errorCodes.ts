@@ -208,6 +208,30 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeDefinition> = {
     description:
       'Triggered when a blockchain transaction reverts, execution fails, or returns invalid state. Usually not retriable.',
   },
+
+  // ─── 403 CSRF Invalid ──────────────────────────────────────────────────────
+  CSRF_INVALID: {
+    code: 'CSRF_INVALID',
+    statusCode: 403,
+    meaning: 'Missing, malformed, or mismatched CSRF token for a cookie-session mutation.',
+    clientHandling:
+      'Refresh the CSRF token and surface a message to re-authenticate before retrying the mutation. Do not retry with the stale token.',
+    retriable: false,
+    description:
+      'Triggered by assertMutationCsrf when a state-changing request carrying a cookie session fails same-origin or synchronizer-token checks.',
+  },
+
+  // ─── 405 Method Not Allowed ────────────────────────────────────────────────
+  METHOD_NOT_ALLOWED: {
+    code: 'METHOD_NOT_ALLOWED',
+    statusCode: 405,
+    meaning: 'The HTTP method is not allowed for the requested resource.',
+    clientHandling:
+      'Do not retry the same method. Only retry using one of the allowed methods returned in the Allow header.',
+    retriable: false,
+    description:
+      'Triggered by the methodNotAllowed handler when a route is invoked with an unsupported HTTP method.',
+  },
 };
 
 /**

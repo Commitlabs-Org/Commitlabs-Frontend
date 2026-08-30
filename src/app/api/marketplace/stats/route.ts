@@ -6,9 +6,18 @@ import { TooManyRequestsError, UnauthorizedError, InternalError, ServiceUnavaila
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
 import { verifySessionToken } from '@/lib/backend/auth';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { marketplaceService } from '@/lib/backend/services/marketplace';
+import { marketplaceService, getStatsGeneration } from '@/lib/backend/services/marketplace';
 import { cache } from '@/lib/backend/cache/factory';
-import { CacheKey, CacheTTL } from '@/lib/backend/cache/index';
+import {
+  CacheKey,
+  CacheTTL,
+  envelopeFreshnessAgeSeconds,
+  envelopeIsExpired,
+  envelopeCanServeStale,
+  isStatsEnvelope,
+  type MarketplaceStatsEnvelope,
+} from '@/lib/backend/cache/index';
+import { generateETag, etagMatches } from '@/lib/backend/etag';
 
 type MarketplaceStats = z.infer<typeof MarketplaceStatsSchema>;
 
@@ -67,7 +76,10 @@ function validateStatsData(data: unknown): MarketplaceStats {
         typeBreakdownTotal: totalFromBreakdown,
       },
     );
-  }
+    response.headers.set('X-Stats-State', envelope.state);
+    response.headers.set('X-Stats-Generation', String(envelope.generation));
+    response.headers.set('X-Stats-LastValid-Generation', String(envelope.lastValidGeneration));
+    response.headers.set('X-Stats-Age', String(meta.ageSeconds));
 
   return parsed;
 }

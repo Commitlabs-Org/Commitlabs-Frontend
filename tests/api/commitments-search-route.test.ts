@@ -22,7 +22,7 @@ import { requireAuth } from '@/lib/backend/requireAuth';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { getUserCommitmentsFromChain } from '@/lib/backend/services/contracts';
 import type { ChainCommitment } from '@/lib/backend/services/contracts';
-import { UnauthorizedError } from '@/lib/backend/errors';
+import { UnauthorizedError, ForbiddenError } from '@/lib/backend/errors';
 import { cache } from '@/lib/backend/cache/factory';
 
 const mockedRequireAuth = vi.mocked(requireAuth);
@@ -90,7 +90,12 @@ describe('GET /api/commitments/search', () => {
     // MemoryAdapter has no cross-test reset hook; clear via wildcard prefix
     // so cached results from one test don't leak visibility into the next.
     await cache.invalidate('commitlabs:commitment-search:');
-    mockedRequireAuth.mockImplementation((req) => req as any);
+    // Return a mock authenticated request whose `.user.address` matches the
+    // VALID_ADDRESS used in all default requests. Tests that need to verify
+    // scope enforcement (403) override this mock locally.
+    mockedRequireAuth.mockImplementation((req) =>
+      Object.assign(req, { user: { address: VALID_ADDRESS, csrfToken: 'tok' } }) as any,
+    );
     mockedCheckRateLimit.mockResolvedValue(true);
     mockedGetUserCommitmentsFromChain.mockResolvedValue(ALL_COMMITMENTS);
   });
@@ -358,6 +363,164 @@ describe('GET /api/commitments/search', () => {
       await GET(createMockRequest(getUrl({ status: 'SETTLED' })));
 
       expect(mockedGetUserCommitmentsFromChain).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ─── New: scope enforcement (issue #1775) ────────────────────────────────────
+  describe('permission / scope enforcement', () => {
+    it('returns 403 when the authenticated address does not match ownerAddress', async () => {
+      // Auth succeeds but the authenticated wallet is a different address.
+      const OTHER_ADDRESS = `G${'B'.repeat(55)}`;
+      mockedRequireAuth.mockImplementation((req) =>
+        Object.assign(req, { user: { address: OTHER_ADDRESS, csrfToken: 'tok' } }) as any,
+      );
+
+      const response = await GET(createMockRequest(getUrl()));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(403);
+      expect(result.data.error.code).toBe('FORBIDDEN');
+      expect(result.data.error.message).toContain('ownerAddress');
+      // Should not have read from chain.
+      expect(mockedGetUserCommitmentsFromChain).not.toHaveBeenCalled();
+    });
+
+    it('returns 200 when the authenticated address exactly matches ownerAddress', async () => {
+      // Default mock already sets address = VALID_ADDRESS; this test
+      // makes the contract explicit.
+      const response = await GET(createMockRequest(getUrl()));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(200);
+      expect(mockedGetUserCommitmentsFromChain).toHaveBeenCalledTimes(1);
+    });
+
+    it('scope check fires after auth and rate-limit but before chain work', async () => {
+      const OTHER_ADDRESS = `G${'C'.repeat(55)}`;
+      mockedRequireAuth.mockImplementation((req) =>
+        Object.assign(req, { user: { address: OTHER_ADDRESS, csrfToken: 'tok' } }) as any,
+      );
+
+      await GET(createMockRequest(getUrl()));
+
+      // Chain must not be invoked when the scope check fails.
+      expect(mockedGetUserCommitmentsFromChain).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── New: structured diagnostics (issue #1775) ───────────────────────────────
+  describe('structured diagnostics', () => {
+    it('includes a diagnostics object in every successful response', async () => {
+      const response = await GET(createMockRequest(getUrl()));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(200);
+      expect(result.data.data.diagnostics).toMatchObject({
+        servedFromCache: false,
+        responseLatencyMs: expect.any(Number),
+        chainLatencyMs: expect.any(Number),
+        filterLatencyMs: expect.any(Number),
+        rawCount: expect.any(Number),
+        filteredCount: expect.any(Number),
+        returnedCount: expect.any(Number),
+        truncated: expect.any(Boolean),
+      });
+    });
+
+    it('diagnostics.servedFromCache is true when the response was cached', async () => {
+      // First request primes the cache.
+      await GET(createMockRequest(getUrl({ status: 'ACTIVE' })));
+
+      // Second identical request should hit the cache.
+      const response = await GET(createMockRequest(getUrl({ status: 'ACTIVE' })));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(200);
+      expect(result.data.data.diagnostics.servedFromCache).toBe(true);
+    });
+
+    it('diagnostics.rawCount reflects total commitments from chain before filtering', async () => {
+      const response = await GET(createMockRequest(getUrl({ status: 'SETTLED' })));
+      const result = await parseResponse(response);
+
+      // ALL_COMMITMENTS has 3 entries; only one matches SETTLED.
+      expect(result.data.data.diagnostics.rawCount).toBe(3);
+      expect(result.data.data.diagnostics.filteredCount).toBe(1);
+      expect(result.data.data.diagnostics.returnedCount).toBe(1);
+    });
+
+    it('diagnostics.responseLatencyMs is a non-negative number', async () => {
+      const response = await GET(createMockRequest(getUrl()));
+      const result = await parseResponse(response);
+
+      expect(result.data.data.diagnostics.responseLatencyMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('diagnostics.truncated is false when chain result is within bounds', async () => {
+      const response = await GET(createMockRequest(getUrl()));
+      const result = await parseResponse(response);
+
+      expect(result.data.data.diagnostics.truncated).toBe(false);
+    });
+
+    it('does not include secrets, stack traces, or internal paths in diagnostics', async () => {
+      const response = await GET(createMockRequest(getUrl()));
+      const result = await parseResponse(response);
+      const diagStr = JSON.stringify(result.data.data.diagnostics);
+
+      // Ensure none of the sensitive patterns appear.
+      expect(diagStr).not.toMatch(/password|secret|token|key|stack|Error:/i);
+    });
+  });
+
+  // ─── New: minCompliance boundary (issue #1775) ───────────────────────────────
+  describe('minCompliance boundary enforcement', () => {
+    it('returns 400 when minCompliance exceeds 100', async () => {
+      const response = await GET(createMockRequest(getUrl({ minCompliance: 101 })));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(400);
+      expect(result.data.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 when minCompliance is negative', async () => {
+      const response = await GET(createMockRequest(getUrl({ minCompliance: -1 })));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(400);
+      expect(result.data.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('accepts minCompliance of exactly 0', async () => {
+      const response = await GET(createMockRequest(getUrl({ minCompliance: 0 })));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(200);
+      // All commitments pass the 0% threshold.
+      expect(result.data.data.data).toHaveLength(3);
+    });
+
+    it('accepts minCompliance of exactly 100', async () => {
+      const response = await GET(createMockRequest(getUrl({ minCompliance: 100 })));
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(200);
+      // None of the test fixtures reach 100%.
+      expect(result.data.data.data).toHaveLength(0);
+    });
+  });
+
+  // ─── New: pagination parse error includes correlationId (issue #1775) ────────
+  describe('pagination error response', () => {
+    it('includes a correlationId in the error when sortBy is invalid', async () => {
+      const req = createMockRequest(getUrl({ sortBy: 'nonExistentField' }));
+      req.headers.set('x-correlation-id', 'test-corr-id-123');
+      const response = await GET(req);
+      const result = await parseResponse(response);
+
+      expect(result.status).toBe(400);
+      // The correlation header should be forwarded regardless of error type.
+      expect(response.headers.get('x-correlation-id')).toBeTruthy();
     });
   });
 });
