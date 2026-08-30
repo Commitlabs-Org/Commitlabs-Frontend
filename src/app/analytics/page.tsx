@@ -33,6 +33,7 @@ import AnalyticsTrendLineChart from '@/components/analytics/AnalyticsTrendLineCh
 import AnalyticsTrendBarChart from '@/components/analytics/AnalyticsTrendBarChart';
 import { usePageTour, type PageTourStep } from '@/hooks/usePageTour';
 import { GuidedTour } from '@/components/onboarding/GuidedTour';
+import { KeyboardShortcutsOverlay } from '@/components/shell/KeyboardShortcutsOverlay';
 
 const ANALYTICS_TOUR_STEPS: PageTourStep[] = [
   {
@@ -481,8 +482,8 @@ function ProtocolAnalyticsView({
         message="Failed to load protocol analytics."
         detail={
           retryIntent
-            ? errorMessage ??
-              'Your retry is saved. Use Retry to refresh analytics; no wallet action will be repeated.'
+            ? (errorMessage ??
+              'Your retry is saved. Use Retry to refresh analytics; no wallet action will be repeated.')
             : errorMessage
         }
         onRetry={onRetry}
@@ -618,13 +619,13 @@ export default function AnalyticsPage() {
   );
   const protocolAbortRef = useRef<AbortController | null>(null);
   const protocolRequestIdRef = useRef(0);
+  const userAbortRef = useRef<AbortController | null>(null);
 
   const {
     isActive: isTourActive,
     currentStepIndex: tourStepIndex,
     currentStep: tourStep,
     totalSteps: tourTotalSteps,
-    startTour,
     nextStep: nextTourStep,
     prevStep: prevTourStep,
     skipTour,
@@ -633,14 +634,23 @@ export default function AnalyticsPage() {
   // ─── Fetch user analytics ─────────────────────────────────────────────────
   const fetchUserAnalytics = useCallback(async () => {
     if (!address) return;
+    // Cancel any in-flight user request so rapid retries / re-renders don't
+    // fan out overlapping fetches or apply a stale response.
+    userAbortRef.current?.abort();
+    const controller = new AbortController();
+    userAbortRef.current = controller;
     setUserState('loading');
     try {
-      const res = await fetch(`/api/analytics/user?ownerAddress=${encodeURIComponent(address)}`);
+      const res = await fetch(`/api/analytics/user?ownerAddress=${encodeURIComponent(address)}`, {
+        signal: controller.signal,
+        cache: 'no-store',
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setUserData(json as UserAnalyticsData);
       setUserState('success');
-    } catch {
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') return;
       setUserState('error');
     }
   }, [address]);
@@ -699,6 +709,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     return () => {
       protocolAbortRef.current?.abort();
+      userAbortRef.current?.abort();
     };
   }, []);
 

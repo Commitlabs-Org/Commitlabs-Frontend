@@ -42,6 +42,8 @@ import {
   CHART_GRID_PROPS,
   CHART_X_AXIS_PROPS,
   formatLocaleNumber,
+  formatDrawdownAxisTick,
+  normalizeChartData,
 } from './chartConfig';
 
 const MEMO_SYMBOL = Symbol.for('react.memo');
@@ -57,6 +59,14 @@ describe('chartConfig', () => {
     expect(CHART_GRID_PROPS.stroke).toBe(CHART_COLORS.grid);
     expect(CHART_X_AXIS_PROPS.dataKey).toBe('date');
     expect(formatLocaleNumber(1200)).toBe((1200).toLocaleString());
+  });
+
+  it('guards adversarial numeric inputs and caps payload size', () => {
+    expect(formatLocaleNumber(Number.NaN)).toBe('0');
+    expect(formatDrawdownAxisTick(Number.POSITIVE_INFINITY)).toBe('0%');
+    expect(
+      normalizeChartData(Array.from({ length: 300 }, (_, index) => ({ date: index }))).length,
+    ).toBe(180);
   });
 });
 

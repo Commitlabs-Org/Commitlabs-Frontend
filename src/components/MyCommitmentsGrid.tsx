@@ -7,6 +7,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useGridSelection } from '@/hooks/useGridSelection';
 import { BulkActionBar } from './BulkActionBar';
 import { Check } from 'lucide-react';
+import type { SearchDiagnostics } from '@/hooks/useCommitmentsSearch';
+import { MyCommitmentsGridSkeleton } from './MyCommitmentsGridSkeleton';
 
 interface MyCommitmentsGridProps {
   commitments: Commitment[];
@@ -16,6 +18,19 @@ interface MyCommitmentsGridProps {
   onListForSale?: (id: string) => void;
   onExportSelected?: (selectedIds: string[]) => void;
   isExporting?: boolean;
+  /**
+   * When true the grid renders a loading skeleton instead of commitment cards.
+   * This prevents stale results from being visible during the loading window
+   * for a new query — the caller sets this while useCommitmentsSearch is
+   * in-flight and clears it when results arrive.
+   */
+  isLoading?: boolean;
+  /**
+   * Client telemetry from the last search request (from useCommitmentsSearch).
+   * When provided, actionable summary (latency, cache hit) is surfaced in the
+   * grid header for developer/operator visibility. No secrets are exposed.
+   */
+  diagnostics?: SearchDiagnostics | null;
   /** Optional comparator to sort commitments before rendering.
    *  Memoized internally so callers should stabilize the reference. */
   sortFn?: (a: Commitment, b: Commitment) => number;
@@ -43,6 +58,15 @@ const VIRTUALIZE_THRESHOLD = 50;
  *     library (react-window, TanStack Virtual) would give larger gains but
  *     requires a new dependency; this lighter approach is intentionally
  *     dependency-conscious as the issue requests.
+ *
+ * Query-consistency notes:
+ *   - `isLoading` renders a skeleton instead of stale data, preventing
+ *     previous results from briefly showing during a new search.
+ *   - `diagnostics` surfaces latency and cache-hit telemetry so developers
+ *     and operators can observe search performance without leaking secrets.
+ *   - The grid is a pure presentation component: stale-query prevention and
+ *     abort-controller logic live in the `useCommitmentsSearch` hook that
+ *     callers use to populate the `commitments` prop.
  */
 const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
   ({
@@ -53,11 +77,16 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
     onListForSale,
     onExportSelected,
     isExporting = false,
+    isLoading = false,
+    diagnostics,
     sortFn,
     filterFn,
   }) => {
+    // ── Derived list ──────────────────────────────────────────────────────
     // Memoize the derived list so filter+sort only run when inputs change.
+    // Always derived — even while loading — so the hook call order is stable.
     const displayedCommitments = useMemo(() => {
+      if (isLoading) return [];
       let result = commitments;
       if (filterFn) {
         result = result.filter(filterFn);
@@ -66,12 +95,16 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
         result = [...result].sort(sortFn);
       }
       return result;
-    }, [commitments, filterFn, sortFn]);
+    }, [commitments, filterFn, sortFn, isLoading]);
 
     const isLargeList = displayedCommitments.length > VIRTUALIZE_THRESHOLD;
 
-    const visibleIds = displayedCommitments.map((c) => c.id);
+    const visibleIds = useMemo(
+      () => displayedCommitments.map((c) => c.id),
+      [displayedCommitments],
+    );
 
+    // ── Selection state ───────────────────────────────────────────────────
     const {
       selectedIds,
       selectedCount,
@@ -81,6 +114,19 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
       selectAll,
       clearSelection,
     } = useGridSelection({ visibleIds });
+
+    // Stable per-id toggle handlers so cards whose selection state hasn't
+    // changed don't receive a new `onSelect` reference (and re-render) just
+    // because some other card was selected/deselected.
+    const toggleHandlersRef = useRef<Map<string, () => void>>(new Map());
+    const getToggleHandler = (id: string) => {
+      let handler = toggleHandlersRef.current.get(id);
+      if (!handler) {
+        handler = () => toggleSelection(id);
+        toggleHandlersRef.current.set(id, handler);
+      }
+      return handler;
+    };
 
     const handleSelectAll = () => {
       if (isAllSelected) {
@@ -96,24 +142,16 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
       }
     };
 
-    // Stable per-id toggle handlers so cards whose selection state hasn't
-    // changed don't receive a new `onSelect` reference (and re-render) just
-    // because some other card was selected/deselected. `toggleSelection`
-    // itself is referentially stable (useCallback with no deps), so each
-    // per-id closure only needs to be created once and can be cached forever.
-    const toggleHandlersRef = useRef<Map<string, () => void>>(new Map());
-    const getToggleHandler = (id: string) => {
-      let handler = toggleHandlersRef.current.get(id);
-      if (!handler) {
-        handler = () => toggleSelection(id);
-        toggleHandlersRef.current.set(id, handler);
-      }
-      return handler;
-    };
+    // ── Loading state ─────────────────────────────────────────────────────
+    // Render skeleton after all hooks have been called (Rules of Hooks).
+    if (isLoading) {
+      return <MyCommitmentsGridSkeleton />;
+    }
 
+    // ── Render ────────────────────────────────────────────────────────────
     return (
       <div className="flex flex-col gap-4">
-        {/* Header with select all control */}
+        {/* Header with select all control and optional diagnostics */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -136,6 +174,19 @@ const MyCommitmentsGrid: React.FC<MyCommitmentsGridProps> = memo(
                 commitments found
               </span>
             </label>
+
+            {/* Client telemetry: actionable latency / cache indicator.
+                Only rendered when diagnostics are provided and the request
+                was not aborted. No secrets are surfaced here. */}
+            {diagnostics && !diagnostics.aborted && (
+              <span
+                className="text-[11px] text-[#94A3B8]/70 font-mono"
+                aria-label="Search diagnostics"
+                title={`Latency: ${diagnostics.latencyMs}ms | Cache: ${diagnostics.cacheHit ? 'hit' : 'miss'}${diagnostics.errorMessage ? ` | Error: ${diagnostics.errorMessage}` : ''}`}
+              >
+                {diagnostics.cacheHit ? '⚡ cached' : `${diagnostics.latencyMs}ms`}
+              </span>
+            )}
           </div>
 
           {selectedCount > 0 && (

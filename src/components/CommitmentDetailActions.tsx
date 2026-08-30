@@ -119,6 +119,14 @@ interface CommitmentDetailActionsProps {
   commitmentId?: string;
   onSettle?: () => void;
   settleDisabledReason?: string;
+  /**
+   * When set, disables the Report Issue button and surfaces this reason
+   * (e.g. wallet not connected, wrong network, or not the commitment
+   * owner). Filing a dispute is an authorization-sensitive action, so the
+   * caller is expected to derive this from an authoritative ownership
+   * check rather than only from client-visible commitment state.
+   */
+  reportIssueDisabledReason?: string;
   previewRefreshTrigger?: string | number;
 }
 
@@ -133,6 +141,7 @@ export function CommitmentDetailActions({
   commitmentId,
   onSettle,
   settleDisabledReason,
+  reportIssueDisabledReason,
   previewRefreshTrigger,
 }: CommitmentDetailActionsProps) {
   const focusRing =
@@ -357,13 +366,17 @@ export function CommitmentDetailActions({
             className={`
               w-full rounded-2xl px-6 py-4
               bg-[#161616] border border-[#232323]
-              hover:bg-[#1a1a1a] hover:border-[#1f1f1f]
               transition-all duration-200
               flex items-center gap-4
-              cursor-pointer
               ${focusRing}
+              ${
+                reportIssueDisabledReason
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-[#1a1a1a] hover:border-[#1f1f1f] cursor-pointer'
+              }
             `}
             aria-label="Report an Issue"
+            aria-disabled={!!reportIssueDisabledReason}
           >
             <FiAlertCircle className="text-white/70" size={22} />
 

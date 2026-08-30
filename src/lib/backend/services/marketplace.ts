@@ -3,7 +3,19 @@ import { ConflictError, InternalError, NotFoundError, ValidationError } from '..
 import { getStorageAdapter } from '../storage';
 import type { MarketplaceListing, CreateListingRequest } from '@/lib/types/domain';
 import { cache } from '@/lib/backend/cache/factory';
-import { CacheKey, CacheTTL } from '@/lib/backend/cache/index';
+import {
+  CacheKey,
+  CacheTTL,
+  CACHE_PREFIXES,
+  envelopeCanServeStale,
+  envelopeFreshnessAgeSeconds,
+  envelopeIsExpired,
+  isStatsEnvelope,
+  makeStatsEnvelope,
+  STATS_EMPTY_PAYLOAD,
+  type MarketplaceStatsEnvelope,
+  type StatsFreshnessState,
+} from '@/lib/backend/cache/index';
 import { isFeatureEnabled } from '../config';
 
 export type MarketplaceCommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
@@ -188,7 +200,55 @@ function queryHash(query: MarketplaceListingsQuery): string {
   return JSON.stringify(entries);
 }
 
-const LISTINGS_PREFIX = 'commitlabs:marketplace:listings:';
+const STATS_GENERATION_LOCK_TTL_MS = 5_000;
+
+async function bumpStatsGeneration(): Promise<number> {
+  const genKey = CacheKey.marketplaceStatsGeneration();
+  const current = await cache.get<number>(genKey);
+  const next = typeof current === 'number' && Number.isFinite(current) ? current + 1 : 1;
+  await cache.set(genKey, next, CacheTTL.MARKETPLACE_STATS_GENERATION_TTL);
+  const invKey = CacheKey.marketplaceStatsInvalidation();
+  await cache.set(
+    invKey,
+    { generation: next, at: Date.now() },
+    CacheTTL.MARKETPLACE_STATS_GENERATION_TTL,
+  );
+  return next;
+}
+
+export async function getStatsGeneration(): Promise<number> {
+  const gen = await cache.get<number>(CacheKey.marketplaceStatsGeneration());
+  return typeof gen === 'number' && Number.isFinite(gen) ? gen : 0;
+}
+
+async function acquireStatsLock(
+  correlationId: string,
+): Promise<{ acquired: boolean; owner?: string; acquiredAt?: number }> {
+  const lockKey = CacheKey.marketplaceStatsLock();
+  const existing = await cache.get<{ owner: string; acquiredAt: number }>(lockKey);
+  if (existing) {
+    if (Date.now() - existing.acquiredAt > STATS_GENERATION_LOCK_TTL_MS) {
+      await cache.delete(lockKey);
+    } else {
+      return { acquired: false, owner: existing.owner, acquiredAt: existing.acquiredAt };
+    }
+  }
+  const token = { owner: correlationId, acquiredAt: Date.now() };
+  await cache.set(lockKey, token, CacheTTL.MARKETPLACE_STATS_LOCK_TTL);
+  const verify = await cache.get<{ owner: string; acquiredAt: number }>(lockKey);
+  if (verify && verify.owner === correlationId) {
+    return { acquired: true, owner: correlationId, acquiredAt: token.acquiredAt };
+  }
+  return { acquired: false, owner: verify?.owner };
+}
+
+async function releaseStatsLock(correlationId: string): Promise<void> {
+  const lockKey = CacheKey.marketplaceStatsLock();
+  const existing = await cache.get<{ owner: string; acquiredAt: number }>(lockKey);
+  if (existing && existing.owner === correlationId) {
+    await cache.delete(lockKey);
+  }
+}
 
 export async function listMarketplaceListings(
   query: MarketplaceListingsQuery,
@@ -315,16 +375,16 @@ class MarketplaceService {
 
       logInfo(undefined, '[MarketplaceService] Listing created', { listingId });
 
-      // Invalidate all cached listing queries — the set has changed.
-      await cache.invalidate(LISTINGS_PREFIX);
+      await cache.invalidate(CACHE_PREFIXES.MARKETPLACE_LISTINGS);
       logInfo(undefined, '[cache] invalidated marketplace-listings after create', {
         listingId,
       });
 
-      // Invalidate marketplace stats as the set of active listings changed.
+      const newGen = await bumpStatsGeneration();
       await cache.delete(CacheKey.marketplaceStats());
       logInfo(undefined, '[cache] invalidated marketplace-stats after create', {
         listingId,
+        newGeneration: newGen,
       });
 
       return listing;
@@ -369,14 +429,14 @@ class MarketplaceService {
 
       await this.storage.set(getListingStorageKey(listingId), cancelledListing);
 
-      // Invalidate all cached listing queries — the set has changed.
-      await cache.invalidate(LISTINGS_PREFIX);
+      await cache.invalidate(CACHE_PREFIXES.MARKETPLACE_LISTINGS);
       logInfo(undefined, '[cache] invalidated marketplace-listings after cancel', { listingId });
 
-      // Invalidate marketplace stats as the set of active listings changed.
+      const newGen = await bumpStatsGeneration();
       await cache.delete(CacheKey.marketplaceStats());
       logInfo(undefined, '[cache] invalidated marketplace-stats after cancel', {
         listingId,
+        newGeneration: newGen,
       });
 
       logInfo(undefined, '[MarketplaceService] Listing cancelled', {
@@ -425,14 +485,14 @@ class MarketplaceService {
 
       await this.storage.set(getListingStorageKey(listingId), purchasedListing);
 
-      // Invalidate all cached listing queries — the set has changed.
-      await cache.invalidate(LISTINGS_PREFIX);
+      await cache.invalidate(CACHE_PREFIXES.MARKETPLACE_LISTINGS);
       logInfo(undefined, '[cache] invalidated marketplace-listings after purchase', { listingId });
 
-      // Invalidate marketplace stats as the set of active listings changed.
+      const newGen = await bumpStatsGeneration();
       await cache.delete(CacheKey.marketplaceStats());
       logInfo(undefined, '[cache] invalidated marketplace-stats after purchase', {
         listingId,
+        newGeneration: newGen,
       });
 
       logInfo(undefined, '[MarketplaceService] Listing purchased', {
@@ -455,12 +515,7 @@ class MarketplaceService {
     return selectFeaturedMarketplaceListings(MOCK_LISTINGS);
   }
 
-  /**
-   * Aggregates marketplace metrics for header KPIs and analytics.
-   *
-   * @returns Promise<MarketplaceStats> - Aggregated metrics including active listings, avg yield, and median price.
-   */
-  async getMarketplaceStats(): Promise<MarketplaceStats> {
+  private computeStatsPayload(): MarketplaceStats {
     if (!isFeatureEnabled('marketplaceMockData')) {
       throw new InternalError(
         'Marketplace on-chain reads not yet implemented. Enable marketplaceMockData feature flag to use mock data.',
@@ -470,12 +525,7 @@ class MarketplaceService {
     const listings = MOCK_LISTINGS;
 
     if (listings.length === 0) {
-      return {
-        activeListings: 0,
-        averageYield: 0,
-        medianPrice: 0,
-        typeBreakdown: { Safe: 0, Balanced: 0, Aggressive: 0 },
-      };
+      return { ...STATS_EMPTY_PAYLOAD };
     }
 
     const activeListings = listings.length;
@@ -505,6 +555,172 @@ class MarketplaceService {
       medianPrice,
       typeBreakdown,
     };
+  }
+
+  /**
+   * Aggregates marketplace metrics for header KPIs and analytics.
+   *
+   * @returns Promise<MarketplaceStats> - Aggregated metrics including active listings, avg yield, and median price.
+   */
+  async getMarketplaceStats(): Promise<MarketplaceStats> {
+    const envelope = await this.getMarketplaceStatsEnvelope('legacy-call');
+    return envelope.payload;
+  }
+
+  /**
+   * Transactional envelope-returning stats fetcher with:
+   *  - freshness/generation-based invalidation
+   *  - request coalescing (single-flight via lock)
+   *  - stale-if-error and stale-while-revalidating semantics
+   *  - deterministic state transitions
+   *  - recovery from interrupted fetches via lock TTL
+   *
+   * State machine (per envelope.state):
+   *   EMPTY        → no data yet; caller triggers REVALIDATING
+   *   REVALIDATING → lock held by another request; serve STALE if available
+   *   FRESH        → within TTL & matching latest generation
+   *   STALE        → expired TTL or older generation; still safe to serve
+   *   ERROR        → upstream failed; serve STALE within grace window else EMPTY
+   *
+   * Invariants enforced:
+   *   INV-1: A returned envelope always passes isStatsEnvelope structural validation.
+   *   INV-2: envelope.generation >= envelope.lastValidGeneration.
+   *   INV-3: FRESH envelopes never exceed MARKETPLACE_STATS TTL.
+   *   INV-4: If generation counter has advanced, cached envelope is demoted to STALE/EMPTY.
+   *   INV-5: Lock ownership is verified before writing a fresh envelope.
+   *   INV-6: CorrelationId ties envelope.sourceCorrelationId to the winning request.
+   *   INV-7: On service compute failure, ERROR envelope is only written if a prior valid payload does not exist,
+   *          so stale-valid data is preserved rather than clobbered.
+   */
+  async getMarketplaceStatsEnvelope(correlationId: string): Promise<MarketplaceStatsEnvelope> {
+    const cacheKey = CacheKey.marketplaceStats();
+    const expectedGeneration = await getStatsGeneration();
+    const staleGraceMs = CacheTTL.MARKETPLACE_STATS_STALE_GRACE * 1000;
+
+    const cachedRaw = await cache.get<unknown>(cacheKey);
+    const cachedEnvelope: MarketplaceStatsEnvelope | null = isStatsEnvelope(cachedRaw)
+      ? cachedRaw
+      : null;
+
+    if (cachedEnvelope) {
+      const matchesGeneration = cachedEnvelope.lastValidGeneration >= expectedGeneration;
+      const expired = envelopeIsExpired(cachedEnvelope);
+
+      if (matchesGeneration && !expired && cachedEnvelope.state === 'FRESH') {
+        return cachedEnvelope;
+      }
+
+      if (!matchesGeneration && expired && !envelopeCanServeStale(cachedEnvelope, staleGraceMs)) {
+        await cache.delete(cacheKey);
+      }
+    }
+
+    const lockResult = await acquireStatsLock(correlationId);
+
+    if (!lockResult.acquired) {
+      if (cachedEnvelope && envelopeCanServeStale(cachedEnvelope, staleGraceMs)) {
+        const staleEnvelope: MarketplaceStatsEnvelope = {
+          ...cachedEnvelope,
+          state: 'STALE',
+        };
+        return staleEnvelope;
+      }
+      const pollingWaitMs = 250;
+      const deadline = Date.now() + (CacheTTL.MARKETPLACE_STATS_LOCK_TTL * 1000 - pollingWaitMs);
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, pollingWaitMs));
+        const intermediate = await cache.get<unknown>(cacheKey);
+        if (isStatsEnvelope(intermediate) && intermediate.generation >= expectedGeneration) {
+          return intermediate;
+        }
+      }
+      const fallbackRaw = await cache.get<unknown>(cacheKey);
+      const fallbackEnvelope = isStatsEnvelope(fallbackRaw) ? fallbackRaw : null;
+      if (fallbackEnvelope && envelopeCanServeStale(fallbackEnvelope, staleGraceMs)) {
+        return { ...fallbackEnvelope, state: 'STALE' };
+      }
+      if (fallbackEnvelope) {
+        return fallbackEnvelope;
+      }
+      return makeStatsEnvelope(
+        { ...STATS_EMPTY_PAYLOAD },
+        Math.max(expectedGeneration, 0),
+        'EMPTY',
+        CacheTTL.MARKETPLACE_STATS,
+        correlationId,
+      );
+    }
+
+    try {
+      const recheckAfterLock = await cache.get<unknown>(cacheKey);
+      if (isStatsEnvelope(recheckAfterLock)) {
+        if (
+          recheckAfterLock.lastValidGeneration >= expectedGeneration &&
+          !envelopeIsExpired(recheckAfterLock)
+        ) {
+          return recheckAfterLock;
+        }
+      }
+
+      const payload = this.computeStatsPayload();
+
+      const generationAfterCompute = Math.max(expectedGeneration, await getStatsGeneration());
+
+      const freshEnvelope = makeStatsEnvelope(
+        payload,
+        generationAfterCompute,
+        'FRESH',
+        CacheTTL.MARKETPLACE_STATS,
+        correlationId,
+      );
+      const ttlWithGrace = CacheTTL.MARKETPLACE_STATS + CacheTTL.MARKETPLACE_STATS_STALE_GRACE;
+      await cache.set(cacheKey, freshEnvelope, ttlWithGrace);
+
+      return freshEnvelope;
+    } catch (err: unknown) {
+      const code = err instanceof InternalError ? 'SERVICE_UNAVAILABLE' : 'INTERNAL_ERROR';
+      const message = err instanceof Error ? err.message : 'Stats computation failed';
+      const retryable = !(err instanceof ValidationError || err instanceof ConflictError);
+      const retryAfterSeconds = retryable ? 30 : undefined;
+
+      if (cachedEnvelope && envelopeCanServeStale(cachedEnvelope, staleGraceMs)) {
+        await releaseStatsLock(correlationId);
+        return {
+          ...cachedEnvelope,
+          state: 'STALE',
+          errorCode: code,
+          errorMessage: message,
+          retryable,
+          retryAfterSeconds,
+        };
+      }
+
+      const currentGen = Math.max(expectedGeneration, await getStatsGeneration());
+      const errorEnvelope: MarketplaceStatsEnvelope = {
+        version: 1,
+        payload: cachedEnvelope?.payload ?? { ...STATS_EMPTY_PAYLOAD },
+        fetchedAt: Date.now(),
+        expiresAt: Date.now() + 10_000,
+        state: 'ERROR',
+        generation: currentGen,
+        lastValidGeneration: cachedEnvelope?.lastValidGeneration ?? 0,
+        errorCode: code,
+        errorMessage: message,
+        retryable,
+        retryAfterSeconds,
+        sourceCorrelationId: correlationId,
+      };
+      await cache.set(cacheKey, errorEnvelope, 30);
+      return errorEnvelope;
+    } finally {
+      await releaseStatsLock(correlationId);
+    }
+  }
+
+  async invalidateStatsCache(): Promise<number> {
+    const nextGen = await bumpStatsGeneration();
+    await cache.delete(CacheKey.marketplaceStats());
+    return nextGen;
   }
 
   async getPublicListing(listingId: string): Promise<MarketplacePublicListing | null> {
