@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { z } from 'zod';
+import { trackApiCall, startLatencyTimer } from '@/lib/telemetry';
 
 type CommitmentType = 'safe' | 'balanced' | 'aggressive';
 
@@ -25,6 +26,8 @@ export type DraftMap = Record<string, NamedDraft>;
 const DRAFT_STORAGE_KEY = 'commitlabs-create-draft';
 const DRAFT_MULTI_STORAGE_KEY = 'commitlabs-create-drafts';
 export const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** Hard cap on concurrent saved drafts. Oldest-by-updatedAt are evicted when exceeded. */
+export const MAX_DRAFTS = 5;
 
 const DraftStateSchema = z.object({
   step: z.number(),
@@ -55,6 +58,23 @@ export function pruneExpiredDrafts(drafts: DraftMap, ttlMs: number): DraftMap {
   return Object.fromEntries(Object.entries(drafts).filter(([, d]) => now - d.updatedAt < ttlMs));
 }
 
+/**
+ * Enforce the MAX_DRAFTS cap by evicting the oldest drafts (by updatedAt) when
+ * the map exceeds the limit. The draft being saved (targetId) is always kept.
+ */
+export function enforceDraftCap(drafts: DraftMap, targetId: string, cap: number = MAX_DRAFTS): DraftMap {
+  const entries = Object.entries(drafts);
+  if (entries.length <= cap) return drafts;
+  // Sort ascending by updatedAt; oldest first. Always retain targetId.
+  const sorted = entries.sort(([, a], [, b]) => a.updatedAt - b.updatedAt);
+  const evicted = sorted.slice(0, entries.length - cap).filter(([id]) => id !== targetId);
+  if (evicted.length === 0) return drafts;
+  const result = { ...drafts };
+  for (const [id] of evicted) {
+    delete result[id];
+  }
+  return result;
+}
 export function migrateLegacyDraft(): DraftMap | null {
   try {
     const stored = localStorage.getItem(DRAFT_STORAGE_KEY);
@@ -76,22 +96,31 @@ export function migrateLegacyDraft(): DraftMap | null {
 }
 
 export function loadDraftsFromStorage(): DraftMap {
+  const stop = startLatencyTimer();
   try {
     const stored = localStorage.getItem(DRAFT_MULTI_STORAGE_KEY);
     if (!stored) {
       const migrated = migrateLegacyDraft();
-      if (migrated) return migrated;
+      if (migrated) {
+        trackApiCall({ path: 'draft/load', method: 'READ', latencyMs: stop(), ok: true, code: 'MIGRATED' });
+        return migrated;
+      }
+      trackApiCall({ path: 'draft/load', method: 'READ', latencyMs: stop(), ok: true, code: 'EMPTY' });
       return {};
     }
     const parsed = JSON.parse(stored);
     const result = DraftMapSchema.safeParse(parsed);
     if (!result.success) {
       localStorage.removeItem(DRAFT_MULTI_STORAGE_KEY);
+      trackApiCall({ path: 'draft/load', method: 'READ', latencyMs: stop(), ok: false, code: 'INVALID_SCHEMA' });
       return {};
     }
-    return pruneExpiredDrafts(result.data, DRAFT_TTL_MS);
+    const pruned = pruneExpiredDrafts(result.data, DRAFT_TTL_MS);
+    trackApiCall({ path: 'draft/load', method: 'READ', latencyMs: stop(), ok: true });
+    return pruned;
   } catch {
     localStorage.removeItem(DRAFT_MULTI_STORAGE_KEY);
+    trackApiCall({ path: 'draft/load', method: 'READ', latencyMs: stop(), ok: false, code: 'PARSE_ERROR' });
     return {};
   }
 }
@@ -115,10 +144,11 @@ export function useDraftPersistence(draftId?: string) {
       const targetId = id ?? draftId ?? `draft-${Date.now()}`;
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
+        const stop = startLatencyTimer();
         setDrafts((prev) => {
           const now = Date.now();
           const existing = prev[targetId];
-          const updated: DraftMap = {
+          const withNew: DraftMap = {
             ...prev,
             [targetId]: {
               id: targetId,
@@ -127,9 +157,12 @@ export function useDraftPersistence(draftId?: string) {
               updatedAt: now,
             },
           };
+          const updated = enforceDraftCap(withNew, targetId);
           try {
             localStorage.setItem(DRAFT_MULTI_STORAGE_KEY, JSON.stringify(updated));
+            trackApiCall({ path: 'draft/save', method: 'WRITE', latencyMs: stop(), ok: true });
           } catch {
+            trackApiCall({ path: 'draft/save', method: 'WRITE', latencyMs: stop(), ok: false, code: 'STORAGE_FULL' });
             console.warn('Failed to save draft to localStorage');
           }
           return updated;
