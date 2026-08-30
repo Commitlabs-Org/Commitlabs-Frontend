@@ -6,7 +6,12 @@ import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/co
 import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
+import {
+  assertWalletMatchesSession,
+  MarketplaceCreateListingBoundarySchema,
+} from '@/lib/backend/marketplaceBoundary';
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
+import { verifyAuth } from '@/lib/backend/requireAuth';
 import {
   getMarketplaceSortKeys,
   isMarketplaceSortBy,
@@ -16,7 +21,7 @@ import {
   type MarketplacePublicListing,
 } from '@/lib/backend/services/marketplace';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import type { CreateListingRequest, CreateListingResponse } from '@/types/marketplace';
+import type { CreateListingResponse } from '@/types/marketplace';
 
 const COMMITMENT_TYPES: readonly MarketplaceCommitmentType[] = [
   'Safe',
@@ -111,16 +116,22 @@ function parseQuery(searchParams: URLSearchParams): ParseResult {
     );
   }
 
-  return {
-    type: parseType(searchParams),
-    minCompliance: parseNumber(searchParams, 'minCompliance'),
-    maxLoss: parseNumber(searchParams, 'maxLoss'),
-    minAmount,
-    maxAmount,
-    sortBy,
+  const type = parseType(searchParams);
+  const minCompliance = parseNumber(searchParams, 'minCompliance');
+  const maxLoss = parseNumber(searchParams, 'maxLoss');
+  const result: ParseResult = {
     page: parseInteger(searchParams, 'page', 1),
     pageSize: parseInteger(searchParams, 'pageSize', 10),
   };
+
+  if (type !== undefined) result.type = type;
+  if (minCompliance !== undefined) result.minCompliance = minCompliance;
+  if (maxLoss !== undefined) result.maxLoss = maxLoss;
+  if (minAmount !== undefined) result.minAmount = minAmount;
+  if (maxAmount !== undefined) result.maxAmount = maxAmount;
+  if (sortBy !== undefined) result.sortBy = sortBy;
+
+  return result;
 }
 
 export const GET = withApiHandler(
@@ -187,15 +198,20 @@ export const POST = withApiHandler(
       );
     }
 
+    const auth = verifyAuth(req);
+
     const body = await parseJsonWithLimit(req, {
       limitBytes: JSON_BODY_LIMITS.marketplaceListingsCreate,
     });
 
-    if (!body || typeof body !== 'object') {
-      throw new ValidationError('Request body must be an object');
+    const validation = MarketplaceCreateListingBoundarySchema.safeParse(body);
+    if (!validation.success) {
+      throw new ValidationError('Invalid listing request', validation.error.issues);
     }
 
-    const request = body as CreateListingRequest;
+    const { networkPassphrase: _networkPassphrase, ...request } = validation.data;
+    assertWalletMatchesSession(auth.address, request.sellerAddress, 'sellerAddress');
+
     const listing = await marketplaceService.createListing(request);
     const response: CreateListingResponse = { listing };
     return ok(response, undefined, 201, correlationId);
