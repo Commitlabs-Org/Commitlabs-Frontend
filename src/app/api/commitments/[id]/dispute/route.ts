@@ -3,42 +3,43 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
-import {
-  TooManyRequestsError,
-  ValidationError,
-  NotFoundError,
-  ConflictError,
-  InternalError,
-} from '@/lib/backend/errors';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
+import { TooManyRequestsError, ValidationError, ForbiddenError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { openDisputeOnChain } from '@/lib/backend/services/contracts';
 import { logDisputeOpened } from '@/lib/backend/logger';
 import { recordAuditEvent } from '@/lib/backend/auditLog';
+import { validateCommitmentId } from '@/lib/backend/validation';
 
 const DisputeRequestSchema = z.object({
   reason: z.string().min(1, 'Dispute reason is required').max(500),
   evidence: z.string().max(500).optional(),
-  callerAddress: z.string().optional(),
+  callerAddress: z.string().trim().min(1, 'Caller address is required').max(128).optional(),
 });
 
-interface Params {
-  params: { id: string };
-}
+/**
+ * POST /api/commitments/[id]/dispute
+ *
+ * Enforces, in order of increasing cost:
+ * 1. CSRF / same-origin boundary for cookie-session mutations.
+ * 2. Rate limit on the caller.
+ * 3. Route-parameter (commitment id) validation against hostile input.
+ * 4. Request-body validation.
+ * 5. Server-side ownership/authorization: a callerAddress must be supplied
+ *    (asserted against the chain inside `openDisputeOnChain`), rather than
+ *    trusting client-side state or inferring identity from the UI.
+ */
+export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  assertMutationCsrf(req);
 
-export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
-  const { id } = params;
   const ip = getClientIp(req);
-
-  const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/commitments/dispute');
-  if (!allowed) {
-    throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
+  if (!(await checkRateLimit(ip, 'api/commitments/dispute'))) {
+    throw new TooManyRequestsError();
   }
 
-  if (!id || id.trim().length === 0) {
-    throw new ValidationError('Commitment ID is required');
-  }
+  const id = validateCommitmentId(params.id, 'Commitment ID');
 
-  let body;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -47,17 +48,21 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
 
   const validation = DisputeRequestSchema.safeParse(body);
   if (!validation.success) {
-    throw new ValidationError('Invalid request data', validation.error.errors);
+    throw new ValidationError('Invalid request data', validation.error.issues);
   }
 
   const { reason, evidence, callerAddress } = validation.data;
+
+  if (!callerAddress) {
+    throw new ForbiddenError('A caller address is required to open a dispute.');
+  }
 
   try {
     const disputeResult = await openDisputeOnChain({
       commitmentId: id,
       reason,
-      evidence,
-      callerAddress: callerAddress ?? '',
+      evidence: evidence ?? '',
+      callerAddress,
     });
 
     logDisputeOpened({
@@ -71,7 +76,7 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
 
     recordAuditEvent({
       eventType: 'DISPUTE_OPENED',
-      actorAddress: callerAddress ?? '',
+      actorAddress: callerAddress,
       commitmentId: id,
       details: {
         reason,
@@ -81,13 +86,18 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
       },
     });
 
-    return ok({
-      commitmentId: id,
-      disputeId: disputeResult.disputeId,
-      status: disputeResult.status,
-      txHash: disputeResult.txHash,
-      disputedAt: disputeResult.disputedAt,
-    });
+    return ok(
+      {
+        commitmentId: id,
+        disputeId: disputeResult.disputeId,
+        status: disputeResult.status,
+        txHash: disputeResult.txHash,
+        disputedAt: disputeResult.disputedAt,
+      },
+      undefined,
+      200,
+      correlationId,
+    );
   } catch (error) {
     logDisputeOpened({
       ip,
@@ -100,3 +110,6 @@ export const POST = withApiHandler(async (req: NextRequest, { params }: Params) 
     throw error;
   }
 });
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

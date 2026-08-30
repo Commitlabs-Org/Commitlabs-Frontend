@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
 import type { CommitmentExposureResult } from '../../utils/exposure';
+import { downsampleSeries } from '../../utils/downsample';
 import {
   CHART_ACTIVE_DOT_R,
   CHART_COLORS,
@@ -95,6 +96,8 @@ const HealthMetricsDrawdownChartComponent: React.FC<HealthMetricsDrawdownChartPr
     (typeof volatilityPercent === 'number' && Number.isFinite(volatilityPercent));
   const meterPercent =
     exposure?.exposurePercent ?? (typeof volatilityPercent === 'number' ? volatilityPercent : 0);
+
+  const boundedData = useMemo(() => downsampleSeries(data), [data]);
 
   return (
     <>

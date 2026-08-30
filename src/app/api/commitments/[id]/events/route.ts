@@ -17,7 +17,7 @@ const EVENTS_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(EVENTS_CORS_POLICY);
 
-function mapStatus(status: any): CommitmentStatus | 'Unknown' {
+export function mapStatus(status: unknown): CommitmentStatus | 'Unknown' {
   switch (status) {
     case 'ACTIVE':
       return 'Active';
@@ -30,6 +30,17 @@ function mapStatus(status: any): CommitmentStatus | 'Unknown' {
     default:
       return 'Unknown';
   }
+}
+
+export function shouldEmitStatusTransition(
+  previousStatus: CommitmentStatus | 'Unknown',
+  currentStatus: CommitmentStatus | 'Unknown',
+): boolean {
+  if (previousStatus === 'Unknown' && currentStatus === 'Unknown') {
+    return false;
+  }
+
+  return previousStatus !== currentStatus;
 }
 
 const validateInterval = (value: string | undefined, defaultValue: number) => {
@@ -72,15 +83,22 @@ export const GET = withApiHandler(
     const stream = new ReadableStream({
       async start(controller) {
         let lastStatus = mapStatus(initialCommitment.status);
+        let checkInFlight = false;
+        let latestRequestId = 0;
+
+        const enqueueEvent = (eventName: string, payload: Record<string, unknown>) => {
+          if (isClosed) return;
+          controller.enqueue(
+            encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`),
+          );
+        };
 
         const snapshotPayload = {
           commitmentId,
           status: lastStatus,
           timestamp: new Date().toISOString(),
         };
-        controller.enqueue(
-          encoder.encode(`event: snapshot\ndata: ${JSON.stringify(snapshotPayload)}\n\n`),
-        );
+        enqueueEvent('snapshot', snapshotPayload);
 
         const cleanup = () => {
           if (isClosed) return;
@@ -99,34 +117,41 @@ export const GET = withApiHandler(
         });
 
         const checkStatus = async () => {
-          if (isClosed) return;
+          if (isClosed || checkInFlight) return;
+
+          const requestId = ++latestRequestId;
+          checkInFlight = true;
+
           try {
             const commitment = await getCommitmentFromChain(commitmentId);
+            if (requestId !== latestRequestId) {
+              return;
+            }
+
             if (!commitment) {
-              controller.enqueue(
-                encoder.encode(
-                  `event: error\ndata: ${JSON.stringify({ message: 'Commitment not found' })}\n\n`,
-                ),
-              );
+              enqueueEvent('error', { message: 'Commitment not found' });
               cleanup();
               return;
             }
 
             const currentStatus = mapStatus(commitment.status);
-            if (currentStatus !== lastStatus) {
-              lastStatus = currentStatus;
-              const transitionPayload = {
-                commitmentId,
-                status: currentStatus,
-                timestamp: new Date().toISOString(),
-              };
-              controller.enqueue(
-                encoder.encode(
-                  `event: status_change\ndata: ${JSON.stringify(transitionPayload)}\n\n`,
-                ),
-              );
+            if (!shouldEmitStatusTransition(lastStatus, currentStatus)) {
+              return;
             }
-          } catch {}
+
+            lastStatus = currentStatus;
+            enqueueEvent('status_change', {
+              commitmentId,
+              status: currentStatus,
+              timestamp: new Date().toISOString(),
+            });
+          } catch {
+            // Ignore transient indexer/chain read failures; the next poll retry may recover the state.
+          } finally {
+            if (!isClosed && requestId === latestRequestId) {
+              checkInFlight = false;
+            }
+          }
         };
 
         const sendKeepalive = () => {

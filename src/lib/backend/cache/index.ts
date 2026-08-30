@@ -27,6 +27,11 @@ export const CacheKey = {
   commitment: (id: string) => `commitlabs:commitment:${id}`,
   userCommitments: (ownerAddress: string) => `commitlabs:user-commitments:${ownerAddress}`,
   marketplaceListings: (queryHash: string) => `commitlabs:marketplace:listings:${queryHash}`,
+  // INVARIANT: each key function must produce a unique namespace prefix.
+  // The duplicate `marketplaceStats` entry that previously existed here has been
+  // removed — duplicate object keys silently overwrite in JavaScript, meaning
+  // the first definition was always dead code and the deduplication only
+  // worked by accident.
   marketplaceStats: () => 'commitlabs:marketplace:stats',
   commitmentSearch: (queryHash: string) => `commitlabs:commitment-search:${queryHash}`,
 } as const;

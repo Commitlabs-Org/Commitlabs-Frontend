@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { downsampleSeries } from '../../utils/downsample';
 import {
   CHART_ACTIVE_DOT_R,
   CHART_COLORS,
@@ -63,6 +64,8 @@ const HealthMetricsComplianceChartComponent: React.FC<HealthMetricsComplianceCha
     ),
     [],
   );
+
+  const boundedData = useMemo(() => downsampleSeries(data), [data]);
 
   return (
     <div className="w-full h-full min-h-[300px] bg-[#111] rounded-xl p-4 sm:p-6 border border-[#222]">

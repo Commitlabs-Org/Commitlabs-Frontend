@@ -15,6 +15,7 @@ import {
 
 import VolatilityExposureMeter from '../VolatilityExposureMeter/VolatilityExposureMeter';
 import type { CommitmentExposureResult } from '../../utils/exposure';
+import { downsampleSeries } from '../../utils/downsample';
 import {
   CHART_COLORS,
   CHART_GRID_PROPS,
@@ -74,9 +75,12 @@ const HealthMetricsFeeGenerationChartComponent: React.FC<HealthMetricsFeeGenerat
     [],
   );
 
+  // Bound the rendered point count so the bar-count cost stays flat.
+  const boundedData = useMemo(() => downsampleSeries(data), [data]);
+
   const barCells = useMemo(
-    () => data.map((_, index) => <Cell key={`cell-${index}`} filter="url(#feeBarGlow)" />),
-    [data],
+    () => boundedData.map((_, index) => <Cell key={`cell-${index}`} filter="url(#feeBarGlow)" />),
+    [boundedData],
   );
 
   return (
