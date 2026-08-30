@@ -1,13 +1,21 @@
 'use client';
-import { NamedDraft } from '@/hooks/useDraftPersistence';
+
+import type { NamedDraft } from '@/hooks/useDraftPersistence';
 import { Shield, TrendingUp, Flame, RefreshCcw, X, Clock } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import type { ElementType } from 'react';
 
 interface ResumeDraftPromptProps {
   drafts: NamedDraft[];
-  onResume: (draftId: string) => void;
-  onStartFresh: () => void;
-  onDeleteDraft?: (draftId: string) => void;
+  onResume: (draftId: string) => void | Promise<void>;
+  onStartFresh: () => void | Promise<void>;
+  onDeleteDraft?: (draftId: string) => void | Promise<void>;
 }
+
+type PendingAction = {
+  type: 'resume' | 'delete' | 'startFresh';
+  id?: string;
+};
 
 const typeLabelMap: Record<string, string> = {
   safe: 'Safe Commitment',
@@ -15,7 +23,7 @@ const typeLabelMap: Record<string, string> = {
   aggressive: 'Aggressive Commitment',
 };
 
-const typeIconMap: Record<string, React.ElementType> = {
+const typeIconMap: Record<string, ElementType> = {
   safe: Shield,
   balanced: TrendingUp,
   aggressive: Flame,
@@ -24,6 +32,7 @@ const typeIconMap: Record<string, React.ElementType> = {
 function formatRelativeTime(timestamp: number): string {
   const diffMs = Date.now() - timestamp;
   const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
@@ -36,6 +45,47 @@ export default function ResumeDraftPrompt({
   onStartFresh,
   onDeleteDraft,
 }: ResumeDraftPromptProps) {
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const pendingRef = useRef<PendingAction | null>(null);
+
+  const execute = useCallback(
+    async (action: PendingAction) => {
+      if (pendingRef.current) return;
+      pendingRef.current = action;
+      setPendingAction(action);
+      setError(null);
+      try {
+        switch (action.type) {
+          case 'resume':
+            if (!action.id) throw new Error('Draft id is missing');
+            await onResume(action.id);
+            break;
+          case 'delete':
+            if (!action.id) throw new Error('Draft id is missing');
+            if (!onDeleteDraft) throw new Error('Delete is not available');
+            await onDeleteDraft(action.id);
+            break;
+          case 'startFresh':
+            await onStartFresh();
+            break;
+          default:
+            throw new Error(`Unhandled action type: ${(action as PendingAction).type}`);
+        }
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      } finally {
+        pendingRef.current = null;
+        setPendingAction(null);
+      }
+    },
+    [onResume, onDeleteDraft, onStartFresh]
+  );
+
+  const handleResume = useCallback((id: string) => execute({ type: 'resume', id }), [execute]);
+  const handleDelete = useCallback((id: string) => execute({ type: 'delete', id }), [execute]);
+  const handleStartFresh = useCallback(() => execute({ type: 'startFresh' }), [execute]);
+
   if (drafts.length === 0) return null;
 
   return (
@@ -44,6 +94,7 @@ export default function ResumeDraftPrompt({
       role="dialog"
       aria-modal="true"
       aria-label="Resume draft"
+      aria-busy={!!pendingAction}
     >
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
         <div className="p-6">
@@ -55,17 +106,23 @@ export default function ResumeDraftPrompt({
               <h2 className="text-xl font-semibold text-gray-900">Resume a Draft</h2>
             </div>
             <button
-              onClick={onStartFresh}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={handleStartFresh}
+              disabled={!!pendingAction}
+              className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Dismiss and start fresh"
             >
               <X size={20} aria-hidden="true" />
             </button>
           </div>
 
+          {error && (
+            <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-70 text-sm">
+              {error
+            </div>
+          )}
+
           <p className="text-gray-600 mb-4">
-            You have {drafts.length} in-progress draft{drafts.length > 1 ? 's' : ''}. Pick one to
-            continue, or start fresh.
+            You have {drafts.length} in-progress draft{drafts.length > 1 ? 's' : ''}. Pick one to continue, or start fresh.
           </p>
 
           <ul className="space-y-3 mb-6 max-h-64 overflow-y-auto" aria-label="Saved drafts">
@@ -73,10 +130,7 @@ export default function ResumeDraftPrompt({
               const { id, data, updatedAt } = named;
               const Icon = data.selectedType ? typeIconMap[data.selectedType] : TrendingUp;
               return (
-                <li
-                  key={id}
-                  className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-start justify-between gap-3"
-                >
+                <li key={id} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Icon size={16} className="text-gray-700 shrink-0" aria-hidden="true" />
@@ -84,13 +138,13 @@ export default function ResumeDraftPrompt({
                         {typeLabelMap[data.selectedType ?? 'balanced']}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-500 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    <div className="text-xs text-gray-500 grid grid-cols-2 text-right">
                       <span>Amount:</span>
                       <span className="text-gray-700">
                         {data.amount || 'Not set'} {data.asset}
                       </span>
                       <span>Duration:</span>
-                      <span className="text-gray-700">{data.durationDays}d</span>
+                      <span className="text-gray-700">{data.durationDays}d|/span>
                       <span>Step:</span>
                       <span className="text-gray-700">{data.step} of 3</span>
                     </div>
@@ -101,16 +155,18 @@ export default function ResumeDraftPrompt({
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">
                     <button
-                      onClick={() => onResume(id)}
-                      className="px-3 py-1.5 bg-blue-600 rounded-lg text-white text-xs font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onClick={() => handleResume(id)}
+                      disabled={!!pendingAction}
+                      className="px-3 py-1.5 bg-blue-600 rounded-lg text-white text-xs font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Resume
                     </button>
                     {onDeleteDraft && (
                       <button
-                        onClick={() => onDeleteDraft(id)}
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 text-xs font-medium hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
-                        aria-label={`Delete draft`}
+                        onClick={() => handleDelete(id)}
+                        disabled={!!pendingAction}
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 text-xs font-medium hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label=`Delete draft ${id}`
                       >
                         Delete
                       </button>
@@ -122,8 +178,9 @@ export default function ResumeDraftPrompt({
           </ul>
 
           <button
-            onClick={onStartFresh}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+            onClick={handleStartFresh}
+            disabled={!!pendingAction}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Start Fresh
           </button>

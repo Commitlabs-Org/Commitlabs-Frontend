@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DisputeInfo, SSEConnectionState } from '@/types/dispute';
+import { computeReconnectDelay, shouldContinueReconnecting } from './sseBackoff';
 
 interface UseDisputeSSEReturn {
   /** The live-updated dispute info, or null if no dispute is active */
@@ -13,6 +14,8 @@ interface UseDisputeSSEReturn {
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 30000;
 const RECONNECT_BACKOFF_FACTOR = 2;
+/** Upper bound on successive reconnect attempts before giving up. */
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
  * Subscribes to the commitment events SSE stream and extracts
@@ -142,22 +145,31 @@ export function useDisputeSSE(commitmentId: string): UseDisputeSSEReturn {
       .catch((error) => {
         if ((error as Error).name === 'AbortError') return;
 
-        // Attempt reconnection with exponential backoff
-        if (isMountedRef.current) {
-          const delay = Math.min(
-            RECONNECT_BASE_DELAY_MS *
-              Math.pow(RECONNECT_BACKOFF_FACTOR, reconnectAttemptRef.current),
-            RECONNECT_MAX_DELAY_MS,
-          );
+        // Attempt reconnection with bounded exponential backoff.
+        reconnectAttemptRef.current += 1;
 
-          reconnectAttemptRef.current += 1;
+        if (!isMountedRef.current) return;
 
-          reconnectTimerRef.current = setTimeout(() => {
-            if (isMountedRef.current) {
-              connect();
-            }
-          }, delay);
+        if (!shouldContinueReconnecting(reconnectAttemptRef.current, MAX_RECONNECT_ATTEMPTS)) {
+          // Give up. Leave the state as 'reconnecting' so the UI does not
+          // falsely report 'live'; no further timers or fetches are scheduled,
+          // which bounds network/CPU cost on an unhealthy stream.
+          setConnectionState('reconnecting');
+          return;
         }
+
+        const delay = computeReconnectDelay(
+          reconnectAttemptRef.current,
+          RECONNECT_BASE_DELAY_MS,
+          RECONNECT_BACKOFF_FACTOR,
+          RECONNECT_MAX_DELAY_MS,
+        );
+
+        reconnectTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            connect();
+          }
+        }, delay);
       });
   }, [commitmentId]);
 

@@ -41,7 +41,11 @@ describe('navigationBoundary validators', () => {
       { pathname: '/create' },
       { connected: true, address: 'not-an-address', networkPassphrase: NETWORK },
     );
-    expect(flaggedOnly).toMatchObject({ ok: false, code: 'DISCONNECTED_WALLET', recoverable: true });
+    expect(flaggedOnly).toMatchObject({
+      ok: false,
+      code: 'DISCONNECTED_WALLET',
+      recoverable: true,
+    });
 
     const disconnected = evaluateNavigationBoundary(
       { pathname: '/settings' },
