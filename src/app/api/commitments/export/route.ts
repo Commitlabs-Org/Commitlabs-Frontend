@@ -51,6 +51,7 @@ import {
   ForbiddenError,
   TooManyRequestsError,
   UnauthorizedError,
+  InternalError,
 } from '@/lib/backend/errors';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { idempotencyService } from '@/lib/backend/idempotency';
@@ -59,6 +60,7 @@ import {
   type ChainCommitment,
 } from '@/lib/backend/services/contracts';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
+import { validateCommitmentArray } from '@/lib/backend/responseValidation';
 
 const ALL_CSV_HEADERS = [
   'Commitment ID',
@@ -250,6 +252,15 @@ export const GET = withApiHandler(async (req: NextRequest) => {
     throw new UnauthorizedError();
   }
 
+  // Verify session token was created recently to catch disconnected or stale sessions
+  if (session.createdAt) {
+    const sessionAgeMinutes = (Date.now() - session.createdAt.getTime()) / (1000 * 60);
+    // Sessions older than 24 hours are considered stale (safety margin beyond normal expiry)
+    if (sessionAgeMinutes > 24 * 60) {
+      throw new UnauthorizedError('Session too old. Please re-authenticate.');
+    }
+  }
+
   const searchParams = new URL(req.url).searchParams;
   const rawOwnerAddress = searchParams.get('ownerAddress');
   const ownerAddress = rawOwnerAddress ? assertValidOwnerAddress(rawOwnerAddress) : null;
@@ -288,15 +299,32 @@ export const GET = withApiHandler(async (req: NextRequest) => {
       resolveExportFormat(searchParams.get('format'));
       const dateRange = resolveDateRange(searchParams.get('dateRange'));
 
-      const commitments = filterByDateRange(
-        await getUserCommitmentsFromChain(ownerAddress),
-        dateRange,
-      );
+      // Fetch and validate commitments from chain service
+      const rawCommitments = await getUserCommitmentsFromChain(ownerAddress);
+      let commitments: ChainCommitment[];
+      try {
+        commitments = validateCommitmentArray(rawCommitments, MAX_EXPORT_ROWS);
+      } catch (error) {
+        // If validation fails, treat as service error (InternalError suggests backend bug)
+        await idempotencyService.fail(scopedKey);
+        throw error;
+      }
+
       if (commitments.length > MAX_EXPORT_ROWS) {
         await idempotencyService.fail(scopedKey);
         throw new BadRequestError(
           `Export exceeds the maximum row limit of ${MAX_EXPORT_ROWS}. Narrow the date range and retry.`,
         );
+      }
+
+      // Verify ownership of each commitment before exporting
+      for (const commitment of commitments) {
+        if (normalizeAddress(commitment.ownerAddress) !== normalizeAddress(ownerAddress)) {
+          await idempotencyService.fail(scopedKey);
+          throw new ForbiddenError(
+            'One or more commitments in the export do not belong to the authenticated wallet.',
+          );
+        }
       }
 
       // Buffer CSV for idempotent replay. Production system with very large
@@ -331,14 +359,33 @@ export const GET = withApiHandler(async (req: NextRequest) => {
   resolveExportFormat(searchParams.get('format'));
   const dateRange = resolveDateRange(searchParams.get('dateRange'));
 
-  const commitments = filterByDateRange(await getUserCommitmentsFromChain(ownerAddress), dateRange);
+  // Fetch and validate commitments from chain service
+  const rawCommitments = await getUserCommitmentsFromChain(ownerAddress);
+  let commitments: ChainCommitment[];
+  try {
+    commitments = validateCommitmentArray(rawCommitments, MAX_EXPORT_ROWS);
+  } catch (error) {
+    // If validation fails, treat as service error (InternalError suggests backend bug)
+    throw error;
+  }
+
   if (commitments.length > MAX_EXPORT_ROWS) {
     throw new BadRequestError(
       `Export exceeds the maximum row limit of ${MAX_EXPORT_ROWS}. Narrow the date range and retry.`,
     );
   }
 
-  const stream = createCsvStream(headers, commitmentsToRows(commitments, headers));
+  // Verify ownership of each commitment before exporting
+  for (const commitment of commitments) {
+    if (normalizeAddress(commitment.ownerAddress) !== normalizeAddress(ownerAddress)) {
+      throw new ForbiddenError(
+        'One or more commitments in the export do not belong to the authenticated wallet.',
+      );
+    }
+  }
+
+  const filteredCommitments = filterByDateRange(commitments, dateRange);
+  const stream = createCsvStream(headers, commitmentsToRows(filteredCommitments, headers));
 
   return new NextResponse(stream, {
     status: 200,
