@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockRequest, createMockRouteContext, parseResponse } from '../../../tests/api/helpers';
+import {
+  createMockRequest,
+  createMockRouteContext,
+  parseResponse,
+} from '../../../../../tests/api/helpers';
 
 // ─── Mocks (must be hoisted before imports) ────────────────────────────────
 
@@ -16,12 +20,22 @@ vi.mock('@/lib/backend/requireAuth', () => ({
 
 vi.mock('@/lib/backend/rateLimit', () => ({
   checkRateLimit: vi.fn().mockResolvedValue(true),
+  getRateLimitWindowSeconds: vi.fn().mockReturnValue(60),
 }));
 
 vi.mock('@/lib/backend/services/marketplace', () => ({
   listMarketplaceListings: vi.fn(),
   isMarketplaceSortBy: vi.fn().mockReturnValue(true),
-  getMarketplaceSortKeys: vi.fn().mockReturnValue(['price', 'amount', 'complianceScore', 'remainingDays', 'maxLoss', 'currentYield']),
+  getMarketplaceSortKeys: vi
+    .fn()
+    .mockReturnValue([
+      'price',
+      'amount',
+      'complianceScore',
+      'remainingDays',
+      'maxLoss',
+      'currentYield',
+    ]),
   marketplaceService: {
     createListing: vi.fn(),
   },
@@ -37,7 +51,9 @@ vi.mock('@/lib/backend/cors', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/backend/cors')>();
   return {
     ...actual,
-    createCorsOptionsHandler: vi.fn().mockReturnValue(vi.fn().mockReturnValue(new Response(null, { status: 204 }))),
+    createCorsOptionsHandler: vi
+      .fn()
+      .mockReturnValue(vi.fn().mockReturnValue(new Response(null, { status: 204 }))),
     applyCorsPolicy: vi.fn().mockImplementation((_req: unknown, res: Response) => res),
     enforceCorsRequestPolicy: vi.fn(),
   };
@@ -98,10 +114,11 @@ function makeGetRequest(params: string = '') {
 }
 
 function makePostRequest(body: Record<string, unknown> = {}, headers: Record<string, string> = {}) {
-  return createMockRequest(
-    'http://localhost:3000/api/marketplace/listings',
-    { method: 'POST', body, headers },
-  );
+  return createMockRequest('http://localhost:3000/api/marketplace/listings', {
+    method: 'POST',
+    body,
+    headers,
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -144,9 +161,7 @@ describe('GET /api/marketplace/listings', () => {
   it('passes type filter to listMarketplaceListings', async () => {
     await GET(makeGetRequest('type=safe'), createMockRouteContext(), 'corr-003');
 
-    expect(listMarketplaceListings).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'Safe' }),
-    );
+    expect(listMarketplaceListings).toHaveBeenCalledWith(expect.objectContaining({ type: 'Safe' }));
   });
 
   it('passes minCompliance filter', async () => {
@@ -160,13 +175,15 @@ describe('GET /api/marketplace/listings', () => {
   it('passes maxLoss filter', async () => {
     await GET(makeGetRequest('maxLoss=5'), createMockRouteContext(), 'corr-005');
 
-    expect(listMarketplaceListings).toHaveBeenCalledWith(
-      expect.objectContaining({ maxLoss: 5 }),
-    );
+    expect(listMarketplaceListings).toHaveBeenCalledWith(expect.objectContaining({ maxLoss: 5 }));
   });
 
   it('passes minAmount and maxAmount filters', async () => {
-    await GET(makeGetRequest('minAmount=10000&maxAmount=100000'), createMockRouteContext(), 'corr-006');
+    await GET(
+      makeGetRequest('minAmount=10000&maxAmount=100000'),
+      createMockRouteContext(),
+      'corr-006',
+    );
 
     expect(listMarketplaceListings).toHaveBeenCalledWith(
       expect.objectContaining({ minAmount: 10000, maxAmount: 100000 }),
@@ -212,7 +229,11 @@ describe('GET /api/marketplace/listings', () => {
   });
 
   it('returns 400 for non-numeric minCompliance', async () => {
-    const res = await GET(makeGetRequest('minCompliance=abc'), createMockRouteContext(), 'corr-011');
+    const res = await GET(
+      makeGetRequest('minCompliance=abc'),
+      createMockRouteContext(),
+      'corr-011',
+    );
     const { status, data } = await parseResponse(res);
 
     expect(status).toBe(400);
@@ -221,7 +242,11 @@ describe('GET /api/marketplace/listings', () => {
   });
 
   it('returns 400 when minAmount > maxAmount', async () => {
-    const res = await GET(makeGetRequest('minAmount=100&maxAmount=50'), createMockRouteContext(), 'corr-012');
+    const res = await GET(
+      makeGetRequest('minAmount=100&maxAmount=50'),
+      createMockRouteContext(),
+      'corr-012',
+    );
     const { status, data } = await parseResponse(res);
 
     expect(status).toBe(400);
@@ -385,10 +410,10 @@ describe('POST /api/marketplace/listings', () => {
   // ── Body validation ───────────────────────────────────────────────────────
 
   it('returns 400 when request body is not an object', async () => {
-    const req = createMockRequest(
-      'http://localhost:3000/api/marketplace/listings',
-      { method: 'POST', body: 'not-an-object' },
-    );
+    const req = createMockRequest('http://localhost:3000/api/marketplace/listings', {
+      method: 'POST',
+      body: 'not-an-object',
+    });
     // Override raw body with string
     const originalJson = req.json.bind(req);
     vi.spyOn(req, 'json').mockResolvedValue('not-an-object');
@@ -455,7 +480,9 @@ describe('POST /api/marketplace/listings', () => {
   it('returns 400 when service throws ValidationError for missing fields', async () => {
     const { ValidationError } = await import('@/lib/backend/errors');
     vi.mocked(marketplaceService.createListing).mockRejectedValue(
-      new ValidationError('Invalid listing request', { errors: ['price must be a positive number'] }),
+      new ValidationError('Invalid listing request', {
+        errors: ['price must be a positive number'],
+      }),
     );
 
     const res = await POST(
@@ -506,14 +533,18 @@ describe('POST /api/marketplace/listings', () => {
 describe('Method enforcement on /api/marketplace/listings', () => {
   it('returns 405 for PUT', async () => {
     const { PUT } = await import('@/app/api/marketplace/listings/route');
-    const req = createMockRequest('http://localhost:3000/api/marketplace/listings', { method: 'PUT' });
+    const req = createMockRequest('http://localhost:3000/api/marketplace/listings', {
+      method: 'PUT',
+    });
     const res = await PUT(req, createMockRouteContext());
     expect(res.status).toBe(405);
   });
 
   it('returns 405 for DELETE', async () => {
     const { DELETE } = await import('@/app/api/marketplace/listings/route');
-    const req = createMockRequest('http://localhost:3000/api/marketplace/listings', { method: 'DELETE' });
+    const req = createMockRequest('http://localhost:3000/api/marketplace/listings', {
+      method: 'DELETE',
+    });
     const res = await DELETE(req, createMockRouteContext());
     expect(res.status).toBe(405);
   });

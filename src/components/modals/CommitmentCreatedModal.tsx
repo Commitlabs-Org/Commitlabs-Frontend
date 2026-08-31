@@ -10,6 +10,7 @@ interface CommitmentCreatedModalProps {
   onCreateAnother: () => void;
   onClose: () => void;
   onViewOnExplorer?: () => void;
+  onFundLater?: () => void;
 }
 
 export default function CommitmentCreatedModal({
@@ -19,6 +20,7 @@ export default function CommitmentCreatedModal({
   onCreateAnother,
   onClose,
   onViewOnExplorer,
+  onFundLater,
 }: CommitmentCreatedModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
@@ -208,6 +210,16 @@ export default function CommitmentCreatedModal({
           <Eye size={20} />
           View Commitment
         </button>
+
+        {/* Fund Later Action */}
+        {onFundLater && (
+          <button
+            onClick={onFundLater}
+            className="w-full flex items-center justify-center gap-2 bg-white/[0.03] border border-white/10 rounded-xl px-5 py-3 text-sm sm:text-[15px] font-medium text-[#f5f5f7] hover:bg-white/[0.05] hover:border-[#0FF0FC]/30 hover:text-[#0FF0FC] transition-all focus:outline-none focus:ring-2 focus:ring-[#0FF0FC]/20 mb-4"
+          >
+            Fund Later
+          </button>
+        )}
 
         {/* Secondary Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">

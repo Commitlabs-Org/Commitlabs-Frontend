@@ -57,7 +57,7 @@ function generateCommitmentId(): string {
 export default function CreateCommitment() {
   const router = useRouter();
   const { address: ownerAddress } = useWallet();
-  const { draft, saveDraft, clearDraft } = useDraftPersistence();
+  const { allDrafts, saveDraft, clearDraft, resumeDraft } = useDraftPersistence();
   const prefill = usePrefillFromCommitment();
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [step, setStep] = useState(1);
@@ -103,7 +103,6 @@ export default function CreateCommitment() {
   // In production this would come from the connected wallet hook.
   // Passed as undefined while wallet integration is pending; the fund
   // API accepts an optional callerAddress and validates it on-chain.
-  const callerAddress: string | undefined = undefined;
 
   useEffect(() => {
     isMounted.current = true;
@@ -130,12 +129,15 @@ export default function CreateCommitment() {
     wasSubmittingRef.current = isSubmitting && submitStatus === 'submitting';
   }, [isSubmitting, submitStatus]);
 
+  const resumePromptChecked = useRef(false);
   useEffect(() => {
-    if (draft) {
+    if (resumePromptChecked.current) return;
+    resumePromptChecked.current = true;
+    if (allDrafts.length > 0) {
       suppressDraftSave.current = true;
       setShowResumePrompt(true);
     }
-  }, [draft]);
+  }, [allDrafts]);
 
   // When a source commitment is loaded via ?sourceId=, prefill the wizard fields
   // and skip straight to step 2 so the user can review / adjust the copied parameters.
@@ -168,20 +170,20 @@ export default function CreateCommitment() {
     }
   }, [startTour]);
 
-  const handleResumeDraft = () => {
-    if (draft) {
-      suppressDraftSave.current = false;
-      updateSubmitStatus('idle');
-      setSubmitError(null);
-      setStep(draft.step);
-      setSelectedType(draft.selectedType);
-      setCommitmentType(draft.commitmentType);
-      setAmount(draft.amount);
-      setAsset(draft.asset);
-      setDurationDays(draft.durationDays);
-      setMaxLossPercent(draft.maxLossPercent);
-      setShowResumePrompt(false);
-    }
+  const handleResumeDraft = (draftId: string) => {
+    const resumed = resumeDraft(draftId);
+    if (!resumed) return;
+    suppressDraftSave.current = false;
+    updateSubmitStatus('idle');
+    setSubmitError(null);
+    setStep(resumed.step);
+    setSelectedType(resumed.selectedType);
+    setCommitmentType(resumed.commitmentType);
+    setAmount(resumed.amount);
+    setAsset(resumed.asset);
+    setDurationDays(resumed.durationDays);
+    setMaxLossPercent(resumed.maxLossPercent);
+    setShowResumePrompt(false);
   };
 
   const handleStartFresh = () => {
@@ -216,7 +218,18 @@ export default function CreateCommitment() {
       maxLossPercent,
     };
     saveDraft(currentDraft);
-  }, [step, selectedType, commitmentType, amount, asset, durationDays, maxLossPercent, saveDraft, showSuccessModal, isSubmitting]);
+  }, [
+    step,
+    selectedType,
+    commitmentType,
+    amount,
+    asset,
+    durationDays,
+    maxLossPercent,
+    saveDraft,
+    showSuccessModal,
+    isSubmitting,
+  ]);
 
   // Build review data from actual configured values
   const getReviewData = () => {
@@ -322,7 +335,12 @@ export default function CreateCommitment() {
   };
 
   const handleSubmit = () => {
-    if (isSubmitting || showSuccessModal || submitStatusRef.current === 'submitting' || submitStatusRef.current === 'success') {
+    if (
+      isSubmitting ||
+      showSuccessModal ||
+      submitStatusRef.current === 'submitting' ||
+      submitStatusRef.current === 'success'
+    ) {
       return;
     }
     if (showResumePrompt) {
@@ -412,8 +430,6 @@ export default function CreateCommitment() {
     setShowSuccessModal(false);
     const numericId = commitmentId.split('-')[1] || '1';
     router.push(`/commitments/${numericId}`);
-  };entId.split('-')[1] || '1';
-    router.push(`/commitments/${numericId}`);
   };
 
   const handleViewOnExplorer = () => {
@@ -449,9 +465,9 @@ export default function CreateCommitment() {
           </div>
         )}
 
-        {showResumePrompt && draft && (
+        {showResumePrompt && allDrafts.length > 0 && (
           <ResumeDraftPrompt
-            draft={draft}
+            drafts={allDrafts}
             onResume={handleResumeDraft}
             onStartFresh={handleStartFresh}
           />
@@ -513,7 +529,6 @@ export default function CreateCommitment() {
             <CommitmentCreatedModal
               isOpen={showSuccessModal}
               commitmentId={commitmentId}
-              {...(callerAddress ? { callerAddress } : {})}
               onViewCommitment={handleViewCommitment}
               onCreateAnother={handleCreateAnother}
               onClose={handleCloseModal}

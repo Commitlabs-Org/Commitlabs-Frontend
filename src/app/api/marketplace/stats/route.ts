@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ok, fail, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { isFeatureEnabled } from '@/lib/backend/config';
-import { TooManyRequestsError, UnauthorizedError, InternalError, ServiceUnavailableError } from '@/lib/backend/errors';
+import {
+  TooManyRequestsError,
+  UnauthorizedError,
+  InternalError,
+  ServiceUnavailableError,
+} from '@/lib/backend/errors';
 import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
 import { verifySessionToken } from '@/lib/backend/auth';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
@@ -76,10 +81,7 @@ function validateStatsData(data: unknown): MarketplaceStats {
         typeBreakdownTotal: totalFromBreakdown,
       },
     );
-    response.headers.set('X-Stats-State', envelope.state);
-    response.headers.set('X-Stats-Generation', String(envelope.generation));
-    response.headers.set('X-Stats-LastValid-Generation', String(envelope.lastValidGeneration));
-    response.headers.set('X-Stats-Age', String(meta.ageSeconds));
+  }
 
   return parsed;
 }
@@ -136,10 +138,9 @@ export const GET = withApiHandler(
     try {
       stats = await marketplaceService.getMarketplaceStats();
     } catch (error) {
-      throw new ServiceUnavailableError(
-        'Failed to compute marketplace statistics.',
-        { cause: error instanceof Error ? error.message : String(error) },
-      );
+      throw new ServiceUnavailableError('Failed to compute marketplace statistics.', {
+        cause: error instanceof Error ? error.message : String(error),
+      });
     }
 
     let validatedStats: MarketplaceStats;

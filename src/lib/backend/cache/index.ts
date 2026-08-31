@@ -78,7 +78,7 @@ export function isMarketplaceStatsPayload(value: unknown): value is MarketplaceS
       (k) =>
         typeof (v.typeBreakdown as Record<string, unknown>)[k] === 'number' &&
         Number.isFinite((v.typeBreakdown as Record<string, number>)[k]) &&
-        (v.typeBreakdown as Record<string, number>)[k] >= 0,
+        ((v.typeBreakdown as Record<string, number>)[k] ?? -1) >= 0,
     )
   );
 }
@@ -114,7 +114,7 @@ export function makeStatsEnvelope(
     state,
     generation,
     lastValidGeneration: state === 'FRESH' ? generation : generation - 1,
-    sourceCorrelationId: correlationId,
+    ...(correlationId !== undefined ? { sourceCorrelationId: correlationId } : {}),
   };
 }
 
@@ -142,6 +142,7 @@ export const CacheKey = {
   userCommitments: (ownerAddress: string) => `commitlabs:user-commitments:${ownerAddress}`,
   marketplaceListings: (queryHash: string) => `commitlabs:marketplace:listings:${queryHash}`,
   commitmentSearch: (queryHash: string) => `commitlabs:commitment-search:${queryHash}`,
+  marketplaceStats: () => 'commitlabs:marketplace:stats',
 } as const;
 
 /** TTL in seconds — keep short so stale chain data doesn't linger. */

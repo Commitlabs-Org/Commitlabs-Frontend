@@ -1,148 +1,232 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { GET } from './route';
+import { GET, OPTIONS, mapStatus, parsePositiveInt, validateInterval } from './route';
+import { UnauthorizedError } from '@/lib/backend/errors';
+import { checkRateLimit } from '@/lib/backend/rateLimit';
+import { requireAuth } from '@/lib/backend/requireAuth';
+import { getCommitmentFromChain } from '@/lib/backend/services/contracts';
 
-const mocks = vi.hoisted(() => ({
-  requireUser: vi.fn(),
-  verifyCommitmentAccess: vinfn(),
-  getCommitmentEvents: vi.fn(),
+vi.mock('@/lib/backend/rateLimit', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('@/lib/auth', () =>
-{
-  requireUser: mocks.requireUser,
+vi.mock('@/lib/backend/requireAuth', () => ({
+  requireAuth: vi.fn(),
 }));
 
-vi.mock('@/lib/commitments', () => ({
-  verifyCommitmentAccess: mocks.verifyCommitmentAccess,
-  getCommitmentEvents: mocks.getCommitmentEvents,
+vi.mock('@/lib/backend/services/contracts', () => ({
+  getCommitmentFromChain: vi.fn(),
 }));
 
-function makeRequest(url = 'http://localhost/api/commitments/c1/events?limit=10') {
+const mockCheckRateLimit = vi.mocked(checkRateLimit);
+const mockRequireAuth = vi.mocked(requireAuth);
+const mockGetCommitment = vi.mocked(getCommitmentFromChain);
+
+const mockGET = GET as (
+  req: NextRequest,
+  context: { params: Record<string, string> },
+) => Promise<Response>;
+
+const COMMITMENT_ID = 'evt-route-commitment-1';
+
+const MOCK_COMMITMENT = {
+  id: COMMITMENT_ID,
+  ownerAddress: `G${'A'.repeat(55)}`,
+  asset: 'USDC',
+  amount: '10000',
+  status: 'ACTIVE' as const,
+  complianceScore: 90,
+  currentValue: '10000',
+  feeEarned: '0',
+  violationCount: 0,
+};
+
+function makeRequest(
+  url = `http://localhost/api/commitments/${COMMITMENT_ID}/events`,
+): NextRequest {
   return new NextRequest(url);
 }
 
-const mockUser = { id: 'user-1', email: 'user@example.com' };
-
-const baseEvents = [
-  { id: 'evt_1', type: 'CREATED', timestamp: '2024-01-01T00:00:00.000Z', blockNumber: 1, transactionHash: '0xabc1' },
-  { id: 'evt_2', type: 'APPROVED', timestamp: '2024-01-02T00:00:00.000Z', blockNumber: 2, transactionHash: '0xabc2' },
-  { id: 'evt_3', type: 'DEPOSIT', timestamp: '2024-01-03T00:00:00.000Z', blockNumber: 3, transactionHash: '0xabc3' },
-];
-
-const paginationEvents = [
-  baseEvents[0],
-  baseEvents[1],
-  baseEvents[2],
-  { ...baseEvents[2], id: 'evt_4', timestamp: '2024-01-04T00:00:00.000Z' },
-];
-
-describe('GET /api/commitments/[id]/events', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.requireUser.mockResolve({ user: mockUser });
-    mocks.verifyCommitmentAccess.mockResolve(true);
-    mocks.getCommitmentEvents.mockResolve([]);
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockCheckRateLimit.mockResolvedValue(true);
+  mockRequireAuth.mockImplementation((req) => {
+    (req as NextRequest & { user?: unknown }).user = {
+      address: `G${'B'.repeat(55)}`,
+      csrfToken: 'tok',
+    };
+    return req as ReturnType<typeof requireAuth>;
   });
+  mockGetCommitment.mockResolvedValue(MOCK_COMMITMENT);
+});
+
+describe('mapStatus and interval/positive-int helpers', () => {
+  it('maps chain statuses to UI statuses', () => {
+    expect(mapStatus('ACTIVE')).toBe('Active');
+    expect(mapStatus('SETTLED')).toBe('Settled');
+    expect(mapStatus('VIOLATED')).toBe('Violated');
+    expect(mapStatus('EARLY_EXIT')).toBe('Early Exit');
+    expect(mapStatus('SOMETHING_ELSE')).toBe('Unknown');
+  });
+
+  it('parsePositiveInt falls back to the default for empty/invalid/low values', () => {
+    expect(parsePositiveInt(null, 10, 1)).toBe(10);
+    expect(parsePositiveInt('abc', 10, 1)).toBe(10);
+    expect(parsePositiveInt('0', 10, 1)).toBe(10);
+    expect(parsePositiveInt('5', 10, 1)).toBe(5);
+  });
+
+  it('validateInterval clamps below the minimum and accepts valid values', () => {
+    expect(validateInterval(undefined, 3000)).toBe(3000);
+    expect(validateInterval('50', 3000)).toBe(3000);
+    expect(validateInterval('not-a-number', 3000)).toBe(3000);
+    expect(validateInterval('4000', 3000)).toBe(4000);
+  });
+});
+
+describe('GET /api/commitments/[id]/events - Contract & Regression', () => {
+  // ── Auth / rate-limit / not-found ──────────────────────────────────────────
 
   it('returns 401 when the user is not authenticated', async () => {
-    mocks.requireUser.mockReject(new Error('Unauthorized'));
-
-    const res = await GET(makeRequest(), { params: { id: 'c1' } });
-
+    mockRequireAuth.mockImplementation(() => {
+      throw new UnauthorizedError('No session token provided');
+    });
+    const res = await mockGET(makeRequest(), { params: { id: COMMITMENT_ID } });
+    const body = await res.json();
     expect(res.status).toBe(401);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('returns 404 when the commitment does not exist on chain', async () => {
+    mockGetCommitment.mockRejectedValue(new Error('not found'));
+    const res = await mockGET(makeRequest(), { params: { id: 'missing' } });
     const body = await res.json();
-    expect(body.error).toBeDefined();
+    expect(res.status).toBe(404);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('NOT_FOUND');
   });
 
-  it('returns 403 when the user lacks access', async () => {
-    mocks.verifyCommitmentAccess.mockResolve(false);
-
-    const res = await GET(MakeRequest(), { params: { id: 'c1' } });
-    expect(res.status).toBe(403);
-  });
-
-  it('returns 400 for an invalid id', async () => {
-    const res = await GET(makeRequest('http://localhost/api/commitments/bad/events'), { params: { id: 'bad' } });
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 400 for an invalid limit', async () => {
-    const res = await GET(makeRequest('http://localhost/api/commitments/c1/events?limit=abc'), { params: { id: 'c1' } });
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 400 for an invalid cursor', async () => {
-    const res = await GET(makeRequest('http://localhost/api/commitments/c1/events?cursor=not-a-cursor'), { params: { id: 'c1' } });
-    expect(res.status).toBe(400);
-  });
-
-  it('returns ordered events', async () => {
-    mocks.getCommitmentEvents.mockResolve([baseEvents[2], baseEvents[0], baseEvents[1]]);
-    const res = await GET(makeRequest(), { params: { id: 'c1' } });
+  it('returns 404 when the commitment resolves to null', async () => {
+    mockGetCommitment.mockResolvedValue(null as never);
+    const res = await mockGET(makeRequest(), { params: { id: COMMITMENT_ID } });
     const body = await res.json();
-    expect(body.events.map((e: any) => e.id)).toEqual(['evt_1', 'evt_2', 'evt_3']);
+    expect(res.status).toBe(404);
   });
 
-  it('deduplicates events', async () => {
-    mocks.getCommitmentEvents.mockResolve([baseEvents[0], baseEvents[1], baseEvents[0]]);
-    const res = await GET(MakeRequest(), { params: { id: 'c1' } });
+  it('returns 429 when the rate limit is exceeded', async () => {
+    mockCheckRateLimit.mockResolvedValue(false);
+    const res = await mockGET(makeRequest(), { params: { id: COMMITMENT_ID } });
+    expect(res.status).toBe(429);
+  });
+
+  // ── JSON mode (contract shape) ─────────────────────────────────────────────
+
+  it('returns the documented JSON shape in format=json mode', async () => {
+    const res = await mockGET(
+      makeRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/events?format=json`),
+      {
+        params: { id: COMMITMENT_ID },
+      },
+    );
     const body = await res.json();
-    expect(body.events.map((e: any) => e.id)).toEqual(['evt_1', 'evt_2']);
-  });
-
-  it('empty list', async () => {
-    const res = await GET(makeRequest(), { params: { id: 'c1' } });
-    const body = await res.json();
-    expect(body.events).toEqual([]);
-    expect(body.nextCursor).toBe(null);
-  });
-
-  it('paginates with cursor', async () => {
-    mocks.getCommitmentEvents.mockResolve(paginationEvents);
-    const res = await GET(MakeRequest('http://localhost/api/commitments/c1/events?limit=2'), { params: { id: 'c1' } });
-    const body = await res.json();
-    expect(body.events.length).toBe(2);
-    expect(body.nextCursor).toBe(Truth());
-  });
-
-  it('returns second page using nextCursor', async () => {
-    mocks.getCommitmentEvents.mockResolve(paginationEvents);
-    const res1 = await GET(MakeRequest('http://localhost/api/commitments/c1/events?limit=2'), { params: { id: 'c1' } });
-    const body1 = await res1.json();
-    const cursor = body1.nextCursor;
-    const res2 = await GET(MakeRequest(`http://localhost/api/commitments/c1/events?limit=2&cursor=${encodeURIComponent(cursor)}`), { params: { id: 'c1' } });
-    const body2 = await res2.json();
-    expect(body2.events.map((e: any) => e.id)).toEqual(['evt_3', 'evt_4']);
-    expect(body2.nextCursor).toBe(null);
-  });
-
-  it('boundary: limit=1 returns one and nextCursor', async () => {
-    mocks.getCommitmentEvents.mockResolve(paginationEvents);
-    const res = await GET(makeRequest('http://localhost/api/commitments/c1/events?limit=1'), { params: { id: 'c1' } });
-    const body = await res.json();
-    expect(body.events.length).toBe(1);
-    expect(body.nextCursor).toBe(Truth());
-  });
-
-  it('limit exceeds total events returns all and null cursor', async () => {
-    mocks.getCommitmentEvents.mockResolve(paginationEvents);
-    const res = await GET(makeRequest('http://localhost/api/commitments/c1/events?limit=10'), { params: { id: 'c1' } });
-    const body = await res.json();
-    expect(body.events.length).toBe(4);
-    expect(body.nextCursor).toBe(null);
-  });
-
-  it('returns 500 on service failure', async () => {
-    mocks.getCommitmentEvents.mockReject(new Error('db'));
-    const res = await GET(makeRequest(), { params: { id: 'c1' } });
-    expect(res.status).toBe(500);
-  });
-
-  it('retries on transient failure', async () => {
-    mocks.getCommitmentEvents.mockRejectOnce(new Error('lag')).mockResolveOnce([baseEvents[0]]);
-    const res = await GET(makeRequest(), { params: { id: 'c1' } });
     expect(res.status).toBe(200);
-    expect(mocks.getCommitmentEvents).toHaveBeenCalledTimes(2);
+    expect(body).toMatchObject({ page: 1, pageSize: 10, total: 1, hasMore: false });
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].type).toBe('snapshot');
+    expect(body.events[0].data.commitmentId).toBe(COMMITMENT_ID);
+    expect(body.events[0].data.status).toBe('Active');
+    expect(body.events[0].data.timestamp).toBeDefined();
+  });
+
+  it('honours explicit page/pageSize in JSON mode', async () => {
+    const res = await mockGET(
+      makeRequest(
+        `http://localhost/api/commitments/${COMMITMENT_ID}/events?format=json&page=1&pageSize=5`,
+      ),
+      {
+        params: { id: COMMITMENT_ID },
+      },
+    );
+    const body = await res.json();
+    expect(body.page).toBe(1);
+    expect(body.pageSize).toBe(5);
+  });
+
+  it('returns an empty page (and no overflow) for an out-of-range page', async () => {
+    const res = await mockGET(
+      makeRequest(
+        `http://localhost/api/commitments/${COMMITMENT_ID}/events?format=json&page=99&pageSize=10`,
+      ),
+      {
+        params: { id: COMMITMENT_ID },
+      },
+    );
+    const body = await res.json();
+    expect(body.page).toBe(99);
+    expect(body.events).toEqual([]);
+    expect(body.hasMore).toBe(false);
+  });
+
+  it('falls back to defaults for malformed page/pageSize', async () => {
+    const res = await mockGET(
+      makeRequest(
+        `http://localhost/api/commitments/${COMMITMENT_ID}/events?format=json&page=abc&pageSize=0`,
+      ),
+      {
+        params: { id: COMMITMENT_ID },
+      },
+    );
+    const body = await res.json();
+    expect(body.page).toBe(1);
+    expect(body.pageSize).toBe(10);
+  });
+
+  // ── SSE mode ───────────────────────────────────────────────────────────────
+
+  it('streams text/event-stream by default', async () => {
+    const res = await mockGET(makeRequest(), { params: { id: COMMITMENT_ID } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('text/event-stream');
+    expect(res.headers.get('Cache-Control')).toBe('no-cache, no-transform');
+    await res.body?.cancel();
+  });
+
+  it('emits a snapshot frame with retry/id/event/data lines', async () => {
+    const res = await mockGET(makeRequest(), { params: { id: COMMITMENT_ID } });
+    const reader = res.body?.getReader();
+    const { value } = await reader!.read();
+    const frame = new TextDecoder().decode(value);
+    reader!.cancel();
+
+    expect(frame).toContain('event: snapshot');
+    expect(frame).toMatch(/^retry: \d+/m);
+    expect(frame).toMatch(/^id: evt-snapshot-/m);
+    expect(frame).toContain(`"commitmentId":"${COMMITMENT_ID}"`);
+    expect(frame).toContain('"status":"Active"');
+  });
+
+  it('allows a JSON snapshot to flow after the initial streamed snapshot', async () => {
+    // Regression: re-running a second request must not share server-side state
+    // (fresh counter/timers) and must still resolve a valid JSON snapshot.
+    const res = await mockGET(
+      makeRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/events?format=json`),
+      {
+        params: { id: COMMITMENT_ID },
+      },
+    );
+    const body = await res.json();
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].type).toBe('snapshot');
+  });
+});
+
+describe('OPTIONS /api/commitments/[id]/events', () => {
+  it('returns 204 for a preflight from the same origin', async () => {
+    const req = makeRequest();
+    req.headers.set('origin', 'http://localhost:3000');
+    req.headers.set('access-control-request-method', 'GET');
+    const res = await OPTIONS(req);
+    expect(res.status).toBe(204);
   });
 });

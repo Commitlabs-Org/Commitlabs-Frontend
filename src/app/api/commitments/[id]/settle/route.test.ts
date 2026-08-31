@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from './route';
 import { diagnosticsService } from '@/lib/backend/diagnostics';
+import { CsrfValidationError } from '@/lib/backend/errors';
 import { randomUUID } from 'crypto';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -31,11 +32,18 @@ vi.mock('@/lib/backend/idempotency', () => ({
 
 vi.mock('@/lib/backend/logger', () => ({
   logCommitmentSettled: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
 }));
 
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
-import { settleCommitmentOnChain, getCommitmentFromChain } from '@/lib/backend/services/contracts';
+import {
+  settleCommitmentOnChain,
+  getCommitmentFromChain,
+  type ChainCommitment,
+} from '@/lib/backend/services/contracts';
 import { idempotencyService } from '@/lib/backend/idempotency';
 import { logCommitmentSettled } from '@/lib/backend/logger';
 
@@ -58,7 +66,7 @@ function createMockRequest(
 ): NextRequest {
   const req = new NextRequest(url, {
     method: options.method || 'POST',
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });
 
   if (options.idempotencyKey) {
@@ -66,7 +74,7 @@ function createMockRequest(
     headers.set('idempotency-key', options.idempotencyKey);
     return new NextRequest(url, {
       method: options.method || 'POST',
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
       headers,
     });
   }
@@ -88,8 +96,8 @@ async function parseResponse(response: Response): Promise<ParsedResponse> {
 
 // ── Test Data ─────────────────────────────────────────────────────────────────
 
-const VALID_ADDRESS = `GBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`;
-const DIFFERENT_ADDRESS = `GBAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB`;
+const VALID_ADDRESS = `GA`.padEnd(56, 'A');
+const DIFFERENT_ADDRESS = `GB`.padEnd(56, 'A');
 const COMMITMENT_ID = 'commitment-settle-test-123';
 
 const MOCK_COMMITMENT_ACTIVE = {
@@ -108,7 +116,7 @@ const MOCK_COMMITMENT_ACTIVE = {
 
 const MOCK_COMMITMENT_FUNDED = {
   ...MOCK_COMMITMENT_ACTIVE,
-  status: 'FUNDED' as const,
+  status: 'UNKNOWN' as const,
 };
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -117,6 +125,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
   beforeEach(() => {
     vi.clearAllMocks();
     diagnosticsService.clear();
+    mockAssertCsrf.mockImplementation(() => undefined);
     mockCheckRateLimit.mockResolvedValue(true);
     mockGetCommitment.mockResolvedValue(MOCK_COMMITMENT_ACTIVE);
     mockSettleCommitment.mockResolvedValue({
@@ -126,7 +135,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
       reference: 'settle-ref-123',
     });
     mockIdempotency.getRecord.mockResolvedValue(null);
-    mockIdempotency.start.mockResolvedValue(undefined);
+    mockIdempotency.start.mockResolvedValue(true);
     mockIdempotency.complete.mockResolvedValue(undefined);
     mockIdempotency.fail.mockResolvedValue(undefined);
   });
@@ -181,7 +190,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
 
     const result = await parseResponse(response);
     expect(result.status).toBe(403);
-    expect(result.data.error.code).toBe('FORBIDDEN_ERROR');
+    expect(result.data.error.code).toBe('FORBIDDEN');
     expect(result.data.error.message).toContain('Ownership verification failed');
   });
 
@@ -202,7 +211,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
   // ── State Precondition Tests ───────────────────────────────────────────────
 
   it('rejects settlement of non-existent commitment', async () => {
-    mockGetCommitment.mockResolvedValue(null);
+    mockGetCommitment.mockResolvedValue(null as unknown as ChainCommitment);
 
     const req = createMockRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/settle`, {
       body: { callerAddress: VALID_ADDRESS },
@@ -213,7 +222,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
 
     const result = await parseResponse(response);
     expect(result.status).toBe(404);
-    expect(result.data.error.code).toBe('NOT_FOUND_ERROR');
+    expect(result.data.error.code).toBe('NOT_FOUND');
   });
 
   it('rejects settlement of already-settled commitment', async () => {
@@ -391,7 +400,8 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
   it('asserts CSRF token on POST request', async () => {
     const req = createMockRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/settle`, {
       body: { callerAddress: VALID_ADDRESS },
-    });\n\n    const context = { params: { id: COMMITMENT_ID } };
+    });
+    const context = { params: { id: COMMITMENT_ID } };
     await POST(req, context, 'correlation-123');
 
     expect(mockAssertCsrf).toHaveBeenCalledWith(req);
@@ -399,7 +409,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
 
   it('fails on CSRF validation failure', async () => {
     mockAssertCsrf.mockImplementation(() => {
-      throw new Error('CSRF token invalid');
+      throw new CsrfValidationError('CSRF token invalid');
     });
 
     const req = createMockRequest(`http://localhost/api/commitments/${COMMITMENT_ID}/settle`, {
@@ -410,7 +420,8 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
     const response = await POST(req, context, 'correlation-123');
 
     const result = await parseResponse(response);
-    expect(result.status).toBe(400);
+    expect(result.status).toBe(403);
+    expect(result.data.error.code).toBe('CSRF_INVALID');
   });
 
   // ── Rate Limit Tests ───────────────────────────────────────────────────────
@@ -427,7 +438,7 @@ describe('POST /api/commitments/[id]/settle - Authorization & Boundary Validatio
 
     const result = await parseResponse(response);
     expect(result.status).toBe(429);
-    expect(result.data.error.code).toBe('TOO_MANY_REQUESTS_ERROR');
+    expect(result.data.error.code).toBe('TOO_MANY_REQUESTS');
   });
 
   // ── Transaction Response Validation ────────────────────────────────────────

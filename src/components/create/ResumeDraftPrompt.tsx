@@ -79,7 +79,7 @@ export default function ResumeDraftPrompt({
         setPendingAction(null);
       }
     },
-    [onResume, onDeleteDraft, onStartFresh]
+    [onResume, onDeleteDraft, onStartFresh],
   );
 
   const handleResume = useCallback((id: string) => execute({ type: 'resume', id }), [execute]);
@@ -116,21 +116,30 @@ export default function ResumeDraftPrompt({
           </div>
 
           {error && (
-            <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-70 text-sm">
-              {error
+            <div
+              role="alert"
+              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"
+            >
+              {error}
             </div>
           )}
 
           <p className="text-gray-600 mb-4">
-            You have {drafts.length} in-progress draft{drafts.length > 1 ? 's' : ''}. Pick one to continue, or start fresh.
+            You have {drafts.length} in-progress draft{drafts.length > 1 ? 's' : ''}. Pick one to
+            continue, or start fresh.
           </p>
 
           <ul className="space-y-3 mb-6 max-h-64 overflow-y-auto" aria-label="Saved drafts">
             {drafts.map((named) => {
               const { id, data, updatedAt } = named;
-              const Icon = data.selectedType ? typeIconMap[data.selectedType] : TrendingUp;
+              const Icon = data.selectedType
+                ? (typeIconMap[data.selectedType] ?? TrendingUp)
+                : TrendingUp;
               return (
-                <li key={id} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-start justify-between gap-3">
+                <li
+                  key={id}
+                  className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-start justify-between gap-3"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Icon size={16} className="text-gray-700 shrink-0" aria-hidden="true" />
@@ -144,7 +153,7 @@ export default function ResumeDraftPrompt({
                         {data.amount || 'Not set'} {data.asset}
                       </span>
                       <span>Duration:</span>
-                      <span className="text-gray-700">{data.durationDays}d|/span>
+                      <span className="text-gray-700">{data.durationDays}d</span>
                       <span>Step:</span>
                       <span className="text-gray-700">{data.step} of 3</span>
                     </div>
@@ -166,7 +175,7 @@ export default function ResumeDraftPrompt({
                         onClick={() => handleDelete(id)}
                         disabled={!!pendingAction}
                         className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 text-xs font-medium hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label=`Delete draft ${id}`
+                        aria-label={`Delete draft ${id}`}
                       >
                         Delete
                       </button>

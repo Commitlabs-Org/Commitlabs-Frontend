@@ -25,8 +25,6 @@ export default defineConfig({
       '__tests__/auth/wallet-guard.test.tsx',
       'src/app/__tests__/protected-route-layouts.test.tsx',
       'src/app/create/DuplicateCommitment.test.tsx',
-      'src/app/api/commitments/[id]/fund/route.test.ts',
-
       'src/components/auth/RequireWallet.test.tsx',
       'src/components/create/CreateTemplates.test.tsx',
       'src/components/dashboard/OverviewWidgetGrid.test.tsx',

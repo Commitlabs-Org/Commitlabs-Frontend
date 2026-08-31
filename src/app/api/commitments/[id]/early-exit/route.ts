@@ -31,6 +31,8 @@
  */
 
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { randomUUID } from 'crypto';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
@@ -40,6 +42,7 @@ import {
   ConflictError,
   TooManyRequestsError,
   ForbiddenError,
+  NotFoundError,
   ValidationError,
 } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
@@ -50,13 +53,11 @@ import { idempotencyService } from '@/lib/backend/idempotency';
 import { diagnosticsService } from '@/lib/backend/diagnostics';
 import { requireAuth } from '@/lib/backend/requireAuth';
 import { EarlyExitRequestBodySchema } from '@/lib/schemas/apiContracts';
-import { earlyExitCommitmentOnChain, getCommitmentFromChain } from '@/lib/backend/services/contracts';
 import {
   earlyExitCommitmentOnChain,
   getCommitmentFromChain,
 } from '@/lib/backend/services/contracts';
 import type { TransactionMetadata, TransactionType } from '@/lib/transaction/transactionTypes';
-import { TRANSACTION_BOUNDS, createTransactionError } from '@/lib/transaction/transactionTypes';
 import { TransactionStateMachine } from '@/lib/transaction/transactionStateMachine';
 import { validateTransactionMetadata } from '@/lib/transaction/transactionStateMachine';
 
@@ -81,64 +82,82 @@ function rethrowContractError(error: unknown): never {
   throw error;
 }
 
-export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
-  // Generate unique operation ID for diagnostics
-  const operationId = randomUUID();
-  const telemetry = diagnosticsService.startOperation(
-    operationId,
-    'early_exit_commitment',
-    100, // max concurrent
-  );
+/**
+ * Validates the on-chain early-exit response before it is returned to the
+ * caller. Rejects responses that are missing required fields, which can
+ * indicate tampering, malformed RPC output, or a corrupted ledger state.
+ */
+function assertEarlyExitResponse(result: {
+  exitAmount?: string;
+  penaltyAmount?: string;
+  finalStatus?: string;
+  txHash?: string;
+}): void {
+  if (
+    result.exitAmount === undefined ||
+    result.exitAmount === null ||
+    result.exitAmount === '' ||
+    result.penaltyAmount === undefined ||
+    result.penaltyAmount === null ||
+    result.penaltyAmount === '' ||
+    result.finalStatus === undefined ||
+    result.finalStatus === '' ||
+    result.txHash === undefined ||
+    result.txHash === ''
+  ) {
+    throw new ValidationError(
+      'Invalid early exit response: missing required fields (exitAmount, penaltyAmount, finalStatus, txHash).',
+    );
+  }
+}
 
-  try {
-    // ─── CSRF Protection ──────────────────────────────────────────────────────
-    assertMutationCsrf(req);
+export const POST = withApiHandler(
+  async (req: NextRequest, { params }, correlationId) => {
+    const operationId = randomUUID();
+    diagnosticsService.startOperation(operationId, 'early_exit_commitment', 100);
 
-    // ─── Rate Limiting ────────────────────────────────────────────────────────
-    const ip = getClientIp(req);
-    if (!(await checkRateLimit(ip, 'api/commitments/early-exit'))) {
-      throw new TooManyRequestsError(
-        'Too many requests. Please try again later.',
-        undefined,
-        getRateLimitWindowSeconds('api/commitments/early-exit'),
-      );
-    }
-
-    // ─── Idempotency Check & Protection ──────────────────────────────────────
-    const idempotencyKey = req.headers.get('idempotency-key');
-    if (idempotencyKey) {
-      const record = await idempotencyService.getRecord(idempotencyKey);
-      if (record) {
-        if (record.status === 'COMPLETED') {
-          diagnosticsService.completeOperation(operationId, 'success', undefined, {
-            cacheHit: true,
-            idempotent: true,
-          });
-          const response = ok(record.response, undefined, record.statusCode, correlationId);
-          response.headers.set('X-Idempotent-Replay', 'true');
-          return response;
-        } else if (record.status === 'STARTED') {
-          throw new ConflictError(
-            'A request with this Idempotency-Key is currently processing. Please retry after a brief delay.',
-          );
-        }
-      }
-      await idempotencyService.start(idempotencyKey);
-    }
-
-    // ─── Authentication ───────────────────────────────────────────────────────
-    // Verifies session validity and extracts authenticated wallet address
-    const authReq = requireAuth(req);
-    const sessionAddress = authReq.user.address;
-
-    // ─── Request Body Validation ──────────────────────────────────────────────
-    let body: unknown;
     try {
-      // Authentication
+      // ─── CSRF Protection ──────────────────────────────────────────────────────
+      assertMutationCsrf(req);
+
+      // ─── Rate Limiting ────────────────────────────────────────────────────────
+      const ip = getClientIp(req);
+      if (!(await checkRateLimit(ip, 'api/commitments/early-exit'))) {
+        throw new TooManyRequestsError(
+          'Too many requests. Please try again later.',
+          undefined,
+          getRateLimitWindowSeconds('api/commitments/early-exit'),
+        );
+      }
+
+      // ─── Idempotency Check & Protection ──────────────────────────────────────
+      const idempotencyKey = req.headers.get('idempotency-key');
+      if (idempotencyKey) {
+        const record = await idempotencyService.getRecord(idempotencyKey);
+        if (record) {
+          if (record.status === 'COMPLETED') {
+            diagnosticsService.completeOperation(operationId, 'success', undefined, {
+              cacheHit: true,
+              idempotent: true,
+            });
+            const response = ok(record.response, undefined, record.statusCode, correlationId);
+            response.headers.set('X-Idempotent-Replay', 'true');
+            return response;
+          } else if (record.status === 'STARTED') {
+            throw new ConflictError(
+              'A request with this Idempotency-Key is currently processing. Please retry after a brief delay.',
+            );
+          }
+        }
+        await idempotencyService.start(idempotencyKey);
+      }
+
+      // ─── Authentication ───────────────────────────────────────────────────────
+      // Verifies session validity and extracts authenticated wallet address
       const authReq = requireAuth(req);
       const sessionAddress = authReq.user.address;
 
-      // Request body validation
+      // ─── Request Body Validation ──────────────────────────────────────────────
       let body: unknown;
       try {
         body = await req.json();
@@ -160,28 +179,88 @@ export const POST = withApiHandler(async (req: NextRequest, { params }, correlat
         throw new ValidationError('Commitment ID is required');
       }
 
+      // ─── Session-Wallet Consistency (Wrong-Wallet Detection) ─────────────────
       if (sessionAddress !== callerAddress) {
+        diagnosticsService.completeOperation(
+          operationId,
+          'failure',
+          'Authorization failed: session-wallet mismatch',
+          { commitmentId, reason: 'session_wallet_mismatch' },
+        );
         throw new ForbiddenError(
-          'You are not authorized to perform this action. Session address does not match caller address.',
+          'Session authentication failed: the session address does not match the caller address.',
         );
       }
 
       // Generate transaction ID
       const transactionId = generateTransactionId(commitmentId);
-      
+
       // Initialize state machine for this transaction
       const stateMachine = new TransactionStateMachine('pending');
 
-      const commitment = await getCommitmentFromChain(commitmentId).catch(rethrowContractError);
+      let commitment: { status: string; ownerAddress?: string } | null = null;
+      try {
+        commitment = await getCommitmentFromChain(commitmentId, {
+          requestId: correlationId,
+        }).catch(rethrowContractError);
+      } catch {
+        // Silence; null commitment is handled below
+      }
 
-      if (commitment.ownerAddress !== callerAddress) {
-        const error = createTransactionError(
-          'VALIDATION_ERROR' as any,
-          'You do not own this commitment and cannot exit it early.',
-          transactionId,
-        );
+      if (!commitment) {
         stateMachine.transition('failed');
-        throw new ForbiddenError('You do not own this commitment and cannot exit it early.');
+        diagnosticsService.completeOperation(operationId, 'failure', 'Commitment not found', {
+          commitmentId,
+        });
+        throw new NotFoundError('Commitment', { commitmentId });
+      }
+
+      // ─── State Preconditions (Precondition Invariant) ────────────────────────
+      if (commitment.status === 'EARLY_EXIT') {
+        stateMachine.transition('rejected');
+        diagnosticsService.completeOperation(
+          operationId,
+          'failure',
+          'Commitment has already been exited early',
+          { commitmentId, status: commitment.status },
+        );
+        throw new ConflictError('Commitment has already been exited early');
+      }
+      if (commitment.status === 'SETTLED') {
+        stateMachine.transition('rejected');
+        diagnosticsService.completeOperation(
+          operationId,
+          'failure',
+          'Cannot exit commitment in current state: commitment has already been settled',
+          { commitmentId, status: commitment.status },
+        );
+        throw new ConflictError(
+          'Cannot exit commitment in current state: the commitment has already been settled.',
+        );
+      }
+      if (commitment.status === 'VIOLATED') {
+        stateMachine.transition('rejected');
+        diagnosticsService.completeOperation(
+          operationId,
+          'failure',
+          'Cannot exit commitment in current state: commitment has been violated',
+          { commitmentId, status: commitment.status },
+        );
+        throw new ConflictError(
+          'Cannot exit commitment in current state: the commitment has been violated.',
+        );
+      }
+
+      // ─── Ownership Verification (Authorization Boundary) ──────────────────────
+      if (commitment.ownerAddress !== callerAddress) {
+        stateMachine.transition('failed');
+        diagnosticsService.completeOperation(
+          operationId,
+          'failure',
+          'Authorization failed: ownership verification',
+          { commitmentId, reason: 'ownership_mismatch' },
+        );
+        throw new ForbiddenError('Ownership verification failed: you do not own this commitment.');
       }
 
       // Transition to confirming state before blockchain call
@@ -195,6 +274,9 @@ export const POST = withApiHandler(async (req: NextRequest, { params }, correlat
           commitmentId,
           callerAddress,
         }).catch(rethrowContractError);
+
+        // ─── Validate Transaction Response (Malformed Response Detection) ──────
+        assertEarlyExitResponse(result);
 
         // Transition to confirmed state on success
         stateMachine.transition('confirmed');
@@ -222,160 +304,57 @@ export const POST = withApiHandler(async (req: NextRequest, { params }, correlat
           await idempotencyService.complete(idempotencyKey, responseData, 200);
         }
 
+        diagnosticsService.completeOperation(operationId, 'success', undefined, {
+          commitmentId,
+          txHash: result.txHash,
+        });
+
         return ok(responseData, undefined, 200, correlationId);
       } catch (error) {
         // Transition to failed state on error
         stateMachine.transition('failed');
-        
+
         // Create transaction metadata for error tracking
         const additionalFields: Partial<TransactionMetadata> = {
           callerAddress,
+          reason,
           error: error instanceof Error ? error.message : String(error),
         };
-        
+
         const transactionMetadata: TransactionMetadata = stateMachine.toMetadata(
           transactionId,
           'early_exit' as TransactionType,
           commitmentId,
           additionalFields,
         );
-        
+
         // Validate metadata invariants
-        const validationError = validateTransactionMetadata(transactionMetadata);
-        if (validationError) {
-          // Log validation error but don't fail the request
-          console.error('[Transaction] Metadata validation failed:', validationError);
+        const metadataValidationError = validateTransactionMetadata(transactionMetadata);
+        if (metadataValidationError) {
+          console.error('[Transaction] Metadata validation failed:', metadataValidationError);
         }
-        
+
         throw error;
       }
     } catch (error) {
+      // Clean up idempotency record on failure to allow retry
+      const idempotencyKey = req.headers.get('idempotency-key');
       if (idempotencyKey) {
         await idempotencyService.fail(idempotencyKey);
       }
+
+      // Record failure in diagnostics
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error during early exit';
+      diagnosticsService.completeOperation(operationId, 'failure', errorMessage, {
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+      });
+
       throw error;
     }
   },
   { cors: COMMITMENT_EARLY_EXIT_CORS_POLICY },
 );
 
-    const { reason, callerAddress } = parseResult.data;
-    const commitmentId = params.id;
-
-    if (!commitmentId?.trim()) {
-      throw new ValidationError('Commitment ID is required');
-    }
-
-    // ─── Session-Wallet Consistency (Wrong-Wallet Detection) ─────────────────
-    try {
-      verifySessionConsistency(sessionAddress, callerAddress);
-    } catch (error) {
-      diagnosticsService.completeOperation(
-        operationId,
-        'failure',
-        'Authorization failed: session-wallet mismatch',
-        { commitmentId, reason: 'session_wallet_mismatch' },
-      );
-      if (error instanceof ForbiddenError) {
-        throw error;
-      }
-      throw new ForbiddenError('Session authentication failed');
-    }
-
-    // ─── Commitment State Check (Precondition Invariant) ───────────────────────
-    const commitment = await getCommitmentFromChain(commitmentId).catch(rethrowContractError);
-
-    if (!commitment) {
-      throw new Error(`Commitment not found: ${commitmentId}`);
-    }
-
-    // Verify commitment can be exited early
-    try {
-      verifyCanEarlyExit(commitment.status);
-    } catch (error) {
-      diagnosticsService.completeOperation(
-        operationId,
-        'failure',
-        `Cannot early exit: ${error instanceof Error ? error.message : 'unknown'}`,
-        { commitmentId, status: commitment.status },
-      );
-      throw new ConflictError(
-        error instanceof Error ? error.message : 'Cannot exit commitment in current state',
-        { commitmentId, status: commitment.status },
-      );
-    }
-
-    // ─── Ownership Verification (Authorization Boundary) ──────────────────────
-    try {
-      verifyOwnership(callerAddress, commitment.ownerAddress);
-    } catch (error) {
-      diagnosticsService.completeOperation(
-        operationId,
-        'failure',
-        'Authorization failed: ownership verification',
-        { commitmentId, reason: 'ownership_mismatch' },
-      );
-      if (error instanceof ForbiddenError) {
-        throw error;
-      }
-      throw new ForbiddenError('Ownership verification failed', { commitmentId });
-    }
-
-    // ─── Execute Early Exit on Chain ──────────────────────────────────────────
-    const result = await earlyExitCommitmentOnChain({
-      commitmentId,
-      callerAddress,
-    }).catch(rethrowContractError);
-
-    // ─── Validate Transaction Response (Malformed Response Detection) ──────────
-    validateTransactionResponse(result, 'early_exit');
-
-    logEarlyExit({
-      ip,
-      commitmentId,
-      callerAddress,
-      reason,
-      exitAmount: result.exitAmount,
-      penaltyAmount: result.penaltyAmount,
-    });
-
-    const responseData = {
-      exitAmount: result.exitAmount,
-      penaltyAmount: result.penaltyAmount,
-      finalStatus: result.finalStatus,
-      txHash: result.txHash,
-      reference: result.reference,
-    };
-
-    if (idempotencyKey) {
-      await idempotencyService.complete(idempotencyKey, responseData, 200);
-    }
-
-    diagnosticsService.completeOperation(
-      operationId,
-      'success',
-      undefined,
-      { commitmentId, txHash: result.txHash },
-    );
-
-    return ok(responseData, undefined, 200, correlationId);
-  } catch (error) {
-    // Clean up idempotency record on failure to allow retry
-    const idempotencyKey = req.headers.get('idempotency-key');
-    if (idempotencyKey) {
-      await idempotencyService.fail(idempotencyKey);
-    }
-
-    // Record failure in diagnostics
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error during early exit';
-    diagnosticsService.completeOperation(operationId, 'failure', errorMessage, {
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-    });
-
-    throw error;
-  }
-}, { cors: COMMITMENT_EARLY_EXIT_CORS_POLICY });
-
-const _405 = methodNotAllowed(["POST"]);
+const _405 = methodNotAllowed(['POST']);
 export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

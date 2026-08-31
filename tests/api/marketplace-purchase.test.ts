@@ -1,532 +1,279 @@
-/**
- * Comprehensive route-level tests for POST /api/marketplace/listings/[id]/purchase
- *
- * Covers: success, failure, boundary, rate-limit, permission, idempotency
- * (double-purchase), sold/cancelled/non-transferable listing states,
- * on-chain error handling, and audit log invariants.
- */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockRequest, parseResponse } from './helpers';
+import type { NextRequest } from 'next/server';
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockRequest, createMockRouteContext, parseResponse } from './helpers';
-
-vi.mock('@/lib/backend/rateLimit', () => ({
-  checkRateLimit: vi.fn(),
-  getRateLimitWindowSeconds: vi.fn(() => 60),
+vi.mock('@/lib/backend/csrf', () => ({
+  assertMutationCsrf: vi.fn(),
 }));
 
-vi.mock('@/lib/backend/rateLimit', () => ({
-  checkRateLimit: vi.fn().mockResolvedValue(true),
+vi.mock('@/lib/backend/config', () => ({
+  isFeatureEnabled: vi.fn(() => true),
 }));
 
-vi.mock('@/lib/backend/services/marketplace', () => ({
+vi.mock('@/lib/backend/getClientIp', () => ({
+  getClientIp: vi.fn(() => '192.168.1.100'),
+}));
+
+vi.mock('@/lib/marketplace/rate-limit', () => ({
+  enforceMarketplaceRateLimit: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/lib/marketplace/telemetry', () => ({
+  emitMarketplaceTelemetry: vi.fn(),
+}));
+
+vi.mock('@/lib/marketplace', () => ({
   marketplaceService: {
-    getListing: vi.fn(),
-    getPurchasePreflight: vi.fn(),
-    markSold: vi.fn(),
+    purchaseListing: vi.fn(),
   },
 }));
 
-vi.mock('@/lib/backend/services/contracts', () => ({
-  transferOwnership: vi.fn(),
-}));
+import { POST, GET as GET_405, OPTIONS } from '@/app/api/marketplace/listings/[id]/purchase/route';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
+import { isFeatureEnabled } from '@/lib/backend/config';
+import { enforceMarketplaceRateLimit } from '@/lib/marketplace/rate-limit';
+import { emitMarketplaceTelemetry } from '@/lib/marketplace/telemetry';
+import { marketplaceService } from '@/lib/marketplace';
+import {
+  CsrfValidationError,
+  NotFoundError,
+  ConflictError,
+  ForbiddenError,
+  TooManyRequestsError,
+} from '@/lib/backend/errors';
 
-vi.mock('@/lib/backend/idempotency', () => ({
-  idempotencyService: {
-    getRecord: vi.fn(),
-    start: vi.fn(),
-    complete: vi.fn(),
-    fail: vi.fn(),
-  },
-}));
-
-vi.mock('@/lib/backend/logger', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-}));
-
-// ─── Imports (after mocks) ────────────────────────────────────────────────────
-
-import { POST } from '@/app/api/marketplace/listings/[id]/purchase/route';
-import { requireAuth } from '@/lib/backend/requireAuth';
-import { checkRateLimit } from '@/lib/backend/rateLimit';
-import { marketplaceService } from '@/lib/backend/services/marketplace';
-import { transferOwnership } from '@/lib/backend/services/contracts';
-import { idempotencyService } from '@/lib/backend/idempotency';
-import { marketplaceService } from '@/lib/backend/services/marketplace';
-import { idempotencyService } from '@/lib/backend/idempotency';
-import { verifyAuth } from '@/lib/backend/requireAuth';
-import { CsrfValidationError, ConflictError, UnauthorizedError } from '@/lib/backend/errors';
-
-const mockedCheckRateLimit = vi.mocked(checkRateLimit);
-const mockedAssertMutationCsrf = vi.mocked(assertMutationCsrf);
-const mockedTransferOwnership = vi.mocked(transferOwnership);
-const mockedGetListing = vi.mocked(marketplaceService.getListing);
-const mockedCompletePurchase = vi.mocked(marketplaceService.completePurchase);
-const mockedIdempotencyGetRecord = vi.mocked(idempotencyService.getRecord);
-const mockedIdempotencyStart = vi.mocked(idempotencyService.start);
+const mockedAssertCsrf = vi.mocked(assertMutationCsrf);
+const mockedIsFeatureEnabled = vi.mocked(isFeatureEnabled);
+const mockedRateLimit = vi.mocked(enforceMarketplaceRateLimit);
+const mockedTelemetry = vi.mocked(emitMarketplaceTelemetry);
+const mockedPurchaseListing = vi.mocked(marketplaceService.purchaseListing);
 
 const mockPOST = POST as (
   req: NextRequest,
   context: { params: Record<string, string> },
 ) => Promise<Response>;
 
-const activeListing = {
-  id: 'listing_1',
-  commitmentId: 'cm_abc',
-  price: '52000',
+const SELLER_ADDRESS = `G${'A'.repeat(55)}`;
+const BUYER_ADDRESS = `G${'B'.repeat(55)}`;
+const LISTING_ID = 'listing_1_123';
+
+const PURCHASED_LISTING = {
+  id: LISTING_ID,
+  commitmentId: 'commitment_123',
+  price: '1000.50',
   currencyAsset: 'USDC',
   sellerAddress: SELLER_ADDRESS,
-  status: 'Active' as const,
+  status: 'Sold' as const,
   createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-};
-
-const soldListing = { ...activeListing, status: 'Sold' };
-const cancelledListing = { ...activeListing, status: 'Cancelled' };
-const nonTransferableListing = { ...activeListing, commitmentId: 'cm_non-transferable_xyz' };
-
-const mockTransfer = {
-  commitmentId: 'cm_abc',
-  newOwner: BUYER,
-  txHash: 'chain-tx-hash-abc',
-  reference: 'ref-001',
+  updatedAt: '2026-01-02T00:00:00.000Z',
 };
 
 const TRANSFER_RESULT = {
-  commitmentId: 'commitment_123',
-  fromAddress: SELLER_ADDRESS,
-  toAddress: BUYER_ADDRESS,
   txHash: '0xabc123',
+  reference: null,
 };
 
-function purchaseRequest(
+function makeRequest(
   listingId: string,
-  body: Record<string, unknown> = {
-    buyerAddress: BUYER_ADDRESS,
-    networkPassphrase: NETWORK_PASSPHRASE,
-  },
-  headers: Record<string, string> = { authorization: 'Bearer valid-session' },
-) {
+  body: Record<string, unknown> = { buyerAddress: BUYER_ADDRESS },
+  method = 'POST',
+  headers: Record<string, string> = {},
+): [NextRequest, { params: { id: string } }] {
   return [
     createMockRequest(`http://localhost:3000/api/marketplace/listings/${listingId}/purchase`, {
-      method: 'POST',
+      method,
       body,
       headers,
     }),
-    createMockRouteContext({ id: listingId }),
-  ] as const;
+    { params: { id: listingId } },
+  ];
 }
 
-describe('POST /api/marketplace/listings/[id]/purchase', () => {
+async function expectError(
+  req: NextRequest,
+  ctx: { params: { id: string } },
+  status: number,
+  code?: string,
+): Promise<void> {
+  const res = await mockPOST(req as any, ctx as any);
+  const body = await res.json();
+  expect(res.status).toBe(status);
+  expect(body.success).toBe(false);
+  expect(body.error).toBeDefined();
+  if (code) expect(body.error.code).toBe(code);
+}
+
+describe('POST /api/marketplace/listings/[id]/purchase - Contract & Invariants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedCheckRateLimit.mockResolvedValue(true);
-    mockedAssertMutationCsrf.mockImplementation(() => {});
-    mockedVerifyAuth.mockReturnValue({ address: BUYER_ADDRESS, isAdmin: false });
-    mockedIdempotencyGetRecord.mockResolvedValue(null);
-    mockedIdempotencyStart.mockResolvedValue(true);
-    mockedIdempotencyComplete.mockResolvedValue(undefined);
-    mockedIdempotencyFail.mockResolvedValue(undefined);
-    mockedGetListing.mockResolvedValue(ACTIVE_LISTING as any);
-    mockedTransferOwnership.mockResolvedValue(TRANSFER_RESULT);
-    mockedCompletePurchase.mockResolvedValue(SOLD_LISTING as any);
-    mockedIdempotencyGetRecord.mockResolvedValue(null);
-    mockedIdempotencyStart.mockResolvedValue(true);
-  });
-
-    // Default: authenticated buyer, rate-limit passes
-    vi.mocked(requireAuth).mockReturnValue({
-      user: { address: BUYER, csrfToken: 'tok' },
+    mockedAssertCsrf.mockImplementation(() => undefined);
+    mockedIsFeatureEnabled.mockReturnValue(true);
+    mockedRateLimit.mockResolvedValue(undefined);
+    mockedPurchaseListing.mockResolvedValue({
+      listing: PURCHASED_LISTING,
+      transfer: TRANSFER_RESULT,
+      commitmentId: 'commitment_123',
+      sellerAddress: SELLER_ADDRESS,
     } as any);
+  });
 
-    vi.mocked(checkRateLimit).mockResolvedValue(true);
-    vi.mocked(marketplaceService.getListing).mockResolvedValue(activeListing as any);
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: true,
-      reasons: [],
+  // ── Success ────────────────────────────────────────────────────────────────
+
+  it('purchases an active listing', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID);
+    const res = await mockPOST(req as any, ctx as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.listingId).toBe(LISTING_ID);
+    expect(body.data.commitmentId).toBe('commitment_123');
+    expect(body.data.buyerAddress).toBe(BUYER_ADDRESS);
+    expect(body.data.sellerAddress).toBe(SELLER_ADDRESS);
+    expect(body.data.txHash).toBe('0xabc123');
+    expect(body.data.purchasedAt).toBe(PURCHASED_LISTING.updatedAt);
+    expect(mockedPurchaseListing).toHaveBeenCalledWith({
+      listingId: LISTING_ID,
+      buyerAddress: BUYER_ADDRESS,
+      correlationId: expect.any(String),
     });
-    vi.mocked(marketplaceService.markSold).mockResolvedValue(undefined);
-    vi.mocked(transferOwnership).mockResolvedValue(mockTransfer);
-    vi.mocked(appendAuditEvent).mockResolvedValue(undefined);
   });
 
-  // ── Success path ──────────────────────────────────────────────────────────
-
-  it('returns 200 with purchase details on success', async () => {
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.listingId).toBe('listing_1');
-    expect(data.data.commitmentId).toBe('cm_abc');
-    expect(data.data.buyerAddress).toBe(BUYER);
-    expect(data.data.price).toBe('52000');
-    expect(data.data.currencyAsset).toBe('USDC');
+  it('sets Cache-Control: no-store on success', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID);
+    const res = await mockPOST(req as any, ctx as any);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 
-  it('includes txHash in response when transfer returns one', async () => {
-    const res = await POST(makeRequest(), makeContext());
-    const { data } = await parseResponse(res);
-
-    expect(data.data.txHash).toBe('chain-tx-hash-abc');
-    expect(data.data.reference).toBe('ref-001');
-  });
-
-  it('coerces missing txHash to null in response', async () => {
-    vi.mocked(transferOwnership).mockResolvedValue({
-      ...mockTransfer,
-      txHash: undefined,
-      reference: undefined,
+  it('uses the Idempotency-Key as the correlation id for the purchase', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID, { buyerAddress: BUYER_ADDRESS }, 'POST', {
+      'idempotency-key': 'purchase-abc',
     });
+    const res = await mockPOST(req as any, ctx as any);
 
-    const res = await POST(makeRequest(), makeContext());
-    const { data } = await parseResponse(res);
-
-    expect(data.data.txHash).toBeNull();
-    expect(data.data.reference).toBeNull();
+    expect(mockedPurchaseListing).toHaveBeenCalledWith(
+      expect.objectContaining({ correlationId: 'purchase-abc' }),
+    );
+    expect(res.headers.get('x-correlation-id')).toBe('purchase-abc');
   });
 
-    it('applies per-IP rate limiting', async () => {
-      const [req, ctx] = purchaseRequest('listing_1_123');
-      await mockPOST(req, ctx);
+  it('emits success telemetry', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID);
+    await mockPOST(req as any, ctx as any);
+    expect(mockedTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'marketplace.purchase.api.succeeded', statusCode: 200 }),
+    );
+  });
 
-      expect(mockedCheckRateLimit).toHaveBeenCalledWith(
-        expect.any(String),
-        'api/marketplace/listings/purchase',
-      );
+  // ── Boundary & Validation ─────────────────────────────────────────────────
+
+  it('rejects an empty listing ID', async () => {
+    const [req, ctx] = makeRequest('   ');
+    await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+  });
+
+  it('rejects a listing ID with invalid characters', async () => {
+    const [req, ctx] = makeRequest('../listing_id');
+    await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+  });
+
+  it('rejects a request body missing buyerAddress', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID, {});
+    await expectError(req, ctx, 400, 'VALIDATION_ERROR');
+  });
+
+  it('rejects an over-long Idempotency-Key header', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID, { buyerAddress: BUYER_ADDRESS }, 'POST', {
+      'idempotency-key': 'x'.repeat(129),
     });
+    const res = await mockPOST(req as any, ctx as any);
+    const body = await res.json();
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
 
-    it('replays a completed idempotent purchase response', async () => {
-      mockedIdempotencyGetRecord.mockResolvedValue({
-        key: 'purchase-key',
-        status: 'COMPLETED',
-        response: {
-          listingId: 'listing_1_123',
-          commitmentId: 'commitment_123',
-          buyerAddress: BUYER_ADDRESS,
-          sellerAddress: SELLER_ADDRESS,
-          txHash: '0xcached',
-          purchasedAt: '2026-01-02T00:00:00.000Z',
+  // ── Invariant failures surfaced by the service ────────────────────────────
+
+  it('returns 409 when the listing is no longer active', async () => {
+    mockedPurchaseListing.mockRejectedValue(
+      new ConflictError('Only active listings can be purchased', { listingId: LISTING_ID }),
+    );
+    const [req, ctx] = makeRequest(LISTING_ID);
+    await expectError(req, ctx, 409, 'CONFLICT');
+  });
+
+  it('returns 403 when the buyer is the seller', async () => {
+    mockedPurchaseListing.mockRejectedValue(
+      new ForbiddenError('Cannot purchase your own listing', { listingId: LISTING_ID }),
+    );
+    const [req, ctx] = makeRequest(LISTING_ID);
+    await expectError(req, ctx, 403, 'FORBIDDEN');
+  });
+
+  it('returns 404 when the listing does not exist', async () => {
+    mockedPurchaseListing.mockRejectedValue(
+      new NotFoundError('Listing', { listingId: LISTING_ID }),
+    );
+    const [req, ctx] = makeRequest('listing_missing');
+    await expectError(req, ctx, 404, 'NOT_FOUND');
+  });
+
+  // ── Governance: CSRF, rate limit, feature flag ────────────────────────────
+
+  it('returns 403 CSRF_INVALID when CSRF validation fails', async () => {
+    mockedAssertCsrf.mockImplementation(() => {
+      throw new CsrfValidationError('Missing CSRF token.');
+    });
+    const [req, ctx] = makeRequest(LISTING_ID);
+    const res = await mockPOST(req as any, ctx as any);
+    const body = await res.json();
+    expect(res.status).toBe(403);
+    expect(body.error.code).toBe('CSRF_INVALID');
+    expect(mockedPurchaseListing).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when the rate limit is exceeded', async () => {
+    mockedRateLimit.mockRejectedValue(new TooManyRequestsError());
+    const [req, ctx] = makeRequest(LISTING_ID);
+    const res = await mockPOST(req as any, ctx as any);
+    const body = await res.json();
+    expect(res.status).toBe(429);
+    expect(body.error.code).toBe('TOO_MANY_REQUESTS');
+  });
+
+  it('returns 404 when the marketplace feature is disabled', async () => {
+    mockedIsFeatureEnabled.mockReturnValue(false);
+    const [req, ctx] = makeRequest(LISTING_ID);
+    const res = await mockPOST(req as any, ctx as any);
+    const body = await res.json();
+    expect(res.status).toBe(404);
+    expect(body.error.code).toBe('NOT_FOUND');
+    expect(mockedPurchaseListing).not.toHaveBeenCalled();
+  });
+
+  // ── Method & Preflight ────────────────────────────────────────────────────
+
+  it('returns 204 for OPTIONS preflight', async () => {
+    const req = createMockRequest(
+      `http://localhost:3000/api/marketplace/listings/${LISTING_ID}/purchase`,
+      {
+        method: 'OPTIONS',
+        headers: {
+          origin: 'http://localhost:3000',
+          'access-control-request-method': 'POST',
         },
-        statusCode: 200,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 86400000,
-      });
-
-      const [req, ctx] = purchaseRequest('listing_1_123', { buyerAddress: BUYER_ADDRESS });
-      Object.defineProperty(req, 'headers', {
-        value: new Headers({ 'idempotency-key': 'purchase-key' }),
-        configurable: true,
-      });
-
-      const response = await mockPOST(req, ctx);
-      const result = await parseResponse(response);
-
-      expect(result.status).toBe(200);
-      expect(result.data.data.txHash).toBe('0xcached');
-      expect(mockedTransferOwnership).not.toHaveBeenCalled();
-    });
-  });
-
-  it('calls markSold after successful transfer', async () => {
-    await POST(makeRequest(), makeContext());
-
-    expect(marketplaceService.markSold).toHaveBeenCalledWith('listing_1', BUYER);
-  });
-
-  it('records an audit event on success', async () => {
-    await POST(makeRequest(), makeContext());
-
-      const [req, ctx] = purchaseRequest('listing_1_123', { buyerAddress: BUYER_ADDRESS });
-      Object.defineProperty(req, 'headers', {
-        value: new Headers({ 'idempotency-key': 'purchase-key' }),
-        configurable: true,
-      });
-
-  it('includes full purchase metadata in audit event', async () => {
-    await POST(makeRequest(), makeContext());
-
-    expect(appendAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        metadata: expect.objectContaining({
-          listingId: 'listing_1',
-          commitmentId: 'cm_abc',
-          price: '52000',
-          currencyAsset: 'USDC',
-          txHash: 'chain-tx-hash-abc',
-        }),
-      }),
+      },
     );
+    const res = await OPTIONS(req as any);
+    expect(res.status).toBe(204);
   });
 
-  // ── Authentication & rate limit ────────────────────────────────────────────
-
-  it('returns 401 when caller is unauthenticated', async () => {
-    const { UnauthorizedError } = await import('@/lib/backend/errors');
-    vi.mocked(requireAuth).mockImplementation(() => {
-      throw new UnauthorizedError('No session token provided');
-    });
-
-    it('rejects a missing buyerAddress', async () => {
-      const [req, ctx] = purchaseRequest('listing_1_123', {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
-      const response = await mockPOST(req, ctx);
-      const result = await parseResponse(response);
-
-    expect(status).toBe(401);
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe('UNAUTHORIZED');
-  });
-
-  it('returns 429 when rate limit is exceeded', async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue(false);
-
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBe(429);
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe('TOO_MANY_REQUESTS');
-  });
-
-  it('does not call getListing when rate-limited', async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue(false);
-
-    await POST(makeRequest(), makeContext());
-
-    expect(marketplaceService.getListing).not.toHaveBeenCalled();
-  });
-
-  // ── Listing not found ─────────────────────────────────────────────────────
-
-  it('returns 404 when listing does not exist', async () => {
-    vi.mocked(marketplaceService.getListing).mockResolvedValue(null);
-
-    const res = await POST(makeRequest('missing_listing'), makeContext('missing_listing'));
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBe(404);
-    expect(data.success).toBe(false);
-    expect(data.error.code).toBe('NOT_FOUND');
-  });
-
-  it('does not attempt transfer when listing is not found', async () => {
-    vi.mocked(marketplaceService.getListing).mockResolvedValue(null);
-
-    await POST(makeRequest(), makeContext());
-
-    expect(transferOwnership).not.toHaveBeenCalled();
-  });
-
-  // ── Preflight guard: sold listing ─────────────────────────────────────────
-
-  it('returns 409 when listing is already sold (inactive)', async () => {
-    vi.mocked(marketplaceService.getListing).mockResolvedValue(soldListing as any);
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['listing_inactive'],
-    });
-
-    it('rejects malformed listing ids before service lookup', async () => {
-      const [req, ctx] = purchaseRequest('../listing_1_123');
-      const response = await mockPOST(req, ctx);
-      const result = await parseResponse(response);
-
-    expect(status).toBe(409);
-    expect(data.success).toBe(false);
-    expect(data.error.message).toContain('listing_inactive');
-  });
-
-  it('returns 409 when listing is cancelled', async () => {
-    vi.mocked(marketplaceService.getListing).mockResolvedValue(cancelledListing as any);
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['listing_inactive'],
-    });
-
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBe(409);
-    expect(data.success).toBe(false);
-  });
-
-  // ── Preflight guard: non-transferable commitment ───────────────────────────
-
-  it('returns 409 for non-transferable commitment', async () => {
-    vi.mocked(marketplaceService.getListing).mockResolvedValue(nonTransferableListing as any);
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['non_transferable'],
-    });
-
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBe(409);
-    expect(data.error.message).toContain('non_transferable');
-  });
-
-  // ── Preflight guard: buyer is seller ──────────────────────────────────────
-
-  it('returns 409 when buyer is the seller', async () => {
-    vi.mocked(requireAuth).mockReturnValue({
-      user: { address: SELLER, csrfToken: 'tok' },
-    } as any);
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['buyer_is_seller'],
-    });
-
-    it('rejects invalid buyer wallet addresses', async () => {
-      const [req, ctx] = purchaseRequest('listing_1_123', {
-        buyerAddress: 'not-a-wallet',
-        networkPassphrase: NETWORK_PASSPHRASE,
-      });
-      const response = await mockPOST(req, ctx);
-      const result = await parseResponse(response);
-
-    expect(status).toBe(409);
-    expect(data.error.message).toContain('buyer_is_seller');
-  });
-
-  // ── Double-purchase idempotency (race-condition guard) ────────────────────
-
-  it('returns 409 when markSold throws ConflictError (concurrent purchase race)', async () => {
-    const { ConflictError } = await import('@/lib/backend/errors');
-    vi.mocked(marketplaceService.markSold).mockRejectedValue(
-      new ConflictError('Listing has already been sold.', { listingId: 'listing_1' }),
-    );
-
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBe(409);
-    expect(data.success).toBe(false);
-    expect(data.error.message).toContain('already been sold');
-  });
-
-  it('does not record audit event when markSold fails (race condition)', async () => {
-    const { ConflictError } = await import('@/lib/backend/errors');
-    vi.mocked(marketplaceService.markSold).mockRejectedValue(
-      new ConflictError('Listing has already been sold.'),
-    );
-
-    await POST(makeRequest(), makeContext());
-
-    expect(appendAuditEvent).not.toHaveBeenCalled();
-  });
-
-  // ── Preflight blocks side-effects ─────────────────────────────────────────
-
-  it('does not call transferOwnership when preflight fails', async () => {
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['listing_inactive'],
-    });
-
-    it('rejects a wallet connected to the wrong network', async () => {
-      const [req, ctx] = purchaseRequest('listing_1_123', {
-        buyerAddress: BUYER_ADDRESS,
-        networkPassphrase: 'Public Global Stellar Network ; September 2015',
-      });
-      const response = await mockPOST(req, ctx);
-      const result = await parseResponse(response);
-
-    expect(transferOwnership).not.toHaveBeenCalled();
-  });
-
-  it('does not call markSold when preflight fails', async () => {
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['listing_inactive'],
-    });
-
-    await POST(makeRequest(), makeContext());
-
-    expect(marketplaceService.markSold).not.toHaveBeenCalled();
-  });
-
-  it('does not record audit event when preflight fails', async () => {
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['listing_inactive'],
-    });
-
-    it('rejects tampered extra request fields', async () => {
-      const [req, ctx] = purchaseRequest('listing_1_123', {
-        buyerAddress: BUYER_ADDRESS,
-        networkPassphrase: NETWORK_PASSPHRASE,
-        sellerAddress: OTHER_ADDRESS,
-      });
-      const response = await mockPOST(req, ctx);
-      const result = await parseResponse(response);
-
-    expect(appendAuditEvent).not.toHaveBeenCalled();
-  });
-
-  // ── On-chain transfer failures ────────────────────────────────────────────
-
-  it('returns 5xx when on-chain transfer fails', async () => {
-    vi.mocked(transferOwnership).mockRejectedValue(
-      new Error('Soroban RPC unreachable'),
-    );
-
-    const res = await POST(makeRequest(), makeContext());
-    const { status, data } = await parseResponse(res);
-
-    expect(status).toBeGreaterThanOrEqual(500);
-    expect(data.success).toBe(false);
-  });
-
-  it('does not mark listing as sold when on-chain transfer fails', async () => {
-    vi.mocked(transferOwnership).mockRejectedValue(new Error('RPC timeout'));
-
-    await POST(makeRequest(), makeContext());
-
-    expect(marketplaceService.markSold).not.toHaveBeenCalled();
-  });
-
-  it('does not record audit event when on-chain transfer fails', async () => {
-    vi.mocked(transferOwnership).mockRejectedValue(new Error('Simulated failure'));
-
-    await POST(makeRequest(), makeContext());
-
-    expect(appendAuditEvent).not.toHaveBeenCalled();
-  });
-
-  // ── Multiple preflight reasons ─────────────────────────────────────────────
-
-  it('includes all preflight reason codes in the 409 message', async () => {
-    vi.mocked(marketplaceService.getPurchasePreflight).mockResolvedValue({
-      eligible: false,
-      reasons: ['listing_inactive', 'non_transferable'],
-    });
-
-    it('rejects invalid JSON body', async () => {
-      const req = createMockRequest(
-        'http://localhost:3000/api/marketplace/listings/listing_1_123/purchase',
-        { method: 'POST', headers: { authorization: 'Bearer valid-session' } },
-      );
-      // Force an invalid JSON body.
-      Object.defineProperty(req, 'json', {
-        value: () => Promise.reject(new Error('bad json')),
-      });
-      const response = await mockPOST(req, createMockRouteContext({ id: 'listing_1_123' }));
-      const result = await parseResponse(response);
-
-    expect(data.error.message).toContain('listing_inactive');
-    expect(data.error.message).toContain('non_transferable');
-  });
-
-  // ── Response structure ────────────────────────────────────────────────────
-
-  it('includes x-correlation-id header in 200 response', async () => {
-    const res = await POST(makeRequest(), makeContext());
-
-    expect(res.headers.get('x-correlation-id')).toBeTruthy();
+  it('rejects GET with 405', async () => {
+    const [req, ctx] = makeRequest(LISTING_ID, null as any, 'GET');
+    const res = await GET_405(req as any, ctx as any);
+    const body = await res.json();
+    expect(res.status).toBe(405);
+    expect(body.error.code).toBe('METHOD_NOT_ALLOWED');
   });
 });

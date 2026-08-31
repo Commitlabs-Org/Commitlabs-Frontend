@@ -24,7 +24,13 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/useWallet', () => ({ useWallet: () => ({ address: '0xABCD' }) }));
 vi.mock('@/hooks/useDraftPersistence', () => ({
-  useDraftPersistence: () => ({ draft: null, saveDraft: vi.fn(), clearDraft: vi.fn() }),
+  useDraftPersistence: () => ({
+    draft: null,
+    allDrafts: [],
+    saveDraft: vi.fn(),
+    clearDraft: vi.fn(),
+    resumeDraft: () => null,
+  }),
 }));
 vi.mock('@/hooks/useGuidedTour', () => ({
   useGuidedTour: () => ({
@@ -135,9 +141,9 @@ describe('usePrefillFromCommitment', () => {
     expect(prefill.maxLossPercent).toBe(60);
 
     // Identity-bound fields must NOT be present
-    expect((prefill as Record<string, unknown>).id).toBeUndefined();
-    expect((prefill as Record<string, unknown>).ownerAddress).toBeUndefined();
-    expect((prefill as Record<string, unknown>).onChainState).toBeUndefined();
+    expect((prefill as unknown as Record<string, unknown>).id).toBeUndefined();
+    expect((prefill as unknown as Record<string, unknown>).ownerAddress).toBeUndefined();
+    expect((prefill as unknown as Record<string, unknown>).onChainState).toBeUndefined();
   });
 
   it('returns null when source commitment is not found (404)', async () => {
