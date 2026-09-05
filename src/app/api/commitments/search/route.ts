@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
-import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
+import { TooManyRequestsError, ValidationError, ForbiddenError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { logInfo, logWarn } from '@/lib/backend/logger';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
@@ -62,7 +62,12 @@ type SortableField = (typeof SORTABLE_FIELDS)[number];
 
 const CommitmentSearchQuerySchema = z.object({
   /** Owner address – required to scope the search. */
-  ownerAddress: z.string().min(1, 'ownerAddress is required'),
+  ownerAddress: z
+    .string()
+    .regex(
+      /^G[A-HJ-NP-Z0-9]{55}$/,
+      'ownerAddress must be a valid Stellar public key (G..., 56 chars)',
+    ),
 
   /** Filter by asset code (e.g. "XLM", "USDC"). Case-insensitive match. */
   asset: z.string().optional(),
@@ -202,7 +207,8 @@ export const GET = withApiHandler(
     const startedAt = Date.now();
 
     // Authorization before any query parsing, cache lookup, or chain work.
-    requireAuth(req);
+    const authenticatedReq = requireAuth(req);
+    const sessionAddress = authenticatedReq.user.address;
 
     // 1. Rate limit
     const ip = getClientIp(req);
@@ -220,6 +226,15 @@ export const GET = withApiHandler(
     }
 
     const { ownerAddress, asset, commitmentId, status, riskType, minCompliance } = queryResult.data;
+
+    // Enforce ownership: session address must match requested ownerAddress.
+    // Prevents one wallet from searching another wallet's commitments.
+    if (ownerAddress !== sessionAddress) {
+      throw new ForbiddenError(
+        'ownerAddress does not match the authenticated session identity',
+        { requestedOwner: ownerAddress, sessionOwner: sessionAddress },
+      );
+    }
 
     // 3. Parse pagination & sort via pagination.ts helpers
     let paginationParams;
