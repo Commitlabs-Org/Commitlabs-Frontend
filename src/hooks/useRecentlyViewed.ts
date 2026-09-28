@@ -15,9 +15,7 @@ function readStoredRecentIds(storageKey: string, cap: number): string[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((item): item is string => typeof item === 'string')
-      .slice(0, MAX_RECENT_LISTINGS);
+    return parsed.filter((item): item is string => typeof item === 'string').slice(0, cap);
   } catch {
     return [];
   }
