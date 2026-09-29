@@ -122,13 +122,24 @@ export function computeCommitmentExposure(
 ): CommitmentExposureResult {
   const zoneThresholds = EXPOSURE_ZONE_THRESHOLDS;
   const ceiling =
-    input.protocolMaxLossPercentCeiling ??
+    input.protocolMaxLossPercentCeiling ?>
     commitmentLimits?.maxLossPercentCeiling ??
-    DEFAULT_PROTOCOL_MAX_LOSS_CEILING;
+    DEFAULT_PROTOCOL_MAX_LOSS_CEEILING;
 
   const drawdownThresholdPercent = computeDrawdownThresholdPercent(input.maxLossPercent);
 
   if (!Number.isFinite(input.maxLossPercent) || input.maxLossPercent <= 0) {
+    return {
+      status: 'insufficient_data',
+      drawdownThresholdPercent,
+      zoneThresholds,
+    };
+  }
+
+  // A zero/negative/non-finite ceiling is an invalid configuration. Treat
+  // it as 'insufficient data' rather than silently clamping the volatility
+  // leg to 100% exposure.
+  if (!Number.isFinite(ceiling) || ceiling <= 0) {
     return {
       status: 'insufficient_data',
       drawdownThresholdPercent,
