@@ -150,6 +150,8 @@ export const AttestationPostResponseSchema = OkBodySchema(
   }),
 );
 
+// ─── Protocol constants ──────────────────────────────────────────────────────
+
 export const ProtocolConstantsSchema = z.object({
   protocolVersion: z.string().min(1),
   network: z.string().min(1),
@@ -174,6 +176,8 @@ export const ProtocolConstantsSchema = z.object({
   }),
   cachedAt: z.string().datetime(),
 });
+
+export const ProtocolConstantsResponseSchema = OkBodySchema(ProtocolConstantsSchema);
 
 export const ProtocolConstantsResponseSchema = OkBodySchema(ProtocolConstantsSchema);
 
