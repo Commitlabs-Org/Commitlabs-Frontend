@@ -1,3 +1,4 @@
+
 /**
  * Seed module for mock database.
  *
@@ -64,6 +65,7 @@ const SAMPLE_DATA: MockData = {
       observedAt: '2026-01-11T12:00:00Z',
       timestamp: '2026-01-11T12:00:00Z',
       severity: 'ok',
+      address: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1',
     },
   ],
   listings: [
