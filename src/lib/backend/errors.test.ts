@@ -14,6 +14,7 @@ import {
   normalizeBackendError,
   HTTP_ERROR_CODES,
 } from './errors';
+import { ERROR_CODE_REGISTRY } from './errorCodes';
 
 describe('ApiError', () => {
   it('should store all constructor arguments', () => {
@@ -40,7 +41,7 @@ describe('TooManyRequestsError', () => {
     expect(error.retryAfterSeconds).toBe(60);
     expect(error.statusCode).toBe(429);
     expect(error.code).toBe('TOO_MANY_REQUESTS');
-    expect(error.message).toBe('Too many requests. Please try again later.');
+    expect(error.message).toBe(ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS.meaning);
   });
 
   it('should accept custom message, details, and retryAfterSeconds', () => {
@@ -70,7 +71,7 @@ describe('ServiceUnavailableError', () => {
     expect(error.retryAfterSeconds).toBe(30);
     expect(error.statusCode).toBe(503);
     expect(error.code).toBe('SERVICE_UNAVAILABLE');
-    expect(error.message).toBe('The service is temporarily unavailable. Please try again later.');
+    expect(error.message).toBe(ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.meaning);
   });
 
   it('should accept custom message, details, and retryAfterSeconds', () => {
@@ -86,6 +87,12 @@ describe('ServiceUnavailableError', () => {
 
   it('should be instanceof ApiError', () => {
     expect(new ServiceUnavailableError()).toBeInstanceOf(ApiError);
+  });
+});
+
+describe('InternalError', () => {
+  it('should use the registry meaning as the default message', () => {
+    expect(new InternalError().message).toBe(ERROR_CODE_REGISTRY.INTERNAL_ERROR.meaning);
   });
 });
 
@@ -138,6 +145,25 @@ describe('HTTP_ERROR_CODES', () => {
 });
 
 describe('normalizeBackendError', () => {
+  it.each([
+    ['TOO_MANY_REQUESTS', 429],
+    ['INTERNAL_ERROR', 500],
+    ['BAD_GATEWAY', 502],
+    ['SERVICE_UNAVAILABLE', 503],
+    ['GATEWAY_TIMEOUT', 504],
+  ] as const)('%s uses registry retry semantics', (code, status) => {
+    const normalized = normalizeBackendError(
+      new BackendError({ code, message: 'Server error', status }),
+      {
+        code: 'BLOCKCHAIN_CALL_FAILED',
+        message: 'Fallback message',
+        status: 500,
+      },
+    );
+
+    expect(normalized.details?.retryable).toBe(ERROR_CODE_REGISTRY[code].retriable);
+  });
+
   it('should classify timeout errors as GATEWAY_TIMEOUT and retryable', () => {
     const normalized = normalizeBackendError(new Error('RPC Timeout'), {
       code: 'BLOCKCHAIN_CALL_FAILED',
