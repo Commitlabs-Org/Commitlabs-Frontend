@@ -138,4 +138,4 @@ describe('classifyAtRiskCommitments', () => {
     expect(result.riskCategories).toHaveLength(1);
     expect(result.riskCategories[0]).toBe('action_required');
   });
-});
+})
