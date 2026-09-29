@@ -1,5 +1,5 @@
 import { Commitment } from '@/lib/types/domain';
-import { ProtocolConstants } from '@/utils/protocol';
+import type { ProtocolConstants } from '@/utils/protocol';
 
 export type RiskCategory = 'low_compliance' | 'maturing_soon' | 'action_required';
 
@@ -15,6 +15,21 @@ export interface ClassificationThresholds {
 const DEFAULT_COMPLIANCE_THRESHOLD = 70;
 const DEFAULT_DAYS_THRESHOLD = 7;
 
+/**
+ * Evaluates commitments against risk criteria and assigns deduplicated risk categories.
+ *
+ * Risk categories include:
+ * - 'low_compliance': Compliance score falls below the configured threshold (default: 70).
+ * - 'maturing_soon': Days remaining until expiration is less than or equal to the threshold (default: 7).
+ * - 'action_required': Commitment is Violated or current drawdown meets/exceeds 80% of maxLoss.
+ *
+ * Ensures riskCategories contains no duplicates even when multiple criteria trigger the same category.
+ *
+ * @param commitments - The array of commitments to evaluate.
+ * @param constants - Protocol constants configuration, or null if unconfigured.
+ * @param thresholds - Optional custom thresholds for compliance score and days remaining.
+ * @returns Array of at-risk commitments with unique risk categories, filtering out commitments with no risk.
+ */
 export function classifyAtRiskCommitments(
   commitments: Commitment[],
   constants: ProtocolConstants | null,
@@ -39,7 +54,6 @@ export function classifyAtRiskCommitments(
         riskCategories.push('action_required');
       }
 
-      // If maxLoss is exceeded or getting close
       if (c.currentDrawdown && c.maxLoss) {
         const drawdown = parseFloat(c.currentDrawdown);
         const maxLoss = parseFloat(c.maxLoss);
