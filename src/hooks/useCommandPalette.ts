@@ -29,5 +29,6 @@ export function useCommandPalette() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggle]);
 
-  return { isOpen, open, close };
+  return { isOpen, open, close, toggle };
 }
+

@@ -54,6 +54,17 @@ describe('useCommandPalette', () => {
     expect(result.current.isOpen).toBe(true);
   });
 
+  it('toggles the palette when toggle() is called directly', () => {
+    const { result } = renderHook(() => useCommandPalette());
+    expect(result.current.isOpen).toBe(false);
+
+    act(() => result.current.toggle());
+    expect(result.current.isOpen).toBe(true);
+
+    act(() => result.current.toggle());
+    expect(result.current.isOpen).toBe(false);
+  });
+
   it('toggles the palette open via Cmd+K (metaKey)', () => {
     const { result } = renderHook(() => useCommandPalette());
     expect(result.current.isOpen).toBe(false);
