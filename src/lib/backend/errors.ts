@@ -122,31 +122,6 @@ export class InternalError extends ApiError {
   }
 }
 
-// ─── HTTP status → error code mapping ───────────────────────────────────────
-
-/**
- * Map of HTTP status codes to their canonical error code strings.
- *
- * @deprecated Use ERROR_CODE_REGISTRY from errorCodes.ts for detailed error
- * documentation including meaning, client handling, and retriable status.
- *
- * @see ERROR_CODE_REGISTRY
- */
-export const HTTP_ERROR_CODES: Record<number, string> = {
-  400: 'BAD_REQUEST',
-  401: 'UNAUTHORIZED',
-  403: 'FORBIDDEN',
-  404: 'NOT_FOUND',
-  409: 'CONFLICT',
-  413: 'PAYLOAD_TOO_LARGE',
-  422: 'UNPROCESSABLE_ENTITY',
-  429: 'TOO_MANY_REQUESTS',
-  500: 'INTERNAL_ERROR',
-  502: 'BAD_GATEWAY',
-  503: 'SERVICE_UNAVAILABLE',
-  504: 'GATEWAY_TIMEOUT',
-};
-
 // ─── Legacy BackendError (kept for backward compatibility) ────────────────────
 
 export type BackendErrorCode =
