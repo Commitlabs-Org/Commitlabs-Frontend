@@ -181,7 +181,8 @@ export const ProtocolConstantsSchema = z.object({
 
 export const ProtocolConstantsResponseSchema = OkBodySchema(ProtocolConstantsSchema);
 
-export const ProtocolConstantsResponseSchema = OkBodySchema(ProtocolConstantsSchema);
+export type ProtocolConstants = z.infer<typeof ProtocolConstantsSchema>;
+export type ProtocolConstantsResponse = z.infer<typeof ProtocolConstantsResponseSchema>;
 
 // ─── Early-exit request validation ──────────────────────────────────────────
 
