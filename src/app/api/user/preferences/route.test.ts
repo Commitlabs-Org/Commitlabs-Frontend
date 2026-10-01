@@ -33,16 +33,25 @@ import {
 import { IdempotencyService } from '@/lib/backend/idempotency';
 import { InMemoryKVStore } from '@/lib/backend/idempotency';
 import { generateETag } from '@/lib/backend/etag';
+import { _clearStores, createSessionToken } from '@/lib/backend/auth';
 import { createMockRequest, parseResponse } from '../../../../../tests/api/helpers';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BASE_URL = 'http://localhost:3000/api/user/preferences';
 const VALID_ADDRESS = 'GAAA1111111111111111111111111111111111111';
 const OTHER_ADDRESS = 'GBBB2222222222222222222222222222222222222';
-const VALID_TOKEN = `session_${VALID_ADDRESS}_1700000000000`;
-const OTHER_TOKEN = `session_${OTHER_ADDRESS}_1700000000000`;
-const AUTH_HEADER = { authorization: `Bearer ${VALID_TOKEN}` };
-const OTHER_AUTH = { authorization: `Bearer ${OTHER_TOKEN}` };
+
+// Tokens are minted per test in `beforeEach`: a bearer token is only accepted
+// when it matches a live session, so a hard-coded string would no longer
+// authenticate. These are reassigned there.
+let VALID_TOKEN = '';
+let OTHER_TOKEN = '';
+let AUTH_HEADER: Record<string, string> = {};
+let OTHER_AUTH: Record<string, string> = {};
+
+function bearer(token: string): Record<string, string> {
+  return { authorization: `Bearer ${token}` };
+}
 
 // ─── In-memory store ──────────────────────────────────────────────────────────
 function makeInMemoryStore(): PreferencesStore & { _data: Record<string, UserPreferences> } {
@@ -97,6 +106,12 @@ beforeEach(() => {
   store = makeInMemoryStore();
   __setStoreForTesting(store);
   __setIdempotencyForTesting(freshIdempotency());
+  // Start from an empty session store so every test mints its own live tokens.
+  _clearStores();
+  VALID_TOKEN = createSessionToken(VALID_ADDRESS);
+  OTHER_TOKEN = createSessionToken(OTHER_ADDRESS);
+  AUTH_HEADER = bearer(VALID_TOKEN);
+  OTHER_AUTH = bearer(OTHER_TOKEN);
 });
 
 afterEach(() => {
@@ -400,6 +415,29 @@ describe('preferences helpers & store', () => {
       'Authorization header must be in format: Bearer <token>',
     );
     expect(() => requireWalletAuth('Bearer invalid_token_str')).toThrow(
+      'Invalid or expired session token.',
+    );
+  });
+
+  it('requireWalletAuth resolves the address from a live session', () => {
+    expect(requireWalletAuth(`Bearer ${VALID_TOKEN}`)).toBe(VALID_ADDRESS);
+    expect(requireWalletAuth(`Bearer ${OTHER_TOKEN}`)).toBe(OTHER_ADDRESS);
+  });
+
+  it('requireWalletAuth rejects a forged token that encodes a wallet address', () => {
+    // Regression: the guard used to fall back to decoding `session_<address>_<ts>`
+    // out of the token, so anyone could claim any wallet without a session.
+    expect(() => requireWalletAuth(`Bearer session_${VALID_ADDRESS}_1700000000000`)).toThrow(
+      'Invalid or expired session token.',
+    );
+    // Same shape, unguessable address: still no session behind it.
+    expect(() =>
+      requireWalletAuth('Bearer session_GBBB2222222222222222222222222222222222222_1'),
+    ).toThrow('Invalid or expired session token.');
+  });
+
+  it('requireWalletAuth rejects an address that is not a session token at all', () => {
+    expect(() => requireWalletAuth(`Bearer ${VALID_ADDRESS}`)).toThrow(
       'Invalid or expired session token.',
     );
   });
