@@ -198,13 +198,12 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 /**
  * Extracts the wallet address from the `Authorization: Bearer <token>` header.
  *
- * Current implementation supports the placeholder session tokens issued by
- * `createSessionToken` (format: `session_<address>_<timestamp>`).
- *
- * TODO: Replace with proper JWT verification once sessions are hardened.
+ * The token must resolve to a live server-side session created by
+ * `createSessionToken`; the address is taken from that record, never decoded
+ * out of the token string itself.
  *
  * @throws {UnauthorizedError} if the header is absent, malformed, or the token
- *   cannot be decoded.
+ *   does not match an unexpired session.
  */
 export function requireWalletAuth(authHeader: string | null): string {
   if (!authHeader) {
@@ -218,16 +217,12 @@ export function requireWalletAuth(authHeader: string | null): string {
 
   const token = parts[1];
 
-  // Try to verify session token via the session store first
+  // A bearer token is only valid when it resolves to a live session. There is
+  // deliberately no format-based fallback: decoding an address out of the token
+  // string would let any caller mint a token claiming any wallet and be trusted.
   const session = verifySessionToken(token);
   if (session.valid && session.address) {
     return session.address;
-  }
-
-  // Fallback for session token placeholder format in tests: session_<address>_<timestamp>
-  const match = token.match(/^session_([A-Za-z0-9]+)_\d+$/);
-  if (match && match[1]) {
-    return match[1];
   }
 
   throw new UnauthorizedError('Invalid or expired session token.');

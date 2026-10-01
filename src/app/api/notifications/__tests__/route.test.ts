@@ -28,16 +28,24 @@ import {
 import { InMemoryNotificationStore } from '@/lib/backend/notificationStateMachine';
 import { IdempotencyService } from '@/lib/backend/idempotency';
 import { InMemoryKVStore } from '@/lib/backend/idempotency';
+import { _clearStores, createSessionToken } from '@/lib/backend/auth';
 import { createMockRequest, parseResponse } from '../../../../../tests/api/helpers';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BASE_URL = 'http://localhost:3000/api/notifications';
 const WALLET_A = 'GAAA1111111111111111111111111111111111111';
 const WALLET_B = 'GBBB2222222222222222222222222222222222222';
-const TOKEN_A = `session_${WALLET_A}_1700000000000`;
-const TOKEN_B = `session_${WALLET_B}_1700000000000`;
-const AUTH_A = { authorization: `Bearer ${TOKEN_A}` };
-const AUTH_B = { authorization: `Bearer ${TOKEN_B}` };
+
+// Bearer tokens are only accepted when they match a live session, so these are
+// minted fresh in `beforeEach` rather than hard-coded.
+let TOKEN_A = '';
+let TOKEN_B = '';
+let AUTH_A: Record<string, string> = {};
+let AUTH_B: Record<string, string> = {};
+
+function bearer(token: string): Record<string, string> {
+  return { authorization: `Bearer ${token}` };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function makeStore(): InMemoryNotificationStore {
@@ -87,6 +95,12 @@ beforeEach(() => {
   store = makeStore();
   __setStoreForTesting(store);
   __setIdempotencyServiceForTesting(freshIdempotency());
+  // Start from an empty session store so every test mints its own live tokens.
+  _clearStores();
+  TOKEN_A = createSessionToken(WALLET_A);
+  TOKEN_B = createSessionToken(WALLET_B);
+  AUTH_A = bearer(TOKEN_A);
+  AUTH_B = bearer(TOKEN_B);
 });
 
 afterEach(() => {
