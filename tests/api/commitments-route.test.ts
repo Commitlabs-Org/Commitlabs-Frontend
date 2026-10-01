@@ -302,8 +302,10 @@ describe('GET /api/commitments', () => {
   it('includes ETag header', async () => {
     const response = await GET(createMockRequest(getUrlWithOwner()));
 
-    expect(response.headers.get('ETag')).toBeDefined();
-    expect(response.headers.get('ETag')).toMatch(/^"/);
+    const etag = response.headers.get('ETag');
+    expect(etag).toBeDefined();
+    expect(etag).toStartWith('"');
+    expect(etag).toEndWith('"');
   });
 });
 

@@ -70,6 +70,8 @@ export const CommitmentSearchItemSchema = z.object({
   expiresAt: z.string(),
 });
 
+export type CommitmentSearchItem = z.infer<typeof CommitmentSearchItemSchema>;
+
 export const CommitmentSearchFiltersSchema = z.object({
   asset: z.string().nullable(),
   status: z.string().nullable(),
@@ -149,6 +151,8 @@ export const AttestationPostResponseSchema = OkBodySchema(
     txReference: z.string().nullable(),
   }),
 );
+
+// ─── Protocol constants ──────────────────────────────────────────────────────
 
 export const ProtocolConstantsSchema = z.object({
   protocolVersion: z.string().min(1),
