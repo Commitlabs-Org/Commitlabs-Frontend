@@ -70,6 +70,8 @@ export const CommitmentSearchItemSchema = z.object({
   expiresAt: z.string(),
 });
 
+export type CommitmentSearchItem = z.infer<typeof CommitmentSearchItemSchema>;
+
 export const CommitmentSearchFiltersSchema = z.object({
   asset: z.string().nullable(),
   status: z.string().nullable(),
