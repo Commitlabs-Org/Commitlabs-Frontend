@@ -7,7 +7,7 @@ import {
 } from '../portfolioAllocation';
 
 type CommitmentFixture = Omit<Commitment, 'type'> & {
-  type?: string;
+  type?: string | undefined;
 };
 
 /**
@@ -152,8 +152,11 @@ describe('aggregateByAsset', () => {
 
 describe('formatAllocationValue', () => {
   it('formats large numbers with locale separators and up to two decimal places', () => {
-    expect(formatAllocationValue(1234567.891)).toBe('1,234,567.89');
-    expect(formatAllocationValue(1000)).toBe('1,000');
+    // Grouping separators depend on the runtime's default locale (e.g. en-IN groups as 12,34,567).
+    const localeFormat = (value: number) =>
+      value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    expect(formatAllocationValue(1234567.891)).toBe(localeFormat(1234567.89));
+    expect(formatAllocationValue(1000)).toBe(localeFormat(1000));
   });
 
   it('formats integers without unnecessary decimal points', () => {
