@@ -46,6 +46,7 @@ import { requireAuth } from '@/lib/backend/requireAuth';
 import { assertMutationCsrf } from '@/lib/backend/csrf';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { BackendError, CsrfValidationError } from '@/lib/backend/errors';
+import type { EarlyExitRequestBody } from '@/lib/schemas/apiContracts';
 import { idempotencyService } from '@/lib/backend/idempotency';
 import {
   earlyExitCommitmentOnChain,
@@ -69,6 +70,10 @@ const POST = postHandler as (
 const VALID_ADDRESS = `G${'A'.repeat(55)}`;
 const DIFFERENT_ADDRESS = `G${'B'.repeat(55)}`;
 const COMMITMENT_ID = 'cm_123456';
+const VALID_EARLY_EXIT_BODY: EarlyExitRequestBody = {
+  reason: 'Need liquidity',
+  callerAddress: VALID_ADDRESS,
+};
 
 describe('POST /api/commitments/[id]/early-exit', () => {
   beforeEach(() => {
@@ -111,10 +116,13 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     });
 
     const response = await POST(
-      createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
-        method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
-      }),
+      createMockRequest<EarlyExitRequestBody>(
+        `http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`,
+        {
+          method: 'POST',
+          body: VALID_EARLY_EXIT_BODY,
+        },
+      ),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
     const result = await parseResponse(response);
@@ -170,7 +178,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -186,7 +194,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -211,7 +219,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -237,7 +245,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -259,7 +267,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -272,7 +280,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -288,7 +296,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -303,7 +311,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
     );
@@ -326,7 +334,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
         headers: { 'idempotency-key': 'k1' },
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
@@ -345,7 +353,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     const response = await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
         headers: { 'idempotency-key': 'k1' },
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
@@ -362,7 +370,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
         headers: { 'idempotency-key': 'k1' },
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
@@ -378,7 +386,7 @@ describe('POST /api/commitments/[id]/early-exit', () => {
     await POST(
       createMockRequest(`http://localhost:3000/api/commitments/${COMMITMENT_ID}/early-exit`, {
         method: 'POST',
-        body: { reason: 'Need liquidity', callerAddress: VALID_ADDRESS },
+        body: VALID_EARLY_EXIT_BODY,
         headers: { 'idempotency-key': 'k2' },
       }),
       createMockRouteContext({ id: COMMITMENT_ID }),
