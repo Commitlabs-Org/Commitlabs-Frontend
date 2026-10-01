@@ -1,19 +1,59 @@
-/**
- * Shared typed fixture factories for tests.
- * Each factory returns a fully valid object with sensible defaults and accepts
- * partial overrides. Types are derived directly from domain/DTO sources so any
- * upstream type change breaks tests at compile time.
- */
-
+import { Keypair } from '@stellar/stellar-sdk';
 import type { Commitment, MarketplaceListing, Attestation } from '@/lib/types/domain';
-import type { CommitmentDto, AttestationDto } from '@/lib/backend/dto';
 import type { MarketplaceCardProps } from '@/components/MarketplaceCard';
-import type { Attestation as PanelAttestation } from '@/components/RecentAttestationsPanel/RecentAttestationsPanel';
 
-// ---------------------------------------------------------------------------
-// makeCommitment — domain Commitment (src/lib/types/domain.ts)
-// ---------------------------------------------------------------------------
+/**
+ * Data transfer object representing a commitment.
+ */
+export interface CommitmentDto {
+  commitmentId: string;
+  ownerAddress: string;
+  amount: string;
+  assetCode: string;
+  assetIssuer: string | null;
+  durationDays: number;
+  maxLossPercent: number;
+  commitmentType: string;
+  status: string;
+  nftTokenId: string | null;
+}
 
+/**
+ * Data transfer object representing an attestation.
+ */
+export interface AttestationDto {
+  attestationId: string;
+  commitmentId: string;
+  ownerAddress: string;
+  kind: string;
+  verdict: 'pass' | 'fail' | 'unknown';
+  observedAt: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Attestation structure expected by the RecentAttestationsPanel component.
+ */
+export interface PanelAttestation {
+  id: string;
+  title: string;
+  description: string;
+  txHash: string;
+  timestamp: string | Date;
+  severity: 'ok' | 'warning' | 'violation';
+}
+
+const OWNER_KEYPAIR = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 1));
+const SELLER_KEYPAIR = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 2));
+
+export const FIXTURE_OWNER_ADDRESS = OWNER_KEYPAIR.publicKey();
+export const FIXTURE_SELLER_ADDRESS = SELLER_KEYPAIR.publicKey();
+export const OWNER_ADDRESS = FIXTURE_OWNER_ADDRESS;
+export const SELLER_ADDRESS = FIXTURE_SELLER_ADDRESS;
+
+/**
+ * Creates a valid domain Commitment fixture with optional overrides.
+ */
 export function makeCommitment(overrides: Partial<Commitment> = {}): Commitment {
   return {
     id: 'CMT-001',
@@ -36,14 +76,13 @@ export function makeCommitment(overrides: Partial<Commitment> = {}): Commitment 
   };
 }
 
-// ---------------------------------------------------------------------------
-// makeCommitmentDto — backend DTO (src/lib/backend/dto.ts)
-// ---------------------------------------------------------------------------
-
+/**
+ * Creates a valid CommitmentDto fixture with optional overrides.
+ */
 export function makeCommitmentDto(overrides: Partial<CommitmentDto> = {}): CommitmentDto {
   return {
     commitmentId: 'CMT-001',
-    ownerAddress: 'GOWNER000000000000000000000000000000000000000000000000',
+    ownerAddress: FIXTURE_OWNER_ADDRESS,
     amount: '10000',
     assetCode: 'XLM',
     assetIssuer: null,
@@ -56,17 +95,16 @@ export function makeCommitmentDto(overrides: Partial<CommitmentDto> = {}): Commi
   };
 }
 
-// ---------------------------------------------------------------------------
-// makeListing — domain MarketplaceListing (src/lib/types/domain.ts)
-// ---------------------------------------------------------------------------
-
+/**
+ * Creates a valid MarketplaceListing fixture with optional overrides.
+ */
 export function makeListing(overrides: Partial<MarketplaceListing> = {}): MarketplaceListing {
   return {
     id: 'LST-001',
     commitmentId: 'CMT-001',
     price: '1000',
     currencyAsset: 'USDC',
-    sellerAddress: 'GSELLER00000000000000000000000000000000000000000000000',
+    sellerAddress: FIXTURE_SELLER_ADDRESS,
     status: 'Active',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -74,10 +112,9 @@ export function makeListing(overrides: Partial<MarketplaceListing> = {}): Market
   };
 }
 
-// ---------------------------------------------------------------------------
-// makeAttestation — domain Attestation (src/lib/types/domain.ts)
-// ---------------------------------------------------------------------------
-
+/**
+ * Creates a valid domain Attestation fixture with optional overrides.
+ */
 export function makeAttestation(overrides: Partial<Attestation> = {}): Attestation {
   return {
     id: 'ATT-001',
@@ -94,15 +131,14 @@ export function makeAttestation(overrides: Partial<Attestation> = {}): Attestati
   };
 }
 
-// ---------------------------------------------------------------------------
-// makeAttestationDto — backend DTO (src/lib/backend/dto.ts)
-// ---------------------------------------------------------------------------
-
+/**
+ * Creates a valid AttestationDto fixture with optional overrides.
+ */
 export function makeAttestationDto(overrides: Partial<AttestationDto> = {}): AttestationDto {
   return {
     attestationId: 'ATT-001',
     commitmentId: 'CMT-001',
-    ownerAddress: 'GOWNER000000000000000000000000000000000000000000000000',
+    ownerAddress: FIXTURE_OWNER_ADDRESS,
     kind: 'health_check',
     verdict: 'pass',
     observedAt: '2026-01-01T12:00:00.000Z',
@@ -111,11 +147,12 @@ export function makeAttestationDto(overrides: Partial<AttestationDto> = {}): Att
   };
 }
 
-// ---------------------------------------------------------------------------
-// makeMarketplaceCard — UI props (src/components/MarketplaceCard.tsx)
-// ---------------------------------------------------------------------------
-
-export function makeMarketplaceCard(overrides: Partial<MarketplaceCardProps> = {}): MarketplaceCardProps {
+/**
+ * Creates a valid MarketplaceCardProps fixture with optional overrides.
+ */
+export function makeMarketplaceCard(
+  overrides: Partial<MarketplaceCardProps> = {},
+): MarketplaceCardProps {
   return {
     id: '1',
     type: 'Safe',
@@ -124,17 +161,16 @@ export function makeMarketplaceCard(overrides: Partial<MarketplaceCardProps> = {
     duration: '90 days',
     yield: '5.0%',
     maxLoss: '5%',
-    owner: 'GOWNER00000000000000000000000000000000000000000000000000',
+    owner: FIXTURE_OWNER_ADDRESS,
     price: '$1,000',
     forSale: true,
     ...overrides,
   };
 }
 
-// ---------------------------------------------------------------------------
-// makePanelAttestation — RecentAttestationsPanel Attestation UI type
-// ---------------------------------------------------------------------------
-
+/**
+ * Creates a valid PanelAttestation fixture with optional overrides.
+ */
 export function makePanelAttestation(overrides: Partial<PanelAttestation> = {}): PanelAttestation {
   return {
     id: 'ATT-001',

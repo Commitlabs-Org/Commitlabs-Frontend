@@ -19,8 +19,6 @@ export function escapeCsvField(value: string | null | undefined): string {
 
 /**
  * Formats a single CSV row and terminates it with CRLF.
- * Shared by `buildCsv` and `createCsvStream` so the injection guard
- * (see `escapeCsvField`) is applied identically in both code paths.
  */
 export function formatCsvRow(row: CsvRow): string {
   return `${row.map(escapeCsvField).join(',')}\r\n`;
@@ -30,16 +28,14 @@ export function buildCsv(headers: string[], rows: CsvRow[]): string {
   return [headers, ...rows].map(formatCsvRow).join('');
 }
 
+function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
+  return typeof value === 'object' && value !== null && Symbol.asyncIterator in value;
+}
+
 /**
- * Returns a ReadableStream that emits the CSV header row first, then one
- * chunk per data row. Accepts a sync or async iterable so callers can pass
- * an in-memory array today or a paginated/streamed source in the future
- * without changing this helper.
- *
- * Errors thrown by the iterable are forwarded to `controller.error`, which
- * aborts the response. The client will see a truncated download; the caller
- * is responsible for ensuring upstream errors are surfaced before streaming
- * starts when possible.
+ * Streams a CSV with a deterministic header first, then row-by-row chunks.
+ * The caller should bound the number of rows before calling this helper so the
+ * response cannot grow without a defined upper bound.
  */
 export function createCsvStream(
   headers: string[],
@@ -51,12 +47,23 @@ export function createCsvStream(
     async start(controller) {
       try {
         controller.enqueue(encoder.encode(formatCsvRow(headers)));
-        for await (const row of rows as AsyncIterable<CsvRow>) {
+
+        const iterator = isAsyncIterable<CsvRow>(rows)
+          ? rows[Symbol.asyncIterator]()
+          : rows[Symbol.iterator]();
+
+        for await (const row of {
+          next: iterator.next.bind(iterator),
+          [Symbol.asyncIterator]() {
+            return this;
+          },
+        }) {
           controller.enqueue(encoder.encode(formatCsvRow(row)));
         }
+
         controller.close();
-      } catch (err) {
-        controller.error(err);
+      } catch (error) {
+        controller.error(error);
       }
     },
   });

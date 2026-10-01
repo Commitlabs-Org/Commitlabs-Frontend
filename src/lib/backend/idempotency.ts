@@ -1,5 +1,4 @@
-
-export interface IdempotencyRecord<T = any> {
+export interface IdempotencyRecord<T = unknown> {
   key: string;
   status: 'STARTED' | 'COMPLETED' | 'FAILED';
   response?: T;
@@ -8,18 +7,14 @@ export interface IdempotencyRecord<T = any> {
   expiresAt: number;
 }
 
-export interface KVStore {
-  get<T>(key: string): Promise<T | null>;
-  set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
-  delete(key: string): Promise<void>;
-}
+import type { KVStore } from './kv';
 
 /**
  * A simple in-memory KV store with TTL support.
  * Designed to be swapped with Redis or Vercel KV.
  */
 export class InMemoryKVStore implements KVStore {
-  private store = new Map<string, { value: any; expiresAt: number }>();
+  private store = new Map<string, { value: unknown; expiresAt: number }>();
 
   async get<T>(key: string): Promise<T | null> {
     const entry = this.store.get(key);
@@ -44,6 +39,28 @@ export class InMemoryKVStore implements KVStore {
     this.store.delete(key);
   }
 
+  async getdel<T>(key: string): Promise<T | null> {
+    const value = await this.get<T>(key);
+    if (value !== null) {
+      this.store.delete(key);
+    }
+    return value;
+  }
+
+  async incr(key: string): Promise<number> {
+    const value = (await this.get<number>(key)) || 0;
+    const newValue = value + 1;
+    await this.set(key, newValue);
+    return newValue;
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    const entry = this.store.get(key);
+    if (entry) {
+      entry.expiresAt = Date.now() + seconds * 1000;
+    }
+  }
+
   // Helper for cleanup (can be called periodically)
   cleanup() {
     const now = Date.now();
@@ -58,16 +75,26 @@ export class InMemoryKVStore implements KVStore {
 // Global instance for in-memory store
 const globalStore = new InMemoryKVStore();
 
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+
 // Periodically clean up
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => globalStore.cleanup(), 60 * 1000); // every minute
+if (typeof setInterval !== 'undefined' && cleanupIntervalId === null) {
+  cleanupIntervalId = setInterval(() => globalStore.cleanup(), 60 * 1000); // every minute
+}
+
+export function clearCleanupInterval(): void {
+  if (cleanupIntervalId !== null) {
+    clearInterval(cleanupIntervalId);
+    cleanupIntervalId = null;
+  }
 }
 
 export class IdempotencyService {
   private store: KVStore;
   private ttlSeconds: number;
 
-  constructor(store: KVStore = globalStore, ttlSeconds: number = 86400) { // Default 24h TTL
+  constructor(store: KVStore = globalStore, ttlSeconds: number = 86400) {
+    // Default 24h TTL
     this.store = store;
     this.ttlSeconds = ttlSeconds;
   }

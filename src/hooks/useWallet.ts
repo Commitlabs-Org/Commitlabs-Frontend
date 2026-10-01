@@ -1,59 +1,131 @@
-import { getAddress, getNetworkDetails, signMessage } from "@stellar/freighter-api";
-import { useState, useEffect, useCallback } from "react";
+import { getAddress, getNetworkDetails, signMessage } from '@stellar/freighter-api';
+import { useState, useEffect, useCallback } from 'react';
 
-const STORED_TOKEN_KEYS = [
-  "commitlabs.sessionToken",
-  "commitlabs:sessionToken",
-  "sessionToken",
-];
+const WALLET_TIMEOUT_MS = 10000;
+
+const getExpectedWalletNetwork = (): string | null => {
+  if (typeof process !== 'undefined') {
+    const envPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE;
+    if (envPassphrase?.trim()) {
+      return envPassphrase.trim();
+    }
+  }
+  return null;
+};
+
+const normalizeWalletError = (message: unknown): string => {
+  const rawMessage =
+    typeof message === 'string' ? message : message instanceof Error ? message.message : '';
+  const normalized = rawMessage.trim().toLowerCase();
+
+  if (!normalized) {
+    return 'Unable to connect to Freighter. Please try again.';
+  }
+
+  if (
+    normalized.includes('not installed') ||
+    normalized.includes('not available') ||
+    normalized.includes('extension unavailable') ||
+    normalized.includes('freighter is not') ||
+    normalized.includes('not found')
+  ) {
+    return 'Freighter is not installed or unavailable. Install it from freighter.app and refresh to continue.';
+  }
+
+  if (
+    normalized.includes('reject') ||
+    normalized.includes('denied') ||
+    normalized.includes('cancel') ||
+    normalized.includes('user cancelled')
+  ) {
+    return 'Wallet prompt was rejected. Please try again if you want to continue.';
+  }
+
+  if (normalized.includes('timeout') || normalized.includes('timed out')) {
+    return 'Freighter request timed out. Please try again.';
+  }
+
+  if (normalized.includes('network') || normalized.includes('passphrase')) {
+    return 'Your wallet is connected to the wrong network. Switch Freighter to the correct network and try again.';
+  }
+
+  if (
+    normalized.includes('freighter') ||
+    normalized.includes('locked') ||
+    normalized.includes('unavailable')
+  ) {
+    return 'Freighter is unavailable right now. Please unlock or reopen Freighter and try again.';
+  }
+
+  return 'Unable to connect to Freighter. Please try again.';
+};
+
+const withWalletTimeout = async <T>(promise: Promise<T>, fallbackMessage: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  return await new Promise<T>((resolve, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(fallbackMessage)), WALLET_TIMEOUT_MS);
+
+    promise.then(resolve, reject).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
+  });
+};
+
+const STORED_TOKEN_KEYS = ['commitlabs.sessionToken', 'commitlabs:sessionToken', 'sessionToken'];
 
 const getStoredToken = (): string | null => {
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   for (const key of STORED_TOKEN_KEYS) {
     const val = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
     if (val?.trim()) return val.trim();
   }
   // Try reading from cookies
-  const cookies = document.cookie.split(";");
+  const cookies = document.cookie.split(';');
   for (const c of cookies) {
-    const [name, val] = c.trim().split("=");
-    if (name === "session" && val) return decodeURIComponent(val);
+    const [name, val] = c.trim().split('=');
+    if (name === 'session' && val) return decodeURIComponent(val);
   }
   return null;
 };
 
 const getStoredAddress = (): string | null => {
-  if (typeof window === "undefined") return null;
-  return window.sessionStorage.getItem("commitlabs.authAddress") ?? window.localStorage.getItem("commitlabs.authAddress");
+  if (typeof window === 'undefined') return null;
+  return (
+    window.sessionStorage.getItem('commitlabs.authAddress') ??
+    window.localStorage.getItem('commitlabs.authAddress')
+  );
 };
 
 const saveSession = (token: string, addr: string) => {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   for (const key of STORED_TOKEN_KEYS) {
     window.localStorage.setItem(key, token);
     window.sessionStorage.setItem(key, token);
   }
-  window.localStorage.setItem("commitlabs.authAddress", addr);
-  window.sessionStorage.setItem("commitlabs.authAddress", addr);
+  window.localStorage.setItem('commitlabs.authAddress', addr);
+  window.sessionStorage.setItem('commitlabs.authAddress', addr);
 
-  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `session=${encodeURIComponent(token)}; path=/; SameSite=Lax${secureFlag}`;
 };
 
 const clearSession = () => {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   for (const key of STORED_TOKEN_KEYS) {
     window.localStorage.removeItem(key);
     window.sessionStorage.removeItem(key);
   }
-  window.localStorage.removeItem("commitlabs.authAddress");
-  window.sessionStorage.removeItem("commitlabs.authAddress");
+  window.localStorage.removeItem('commitlabs.authAddress');
+  window.sessionStorage.removeItem('commitlabs.authAddress');
 
-  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
   // Fallbacks for testing environments or strict cookie parsers
-  document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  document.cookie = "session=; max-age=0";
+  document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'session=; max-age=0';
 };
 
 /**
@@ -61,7 +133,7 @@ const clearSession = () => {
  */
 export const useWallet = () => {
   const [connected, setConnected] = useState(false);
-  const [address, setAddress] = useState<string>("");
+  const [address, setAddress] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -76,28 +148,45 @@ export const useWallet = () => {
     setConnecting(true);
 
     try {
-      const result = await getAddress();
+      const result = await withWalletTimeout(
+        getAddress(),
+        'Freighter request timed out while checking your wallet.',
+      );
 
       if (result.error) {
-        setError(result.error);
+        const message = normalizeWalletError(result.error);
+        setError(message);
         setConnected(false);
-        setAddress("");
+        setAddress('');
         setWalletNetwork(null);
       } else if (result.address) {
+        const expectedNetwork = getExpectedWalletNetwork();
         setAddress(result.address);
         setConnected(true);
         setError(null);
+
         try {
-          const details = await getNetworkDetails();
-          setWalletNetwork(details.networkPassphrase ?? null);
+          const details = await withWalletTimeout(
+            getNetworkDetails(),
+            'Freighter request timed out while checking the wallet network.',
+          );
+          const networkPassphrase = details.networkPassphrase ?? null;
+          setWalletNetwork(networkPassphrase);
+
+          if (expectedNetwork && networkPassphrase && networkPassphrase !== expectedNetwork) {
+            setError(
+              'Your wallet is connected to the wrong network. Switch Freighter to the correct network and try again.',
+            );
+          }
         } catch {
           setWalletNetwork(null);
         }
       }
     } catch (e) {
-      setError((e as Error).message || "Unable to connect to Freighter.");
+      const message = normalizeWalletError(e);
+      setError(message);
       setConnected(false);
-      setAddress("");
+      setAddress('');
       setWalletNetwork(null);
     } finally {
       setConnecting(false);
@@ -105,19 +194,19 @@ export const useWallet = () => {
     }
   }, []);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     setError(null);
-    fetchAddress();
+    await fetchAddress();
   }, [fetchAddress]);
 
   const signOut = useCallback(async () => {
     try {
       const storedToken = getStoredToken();
       if (storedToken) {
-        await fetch("/api/auth/logout", {
-          method: "POST",
+        await fetch('/api/auth/logout', {
+          method: 'POST',
           headers: {
-            "Authorization": `Bearer ${storedToken}`,
+            Authorization: `Bearer ${storedToken}`,
           },
         }).catch(() => {});
       }
@@ -130,7 +219,7 @@ export const useWallet = () => {
 
   const disconnect = useCallback(() => {
     setConnected(false);
-    setAddress("");
+    setAddress('');
     setError(null);
     setConnecting(false);
     setWalletNetwork(null);
@@ -146,12 +235,15 @@ export const useWallet = () => {
     try {
       let currentAddress = address;
       if (!connected || !currentAddress) {
-        const result = await getAddress();
+        const result = await withWalletTimeout(
+          getAddress(),
+          'Freighter request timed out while preparing authentication.',
+        );
         if (result.error) {
-          throw new Error(result.error);
+          throw new Error(normalizeWalletError(result.error));
         }
         if (!result.address) {
-          throw new Error("Unable to retrieve address from Freighter.");
+          throw new Error('Unable to retrieve address from Freighter.');
         }
         currentAddress = result.address;
         setAddress(currentAddress);
@@ -159,51 +251,62 @@ export const useWallet = () => {
         setError(null);
       }
 
-      const nonceRes = await fetch("/api/auth/nonce", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ address: currentAddress }),
-      });
+      const nonceRes = await withWalletTimeout(
+        fetch('/api/auth/nonce', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ address: currentAddress }),
+        }),
+        'Authentication timed out while fetching the nonce.',
+      );
 
       if (!nonceRes.ok) {
-        throw new Error("Failed to fetch authentication nonce.");
+        throw new Error('Failed to fetch authentication nonce.');
       }
 
       const nonceData = await nonceRes.json();
       const data = nonceData.data || nonceData;
       const message = data.message;
       if (!message) {
-        throw new Error("Nonce response is missing the challenge message.");
+        throw new Error('Nonce response is missing the challenge message.');
       }
 
-      const signResult = await signMessage(message, { address: currentAddress });
+      const signResult = await withWalletTimeout(
+        signMessage(message, { address: currentAddress }),
+        'Authentication timed out while requesting a signature.',
+      );
       if (!signResult) {
-        throw new Error("No response received from Freighter.");
+        throw new Error('No response received from Freighter.');
       }
       if (signResult.error) {
         throw new Error(signResult.error);
       }
       if (!signResult.signedMessage) {
-        throw new Error("User rejected the signature or no signature returned.");
+        throw new Error('User rejected the signature or no signature returned.');
       }
 
-      const verifyRes = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          address: currentAddress,
-          signature: signResult.signedMessage,
-          message: message,
+      const verifyRes = await withWalletTimeout(
+        fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            address: currentAddress,
+            signature: signResult.signedMessage,
+            message: message,
+          }),
         }),
-      });
+        'Authentication timed out while verifying your signature.',
+      );
 
       if (!verifyRes.ok) {
         const errData = await verifyRes.json().catch(() => ({}));
-        throw new Error(errData.error?.message || errData.message || "Signature verification failed.");
+        throw new Error(
+          errData.error?.message || errData.message || 'Signature verification failed.',
+        );
       }
 
       const verifyData = await verifyRes.json();
@@ -211,17 +314,22 @@ export const useWallet = () => {
       const { verified, sessionToken: token } = vData;
 
       if (!verified || !token) {
-        throw new Error("Verification failed: Session token not received.");
+        throw new Error('Verification failed: Session token not received.');
       }
 
       saveSession(token, currentAddress);
       setSessionToken(token);
       setAuthError(null);
+      setError(null);
     } catch (e) {
-      const msg = (e as Error).message || "Authentication handshake failed.";
+      const msg = (e as Error).message || 'Authentication handshake failed.';
       setAuthError(msg);
+      setError(msg);
       clearSession();
       setSessionToken(null);
+      setConnected(false);
+      setAddress('');
+      setWalletNetwork(null);
       throw e;
     } finally {
       setAuthenticating(false);
@@ -235,7 +343,7 @@ export const useWallet = () => {
 
   // Sync session state once connection check completes or when address/connected changes
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     if (!initialCheckDone) return;
 
     const storedToken = getStoredToken();

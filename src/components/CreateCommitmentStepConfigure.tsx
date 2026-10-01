@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import WizardStepper from './WizardStepper'
 import AllocationConstraintsEditor from './create/AllocationConstraintsEditor'
+import CostYieldEstimator from './create/CostYieldEstimator'
 import styles from './CreateCommitmentStepConfigure.module.css'
 import GlossaryTerm from './GlossaryTerm'
 
@@ -23,17 +24,17 @@ interface CreateCommitmentStepConfigureProps {
   earlyExitPenalty: string
   estimatedFees: string
   isValid: boolean
-  ownerAddress?: string
-  commitmentType?: 'safe' | 'balanced' | 'aggressive'
+  ownerAddress?: string | undefined
+  commitmentType?: 'safe' | 'balanced' | 'aggressive' | undefined
   onChangeAmount: (value: string) => void
   onChangeAsset: (asset: string) => void
   onChangeDuration: (value: number) => void
   onChangeMaxLoss: (value: number) => void
   onBack: () => void
   onNext: () => void
-  amountError?: string
-  maxLossWarning?: boolean
-  initialFocusField?: string
+  amountError?: string | undefined
+  maxLossWarning?: boolean | undefined
+  initialFocusField?: string | undefined
 }
 
 // Per-type constraints surfaced as copy
@@ -160,8 +161,12 @@ export default function CreateCommitmentStepConfigure({
     onChangeMaxLoss(Number(e.target.value))
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && canAdvance) onNext()
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    if (canAdvance) {
+      onNext()
+    }
   }
 
   return (
@@ -187,7 +192,7 @@ export default function CreateCommitmentStepConfigure({
           </p>
         </div>
 
-        <form className={styles.form} onKeyDown={handleKeyDown}>
+        <form id="commitment-configure-form" className={styles.form} onSubmit={handleSubmit} aria-label="Commitment configuration form" noValidate>
           {/* Commitment Amount */}
           <div className={styles.formGroup}>
             <label htmlFor="amount" className={styles.label}>
@@ -245,6 +250,7 @@ export default function CreateCommitmentStepConfigure({
                   min="1"
                   max="365"
                   aria-label="Duration slider"
+                  aria-valuetext={`${durationDays} days`}
                   style={{
                     background: `linear-gradient(to right, #00d4aa ${(durationDays / 365) * 100}%, #2a2a2a ${(durationDays / 365) * 100}%)`
                   }}
@@ -290,6 +296,7 @@ export default function CreateCommitmentStepConfigure({
                   min="0"
                   max="100"
                   aria-label="Maximum loss slider"
+                  aria-valuetext={`${maxLossPercent}% max loss`}
                   style={{
                     background: maxLossWarning
                       ? `linear-gradient(to right, #f5a623 ${maxLossPercent}%, #2a2a2a ${maxLossPercent}%)`
@@ -349,6 +356,14 @@ export default function CreateCommitmentStepConfigure({
             onChangeMaxLoss={onChangeMaxLoss}
           />
 
+          {/* Live Cost and Yield Estimator */}
+          <CostYieldEstimator
+            amount={amount}
+            durationDays={durationDays}
+            maxLossPercent={maxLossPercent}
+            asset={asset}
+          />
+
           {/* Advanced Risk Settings */}
           <div className={styles.advancedToggleContainer}>
             <button
@@ -387,6 +402,7 @@ export default function CreateCommitmentStepConfigure({
                     value={slippageTolerance}
                     onChange={(e) => setSlippageTolerance(Number(e.target.value))}
                     min="0" max="10" step="0.5"
+                    aria-valuetext={`${slippageTolerance}% slippage tolerance`}
                     style={{ background: `linear-gradient(to right, #00d4aa ${(slippageTolerance / 10) * 100}%, #2a2a2a ${(slippageTolerance / 10) * 100}%)` }}
                   />
                 </div>
@@ -422,6 +438,7 @@ export default function CreateCommitmentStepConfigure({
                     value={liquidationBuffer}
                     onChange={(e) => setLiquidationBuffer(Number(e.target.value))}
                     min="1" max="20"
+                    aria-valuetext={`${liquidationBuffer}% liquidation buffer`}
                     style={{ background: `linear-gradient(to right, #00d4aa ${(liquidationBuffer / 20) * 100}%, #2a2a2a ${(liquidationBuffer / 20) * 100}%)` }}
                   />
                 </div>
@@ -465,9 +482,9 @@ export default function CreateCommitmentStepConfigure({
             Back
           </button>
           <button
-            type="button"
+            type="submit"
+            form="commitment-configure-form"
             className={styles.continueButton}
-            onClick={onNext}
             disabled={!canAdvance}
             aria-disabled={!canAdvance}
             data-testid="configure-continue"

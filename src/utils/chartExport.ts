@@ -1,163 +1,256 @@
-import { buildCsv, type CsvRow } from '@/lib/backend/csv';
-
-export type HealthMetricsTab = 'value' | 'drawdown' | 'fee' | 'compliance';
-
-export interface HealthMetricsExportData {
-  valueHistoryData: Array<{ date: string; currentValue: number; initialAmount?: number }>;
-  drawdownData: Array<{ date: string; drawdownPercent: number }>;
-  feeGenerationData: Array<{ date: string; feeAmount: number }>;
-  complianceData: Array<{ date: string; complianceScore: number }>;
+export interface HealthMetricsValueHistoryPoint {
+  date: string;
+  currentValue: number;
+  initialAmount?: number;
+  benchmarkValue?: number | null;
 }
 
-const TAB_LABELS: Record<HealthMetricsTab, string> = {
-  value: 'value-history',
-  drawdown: 'drawdown',
-  fee: 'fee-generation',
-  compliance: 'compliance',
-};
-
-function normalizeDrawdownPercent(value: number): string {
-  const percent = value <= 1 ? value * 100 : value;
-  return `${percent.toFixed(2)}%`;
+export interface HealthMetricsDrawdownPoint {
+  date: string;
+  drawdownPercent: number;
 }
 
-export function buildHealthMetricsCsv(
-  tab: HealthMetricsTab,
-  data: HealthMetricsExportData,
-): { headers: string[]; rows: CsvRow[] } {
-  switch (tab) {
-    case 'value':
-      return {
-        headers: ['Date', 'Current Value', 'Initial Amount'],
-        rows: data.valueHistoryData.map((row) => [
-          row.date,
-          String(row.currentValue),
-          row.initialAmount == null ? '' : String(row.initialAmount),
-        ]),
-      };
-    case 'drawdown':
-      return {
-        headers: ['Date', 'Drawdown Percent'],
-        rows: data.drawdownData.map((row) => [
-          row.date,
-          normalizeDrawdownPercent(row.drawdownPercent),
-        ]),
-      };
-    case 'fee':
-      return {
-        headers: ['Date', 'Fee Amount'],
-        rows: data.feeGenerationData.map((row) => [row.date, String(row.feeAmount)]),
-      };
-    case 'compliance':
-      return {
-        headers: ['Date', 'Compliance Score'],
-        rows: data.complianceData.map((row) => [row.date, String(row.complianceScore)]),
-      };
-    default:
-      return { headers: [], rows: [] };
-  }
+export interface HealthMetricsCompliancePoint {
+  date: string;
+  complianceScore: number;
 }
 
-export function buildHealthMetricsCsvContent(
-  tab: HealthMetricsTab,
-  data: HealthMetricsExportData,
-): string {
-  const { headers, rows } = buildHealthMetricsCsv(tab, data);
-  return buildCsv(headers, rows);
+export interface HealthMetricsFeePoint {
+  date: string;
+  feeAmount: number;
 }
 
-export function sanitizeExportFilename(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+export type HealthMetricsPoint =
+  | HealthMetricsValueHistoryPoint
+  | HealthMetricsDrawdownPoint
+  | HealthMetricsCompliancePoint
+  | HealthMetricsFeePoint;
+
+export interface AttestationExportRow {
+  id: string;
+  title: string;
+  description: string;
+  txHash: string;
+  timestamp: Date | string;
+  severity: 'ok' | 'warning' | 'violation';
 }
 
-export function buildHealthMetricsFilename(
-  commitmentId: string,
-  tab: HealthMetricsTab,
-  extension: 'csv' | 'png',
-): string {
-  const safeId = sanitizeExportFilename(commitmentId || 'commitment');
-  const metric = TAB_LABELS[tab];
-  const dateStamp = new Date().toISOString().slice(0, 10);
-  return sanitizeExportFilename(`health-metrics-${safeId}-${metric}-${dateStamp}.${extension}`);
-}
+function escapeCsvValue(value: unknown): string {
+  const text = value == null ? '' : String(value);
 
-export async function downloadBlob(blob: Blob, filename: string): Promise<void> {
-  const href = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = href;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(href);
-}
-
-export async function downloadCsvContent(content: string, filename: string): Promise<void> {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  await downloadBlob(blob, filename);
-}
-
-export async function exportSvgElementToPng(
-  svgElement: SVGSVGElement,
-  filename: string,
-): Promise<void> {
-  const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
-  if (!clonedSvg.getAttribute('xmlns')) {
-    clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
   }
 
-  const bbox = svgElement.getBoundingClientRect();
-  const width = Math.max(1, Math.ceil(bbox.width));
-  const height = Math.max(1, Math.ceil(bbox.height));
-  clonedSvg.setAttribute('width', String(width));
-  clonedSvg.setAttribute('height', String(height));
+  return text;
+}
 
-  const serialized = new XMLSerializer().serializeToString(clonedSvg);
-  const svgBlob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
-  const url = URL.createObjectURL(svgBlob);
+function formatTimestamp(timestamp: Date | string): string {
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(timestamp);
+  }
+
+  return date.toISOString();
+}
+
+function buildCsv(rows: readonly (readonly unknown[])[]): string {
+  return rows.map((row) => row.map(escapeCsvValue).join(',')).join('\r\n') + '\r\n';
+}
+
+export function sanitizeExportFilename(filename: string): string {
+  const sanitized = filename
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return sanitized || 'export';
+}
+
+export function buildHealthMetricsCsvContent(data: readonly HealthMetricsPoint[]): string {
+  if (data.length === 0) {
+    return '';
+  }
+
+  const first = data[0]!;
+
+  if ('currentValue' in first) {
+    return buildCsv([
+      ['Date', 'Current Value', 'Initial Amount', 'Benchmark Value'],
+      ...data.map((point) => {
+        if (!('currentValue' in point)) {
+          return [point.date];
+        }
+
+        return [
+          point.date,
+          point.currentValue,
+          point.initialAmount ?? '',
+          point.benchmarkValue ?? '',
+        ];
+      }),
+    ]);
+  }
+
+  if ('drawdownPercent' in first) {
+    return buildCsv([
+      ['Date', 'Drawdown Percent'],
+      ...data.map((point) =>
+        'drawdownPercent' in point ? [point.date, point.drawdownPercent] : [point.date],
+      ),
+    ]);
+  }
+
+  if ('complianceScore' in first) {
+    return buildCsv([
+      ['Date', 'Compliance Score'],
+      ...data.map((point) =>
+        'complianceScore' in point ? [point.date, point.complianceScore] : [point.date],
+      ),
+    ]);
+  }
+
+  if ('feeAmount' in first) {
+    return buildCsv([
+      ['Date', 'Fee Amount'],
+      ...data.map((point) => ('feeAmount' in point ? [point.date, point.feeAmount] : [point.date])),
+    ]);
+  }
+
+  return '';
+}
+
+export function buildHealthMetricsCsv(data: readonly HealthMetricsPoint[]): Blob {
+  return new Blob([buildHealthMetricsCsvContent(data)], {
+    type: 'text/csv;charset=utf-8',
+  });
+}
+
+export function buildHealthMetricsFilename(metric = 'health-metrics'): string {
+  return `${sanitizeExportFilename(metric)}.csv`;
+}
+
+export function buildAttestationCsvRows(attestations: readonly AttestationExportRow[]): string[][] {
+  return attestations.map((attestation) => [
+    attestation.id,
+    attestation.title,
+    attestation.description,
+    attestation.txHash,
+    formatTimestamp(attestation.timestamp),
+    attestation.severity,
+  ]);
+}
+
+export function buildAttestationCsvContent(attestations: readonly AttestationExportRow[]): string {
+  return buildCsv([
+    ['ID', 'Title', 'Description', 'Transaction Hash', 'Timestamp', 'Severity'],
+    ...buildAttestationCsvRows(attestations),
+  ]);
+}
+
+export function buildAttestationExportFilename(commitmentId = 'commitment'): string {
+  return `${sanitizeExportFilename(commitmentId)}-attestations.csv`;
+}
+
+export function downloadBlob(blob: Blob, filename: string): void {
+  if (typeof document === 'undefined') {
+    throw new Error('Blob downloads require a browser environment.');
+  }
+
+  const url = URL.createObjectURL(blob);
 
   try {
-    const image = await loadImage(url);
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Canvas context unavailable');
-    }
-    context.fillStyle = '#111111';
-    context.fillRect(0, 0, width, height);
-    context.drawImage(image, 0, 0, width, height);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = sanitizeExportFilename(filename);
+    anchor.style.display = 'none';
 
-    const pngBlob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('Failed to create PNG blob'));
-      }, 'image/png');
-    });
-
-    await downloadBlob(pngBlob, filename);
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
   } finally {
     URL.revokeObjectURL(url);
   }
 }
 
-export async function exportChartContainerToPng(
-  container: HTMLElement,
-  filename: string,
-): Promise<void> {
-  const svgElement = container.querySelector('svg.recharts-surface');
-  if (!(svgElement instanceof SVGSVGElement)) {
-    throw new Error('Chart SVG not found');
-  }
-  await exportSvgElementToPng(svgElement, filename);
+export function downloadCsvContent(content: string, filename: string): void {
+  const blob = new Blob([content], {
+    type: 'text/csv;charset=utf-8',
+  });
+
+  downloadBlob(blob, filename);
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
+
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Failed to load chart SVG for PNG export'));
+    image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+
     image.src = src;
   });
+}
+
+export async function exportSvgElementToPng(
+  svgElement: SVGElement,
+  filename = 'chart.png',
+): Promise<void> {
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(svgElement);
+  const svgBlob = new Blob([svgString], {
+    type: 'image/svg+xml;charset=utf-8',
+  });
+
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await loadImage(svgUrl);
+
+    const rect = svgElement.getBoundingClientRect();
+    const width = Number(svgElement.getAttribute('width')) || rect.width || 800;
+    const height = Number(svgElement.getAttribute('height')) || rect.height || 600;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Canvas 2D context is unavailable.');
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to create PNG blob.'));
+        }
+      }, 'image/png');
+    });
+
+    downloadBlob(pngBlob, filename);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
+
+export async function exportChartContainerToPng(
+  container: HTMLElement,
+  filename = 'chart.png',
+): Promise<void> {
+  const svgElement = container.querySelector('svg');
+
+  if (!svgElement) {
+    throw new Error('Chart SVG element was not found.');
+  }
+
+  await exportSvgElementToPng(svgElement, filename);
 }

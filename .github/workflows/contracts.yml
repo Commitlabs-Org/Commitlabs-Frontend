@@ -2,12 +2,12 @@ name: Contracts CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [master, main]
     paths:
       - 'contracts/**'
       - '.github/workflows/contracts.yml'
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
     paths:
       - 'contracts/**'
       - '.github/workflows/contracts.yml'
@@ -34,7 +34,7 @@ jobs:
             contracts
 
       - name: Install Stellar CLI
-        uses: stellar/stellar-cli@v27.0.0
+        uses: stellar/stellar-cli@v27.1.0
 
       - name: Run Cargo Tests
         working-directory: contracts

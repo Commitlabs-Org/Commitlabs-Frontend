@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import * as yaml from 'js-yaml';
 
 const ROUTE_FILE = 'route.ts';
 
@@ -11,9 +12,11 @@ export function routeFileToOpenApiPath(routeFile: string): string {
     return '';
   }
 
-  const segments = normalized.slice(prefix.length, -(`/${ROUTE_FILE}`).length).split('/');
+  const segments = normalized.slice(prefix.length, -`/${ROUTE_FILE}`.length).split('/');
   const apiPath = segments
-    .map((segment) => (segment.startsWith('[') && segment.endsWith(']') ? `{${segment.slice(1, -1)}}` : segment))
+    .map((segment) =>
+      segment.startsWith('[') && segment.endsWith(']') ? `{${segment.slice(1, -1)}}` : segment,
+    )
     .join('/');
 
   return `/api/${apiPath}`;
@@ -43,28 +46,28 @@ export function discoverApiRouteFiles(apiRoot: string, rootDir = apiRoot): strin
 
 /** Parse top-level path keys from an OpenAPI YAML file. */
 export function parseOpenApiPaths(openApiContent: string): Set<string> {
+  const parsed = yaml.load(openApiContent) as Record<string, unknown>;
   const paths = new Set<string>();
-  let inPaths = false;
-
-  for (const rawLine of openApiContent.split(/\r?\n/)) {
-    const line = rawLine;
-    if (!inPaths) {
-      if (line === 'paths:') {
-        inPaths = true;
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    parsed.paths &&
+    typeof parsed.paths === 'object' &&
+    parsed.paths !== null
+  ) {
+    for (const key of Object.keys(parsed.paths)) {
+      if (key.startsWith('/api/')) {
+        paths.add(key);
       }
-      continue;
-    }
-
-    const match = line.match(/^  (\/api\/[^:]+):/);
-    if (match) {
-      paths.add(match[1]);
     }
   }
-
   return paths;
 }
 
-export function findUndocumentedRoutes(routeFiles: string[], documentedPaths: Set<string>): string[] {
+export function findUndocumentedRoutes(
+  routeFiles: string[],
+  documentedPaths: Set<string>,
+): string[] {
   return routeFiles
     .map((file) => routeFileToOpenApiPath(`src/app/api/${file}`))
     .filter((path) => path.length > 0 && !documentedPaths.has(path))

@@ -1,23 +1,41 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { fail, ok, methodNotAllowed } from "@/lib/backend/apiResponse";
+import { fail, ok, methodNotAllowed } from '@/lib/backend/apiResponse';
 import { createCorsOptionsHandler, type CorsRoutePolicy } from '@/lib/backend/cors';
-import { TooManyRequestsError, ValidationError } from "@/lib/backend/errors";
+import { assertMutationCsrf } from '@/lib/backend/csrf';
+import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
-import { parseJsonWithLimit, JSON_BODY_LIMITS } from "@/lib/backend/jsonBodyLimit";
-import { checkRateLimit, getRateLimitWindowSeconds } from "@/lib/backend/rateLimit";
-import { getUserCommitmentsFromChain, createCommitmentOnChain } from "@/lib/backend/services/contracts";
-import { validateSupportedAsset, validateStellarAddress } from "@/lib/backend/validation";
-import { withApiHandler } from "@/lib/backend/withApiHandler";
+import { parseJsonWithLimit, JSON_BODY_LIMITS } from '@/lib/backend/jsonBodyLimit';
+import { logInfo, logWarn } from '@/lib/backend/logger';
+import { MAX_PAGE_SIZE } from '@/lib/backend/pagination';
+import { checkRateLimit, getRateLimitWindowSeconds } from '@/lib/backend/rateLimit';
+import { requireAuth } from '@/lib/backend/requireAuth';
+import {
+  getUserCommitmentsFromChain,
+  createCommitmentOnChain,
+} from '@/lib/backend/services/contracts';
+import { validateSupportedAsset, validateStellarAddress } from '@/lib/backend/validation';
+import { withApiHandler } from '@/lib/backend/withApiHandler';
 
 const CommitmentsQuerySchema = z.object({
-  ownerAddress: z.string().min(1, "ownerAddress is required"),
+  ownerAddress: z.string().min(1, 'ownerAddress is required'),
   page: z.coerce.number().min(1).default(1),
-  pageSize: z.coerce.number().min(1).max(100).default(10),
+  pageSize: z.coerce.number().min(1).max(MAX_PAGE_SIZE).default(10),
   status: z.enum(['ACTIVE', 'SETTLED', 'VIOLATED', 'EARLY_EXIT', 'UNKNOWN']).optional(),
   type: z.string().optional(),
   minCompliance: z.coerce.number().min(0).max(100).optional(),
 });
+
+/**
+ * Defensive upper bound on how many raw commitments from the chain a single
+ * request will map/filter/paginate over. `getUserCommitmentsFromChain`
+ * already caches and rate-limits the actual chain read, but this bounds the
+ * in-memory CPU/allocation cost of *this route's own* per-request work
+ * (map -> filter -> slice) regardless of how large a single owner's
+ * commitment set grows to. Exceeding it is logged (see `logWarn` below) so
+ * an unexpectedly large account is observable rather than just slow.
+ */
+const MAX_CHAIN_COMMITMENTS_PROCESSED = 5000;
 
 interface CreateCommitmentRequestBody {
   ownerAddress: string;
@@ -35,114 +53,164 @@ const COMMITMENTS_CORS_POLICY = {
 
 export const OPTIONS = createCorsOptionsHandler(COMMITMENTS_CORS_POLICY);
 
-export const GET = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  const { searchParams } = new URL(req.url);
-  const queryResult = CommitmentsQuerySchema.safeParse(Object.fromEntries(searchParams.entries()));
+export const GET = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    const startedAt = Date.now();
 
-  if (!queryResult.success) {
-    throw new ValidationError("Invalid query parameters", queryResult.error.issues);
-  }
+    // Authorization before any query parsing or chain work: a request with
+    // no valid session is rejected immediately, not after we've already
+    // paid for parsing/rate-limit/chain-read work on its behalf.
+    requireAuth(req);
 
-  const { ownerAddress, page, pageSize, status, type, minCompliance } = queryResult.data;
-  const ip = getClientIp(req);
-  if (!(await checkRateLimit(ip, "api/commitments"))) {
-    throw new TooManyRequestsError(
-      "Too many requests. Please try again later.",
-      undefined,
-      getRateLimitWindowSeconds("api/commitments"),
+    const { searchParams } = new URL(req.url);
+    const queryResult = CommitmentsQuerySchema.safeParse(
+      Object.fromEntries(searchParams.entries()),
     );
-  }
 
-  const commitments = await getUserCommitmentsFromChain(ownerAddress, { requestId: correlationId });
-  let mapped = commitments.map((c: any) => ({
-    commitmentId: String(c.id ?? c.commitmentId),
-    ownerAddress: c.ownerAddress,
-    asset: c.asset,
-    amount: typeof c.amount === 'bigint' ? String(c.amount) : c.amount,
-    status: c.status,
-    complianceScore: c.complianceScore,
-    type: 'Safe',
-    currentValue: typeof c.currentValue === "bigint" ? String(c.currentValue) : c.currentValue,
-    feeEarned: c.feeEarned,
-    violationCount: c.violationCount,
-    createdAt: c.createdAt,
-    expiresAt: c.expiresAt,
-    contractVersion: c.contractVersion,
-  }));
+    if (!queryResult.success) {
+      throw new ValidationError('Invalid query parameters', queryResult.error.issues);
+    }
 
-  if (status) mapped = mapped.filter((c) => c.status === status);
-  if (type) mapped = mapped.filter((c) => c.type.toLowerCase() === type.toLowerCase());
-  if (minCompliance !== undefined) mapped = mapped.filter((c) => c.complianceScore >= minCompliance);
+    const { ownerAddress, page, pageSize, status, type, minCompliance } = queryResult.data;
+    const ip = getClientIp(req);
+    if (!(await checkRateLimit(ip, 'api/commitments'))) {
+      throw new TooManyRequestsError(
+        'Too many requests. Please try again later.',
+        undefined,
+        getRateLimitWindowSeconds('api/commitments'),
+      );
+    }
 
-  const total = mapped.length;
-  const start = (page - 1) * pageSize;
-  const items = mapped.slice(start, start + pageSize);
+    const chainStartedAt = Date.now();
+    const commitments = await getUserCommitmentsFromChain(ownerAddress, {
+      requestId: correlationId,
+    });
+    const chainDurationMs = Date.now() - chainStartedAt;
 
-  return ok({ items, page, pageSize, total }, undefined, 200, correlationId);
-}, { cors: COMMITMENTS_CORS_POLICY, enableETag: true });
+    let truncated = false;
+    let sourceCommitments = commitments;
+    if (commitments.length > MAX_CHAIN_COMMITMENTS_PROCESSED) {
+      truncated = true;
+      sourceCommitments = commitments.slice(0, MAX_CHAIN_COMMITMENTS_PROCESSED);
+      logWarn(req, '[api/commitments] chain result exceeded processing bound, truncating', {
+        correlationId,
+        ownerAddress,
+        rawCount: commitments.length,
+        boundApplied: MAX_CHAIN_COMMITMENTS_PROCESSED,
+      });
+    }
 
-export const POST = withApiHandler(async (req: NextRequest, _context, correlationId) => {
-  const ip = getClientIp(req);
-  // Use the dedicated write-route key so tighter limits apply
-  if (!(await checkRateLimit(ip, "api/commitments/create"))) {
-    throw new TooManyRequestsError(
-      "Too many requests. Please try again later.",
-      undefined,
-      getRateLimitWindowSeconds("api/commitments/create"),
-    );
-  }
+    let mapped = sourceCommitments.map((c: any) => ({
+      commitmentId: String(c.id ?? c.commitmentId),
+      ownerAddress: c.ownerAddress,
+      asset: c.asset,
+      amount: typeof c.amount === 'bigint' ? String(c.amount) : c.amount,
+      status: c.status,
+      complianceScore: c.complianceScore,
+      type: 'Safe',
+      currentValue: typeof c.currentValue === 'bigint' ? String(c.currentValue) : c.currentValue,
+      feeEarned: c.feeEarned,
+      violationCount: c.violationCount,
+      createdAt: c.createdAt,
+      expiresAt: c.expiresAt,
+      contractVersion: c.contractVersion,
+    }));
 
-  const parsed = await parseJsonWithLimit(req, {
-    limitBytes: JSON_BODY_LIMITS.commitmentsCreate,
-  });
-  const body = (parsed ?? {}) as Partial<CreateCommitmentRequestBody>;
-  const { ownerAddress, asset, amount, durationDays, maxLossBps, metadata } = body;
+    if (status) mapped = mapped.filter((c) => c.status === status);
+    if (type) mapped = mapped.filter((c) => c.type.toLowerCase() === type.toLowerCase());
+    if (minCompliance !== undefined)
+      mapped = mapped.filter((c) => c.complianceScore >= minCompliance);
 
-  if (!ownerAddress || typeof ownerAddress !== "string") {
-    return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400, correlationId);
-  }
-  if (!asset || typeof asset !== "string") {
-    return fail("BAD_REQUEST", "Invalid asset", undefined, 400, correlationId);
-  }
-  try {
-    validateSupportedAsset(asset, "asset");
-  } catch {
-    throw new ValidationError("Asset is not supported. Supported assets: XLM, USDC.");
-  }
-  if (!ownerAddress || typeof ownerAddress !== "string") {
-    return fail("BAD_REQUEST", "Invalid ownerAddress", undefined, 400, correlationId);
-  }
-  try {
-    validateStellarAddress(ownerAddress, "ownerAddress");
-  } catch {
-    return fail(
-      "BAD_REQUEST",
-      "Invalid ownerAddress: must be a valid Stellar address (G... format).",
-      undefined,
-      400,
+    const total = mapped.length;
+    const start = (page - 1) * pageSize;
+    const items = mapped.slice(start, start + pageSize);
+
+    logInfo(req, '[api/commitments] list served', {
       correlationId,
-    );
-  }
-  if (!amount || isNaN(Number(amount))) {
-    return fail("BAD_REQUEST", "Invalid amount", undefined, 400, correlationId);
-  }
-  if (!durationDays || durationDays <= 0) {
-    return fail("BAD_REQUEST", "Invalid durationDays", undefined, 400, correlationId);
-  }
-  if (maxLossBps == null || maxLossBps < 0) {
-    return fail("BAD_REQUEST", "Invalid maxLossBps", undefined, 400, correlationId);
-  }
-  const result = await createCommitmentOnChain({
-    ownerAddress,
-    asset,
-    amount,
-    durationDays,
-    maxLossBps,
-    metadata,
-  }, { requestId: correlationId });
+      ownerAddress,
+      durationMs: Date.now() - startedAt,
+      chainDurationMs,
+      rawCount: commitments.length,
+      filteredCount: total,
+      returnedCount: items.length,
+      page,
+      pageSize,
+      filters: { status: status ?? null, type: type ?? null, minCompliance: minCompliance ?? null },
+      truncated,
+    });
 
-  return ok(result, undefined, 201, correlationId);
-}, { cors: COMMITMENTS_CORS_POLICY });
+    return ok({ items, page, pageSize, total }, undefined, 200, correlationId);
+  },
+  { cors: COMMITMENTS_CORS_POLICY, enableETag: true },
+);
+
+export const POST = withApiHandler(
+  async (req: NextRequest, _context, correlationId) => {
+    assertMutationCsrf(req);
+
+    const ip = getClientIp(req);
+    // Use the dedicated write-route key so tighter limits apply
+    if (!(await checkRateLimit(ip, 'api/commitments/create'))) {
+      throw new TooManyRequestsError(
+        'Too many requests. Please try again later.',
+        undefined,
+        getRateLimitWindowSeconds('api/commitments/create'),
+      );
+    }
+
+    const parsed = await parseJsonWithLimit(req, {
+      limitBytes: JSON_BODY_LIMITS.commitmentsCreate,
+    });
+    const body = (parsed ?? {}) as Partial<CreateCommitmentRequestBody>;
+    const { ownerAddress, asset, amount, durationDays, maxLossBps, metadata } = body;
+
+    if (!ownerAddress || typeof ownerAddress !== 'string') {
+      return fail('BAD_REQUEST', 'Invalid ownerAddress', undefined, 400, correlationId);
+    }
+    if (!asset || typeof asset !== 'string') {
+      return fail('BAD_REQUEST', 'Invalid asset', undefined, 400, correlationId);
+    }
+    try {
+      validateSupportedAsset(asset, 'asset');
+    } catch {
+      throw new ValidationError('Asset is not supported. Supported assets: XLM, USDC.');
+    }
+    try {
+      validateStellarAddress(ownerAddress, 'ownerAddress');
+    } catch {
+      return fail(
+        'BAD_REQUEST',
+        'Invalid ownerAddress: must be a valid Stellar address (G... format).',
+        undefined,
+        400,
+        correlationId,
+      );
+    }
+    if (!amount || isNaN(Number(amount))) {
+      return fail('BAD_REQUEST', 'Invalid amount', undefined, 400, correlationId);
+    }
+    if (!durationDays || durationDays <= 0) {
+      return fail('BAD_REQUEST', 'Invalid durationDays', undefined, 400, correlationId);
+    }
+    if (maxLossBps == null || maxLossBps < 0) {
+      return fail('BAD_REQUEST', 'Invalid maxLossBps', undefined, 400, correlationId);
+    }
+    const result = await createCommitmentOnChain(
+      {
+        ownerAddress,
+        asset,
+        amount,
+        durationDays,
+        maxLossBps,
+        ...(metadata !== undefined ? { metadata } : {}),
+      },
+      { requestId: correlationId },
+    );
+
+    return ok(result, undefined, 201, correlationId);
+  },
+  { cors: COMMITMENTS_CORS_POLICY },
+);
 
 const _405 = methodNotAllowed(['GET', 'POST']);
 export { _405 as PUT, _405 as PATCH, _405 as DELETE };

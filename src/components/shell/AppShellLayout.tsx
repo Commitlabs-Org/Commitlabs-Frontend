@@ -1,19 +1,29 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { AppSidebar } from './AppSidebar'
+import type { ReactNode } from 'react';
+import { AppSidebar } from './AppSidebar';
+import { QuickCreateFab } from './QuickCreateFab';
+import { ShellNavigationBoundary } from './ShellNavigationBoundary';
+import { useShellAuthState } from './useShellAuthState';
 
-export interface AppShellLayoutProps {
-  children: React.ReactNode
-}
+export function AppShellLayout({
+  children,
+  sessionSnapshot,
+}: {
+  children: ReactNode;
+  sessionSnapshot?: unknown;
+}) {
+  const auth = useShellAuthState();
 
-export const AppShellLayout: React.FC<AppShellLayoutProps> = ({ children }) => {
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
-      <AppSidebar />
-      <main className="flex-1 md:ml-[240px] transition-[margin] duration-300">
-        {children}
+    <div className="flex min-h-screen bg-[#050505]">
+      <AppSidebar auth={auth} />
+      <main className="min-w-0 flex-1">
+        <ShellNavigationBoundary auth={auth} sessionSnapshot={sessionSnapshot}>
+          {children}
+        </ShellNavigationBoundary>
       </main>
+      <QuickCreateFab />
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
 name: ✨ Feature Request
 description: Propose a new feature or improvement for CommitLabs.
-title: "[Feature]: "
-labels: ["type-feature"]
+title: '[Feature]: '
+labels: ['type-feature']
 body:
   - type: markdown
     attributes:

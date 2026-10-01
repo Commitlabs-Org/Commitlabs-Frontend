@@ -16,22 +16,22 @@ export class PersistentCounters implements CountersAdapter {
     return `${this.keyPrefix}${name}`;
   }
 
-  async incrementRateLimitBlocks(): void {
+  async incrementRateLimitBlocks(): Promise<void> {
     const key = await this.getKey('rate_limit_blocks');
     await this.redis.incr(key);
   }
 
-  async incrementAuthFailures(): void {
+  async incrementAuthFailures(): Promise<void> {
     const key = await this.getKey('auth_failures');
     await this.redis.incr(key);
   }
 
-  async incrementChainFailures(): void {
+  async incrementChainFailures(): Promise<void> {
     const key = await this.getKey('chain_failures');
     await this.redis.incr(key);
   }
 
-  async incrementSuccessfulActions(): void {
+  async incrementSuccessfulActions(): Promise<void> {
     const key = await this.getKey('successful_actions');
     await this.redis.incr(key);
   }
@@ -47,7 +47,7 @@ export class PersistentCounters implements CountersAdapter {
       await this.getKey('rate_limit_blocks'),
       await this.getKey('auth_failures'),
       await this.getKey('chain_failures'),
-      await this.getKey('successful_actions')
+      await this.getKey('successful_actions'),
     );
 
     return {
@@ -59,7 +59,7 @@ export class PersistentCounters implements CountersAdapter {
     };
   }
 
-  async reset(): void {
+  async reset(): Promise<void> {
     // Only for testing: delete the keys
     const keys = [
       await this.getKey('rate_limit_blocks'),

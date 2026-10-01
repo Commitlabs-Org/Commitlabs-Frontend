@@ -30,4 +30,25 @@ export interface ToastContextValue {
   warning: (options: ToastOptions) => void;
   dismiss: (id: string) => void;
   dismissAll: () => void;
+  history: ToastHistoryEntry[];
+  clearHistory: () => void;
+  markHistoryRead: (id: string) => void;
+  markAllHistoryRead: () => void;
+}
+
+/** A record of a dismissed/expired toast kept in the bounded history store. */
+export interface ToastHistoryEntry {
+  id: string;
+  severity: ToastSeverity;
+  title: string;
+  description?: string;
+  /** Unix-ms timestamp when the toast was first created. */
+  createdAt: number;
+  /** Unix-ms timestamp when the toast was dismissed/expired. */
+  dismissedAt: number;
+  /** Whether the user has acknowledged this entry in the history panel. */
+  read: boolean;
+  /** Source tag so history viewers can distinguish ephemeral client toasts
+   *  from server-derived notifications.  Always "toast" for this store. */
+  source: 'toast';
 }

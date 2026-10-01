@@ -1,167 +1,63 @@
-import { randomUUID } from "crypto";
-
-export type AuditEventType =
-  | "DISPUTE_OPENED"
-  | "DISPUTE_RESOLVED"
-  | "DISPUTE_RESOLVED_FAILED"
-  | "DISPUTE_OPEN_FAILED";
-
-export interface AuditLogEntry {
-  id: string;
-  eventType: AuditEventType;
-  timestamp: string;
-  actorAddress: string;
-  commitmentId: string;
-  details: Record<string, unknown>;
-}
-
-const auditLogStore: AuditLogEntry[] = [];
-
-export function recordAuditEvent(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): AuditLogEntry {
-    const logEntry: AuditLogEntry = {
-        id: randomUUID(),
-        timestamp: new Date().toISOString(),
-        ...entry,
-    };
-
-    auditLogStore.push(logEntry);
-
-    console.log(JSON.stringify({
-        event: 'AuditLog',
-        ...logEntry,
-    }));
-
-    return logEntry;
-}
-
-export interface GetAuditLogFilters {
-  commitmentId?: string;
-  actorAddress?: string;
-  eventType?: AuditEventType;
-}
-
-export function getAuditLog(filters: GetAuditLogFilters): AuditLogEntry[] {
-  return auditLogStore.filter((entry) => {
-    if (filters.commitmentId && entry.commitmentId !== filters.commitmentId)
-      return false;
-    if (filters.actorAddress && entry.actorAddress !== filters.actorAddress)
-      return false;
-    if (filters.eventType && entry.eventType !== filters.eventType) return false;
-    return true;
-  });
-}
-
-export function clearAuditLog(): void {
-  auditLogStore.length = 0;
-  if (typeof auditEventsStore !== 'undefined') {
-    auditEventsStore.length = 0;
-  }
-}
 /**
- * Audit Event Store
+ * Minimal audit-event recorder.
  *
- * Provides a typed schema for audit events and a pluggable store interface.
+ * Emits a structured, redacted JSON line for security-relevant events
+ * (e.g. dispute opened / resolved). Keeping this module intentionally light:
+ * the actual sink can be swapped for a durable audit store later without
+ * changing call sites.
  *
- * Storage strategy:
- *   - Development / test: in-memory ring buffer (last MAX_BUFFER_SIZE events).
- *   - Production: swap `activeStore` for a durable backend (Postgres, Redis Streams,
- *     Datadog Logs, etc.) by implementing the `AuditStore` interface.
- *
- * Sensitive fields (ownerAddress, verifiedBy, callerAddress, ip) are redacted
- * before events leave this module so that callers never need to remember to do it.
- *
- * Feature flag: COMMITLABS_FEATURE_AUDIT_LOG (env var, default off).
- * When disabled, `appendAuditEvent` is a no-op and `getRecentAuditEvents` returns [].
+ * @see logger.ts for the underlying emit mechanism
  */
+import { randomUUID } from 'crypto';
+import { redact } from './redact';
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
-
-export type AuditEventCategory =
-  | "commitment"
-  | "attestation"
-  | "marketplace"
-  | "auth"
-  | "admin";
-
-export type AuditEventSeverity = "info" | "warn" | "error";
-
-export interface AuditEvent {
-  id: string;
-  timestamp: string;
-  category: AuditEventCategory;
-  action: string;
-  severity: AuditEventSeverity;
-  actor?: string;
-  resourceId?: string;
-  metadata?: Record<string, unknown>;
-  ip?: string;
+export interface AuditEventData {
+  /** Discriminator describing the auditable action. */
+  eventType: string;
+  /** Wallet address performing the action (or '' when anonymous). */
+  actorAddress?: string;
+  /** Aggregate the event belongs to, when applicable. */
+  commitmentId?: string;
+  /** Free-form, non-sensitive details. */
+  details?: Record<string, unknown>;
 }
 
-export type RedactedAuditEvent = Omit<AuditEvent, "actor" | "ip"> & {
-  actor: string;
-  ip: string;
-};
-
-const auditEventsStore: AuditEvent[] = [];
-const REDACTED = "[REDACTED]";
-const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
-
-function redactAuditEvent(event: AuditEvent): RedactedAuditEvent {
-  return {
-    ...event,
-    actor: REDACTED,
-    ip: REDACTED,
-  };
+export interface AuditLogOptions {
+  requestId?: string;
 }
 
-export function isAuditLogEnabled(): boolean {
-  const raw = process.env.COMMITLABS_FEATURE_AUDIT_LOG;
-  if (raw === undefined) return false;
-  return TRUE_VALUES.has(raw.trim().toLowerCase());
-}
-
-export async function appendAuditEvent(
-  event: Omit<AuditEvent, "id" | "timestamp">,
-): Promise<void> {
-  if (!isAuditLogEnabled()) return;
-  auditEventsStore.push({
-    id: randomUUID(),
+/**
+ * Record a security-relevant audit event.
+ *
+ * Currently writes a redacted, timestamped JSON line to the console so the
+ * hook is observable in tests and dev. It intentionally returns `void` and
+ * never throws so audit failures cannot break a request.
+ */
+export function recordAuditEvent(data: AuditEventData, options: AuditLogOptions = {}): void {
+  const entry = {
+    event: 'audit',
+    eventType: data.eventType,
     timestamp: new Date().toISOString(),
-    ...event,
-  });
+    requestId: options.requestId ?? randomUUID(),
+    actorAddress: data.actorAddress,
+    commitmentId: data.commitmentId,
+    details: data.details,
+  };
+  // Redact sensitive fields before emitting.
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify(redact(entry)));
 }
 
-export interface AuditEventFilters {
-  actor?: string;
-  type?: string;
-  startTime?: string;
-  endTime?: string;
+/** Shorthand to surface a warning-level audit line (e.g. unauthorized access). */
+export function warn(message: string, context: Record<string, unknown> = {}): void {
+  // eslint-disable-next-line no-console
+  console.warn(JSON.stringify(redact({ event: 'audit.warn', message, context })));
 }
 
-export async function getRecentAuditEvents(limit: number, filters?: AuditEventFilters): Promise<RedactedAuditEvent[]> {
-  if (!isAuditLogEnabled()) return [];
-  let events = auditEventsStore;
-  if (filters) {
-    if (filters.actor) events = events.filter(e => e.actor === filters.actor);
-    if (filters.type) events = events.filter(e => e.action === filters.type);
-    if (filters.startTime) { const t = filters.startTime; events = events.filter(e => e.timestamp >= t); }
-    if (filters.endTime) { const t = filters.endTime; events = events.filter(e => e.timestamp <= t); }
-  }
-  return events.slice(-limit).reverse().map(redactAuditEvent);
+/** Shorthand to surface an error-level audit line. */
+export function error(message: string, context: Record<string, unknown> = {}): void {
+  // eslint-disable-next-line no-console
+  console.error(JSON.stringify(redact({ event: 'audit.error', message, context })));
 }
 
-export async function getAuditEventCount(filters?: AuditEventFilters): Promise<number> {
-  if (!isAuditLogEnabled()) return 0;
-  if (!filters) return auditEventsStore.length;
-  let events = auditEventsStore;
-  if (filters.actor) events = events.filter(e => e.actor === filters.actor);
-  if (filters.type) events = events.filter(e => e.action === filters.type);
-  if (filters.startTime) { const t = filters.startTime; events = events.filter(e => e.timestamp >= t); }
-  if (filters.endTime) { const t = filters.endTime; events = events.filter(e => e.timestamp <= t); }
-  return events.length;
-}
-
-export function resetAuditStoreForTests(): void {
-  auditLogStore.length = 0;
-  auditEventsStore.length = 0;
-}
+export const auditLog = { recordAuditEvent, warn, error };

@@ -16,9 +16,7 @@ const DEFAULT_PROPS = {
   onViewCommitments: vi.fn(),
 };
 
-function renderModal(
-  overrides: Partial<React.ComponentProps<typeof PurchaseSuccessModal>> = {},
-) {
+function renderModal(overrides: Partial<React.ComponentProps<typeof PurchaseSuccessModal>> = {}) {
   const props = { ...DEFAULT_PROPS, ...overrides };
   const view = render(<PurchaseSuccessModal {...props} />);
   return { props, ...view };
@@ -86,15 +84,37 @@ describe('PurchaseSuccessModal', () => {
     expect(screen.getByText('Transaction hash unavailable.')).toBeTruthy();
   });
 
-  it('shows explorer link when txHash is provided', () => {
-    renderModal({ txHash: 'deadbeef00000000cafebabe11111111' });
+  it('shows explorer link with correct mainnet URL when txHash is provided', () => {
+    const txHash = 'a'.repeat(64);
+    renderModal({ txHash });
     const link = screen.getByRole('link', { name: /View on Stellar Explorer/i });
     expect(link).toBeTruthy();
-    expect((link as HTMLAnchorElement).href).toContain('deadbeef00000000cafebabe11111111');
+    expect((link as HTMLAnchorElement).href).toBe(
+      `https://stellar.expert/explorer/public/tx/${txHash}`,
+    );
+  });
+
+  it('shows explorer link with testnet URL when network="testnet"', () => {
+    const txHash = 'a'.repeat(64);
+    renderModal({ txHash, network: 'testnet' });
+    const link = screen.getByRole('link', { name: /View on Stellar Explorer/i });
+    expect(link).toBeTruthy();
+    expect((link as HTMLAnchorElement).href).toBe(
+      `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+    );
   });
 
   it('does not show explorer link when txHash is absent', () => {
     renderModal({ txHash: undefined });
+    expect(screen.queryByRole('link', { name: /View on Stellar Explorer/i })).toBeNull();
+  });
+
+  // ── Acceptance criteria: txHash fails validation ─────────────────────────
+
+  it('renders no explorer link when txHash fails buildExplorerUrl validation', () => {
+    // A short non-hex string is truthy but will fail TX_HASH_PATTERN validation
+    // in buildExplorerUrl, which expects exactly 64 hex characters.
+    renderModal({ txHash: 'short-invalid-hash' });
     expect(screen.queryByRole('link', { name: /View on Stellar Explorer/i })).toBeNull();
   });
 
@@ -150,10 +170,7 @@ describe('PurchaseSuccessModal', () => {
 
   it('dialog is labelled by heading id', () => {
     renderModal();
-    expect(screen.getByRole('dialog')).toHaveAttribute(
-      'aria-labelledby',
-      'purchase-success-title',
-    );
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'purchase-success-title');
   });
 
   it('dialog is described by description id', () => {
@@ -168,6 +185,9 @@ describe('PurchaseSuccessModal', () => {
 
   it('handles short txHash without truncation', () => {
     renderModal({ txHash: 'short' });
+    // The hash is shown but shorter than 16 chars so no truncation occurs.
+    // However, because 'short' fails buildExplorerUrl validation, the explorer
+    // link will not render. The hash display should still work.
     expect(screen.getByText('short')).toBeTruthy();
   });
 
@@ -179,5 +199,14 @@ describe('PurchaseSuccessModal', () => {
   it('does not show copy button when txHash is missing', () => {
     renderModal({ txHash: undefined });
     expect(screen.queryByRole('button', { name: 'Copy transaction hash' })).toBeNull();
+  });
+
+  it('defaults network to "public" when not provided', () => {
+    const txHash = 'b'.repeat(64);
+    renderModal({ txHash });
+    const link = screen.getByRole('link', { name: /View on Stellar Explorer/i });
+    expect((link as HTMLAnchorElement).href).toBe(
+      `https://stellar.expert/explorer/public/tx/${txHash}`,
+    );
   });
 });

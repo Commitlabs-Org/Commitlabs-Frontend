@@ -15,7 +15,7 @@ export function getCountersAdapter(): CountersAdapter {
   }
 
   const nodeEnv = process.env.NODE_ENV || 'development';
-  
+
   // In development and test environments, use in-memory counters
   if (nodeEnv === 'development' || nodeEnv === 'test') {
     countersInstance = new InMemoryCounters();
@@ -23,7 +23,7 @@ export function getCountersAdapter(): CountersAdapter {
     // In production, use persistent counters (Redis)
     countersInstance = new PersistentCounters();
   }
-  
+
   return countersInstance;
 }
 
@@ -37,9 +37,9 @@ export function setCountersAdapter(instance: CountersAdapter): void {
 /**
  * Reset the counters instance (mainly for testing)
  */
-export function resetCountersAdapter(): void {
+export async function resetCountersAdapter(): Promise<void> {
   if (countersInstance) {
-    countersInstance.reset();
+    await countersInstance.reset();
   }
   countersInstance = null;
 }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the secure cookie-based session management system implemented for CommitLabs. The system uses JWT tokens delivered via HTTP-only cookies with CSRF protection for web-based authentication.
+This document describes the secure cookie-based session management system implemented for CommitLabs. The system uses random opaque session tokens delivered via HTTP-only cookies with CSRF protection for web-based authentication.
 
 ## Architecture
 
@@ -10,27 +10,31 @@ This document describes the secure cookie-based session management system implem
 
 1. **Authentication Request**: Client sends Stellar signature verification request to `/api/auth/verify`
 2. **Signature Verification**: Server validates the signature and nonce
-3. **Session Creation**: Server generates JWT session token with embedded CSRF token
+3. **Session Creation**: Server generates a random opaque session token and associates it with a newly generated CSRF token and user metadata in a server-side in-memory session store.
 4. **Cookie Setting**: Server sets secure HTTP-only session cookie and non-HttpOnly CSRF cookie
 5. **Authenticated Requests**: Client includes session cookie automatically and CSRF token in headers for state-changing requests
-6. **Session Validation**: Server validates JWT and CSRF token for protected routes
+6. **Session Validation**: Server validates the opaque token against the in-memory store and verifies the CSRF token for protected routes
 7. **Session Termination**: Client can logout via `/api/auth/logout` to revoke session
 
 ### Security Features
 
-#### JWT Session Tokens
-- **Algorithm**: HS256 with server-side secret
+#### Opaque Session Tokens
+
+- **Format**: 16-byte random hex string prefixed with `session_`
 - **Expiry**: 24 hours
-- **Payload**: User address, issued timestamp, expiry timestamp, CSRF token
-- **Revocation**: In-memory revocation list (TODO: Redis/database for production)
+- **Storage**: Server-side in-memory `Map` containing user address, issued timestamp, expiry timestamp, and CSRF token.
+- **Revocation**: Removed from the in-memory store upon logout.
+- **Limitation (Known Issue)**: The current session store is strictly in-memory (`sessionStoreMap`) and does not support cross-instance persistence. This limitation is tracked in an existing issue. A multi-instance production deployment currently requires sticky sessions or will drop sessions on request routing changes.
 
 #### Cookie Security
-- **Session Cookie**: HTTP-only, Secure (production), SameSite=Strict, 24-hour expiry
-- **CSRF Cookie**: Non-HttpOnly, Secure (production), SameSite=Strict, 24-hour expiry
+
+- **Session Cookie**: HTTP-only, Secure (production), SameSite=Lax, 24-hour expiry
+- **CSRF Cookie**: Non-HttpOnly, Secure (production), SameSite=Lax, 24-hour expiry
 - **Path**: `/` (site-wide availability)
 
 #### CSRF Protection
-- **Synchronizer Token Pattern**: CSRF token embedded in JWT and mirrored in header
+
+- **Synchronizer Token Pattern**: CSRF token stored in server-side session and mirrored in header
 - **Double-Submit Cookie Pattern**: CSRF token available in non-HttpOnly cookie
 - **Origin Validation**: Additional defense-in-depth with Origin/Referer header checks
 
@@ -39,16 +43,18 @@ This document describes the secure cookie-based session management system implem
 ### Core Functions
 
 #### `createSessionToken(address: string)`
-Creates JWT session token with embedded CSRF token for authenticated user.
+
+Generates an opaque session token and stores session context (including CSRF token) in the server-side store.
 
 ```typescript
-const { token, csrfToken } = createSessionToken(address);
+const token = createSessionToken(address);
 ```
 
-**Returns**: Object containing JWT token and CSRF token
+**Returns**: The opaque session token (string)
 
 #### `verifySessionToken(token: string)`
-Validates JWT token and returns session information.
+
+Validates the opaque token against the session store and returns session information.
 
 ```typescript
 const result = verifySessionToken(token);
@@ -57,11 +63,12 @@ const result = verifySessionToken(token);
 
 **Returns**: SessionVerificationResult with validity status and user data
 
-#### `revokeSessionToken(token: string)`
-Revokes a session token for logout functionality.
+#### `revokeSession(token: string)`
+
+Revokes a session token for logout functionality, clearing it from the in-memory store.
 
 ```typescript
-const revoked = revokeSessionToken(token);
+const revoked = revokeSession(token);
 ```
 
 **Returns**: Boolean indicating successful revocation
@@ -69,7 +76,8 @@ const revoked = revokeSessionToken(token);
 ### Authentication Middleware
 
 #### `requireAuth(req: NextRequest)`
-Middleware function for protecting routes that extracts and validates session cookies.
+
+Middleware function for protecting routes that extracts and validates session cookies against the store.
 
 ```typescript
 const authenticatedReq = requireAuth(req);
@@ -79,6 +87,7 @@ const authenticatedReq = requireAuth(req);
 **Throws**: UnauthorizedError for invalid/missing sessions
 
 #### `validateCsrfToken(req: NextRequest, expectedCsrfToken: string)`
+
 Validates CSRF token for state-changing requests (POST, PUT, PATCH, DELETE).
 
 ```typescript
@@ -88,6 +97,7 @@ validateCsrfToken(req, expectedCsrfToken);
 **Throws**: UnauthorizedError for missing/invalid CSRF tokens
 
 #### `validateOrigin(req: NextRequest)`
+
 Validates Origin/Referer headers for additional CSRF protection.
 
 ```typescript
@@ -99,9 +109,11 @@ validateOrigin(req);
 ## API Endpoints
 
 ### POST /api/auth/verify
+
 Authenticates user via Stellar signature and creates session.
 
 **Request Body**:
+
 ```json
 {
   "address": "G...",
@@ -111,6 +123,7 @@ Authenticates user via Stellar signature and creates session.
 ```
 
 **Response**:
+
 ```json
 {
   "verified": true,
@@ -121,15 +134,18 @@ Authenticates user via Stellar signature and creates session.
 ```
 
 **Cookies Set**:
-- `session`: HTTP-only JWT token (24 hours)
+
+- `session`: HTTP-only opaque token (24 hours)
 - `csrf`: Non-HttpOnly CSRF token (24 hours)
 
 ### POST /api/auth/logout
+
 Terminates user session and clears cookies.
 
 **Headers**: Requires valid session cookie
 
 **Response**:
+
 ```json
 {
   "loggedOut": true,
@@ -150,16 +166,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export const POST = async (req: NextRequest) => {
   // Authenticate user
   const authenticatedReq = requireAuth(req);
-  
+
   // Validate CSRF for state-changing requests
   validateCsrfToken(req, authenticatedReq.user.csrfToken);
-  
+
   // Additional origin validation
   validateOrigin(req);
-  
+
   // Process authenticated request
   const userAddress = authenticatedReq.user.address;
-  
+
   return NextResponse.json({
     message: 'Action completed successfully',
     user: userAddress,
@@ -198,32 +214,35 @@ const protectedResponse = await fetch('/api/protected-route', {
 
 ### Production Deployment
 
-1. **JWT Secret**: Set `JWT_SECRET` environment variable with strong random value
-2. **HTTPS**: Ensure all cookies are marked Secure (automatic in production)
-3. **Session Store**: Replace in-memory store with Redis/database for scalability
-4. **Rate Limiting**: Implement rate limiting on authentication endpoints
-5. **Monitoring**: Log authentication failures and suspicious activity
+1. **HTTPS**: Ensure all cookies are marked Secure (automatic in production)
+2. **Session Store**: Replace in-memory store with Redis/database for scalability (pending issue fix)
+3. **Rate Limiting**: Implement rate limiting on authentication endpoints
+4. **Monitoring**: Log authentication failures and suspicious activity
 
 ### Threat Mitigations
 
 #### Session Hijacking
+
 - HTTP-only cookies prevent JavaScript access
-- SameSite=Strict prevents cross-site request forgery
+- SameSite=Lax (with double constraints) prevents cross-site request forgery
 - Secure flag ensures HTTPS-only transmission
 - 24-hour expiry limits exposure window
 
 #### CSRF Attacks
-- Synchronizer token pattern requires server-generated token
+
+- Synchronizer token pattern requires server-managed token
 - Origin validation provides additional protection
 - Double-submit cookie pattern for client-side access
 
 #### Token Replay
-- JWT includes issued timestamp (iat) and expiry (exp)
-- Server-side revocation list for immediate logout
+
+- Session records include issued timestamp and expiry
+- Server-side map for immediate logout
 - Nonce consumption prevents signature replay
 
 #### Cross-Origin Attacks
-- SameSite=Strict prevents cross-site cookie transmission
+
+- SameSite=Lax and CSRF tokens prevent cross-site action execution
 - Origin/Referer header validation
 - Host header validation in production
 
@@ -273,9 +292,6 @@ npm run test:coverage -- auth
 ### Environment Variables
 
 ```bash
-# Required for production
-JWT_SECRET=your-super-secret-random-key-here
-
 # Optional (defaults to secure settings in production)
 NODE_ENV=production
 ```
@@ -292,7 +308,7 @@ NODE_ENV=production
 
 ### Scalability Considerations
 
-1. **Horizontal Scaling**: Redis-based session store for multiple server instances
+1. **Horizontal Scaling**: Redis-based session store for multiple server instances (crucial current gap)
 2. **Load Balancing**: Ensure session affinity or shared session store
 3. **Caching**: Implement session caching for high-traffic scenarios
 4. **Monitoring**: Add metrics for session creation, validation, and revocation
@@ -301,7 +317,7 @@ NODE_ENV=production
 
 ### Common Issues
 
-1. **Token Verification Fails**: Check JWT_SECRET consistency across servers
+1. **Token Verification Fails**: The in-memory store doesn't persist across restarts or multiple server instances.
 2. **CSRF Validation Fails**: Ensure client includes X-CSRF-Token header
 3. **Cookie Not Set**: Verify SameSite and Secure settings match environment
 4. **Session Expires Too Soon**: Check server time synchronization
@@ -309,6 +325,7 @@ NODE_ENV=production
 ### Debug Mode
 
 Enable debug logging by setting:
+
 ```bash
 DEBUG=session:* npm run dev
 ```

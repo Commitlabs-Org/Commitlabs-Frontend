@@ -3,14 +3,35 @@
  * Used across backend API and frontend.
  */
 
+import {
+  CommitmentStatus as SharedCommitmentStatus,
+  CommitmentType as SharedCommitmentType,
+} from './shared';
+
+/**
+ * Legacy domain types - maintained for backward compatibility.
+ * New code should use the shared enums from './shared'.
+ * @deprecated Use CommitmentStatus enum from './shared' instead.
+ */
 export type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
+/**
+ * Legacy domain types - maintained for backward compatibility.
+ * New code should use the shared enums from './shared'.
+ * @deprecated Use CommitmentStatus enum from './shared' instead.
+ */
 export type CommitmentStatus = 'Active' | 'Settled' | 'Violated' | 'Early Exit';
+
+/**
+ * Re-export shared enums for convenience
+ */
+export { SharedCommitmentStatus, SharedCommitmentType };
 
 export interface Commitment {
   id: string;
   type: CommitmentType;
   status: CommitmentStatus;
+  ownerAddress?: string;
   asset: string;
   amount: string;
   currentValue?: string;
@@ -26,11 +47,26 @@ export interface Commitment {
   expiresAt?: string;
 }
 
+export type TrendDirection = 'up' | 'down' | 'neutral';
+
+export interface StatTrend {
+  value: number;
+  direction: TrendDirection;
+  period?: string;
+}
+
 export interface CommitmentStats {
   totalActive: number;
   totalCommittedValue: string;
   avgComplianceScore: number;
   totalFeesGenerated: string;
+  /** Optional per-metric trend indicators */
+  trends?: {
+    totalActive?: StatTrend;
+    totalCommittedValue?: StatTrend;
+    avgComplianceScore?: StatTrend;
+    totalFeesGenerated?: StatTrend;
+  };
 }
 
 export const ATTESTATION_TYPES = [
@@ -50,8 +86,10 @@ export interface Attestation {
   id: string;
   commitmentId: string;
   kind?: string;
+  status?: string;
   verdict?: AttestationVerdict;
   observedAt: string;
+  timestamp?: string;
   title?: string;
   description?: string;
   txHash?: string;
@@ -60,14 +98,14 @@ export interface Attestation {
 }
 
 export interface HealthMetrics {
-   status: string;
-   uptime: number;
-   rate_limit_blocks: number;
-   auth_failures: number;
-   chain_failures: number;
-   successful_actions: number;
-   timestamp: string;
- }
+  status: string;
+  uptime: number;
+  rate_limit_blocks: number;
+  auth_failures: number;
+  chain_failures: number;
+  successful_actions: number;
+  timestamp: string;
+}
 
 export type ListingStatus = 'Active' | 'Sold' | 'Cancelled';
 
@@ -104,11 +142,7 @@ export interface CreateListingRequest {
  * | early_exit    | Owner triggered an early exit                |
  * | settlement    | Commitment reached maturity and was settled  |
  */
-export type HistoryEventKind =
-  | 'created'
-  | 'attestation'
-  | 'early_exit'
-  | 'settlement';
+export type HistoryEventKind = 'created' | 'attestation' | 'early_exit' | 'settlement';
 
 export interface BaseHistoryEvent {
   /** Stable, deterministic identifier for this event (kind + source id). */
@@ -156,8 +190,25 @@ export interface SettlementEvent extends BaseHistoryEvent {
   };
 }
 
-export type HistoryEvent =
-  | CreatedEvent
-  | AttestationEvent
-  | EarlyExitEvent
-  | SettlementEvent;
+export type HistoryEvent = CreatedEvent | AttestationEvent | EarlyExitEvent | SettlementEvent;
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export type NotificationSeverity = 'info' | 'warning' | 'critical';
+
+export type NotificationType = 'expiry' | 'violation' | 'health_check' | 'marketplace';
+
+export interface Notification {
+  id: string;
+  ownerAddress: string;
+  title: string;
+  message: string;
+  severity: NotificationSeverity;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+  relatedCommitmentId?: string;
+  relatedListingId?: string;
+}

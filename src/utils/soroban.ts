@@ -1,54 +1,46 @@
+import { getContractAddress } from '../lib/backend/config';
+
 /**
- * Soroban Utility Functions
- *
- * This module provides contract address configuration and network constants.
- * All actual blockchain interactions are handled by the contracts service.
- *
- * SINGLE SOURCE OF TRUTH:
- * - Contract addresses: This module (via contractAddresses getters)
- * - Chain interactions: src/lib/backend/services/contracts.ts
- * - Client environment variables: src/lib/clientEnv.ts
- *
- * For wallet connection, contract calls, and contract reads, use:
- * @see src/lib/backend/services/contracts.ts
+ * Soroban RPC endpoint URL.
+ * Falls back to the Stellar testnet endpoint when NEXT_PUBLIC_SOROBAN_RPC_URL is unset.
  */
-
-import { getContractAddress } from "../lib/backend/config";
-import { getValidatedClientEnv } from "../lib/clientEnv";
-
-const clientEnv = getValidatedClientEnv();
-
-export const rpcUrl =
-  clientEnv.NEXT_PUBLIC_SOROBAN_RPC_URL ||
-  "https://soroban-testnet.stellar.org:443";
-export const networkPassphrase =
-  clientEnv.NEXT_PUBLIC_NETWORK_PASSPHRASE ||
-  "Test SDF Network ; September 2015";
+export const rpcUrl: string =
+  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org:443';
 
 /**
- * Lazily-loaded contract addresses to avoid build-time errors when env vars aren't set.
- * Access these through the getter functions or the contractAddresses object.
+ * Stellar network passphrase.
+ * Falls back to the Test SDF Network passphrase when NEXT_PUBLIC_NETWORK_PASSPHRASE is unset.
+ */
+export const networkPassphrase: string =
+  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015';
+
+/**
+ * Lazily-loaded contract addresses.
+ *
+ * Each getter resolves its address at access time and falls back to an empty
+ * string when the underlying configuration is missing or invalid, avoiding
+ * build-time errors when the corresponding environment variables are unset.
  */
 export const contractAddresses = {
-  get commitmentNFT() {
+  get commitmentNFT(): string {
     try {
-      return getContractAddress("commitmentNFT");
+      return getContractAddress('commitmentNFT');
     } catch {
-      return "";
+      return '';
     }
   },
-  get commitmentCore() {
+  get commitmentCore(): string {
     try {
-      return getContractAddress("commitmentCore");
+      return getContractAddress('commitmentCore');
     } catch {
-      return "";
+      return '';
     }
   },
-  get attestationEngine() {
+  get attestationEngine(): string {
     try {
-      return getContractAddress("attestationEngine");
+      return getContractAddress('attestationEngine');
     } catch {
-      return "";
+      return '';
     }
   },
 };

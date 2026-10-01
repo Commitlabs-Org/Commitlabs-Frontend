@@ -56,6 +56,7 @@ function Example() {
 - `dismissAll()`
 
 Options:
+
 - `title: string`
 - `description?: string`
 - `duration?: number` (ms; `0` disables auto-dismiss)
@@ -72,12 +73,12 @@ Options:
 
 `ToastProvider` renders two visually-hidden `aria-live` regions that announce toast text to screen readers as toasts are added.
 
-| Severity | Region | `aria-live` |
-|----------|--------|-------------|
-| `error` | `[data-toast-announcer="assertive"]` | `assertive` |
-| `success`, `info`, `warning` | `[data-toast-announcer="polite"]` | `polite` |
+| Severity                     | Region                               | `aria-live` |
+| ---------------------------- | ------------------------------------ | ----------- |
+| `error`                      | `[data-toast-announcer="assertive"]` | `assertive` |
+| `success`, `info`, `warning` | `[data-toast-announcer="polite"]`    | `polite`    |
 
-The announced text is the toast `title` (and `description`, if present, joined with ` — `). When a new toast fires, the opposing region is cleared to avoid stale announcements. The regions use `aria-atomic="true"` so assistive tech reads the full updated text.
+The announced text is the toast `title` (and `description`, if present, joined with `—`). When a new toast fires, the opposing region is cleared to avoid stale announcements. The regions use `aria-atomic="true"` so assistive tech reads the full updated text.
 
 The regions are hidden from view using inline clip/overflow styles (equivalent to a `.sr-only` class) and are never interactive.
 

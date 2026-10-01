@@ -1,66 +1,50 @@
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-/**
- * Hook to track dirty state of a form/object and guard against accidental navigation.
- *
- * @param currentState The current state object (e.g., preferences).
- * @returns {
- *   isDirty: boolean indicating if changes differ from baseline,
- *   resetBaseline: () => void to set current state as new baseline (e.g., after save)
- * }
- */
-export function useUnsavedChangesGuard<T extends Record<string, any>>(currentState: T) {
-  const baselineRef = useRef<T>(JSON.parse(JSON.stringify(currentState)));
-  const [isDirty, setIsDirty] = useState(false);
-  const router = useRouter();
+const DEFAULT_MESSAGE = 'You have unsaved changes. Are you sure you want to leave?';
 
-  // Compare current state with baseline whenever it changes.
+export function useUnsavedChangesGuard(isDirty: boolean, message = DEFAULT_MESSAGE): void {
   useEffect(() => {
-    const dirty = JSON.stringify(currentState) !== JSON.stringify(baselineRef.current);
-    setIsDirty(dirty);
-  }, [currentState]);
+    if (!isDirty) return;
 
-  const resetBaseline = () => {
-    baselineRef.current = JSON.parse(JSON.stringify(currentState));
-    setIsDirty(false);
-  };
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = message;
+    };
 
-  // Prompt on browser unload (refresh/close)
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      if (!(event.target instanceof Element)) return;
+
+      const anchor = event.target.closest('a[href]');
+      if (!anchor || anchor.hasAttribute('download')) return;
+      if (anchor.target && anchor.target !== '_self') return;
+
+      const destination = new URL(anchor.href, window.location.href);
+      if (destination.origin !== window.location.origin) return;
+      if (destination.href === window.location.href) return;
+
+      if (!window.confirm(message)) {
+        event.preventDefault();
+        event.stopPropagation();
       }
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
 
-  // Guard against client-side navigation using Next.js router.
-  useEffect(() => {
-    const handle = (state: any) => {
-      if (isDirty) {
-        const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
-        if (!confirmLeave) return false;
-      }
-      return true;
-    };
-    // @ts-ignore – beforePopState may be undefined in some versions.
-    if (router && typeof router.beforePopState === 'function') {
-      // @ts-ignore
-      router.beforePopState(handle);
-    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleDocumentClick, true);
+
     return () => {
-      // @ts-ignore
-      if (router && typeof router.beforePopState === 'function') {
-        // @ts-ignore
-        router.beforePopState(() => true);
-      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleDocumentClick, true);
     };
-  }, [router, isDirty]);
-
-  return { isDirty, resetBaseline };
+  }, [isDirty, message]);
 }

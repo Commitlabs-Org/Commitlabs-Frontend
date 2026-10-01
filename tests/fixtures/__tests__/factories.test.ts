@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { StrKey } from '@stellar/stellar-sdk';
 import {
   makeCommitment,
   makeCommitmentDto,
@@ -7,11 +8,51 @@ import {
   makeAttestationDto,
   makeMarketplaceCard,
   makePanelAttestation,
+  FIXTURE_OWNER_ADDRESS,
+  FIXTURE_SELLER_ADDRESS,
+  OWNER_ADDRESS,
+  SELLER_ADDRESS,
 } from '../index';
 
-// ---------------------------------------------------------------------------
-// makeCommitment
-// ---------------------------------------------------------------------------
+const BASE32_REGEX = /^[A-Z2-7]+$/;
+
+describe('Stellar address fixture validation', () => {
+  it('ensures fixture addresses conform to RFC 4648 base32 without 0, 1, 8, 9', () => {
+    const addresses = [
+      FIXTURE_OWNER_ADDRESS,
+      FIXTURE_SELLER_ADDRESS,
+      OWNER_ADDRESS,
+      SELLER_ADDRESS,
+    ];
+
+    for (const address of addresses) {
+      expect(address).toMatch(BASE32_REGEX);
+      expect(address).not.toMatch(/[0189]/);
+      expect(StrKey.isValidEd25519PublicKey(address)).toBe(true);
+    }
+  });
+
+  it('ensures factory outputs use valid base32 Stellar addresses', () => {
+    const commitmentDto = makeCommitmentDto();
+    const listing = makeListing();
+    const attestationDto = makeAttestationDto();
+    const card = makeMarketplaceCard();
+
+    const factoryAddresses = [
+      commitmentDto.ownerAddress,
+      listing.sellerAddress,
+      attestationDto.ownerAddress,
+      card.owner,
+    ];
+
+    for (const address of factoryAddresses) {
+      expect(address).toBeDefined();
+      expect(address).toMatch(BASE32_REGEX);
+      expect(address).not.toMatch(/[0189]/);
+      expect(StrKey.isValidEd25519PublicKey(address!)).toBe(true);
+    }
+  });
+});
 
 describe('makeCommitment', () => {
   it('returns a fully valid object with defaults', () => {
@@ -29,7 +70,6 @@ describe('makeCommitment', () => {
     expect(c.id).toBe('CMT-999');
     expect(c.type).toBe('Aggressive');
     expect(c.status).toBe('Violated');
-    // unoverridden defaults remain
     expect(c.asset).toBe('XLM');
   });
 
@@ -55,10 +95,6 @@ describe('makeCommitment', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// makeCommitmentDto
-// ---------------------------------------------------------------------------
-
 describe('makeCommitmentDto', () => {
   it('returns defaults with lowercase commitmentType and status', () => {
     const dto = makeCommitmentDto();
@@ -67,19 +103,20 @@ describe('makeCommitmentDto', () => {
     expect(dto.status).toBe('active');
     expect(dto.assetIssuer).toBeNull();
     expect(dto.nftTokenId).toBeNull();
+    expect(dto.ownerAddress).toBe(FIXTURE_OWNER_ADDRESS);
   });
 
   it('applies partial overrides', () => {
-    const dto = makeCommitmentDto({ commitmentId: 'CMT-XYZ', commitmentType: 'aggressive', status: 'settled' });
+    const dto = makeCommitmentDto({
+      commitmentId: 'CMT-XYZ',
+      commitmentType: 'aggressive',
+      status: 'settled',
+    });
     expect(dto.commitmentId).toBe('CMT-XYZ');
     expect(dto.commitmentType).toBe('aggressive');
     expect(dto.status).toBe('settled');
   });
 });
-
-// ---------------------------------------------------------------------------
-// makeListing
-// ---------------------------------------------------------------------------
 
 describe('makeListing', () => {
   it('returns a fully valid listing with defaults', () => {
@@ -87,6 +124,7 @@ describe('makeListing', () => {
     expect(l.id).toBe('LST-001');
     expect(l.status).toBe('Active');
     expect(l.currencyAsset).toBe('USDC');
+    expect(l.sellerAddress).toBe(FIXTURE_SELLER_ADDRESS);
   });
 
   it('applies partial overrides', () => {
@@ -94,7 +132,7 @@ describe('makeListing', () => {
     expect(l.id).toBe('LST-007');
     expect(l.status).toBe('Sold');
     expect(l.price).toBe('5000');
-    expect(l.currencyAsset).toBe('USDC'); // default preserved
+    expect(l.currencyAsset).toBe('USDC');
   });
 
   it('can set commitmentId independently', () => {
@@ -102,10 +140,6 @@ describe('makeListing', () => {
     expect(l.commitmentId).toBe('CMT-ABC');
   });
 });
-
-// ---------------------------------------------------------------------------
-// makeAttestation
-// ---------------------------------------------------------------------------
 
 describe('makeAttestation', () => {
   it('returns a fully valid attestation with defaults', () => {
@@ -122,7 +156,7 @@ describe('makeAttestation', () => {
     expect(a.id).toBe('ATT-XYZ');
     expect(a.verdict).toBe('fail');
     expect(a.severity).toBe('violation');
-    expect(a.commitmentId).toBe('CMT-001'); // default preserved
+    expect(a.commitmentId).toBe('CMT-001');
   });
 
   it('overrides details object', () => {
@@ -144,29 +178,26 @@ describe('makeAttestation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// makeAttestationDto
-// ---------------------------------------------------------------------------
-
 describe('makeAttestationDto', () => {
   it('returns defaults', () => {
     const dto = makeAttestationDto();
     expect(dto.attestationId).toBe('ATT-001');
     expect(dto.verdict).toBe('pass');
     expect(dto.kind).toBe('health_check');
+    expect(dto.ownerAddress).toBe(FIXTURE_OWNER_ADDRESS);
   });
 
   it('applies partial overrides', () => {
-    const dto = makeAttestationDto({ attestationId: 'ATT-999', verdict: 'fail', kind: 'violation' });
+    const dto = makeAttestationDto({
+      attestationId: 'ATT-999',
+      verdict: 'fail',
+      kind: 'violation',
+    });
     expect(dto.attestationId).toBe('ATT-999');
     expect(dto.verdict).toBe('fail');
     expect(dto.kind).toBe('violation');
   });
 });
-
-// ---------------------------------------------------------------------------
-// makeMarketplaceCard
-// ---------------------------------------------------------------------------
 
 describe('makeMarketplaceCard', () => {
   it('returns a fully valid card with defaults', () => {
@@ -175,6 +206,7 @@ describe('makeMarketplaceCard', () => {
     expect(card.type).toBe('Safe');
     expect(card.score).toBe(90);
     expect(card.forSale).toBe(true);
+    expect(card.owner).toBe(FIXTURE_OWNER_ADDRESS);
   });
 
   it('applies partial overrides', () => {
@@ -183,20 +215,26 @@ describe('makeMarketplaceCard', () => {
     expect(card.type).toBe('Balanced');
     expect(card.score).toBe(91);
     expect(card.forSale).toBe(false);
-    expect(card.amount).toBe('$10,000'); // default preserved
+    expect(card.amount).toBe('$10,000');
   });
 
   it('accepts optional fields', () => {
-    const card = makeMarketplaceCard({ totalCommitments: 5, successRate: 98, trustLevel: 'verified' });
-    expect(card.totalCommitments).toBe(5);
-    expect(card.successRate).toBe(98);
-    expect(card.trustLevel).toBe('verified');
+    const card = makeMarketplaceCard({
+      id: '2',
+      type: 'Safe',
+      score: 85,
+      amount: '$5,000',
+      duration: '60 days',
+      yield: '4.0%',
+      maxLoss: '4%',
+      price: '$500',
+      compareSelected: true,
+      compareDisabled: false,
+    });
+    expect(card.compareSelected).toBe(true);
+    expect(card.compareDisabled).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// makePanelAttestation
-// ---------------------------------------------------------------------------
 
 describe('makePanelAttestation', () => {
   it('returns a fully valid panel attestation with defaults', () => {

@@ -23,6 +23,7 @@ All successful responses follow this structure:
 ```
 
 **Fields:**
+
 - `success`: Always `true` for successful responses
 - `data`: The actual response payload (varies by endpoint)
 - `meta`: Metadata object containing:
@@ -48,6 +49,7 @@ All error responses follow this structure:
 ```
 
 **Fields:**
+
 - `success`: Always `false` for error responses
 - `error`: Error object containing:
   - `code`: Machine-readable error code (see Error Codes section)
@@ -61,6 +63,7 @@ All error responses follow this structure:
 ### Purpose
 
 Correlation IDs help track requests across services and logs, enabling:
+
 - Request tracing through the system
 - Debugging distributed workflows
 - Performance monitoring
@@ -78,6 +81,7 @@ Correlation IDs help track requests across services and logs, enabling:
 ### Usage Examples
 
 **Client-side:**
+
 ```javascript
 // Generate correlation ID for new request
 const correlationId = crypto.randomUUID().replace(/-/g, '');
@@ -95,12 +99,13 @@ const responseCorrelationId = response.headers.get('x-correlation-id');
 ```
 
 **Server-side:**
+
 ```typescript
 // Correlation ID automatically handled by withApiHandler
 export const GET = withApiHandler(async (req, context, correlationId) => {
   // Use correlationId for logging
   logger.info('Processing request', { correlationId });
-  
+
   return ok(data, undefined, 200, correlationId);
 });
 ```
@@ -109,29 +114,29 @@ export const GET = withApiHandler(async (req, context, correlationId) => {
 
 ### Standard Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `BAD_REQUEST` | 400 | Malformed or invalid request |
-| `VALIDATION_ERROR` | 400 | Request validation failed |
-| `UNAUTHORIZED` | 401 | Authentication required or failed |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `CONFLICT` | 409 | Resource conflict (duplicate, state mismatch) |
-| `TOO_MANY_REQUESTS` | 429 | Rate limit exceeded |
-| `UNPROCESSABLE_ENTITY` | 422 | Well-formed but semantically invalid request |
-| `INTERNAL_ERROR` | 500 | Unexpected server error |
-| `BAD_GATEWAY` | 502 | Upstream service failure |
-| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
-| `GATEWAY_TIMEOUT` | 504 | Upstream service timeout |
+| Code                   | HTTP Status | Description                                   |
+| ---------------------- | ----------- | --------------------------------------------- |
+| `BAD_REQUEST`          | 400         | Malformed or invalid request                  |
+| `VALIDATION_ERROR`     | 400         | Request validation failed                     |
+| `UNAUTHORIZED`         | 401         | Authentication required or failed             |
+| `FORBIDDEN`            | 403         | Insufficient permissions                      |
+| `NOT_FOUND`            | 404         | Resource not found                            |
+| `CONFLICT`             | 409         | Resource conflict (duplicate, state mismatch) |
+| `TOO_MANY_REQUESTS`    | 429         | Rate limit exceeded                           |
+| `UNPROCESSABLE_ENTITY` | 422         | Well-formed but semantically invalid request  |
+| `INTERNAL_ERROR`       | 500         | Unexpected server error                       |
+| `BAD_GATEWAY`          | 502         | Upstream service failure                      |
+| `SERVICE_UNAVAILABLE`  | 503         | Service temporarily unavailable               |
+| `GATEWAY_TIMEOUT`      | 504         | Upstream service timeout                      |
 
 ### Domain-Specific Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `BLOCKCHAIN_CALL_FAILED` | 502 | Blockchain interaction failed |
-| `BLOCKCHAIN_UNAVAILABLE` | 503 | Blockchain service unavailable |
-| `NONCE_EXPIRED` | 400 | Authentication nonce expired |
-| `SIGNATURE_INVALID` | 400 | Cryptographic signature verification failed |
+| Code                     | HTTP Status | Description                                 |
+| ------------------------ | ----------- | ------------------------------------------- |
+| `BLOCKCHAIN_CALL_FAILED` | 502         | Blockchain interaction failed               |
+| `BLOCKCHAIN_UNAVAILABLE` | 503         | Blockchain service unavailable              |
+| `NONCE_EXPIRED`          | 400         | Authentication nonce expired                |
+| `SIGNATURE_INVALID`      | 400         | Cryptographic signature verification failed |
 
 ## Implementation Guidelines
 
@@ -209,14 +214,17 @@ return NextResponse.json({ data: result }, { status: 200 });
 return Response.json({
   success: true,
   payload: result,
-  metadata: { timestamp: new Date() }
+  metadata: { timestamp: new Date() },
 });
 
 // Old pattern 3: Manual error handling
-return Response.json({
-  error: 'Something went wrong',
-  code: 'ERROR_500'
-}, { status: 500 });
+return Response.json(
+  {
+    error: 'Something went wrong',
+    code: 'ERROR_500',
+  },
+  { status: 500 },
+);
 ```
 
 ### After (Unified Contract)
@@ -248,10 +256,10 @@ describe('Response Contract', () => {
   it('should create proper success response', () => {
     const correlationId = 'test-123';
     const response = ok({ data: 'test' }, undefined, 200, correlationId);
-    
+
     expect(response.headers.get('x-correlation-id')).toBe(correlationId);
-    
-    return response.json().then(json => {
+
+    return response.json().then((json) => {
       expect(json.success).toBe(true);
       expect(json.data).toEqual({ data: 'test' });
       expect(json.meta.correlationId).toBe(correlationId);
@@ -266,13 +274,13 @@ describe('Response Contract', () => {
 describe('API Contract Compliance', () => {
   it('should follow contract for GET /api/endpoint', async () => {
     const req = new NextRequest('http://localhost:3000/api/endpoint', {
-      headers: { 'x-correlation-id': 'test-456' }
+      headers: { 'x-correlation-id': 'test-456' },
     });
-    
+
     const response = await GET(req, { params: {} }, 'test-456');
-    
+
     expect(response.headers.get('x-correlation-id')).toBe('test-456');
-    
+
     const json = await response.json();
     expect(json).toHaveProperty('success');
     expect(json).toHaveProperty('meta.correlationId', 'test-456');
@@ -382,6 +390,7 @@ DEBUG=api-response:* npm run dev
 ```
 
 This will provide detailed logging for:
+
 - Correlation ID generation/extraction
 - Response contract validation
 - Error handling flow
@@ -400,6 +409,7 @@ This will provide detailed logging for:
 ### Extensibility
 
 The unified contract is designed to be extensible:
+
 - New metadata fields can be added without breaking changes
 - Additional error codes can be introduced as needed
 - Correlation ID format can evolve while maintaining compatibility

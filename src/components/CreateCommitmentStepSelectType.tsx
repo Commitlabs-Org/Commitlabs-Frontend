@@ -1,8 +1,13 @@
 'use client';
 import { useRef, useEffect } from 'react';
-import { Shield, TrendingUp, Flame, ArrowRight, ChevronLeft, Info } from 'lucide-react';
+import { Shield, TrendingUp, Flame, ArrowRight, ChevronLeft, Info, Zap } from 'lucide-react';
 import WizardStepper from './WizardStepper';
 import styles from './CreateCommitmentStepSelectType.module.css';
+import {
+  COMMITMENT_PRESETS,
+  SCRATCH_OPTION_ID,
+  type CommitmentPreset,
+} from './create/commitmentPresets';
 
 interface CommitmentType {
   id: 'safe' | 'balanced' | 'aggressive';
@@ -23,6 +28,7 @@ interface CreateCommitmentStepSelectTypeProps {
   onNext: (type: 'safe' | 'balanced' | 'aggressive') => void;
   onBack: () => void;
   initialFocusField?: string;
+  onApplyPreset?: (preset: CommitmentPreset) => void;
 }
 
 const commitmentTypes: CommitmentType[] = [
@@ -31,9 +37,11 @@ const commitmentTypes: CommitmentType[] = [
     title: 'Safe Commitment',
     icon: Shield,
     duration: '30 days',
-    durationNote: 'Minimum lock-in: 30 days. Early exit incurs a 2% penalty on your committed amount.',
+    durationNote:
+      'Minimum lock-in: 30 days. Early exit incurs a 2% penalty on your committed amount.',
     maxLoss: '2%',
-    maxLossNote: 'Your position is automatically closed if losses reach 2% of your committed amount, protecting your principal.',
+    maxLossNote:
+      'Your position is automatically closed if losses reach 2% of your committed amount, protecting your principal.',
     description: 'Lower risk, stable yield with minimal exposure.',
     badge: 'Recommended',
     badgeType: 'recommended',
@@ -43,9 +51,11 @@ const commitmentTypes: CommitmentType[] = [
     title: 'Balanced Commitment',
     icon: TrendingUp,
     duration: '60 days',
-    durationNote: 'Minimum lock-in: 60 days. Early exit incurs a 3% penalty on your committed amount.',
+    durationNote:
+      'Minimum lock-in: 60 days. Early exit incurs a 3% penalty on your committed amount.',
     maxLoss: '8%',
-    maxLossNote: 'Your position closes automatically at an 8% loss. Suitable for moderate risk tolerance.',
+    maxLossNote:
+      'Your position closes automatically at an 8% loss. Suitable for moderate risk tolerance.',
     description: 'Medium yield potential with controlled risk.',
     badge: null,
     badgeType: null,
@@ -55,9 +65,11 @@ const commitmentTypes: CommitmentType[] = [
     title: 'Aggressive Commitment',
     icon: Flame,
     duration: '90 days',
-    durationNote: 'Minimum lock-in: 90 days. Early exit incurs a 5% penalty on your committed amount.',
+    durationNote:
+      'Minimum lock-in: 90 days. Early exit incurs a 5% penalty on your committed amount.',
     maxLoss: 'No protection',
-    maxLossNote: 'No automatic stop-loss. Your full committed amount is at risk. Only suitable for experienced users.',
+    maxLossNote:
+      'No automatic stop-loss. Your full committed amount is at risk. Only suitable for experienced users.',
     description: 'Highest yield potential with no loss protection.',
     badge: '⚠ High Risk',
     badgeType: 'risk',
@@ -70,6 +82,7 @@ export default function CreateCommitmentStepSelectType({
   onNext,
   onBack,
   initialFocusField,
+  onApplyPreset,
 }: CreateCommitmentStepSelectTypeProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -93,6 +106,15 @@ export default function CreateCommitmentStepSelectType({
     }
   };
 
+  const handlePresetSelect = (preset: CommitmentPreset) => {
+    onSelectType(preset.type);
+    onApplyPreset?.(preset);
+  };
+
+  const handleScratchSelect = () => {
+    // Just select without prefilling — user configures from defaults
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.contentWrapper}>
@@ -110,8 +132,66 @@ export default function CreateCommitmentStepSelectType({
 
         <WizardStepper currentStep={1} />
 
+        {/* Preset / Template Picker */}
         <div className={styles.titleSection}>
-          <h2 ref={headingRef} tabIndex={-1} className={styles.sectionTitle}>Choose Your Commitment Type</h2>
+          <h2 className={styles.sectionTitle} tabIndex={-1}>
+            <Zap
+              size={18}
+              style={{ display: 'inline', marginRight: '0.4rem', verticalAlign: 'middle' }}
+            />
+            Quick-start Templates
+          </h2>
+          <p className={styles.sectionSubtitle}>
+            Choose a preset to prefill the next step, or start from scratch.
+          </p>
+        </div>
+
+        <div
+          role="radiogroup"
+          aria-label="Commitment templates"
+          className={styles.presetsContainer}
+          data-testid="presets-container"
+        >
+          {COMMITMENT_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              role="radio"
+              aria-checked={selectedType === preset.type}
+              data-testid={`preset-${preset.id}`}
+              className={`${styles.presetBtn} ${selectedType === preset.type ? styles.presetBtnSelected : ''}`}
+              onClick={() => handlePresetSelect(preset)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handlePresetSelect(preset);
+                }
+              }}
+            >
+              <span className={styles.presetLabel}>{preset.label}</span>
+              <span className={styles.presetDesc}>{preset.description}</span>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            role="radio"
+            aria-checked={false}
+            data-testid={`preset-${SCRATCH_OPTION_ID}`}
+            className={styles.presetBtn}
+            onClick={handleScratchSelect}
+          >
+            <span className={styles.presetLabel}>Start from scratch</span>
+            <span className={styles.presetDesc}>
+              Pick a type below and configure every field yourself.
+            </span>
+          </button>
+        </div>
+
+        <div className={styles.titleSection}>
+          <h2 ref={headingRef} tabIndex={-1} className={styles.sectionTitle}>
+            Choose Your Commitment Type
+          </h2>
           <p className={styles.sectionSubtitle}>
             Select the risk profile that matches your investment strategy
           </p>
@@ -146,8 +226,8 @@ export default function CreateCommitmentStepSelectType({
                   type.id === 'safe'
                     ? styles.cardSafe
                     : type.id === 'aggressive'
-                    ? styles.cardAggressive
-                    : styles.cardBalanced
+                      ? styles.cardAggressive
+                      : styles.cardBalanced
                 } ${isSelected ? styles.cardSelected : ''}`}
               >
                 {type.badge && (
@@ -167,8 +247,8 @@ export default function CreateCommitmentStepSelectType({
                       type.id === 'safe'
                         ? styles.iconEmerald
                         : type.id === 'balanced'
-                        ? styles.iconBlue
-                        : styles.iconOrange
+                          ? styles.iconBlue
+                          : styles.iconOrange
                     }
                   />
                 </div>
@@ -198,7 +278,9 @@ export default function CreateCommitmentStepSelectType({
                         {type.maxLoss}
                       </span>
                     </div>
-                    <p className={`${styles.constraintNote} ${type.id === 'aggressive' ? styles.constraintNoteRisk : ''}`}>
+                    <p
+                      className={`${styles.constraintNote} ${type.id === 'aggressive' ? styles.constraintNoteRisk : ''}`}
+                    >
                       <Info size={11} className={styles.noteIcon} />
                       {type.maxLossNote}
                     </p>
@@ -214,7 +296,8 @@ export default function CreateCommitmentStepSelectType({
         <div className={styles.infoBox}>
           <p className={styles.infoText}>
             💡 <span className={styles.infoTextHighlight}>Tip:</span> Your commitment type
-            determines the initial parameters. You can fine-tune duration and max loss in the next step.
+            determines the initial parameters. You can fine-tune duration and max loss in the next
+            step.
           </p>
         </div>
 

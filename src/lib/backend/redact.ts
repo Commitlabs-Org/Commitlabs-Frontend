@@ -1,80 +1,50 @@
 /**
  * Redaction utility for sensitive fields in backend logs and analytics.
- * 
+ *
  * This utility prevents accidental logging of sensitive information like signatures,
  * tokens, nonces, and other security-sensitive values.
  */
 
-/**
- * Default denylist of sensitive field names
- */
-const DEFAULT_DENYLIST = new Set([
-  'signature',
-  'token',
-  'nonce',
-  'authorization',
-  'password',
-  'secret',
-  'key',
-  'privatekey',
-  'publickey',
-  'mnemonic',
-  'seed',
-  'hash',
-  'digest',
-  'auth',
-  'bearer',
-  'apikey',
-  'api_key',
-  'session',
-  'cookie',
-  'csrf',
-  'xss',
-  'sql',
-])
+import { SENSITIVE_FIELDS } from '@/lib/shared/sensitiveFields';
+
+const DEFAULT_DENYLIST = SENSITIVE_FIELDS;
 
 /**
  * Configuration options for redaction
  */
 interface RedactOptions {
   /** Custom denylist of field names to redact */
-  denylist?: string[]
+  denylist?: string[];
   /** Custom replacement string for redacted values */
-  replacement?: string
+  replacement?: string;
   /** Whether to perform case-insensitive matching */
-  caseInsensitive?: boolean
+  caseInsensitive?: boolean;
 }
 
 /**
  * Redacts sensitive values from objects, arrays, and primitives
- * 
+ *
  * @param data - The data to redact
  * @param options - Configuration options
  * @returns Redacted data with sensitive values replaced
  */
 export function redact<T = unknown>(data: T, options: RedactOptions = {}): T {
-  const {
-    denylist = [],
-    replacement = '[REDACTED]',
-    caseInsensitive = true
-  } = options
+  const { denylist = [], replacement = '[REDACTED]', caseInsensitive = true } = options;
 
   // Combine default denylist with custom denylist
   const denylistSet = new Set(
-    [...DEFAULT_DENYLIST, ...denylist].map(key =>
-      caseInsensitive ? key.toLowerCase() : key
-    )
-  )
+    [...DEFAULT_DENYLIST, ...denylist].map((key) => (caseInsensitive ? key.toLowerCase() : key)),
+  );
 
   // Create case-insensitive matcher if enabled
   const shouldRedact = caseInsensitive
     ? (key: string): boolean => {
-        const lowerKey = key.toLowerCase()
-        return denylistSet.has(lowerKey)
+        const lowerKey = key.toLowerCase();
+        return denylistSet.has(lowerKey);
       }
-    : (key: string): boolean => denylistSet.has(key)
+    : (key: string): boolean => denylistSet.has(key);
 
-  return redactValue(data, shouldRedact, replacement)
+  return redactValue(data, shouldRedact, replacement);
 }
 
 /**
@@ -83,51 +53,51 @@ export function redact<T = unknown>(data: T, options: RedactOptions = {}): T {
 function redactValue<T = unknown>(
   data: T,
   shouldRedact: (key: string) => boolean,
-  replacement: string
+  replacement: string,
 ): T {
   if (data === null || data === undefined) {
-    return data
+    return data;
   }
 
   // Handle primitives
   if (typeof data !== 'object') {
-    return data
+    return data;
   }
 
   // Handle arrays
   if (Array.isArray(data)) {
-    return data.map(item => redactValue(item, shouldRedact, replacement)) as T
+    return data.map((item) => redactValue(item, shouldRedact, replacement)) as T;
   }
 
   // Handle Date objects
   if (data instanceof Date) {
-    return data
+    return data;
   }
 
   // Handle Error objects
   if (data instanceof Error) {
-    const redactedError = new Error(redactValue(data.message, shouldRedact, replacement) as string)
-    redactedError.name = data.name
-    redactedError.stack = data.stack
-    return redactedError as T
+    const redactedError = new Error(redactValue(data.message, shouldRedact, replacement) as string);
+    redactedError.name = data.name;
+    redactedError.stack = data.stack;
+    return redactedError as T;
   }
 
   // Handle plain objects
   if (typeof data === 'object') {
-    const result: Record<string, unknown> = {}
-    
+    const result: Record<string, unknown> = {};
+
     for (const [key, value] of Object.entries(data)) {
       if (shouldRedact(key)) {
-        result[key] = replacement
+        result[key] = replacement;
       } else {
-        result[key] = redactValue(value, shouldRedact, replacement)
+        result[key] = redactValue(value, shouldRedact, replacement);
       }
     }
-    
-    return result as T
+
+    return result as T;
   }
 
-  return data
+  return data;
 }
 
 /**
@@ -135,28 +105,28 @@ function redactValue<T = unknown>(
  */
 export function createRedacted<T extends Record<string, unknown>>(
   data: T,
-  sensitiveFields: string[]
+  sensitiveFields: string[],
 ): Partial<T> {
-  return redact(data, { denylist: sensitiveFields }) as Partial<T>
+  return redact(data, { denylist: sensitiveFields }) as Partial<T>;
 }
 
 /**
  * Checks if a field name is considered sensitive
  */
 export function isSensitiveField(fieldName: string): boolean {
-  return DEFAULT_DENYLIST.has(fieldName.toLowerCase())
+  return DEFAULT_DENYLIST.has(fieldName.toLowerCase());
 }
 
 /**
  * Adds a field to the default denylist (for runtime configuration)
  */
 export function addToDenylist(fieldName: string): void {
-  DEFAULT_DENYLIST.add(fieldName.toLowerCase())
+  DEFAULT_DENYLIST.add(fieldName.toLowerCase());
 }
 
 /**
  * Removes a field from the default denylist (for runtime configuration)
  */
 export function removeFromDenylist(fieldName: string): void {
-  DEFAULT_DENYLIST.delete(fieldName.toLowerCase())
+  DEFAULT_DENYLIST.delete(fieldName.toLowerCase());
 }
