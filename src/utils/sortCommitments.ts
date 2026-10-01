@@ -1,4 +1,4 @@
-import { Commitment } from '@/types/commitment';
+import type { Commitment } from '@/types/commitment';
 
 /** Supported sorting options for commitments. */
 export type SortOption =
@@ -23,7 +23,9 @@ function parseAmount(amount: unknown): number {
 }
 
 function parseNumeric(val: unknown): number {
-  if (val === undefined || val === null) return 0;
+  if (val === undefined || val === null) {
+    return 0;
+  }
   const parsed = Number(val);
   return isNaN(parsed) ? 0 : parsed;
 }
