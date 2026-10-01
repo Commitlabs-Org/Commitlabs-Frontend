@@ -173,4 +173,4 @@ describe('classifyAtRiskCommitments', () => {
     expect(customResult[0].riskCategories).toContain('low_compliance');
     expect(customResult[0].riskCategories).toContain('maturing_soon');
   });
-})
+});
