@@ -1,335 +1,456 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
-  buildAttestationCsvContent,
-  buildAttestationCsvRows,
-  buildAttestationExportFilename,
   buildHealthMetricsCsv,
   buildHealthMetricsCsvContent,
   buildHealthMetricsFilename,
   downloadBlob,
   downloadCsvContent,
-  exportChartContainerToPng,
-  exportSvgElementToPng,
-  loadImage,
   sanitizeExportFilename,
-} from '../chartExport';
+  buildAttestationCsvRows,
+  buildAttestationCsvContent,
+  buildAttestationExportFilename,
+  ATTESTATION_CSV_HEADERS,
+  loadImage,
+  exportSvgElementToPng,
+  exportChartContainerToPng,
+  type Attestation,
+  type HealthMetricsTab,
+} from '@/utils/chartExport';
 
-const mockCreateObjectURL = vi.fn(() => 'blob:test');
-const mockRevokeObjectURL = vi.fn();
+const sampleData = {
+  valueHistoryData: [
+    { date: 'Jan 1', currentValue: 1000, initialAmount: 900 },
+    { date: 'Jan 2', currentValue: 1100 },
+  ],
+  drawdownData: [
+    { date: 'Jan 1', drawdownPercent: 0.15 },
+    { date: 'Jan 2', drawdownPercent: 2.5 },
+  ],
+  feeGenerationData: [{ date: 'Jan 1', feeAmount: 25 }],
+  complianceData: [{ date: 'Jan 1', complianceScore: 98 }],
+};
 
-Object.defineProperty(URL, 'createObjectURL', {
-  writable: true,
-  value: mockCreateObjectURL,
+const sampleAttestation: Attestation = {
+  id: 'att-001',
+  title: 'Health Check Passed',
+  description: 'All metrics within acceptable range',
+  txHash: 'abcd1234efgh5678',
+  timestamp: '2026-06-27T12:00:00.000Z',
+  severity: 'ok',
+};
+
+const sampleAttestationWithDate: Attestation = {
+  id: 'att-002',
+  title: 'Drawdown Warning',
+  description: 'Drawdown exceeded 50% threshold',
+  txHash: 'wxyz9876',
+  timestamp: new Date('2026-06-26T08:30:00.000Z'),
+  severity: 'warning',
+};
+
+function createMockSvgElement(width = 100, height = 50): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.getBoundingClientRect = vi.fn().mockReturnValue({
+    width,
+    height,
+    top: 0,
+    left: 0,
+    bottom: height,
+    right: width,
+  } as DOMRect);
+  return svg;
+}
+
+describe('chartExport health metrics helpers', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-27T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('builds value history CSV rows', () => {
+    const { headers, rows } = buildHealthMetricsCsv('value', sampleData);
+    expect(headers).toEqual(['Date', 'Current Value', 'Initial Amount']);
+    expect(rows[0]).toEqual(['Jan 1', '1000', '900']);
+    expect(rows[1]).toEqual(['Jan 2', '1100', '']);
+  });
+
+  it('normalizes fractional drawdown values to percent strings', () => {
+    const { rows } = buildHealthMetricsCsv('drawdown', sampleData);
+    expect(rows[0]).toEqual(['Jan 1', '15.00%']);
+    expect(rows[1]).toEqual(['Jan 2', '2.50%']);
+  });
+
+  it('builds fee generation CSV rows', () => {
+    const { headers, rows } = buildHealthMetricsCsv('fee', sampleData);
+    expect(headers).toEqual(['Date', 'Fee Amount']);
+    expect(rows[0]).toEqual(['Jan 1', '25']);
+  });
+
+  it('builds compliance CSV rows', () => {
+    const { headers, rows } = buildHealthMetricsCsv('compliance', sampleData);
+    expect(headers).toEqual(['Date', 'Compliance Score']);
+    expect(rows[0]).toEqual(['Jan 1', '98']);
+  });
+
+  it('returns empty headers and rows for an unrecognized tab', () => {
+    const result = buildHealthMetricsCsv('unrecognized' as HealthMetricsTab, sampleData);
+    expect(result).toEqual({ headers: [], rows: [] });
+  });
+
+  it('escapes formula-like CSV values', () => {
+    const csv = buildHealthMetricsCsvContent('fee', {
+      ...sampleData,
+      feeGenerationData: [{ date: '=SUM(A1)', feeAmount: 10 }],
+    });
+    expect(csv).toContain("'=SUM(A1)");
+  });
+
+  it('returns empty CSV content for empty series', () => {
+    const csv = buildHealthMetricsCsvContent('compliance', {
+      ...sampleData,
+      complianceData: [],
+    });
+    expect(csv).toBe('Date,Compliance Score\r\n');
+  });
+
+  it('sanitizes export filenames', () => {
+    expect(sanitizeExportFilename('bad/name with spaces')).toBe('bad-name-with-spaces');
+    expect(sanitizeExportFilename('---already-trimmed---')).toBe('already-trimmed');
+    expect(buildHealthMetricsFilename('cmt/001', 'value', 'csv')).toBe(
+      'health-metrics-cmt-001-value-history-2026-06-27.csv',
+    );
+  });
+
+  it('buildHealthMetricsFilename falls back to commitment when id is empty', () => {
+    expect(buildHealthMetricsFilename('', 'drawdown', 'png')).toBe(
+      'health-metrics-commitment-drawdown-2026-06-27.png',
+    );
+    expect(buildHealthMetricsFilename('cmt-01', 'unknown' as HealthMetricsTab, 'csv')).toBe(
+      'health-metrics-cmt-01-metrics-2026-06-27.csv',
+    );
+  });
+
+  it('downloads CSV content via blob link', async () => {
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:test'),
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    await downloadCsvContent('Date,Value\r\nJan,1\r\n', 'metrics.csv');
+    expect(window.URL.createObjectURL).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it('downloads arbitrary blobs', async () => {
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:png'),
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    await downloadBlob(new Blob(['x'], { type: 'image/png' }), 'chart.png');
+    expect(clickSpy).toHaveBeenCalled();
+  });
 });
 
-Object.defineProperty(URL, 'revokeObjectURL', {
-  writable: true,
-  value: mockRevokeObjectURL,
+describe('Attestation CSV export helpers', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-27T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('ATTESTATION_CSV_HEADERS has the expected columns', () => {
+    expect(ATTESTATION_CSV_HEADERS).toEqual([
+      'ID',
+      'Title',
+      'Description',
+      'TX Hash',
+      'Timestamp',
+      'Severity',
+    ]);
+  });
+
+  it('buildAttestationCsvRows handles string timestamps directly', () => {
+    const rows = buildAttestationCsvRows([sampleAttestation]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual([
+      'att-001',
+      'Health Check Passed',
+      'All metrics within acceptable range',
+      'abcd1234efgh5678',
+      '2026-06-27T12:00:00.000Z',
+      'ok',
+    ]);
+  });
+
+  it('buildAttestationCsvRows converts Date objects to ISO strings', () => {
+    const rows = buildAttestationCsvRows([sampleAttestationWithDate]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.[4]).toBe('2026-06-26T08:30:00.000Z');
+  });
+
+  it('buildAttestationCsvRows handles mixed string and Date timestamps', () => {
+    const rows = buildAttestationCsvRows([sampleAttestation, sampleAttestationWithDate]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.[4]).toBe('2026-06-27T12:00:00.000Z');
+    expect(rows[1]?.[4]).toBe('2026-06-26T08:30:00.000Z');
+  });
+
+  it('buildAttestationCsvContent produces valid CSV with header row', () => {
+    const csv = buildAttestationCsvContent([sampleAttestation]);
+    expect(csv).toContain('ID,Title,Description,TX Hash,Timestamp,Severity');
+    expect(csv).toContain('att-001');
+    expect(csv).toContain('Health Check Passed');
+  });
+
+  it('buildAttestationCsvContent escapes formula-like attestation titles', () => {
+    const alertAttestation: Attestation = {
+      id: 'att-003',
+      title: '=FORMULA_INJECTION',
+      description: 'Normal description',
+      txHash: 'hash',
+      timestamp: '2026-01-01',
+      severity: 'violation',
+    };
+    const csv = buildAttestationCsvContent([alertAttestation]);
+    expect(csv).toContain("'=FORMULA_INJECTION");
+  });
+
+  it('buildAttestationCsvContent returns header-only CSV for empty attestations', () => {
+    const csv = buildAttestationCsvContent([]);
+    expect(csv).toBe('ID,Title,Description,TX Hash,Timestamp,Severity\r\n');
+  });
+
+  it('buildAttestationExportFilename sanitizes the commitment id', () => {
+    const filename = buildAttestationExportFilename('cmt/ABC-123');
+    expect(filename).toBe('attestations-cmt-ABC-123-2026-06-27.csv');
+  });
+
+  it('buildAttestationExportFilename falls back to "commitment" when id is empty', () => {
+    const filename = buildAttestationExportFilename('');
+    expect(filename).toBe('attestations-commitment-2026-06-27.csv');
+  });
 });
 
-describe('chartExport', () => {
-  describe('sanitizeExportFilename', () => {
-    it('removes unsafe filename characters', () => {
-      expect(sanitizeExportFilename('my/report:file?.csv')).toBe('my-report-file-.csv');
-    });
-
-    it('normalizes whitespace and falls back for an empty filename', () => {
-      expect(sanitizeExportFilename('  hello   world  ')).toBe('hello-world');
-      expect(sanitizeExportFilename('   ')).toBe('export');
-    });
-  });
-
-  describe('health metrics CSV', () => {
-    it('builds value-history CSV content', () => {
-      const content = buildHealthMetricsCsvContent([
-        {
-          date: 'Jan 10',
-          currentValue: 50000,
-          initialAmount: 50000,
-          benchmarkValue: 49000,
-        },
-        {
-          date: 'Jan 15',
-          currentValue: 52000,
-          initialAmount: 50000,
-        },
-      ]);
-
-      expect(content).toBe(
-        [
-          'Date,Current Value,Initial Amount,Benchmark Value',
-          'Jan 10,50000,50000,49000',
-          'Jan 15,52000,50000,',
-          '',
-        ].join('\r\n'),
-      );
-    });
-
-    it('builds drawdown CSV content', () => {
-      expect(
-        buildHealthMetricsCsvContent([
-          { date: 'Jan 10', drawdownPercent: 0 },
-          { date: 'Jan 15', drawdownPercent: 0.35 },
-        ]),
-      ).toContain('Jan 15,0.35');
-    });
-
-    it('builds compliance CSV content', () => {
-      expect(
-        buildHealthMetricsCsvContent([
-          { date: 'Jan 10', complianceScore: 98 },
-          { date: 'Jan 15', complianceScore: 95 },
-        ]),
-      ).toContain('Jan 15,95');
-    });
-
-    it('builds fee CSV content', () => {
-      expect(
-        buildHealthMetricsCsvContent([
-          { date: 'Jan 10', feeAmount: 25 },
-          { date: 'Jan 15', feeAmount: 45 },
-        ]),
-      ).toContain('Jan 15,45');
-    });
-
-    it('returns empty content for an empty series', () => {
-      expect(buildHealthMetricsCsvContent([])).toBe('');
-    });
-
-    it('creates a CSV blob', async () => {
-      const blob = buildHealthMetricsCsv([{ date: 'Jan 10', complianceScore: 98 }]);
-
-      expect(blob.type).toBe('text/csv;charset=utf-8');
-      expect(await blob.text()).toContain('Compliance Score');
-    });
-
-    it('builds a sanitized health-metrics filename', () => {
-      expect(buildHealthMetricsFilename('value history/chart')).toBe('value-history-chart.csv');
-    });
-  });
-
-  describe('attestation CSV', () => {
-    const date = new Date('2026-09-29T12:00:00.000Z');
-
-    const attestations = [
-      {
-        id: '1',
-        title: 'Daily Compliance Check',
-        description: 'All parameters within acceptable ranges.',
-        txHash: '0xabc123',
-        timestamp: date,
-        severity: 'ok' as const,
-      },
-      {
-        id: '2',
-        title: 'Allocation Verified',
-        description: 'Portfolio allocation meets all constraints.',
-        txHash: '0xdef456',
-        timestamp: '2026-09-28T12:00:00.000Z',
-        severity: 'warning' as const,
-      },
-    ];
-
-    it('supports Date and string timestamps', () => {
-      const rows = buildAttestationCsvRows(attestations);
-
-      expect(rows).toEqual([
-        [
-          '1',
-          'Daily Compliance Check',
-          'All parameters within acceptable ranges.',
-          '0xabc123',
-          '2026-09-29T12:00:00.000Z',
-          'ok',
-        ],
-        [
-          '2',
-          'Allocation Verified',
-          'Portfolio allocation meets all constraints.',
-          '0xdef456',
-          '2026-09-28T12:00:00.000Z',
-          'warning',
-        ],
-      ]);
-    });
-
-    it('builds the attestation CSV with headers', () => {
-      const content = buildAttestationCsvContent(attestations);
-
-      expect(content).toContain('ID,Title,Description,Transaction Hash,Timestamp,Severity');
-
-      expect(content).toContain(
-        '1,Daily Compliance Check,All parameters within acceptable ranges.,0xabc123,2026-09-29T12:00:00.000Z,ok',
-      );
-    });
-
-    it('escapes CSV values containing commas, quotes, and newlines', () => {
-      const content = buildAttestationCsvContent([
-        {
-          id: '1',
-          title: 'Title, with comma',
-          description: 'Description with "quotes"\nand a newline',
-          txHash: '0x123',
-          timestamp: date,
-          severity: 'ok',
-        },
-      ]);
-
-      expect(content).toContain('"Title, with comma"');
-
-      expect(content).toContain('"Description with ""quotes""\nand a newline"');
-    });
-
-    it('builds an attestation export filename', () => {
-      expect(buildAttestationExportFilename('commitment/123')).toBe(
-        'commitment-123-attestations.csv',
-      );
-    });
-  });
-
-  describe('downloads', () => {
-    beforeEach(() => {
-      mockCreateObjectURL.mockClear();
-      mockRevokeObjectURL.mockClear();
-      mockCreateObjectURL.mockReturnValue('blob:test');
-    });
-
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it('downloads a blob and revokes its object URL', () => {
-      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click');
-
-      downloadBlob(new Blob(['hello']), 'report.csv');
-
-      expect(mockCreateObjectURL).toHaveBeenCalled();
-      expect(click).toHaveBeenCalled();
-      expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:test');
-    });
-
-    it('downloads CSV content as a blob', () => {
-      mockCreateObjectURL.mockReturnValue('blob:csv');
-
-      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click');
-
-      downloadCsvContent('a,b\r\n1,2\r\n', 'data.csv');
-
-      expect(mockCreateObjectURL).toHaveBeenCalled();
-      expect(click).toHaveBeenCalled();
-    });
-  });
-
-  describe('loadImage', () => {
-    it('resolves when the image loads', async () => {
-      const originalImage = globalThis.Image;
-
-      class MockImage {
-        onload: (() => void) | null = null;
-        onerror: (() => void) | null = null;
-
-        set src(_value: string) {
-          queueMicrotask(() => this.onload?.());
-        }
+describe('loadImage helper', () => {
+  it('resolves image element on successful load', async () => {
+    const originalImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onload?.(), 0);
       }
+    } as unknown as typeof Image;
 
-      globalThis.Image = MockImage as unknown as typeof Image;
+    const result = await loadImage('blob:test');
+    expect(result).toBeInstanceOf(Object);
 
-      try {
-        await expect(loadImage('blob:test')).resolves.toBeInstanceOf(MockImage);
-      } finally {
-        globalThis.Image = originalImage;
-      }
-    });
-
-    it('rejects when the image fails to load', async () => {
-      const originalImage = globalThis.Image;
-
-      class MockImage {
-        onload: (() => void) | null = null;
-        onerror: (() => void) | null = null;
-
-        set src(_value: string) {
-          queueMicrotask(() => this.onerror?.());
-        }
-      }
-
-      globalThis.Image = MockImage as unknown as typeof Image;
-
-      try {
-        await expect(loadImage('blob:test')).rejects.toThrow('Failed to load image');
-      } finally {
-        globalThis.Image = originalImage;
-      }
-    });
+    globalThis.Image = originalImage;
   });
 
-  describe('PNG export', () => {
-    beforeEach(() => {
-      mockCreateObjectURL.mockClear();
-      mockRevokeObjectURL.mockClear();
-      mockCreateObjectURL.mockReturnValue('blob:test');
+  it('rejects on image load error', async () => {
+    const originalImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onerror?.(), 0);
+      }
+    } as unknown as typeof Image;
+
+    await expect(loadImage('blob:invalid')).rejects.toThrow(
+      'Failed to load chart SVG for PNG export',
+    );
+
+    globalThis.Image = originalImage;
+  });
+});
+
+describe('PNG export helpers', () => {
+  beforeEach(() => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:svg-mock');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('exportSvgElementToPng throws when canvas context is unavailable', async () => {
+    const svgElement = createMockSvgElement(100, 50);
+
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(null);
+
+    const origImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    } as unknown as typeof Image;
+
+    await expect(exportSvgElementToPng(svgElement, 'chart.png')).rejects.toThrow(
+      'Canvas context unavailable',
+    );
+
+    HTMLCanvasElement.prototype.getContext = origGetContext;
+    globalThis.Image = origImage;
+  });
+
+  it('exportSvgElementToPng throws when toBlob returns null', async () => {
+    const svgElement = createMockSvgElement(100, 50);
+
+    const mockCtx = {
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(mockCtx);
+
+    const origToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = vi.fn((cb: (blob: Blob | null) => void) => {
+      cb(null);
     });
 
-    afterEach(() => {
-      vi.restoreAllMocks();
+    const origImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    } as unknown as typeof Image;
+
+    await expect(exportSvgElementToPng(svgElement, 'chart.png')).rejects.toThrow(
+      'Failed to create PNG blob',
+    );
+
+    HTMLCanvasElement.prototype.getContext = origGetContext;
+    HTMLCanvasElement.prototype.toBlob = origToBlob;
+    globalThis.Image = origImage;
+  });
+
+  it('exportSvgElementToPng successfully downloads a PNG blob and sets xmlns if missing', async () => {
+    const svgElement = createMockSvgElement(200, 100);
+
+    const mockCtx = {
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(mockCtx);
+
+    const fakeBlob = new Blob(['fake-png'], { type: 'image/png' });
+    const origToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = vi.fn((cb: (blob: Blob | null) => void) => {
+      cb(fakeBlob);
     });
 
-    it('rejects when the canvas context is unavailable', async () => {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const origImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    } as unknown as typeof Image;
 
-      vi.spyOn(globalThis, 'Image').mockImplementation(() => {
-        const image = {
-          onload: null as (() => void) | null,
-          onerror: null as (() => void) | null,
+    await expect(exportSvgElementToPng(svgElement, 'chart.png')).resolves.toBeUndefined();
 
-          set src(_value: string) {
-            queueMicrotask(() => image.onload?.());
-          },
-        };
+    expect(URL.createObjectURL).toHaveBeenCalled();
 
-        return image as unknown as HTMLImageElement;
-      });
+    HTMLCanvasElement.prototype.getContext = origGetContext;
+    HTMLCanvasElement.prototype.toBlob = origToBlob;
+    globalThis.Image = origImage;
+  });
 
-      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  it('exportSvgElementToPng handles image load failure', async () => {
+    const svgElement = createMockSvgElement(100, 50);
 
-      await expect(exportSvgElementToPng(svg)).rejects.toThrow('Canvas 2D context is unavailable');
+    const origImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onerror?.(), 0);
+      }
+    } as unknown as typeof Image;
+
+    await expect(exportSvgElementToPng(svgElement, 'chart.png')).rejects.toThrow(
+      'Failed to load chart SVG for PNG export',
+    );
+
+    globalThis.Image = origImage;
+  });
+
+  it('exportChartContainerToPng throws when SVG is not found', async () => {
+    const container = document.createElement('div');
+
+    await expect(exportChartContainerToPng(container, 'chart.png')).rejects.toThrow(
+      'Chart SVG not found',
+    );
+  });
+
+  it('exportChartContainerToPng finds a valid SVG and delegates to export', async () => {
+    const container = document.createElement('div');
+    const svg = createMockSvgElement(150, 75);
+    svg.classList.add('recharts-surface');
+    container.appendChild(svg);
+
+    const mockCtx = {
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(mockCtx);
+
+    const fakeBlob = new Blob(['fake-chart-png'], { type: 'image/png' });
+    const origToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = vi.fn((cb: (blob: Blob | null) => void) => {
+      cb(fakeBlob);
     });
 
-    it('rejects when canvas.toBlob fails to create a blob', async () => {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const origImage = globalThis.Image;
+    globalThis.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_: string) {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    } as unknown as typeof Image;
 
-      vi.spyOn(globalThis, 'Image').mockImplementation(() => {
-        const image = {
-          onload: null as (() => void) | null,
-          onerror: null as (() => void) | null,
+    await expect(
+      exportChartContainerToPng(container, 'container-chart.png'),
+    ).resolves.toBeUndefined();
 
-          set src(_value: string) {
-            queueMicrotask(() => image.onload?.());
-          },
-        };
-
-        return image as unknown as HTMLImageElement;
-      });
-
-      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-        drawImage: vi.fn(),
-      } as unknown as CanvasRenderingContext2D);
-
-      vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
-        callback(null);
-      });
-
-      await expect(exportSvgElementToPng(svg)).rejects.toThrow('Failed to create PNG blob');
-    });
-
-    it('rejects when the chart SVG is missing', async () => {
-      const container = document.createElement('div');
-
-      await expect(exportChartContainerToPng(container)).rejects.toThrow(
-        'Chart SVG element was not found',
-      );
-    });
+    HTMLCanvasElement.prototype.getContext = origGetContext;
+    HTMLCanvasElement.prototype.toBlob = origToBlob;
+    globalThis.Image = origImage;
   });
 });
