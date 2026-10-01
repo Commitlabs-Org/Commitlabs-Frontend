@@ -25,6 +25,13 @@ const ASSET_PALETTE = [
   '#22d3ee',
 ];
 
+/**
+ * Aggregates commitments by risk profile type and sums their allocated amounts.
+ * Unrecognized risk profile names and missing types default to fallback color #666.
+ *
+ * @param commitments - List of commitments to aggregate
+ * @returns Array of allocation slices grouped by risk profile
+ */
 export function aggregateByRiskProfile(commitments: Commitment[]): AllocationSlice[] {
   const groups: Record<string, number> = {};
   for (const c of commitments) {
@@ -39,6 +46,13 @@ export function aggregateByRiskProfile(commitments: Commitment[]): AllocationSli
   }));
 }
 
+/**
+ * Aggregates commitments by asset and sums their allocated amounts.
+ * Missing assets default to 'Unknown', and colors cycle through the asset palette.
+ *
+ * @param commitments - List of commitments to aggregate
+ * @returns Array of allocation slices grouped by asset
+ */
 export function aggregateByAsset(commitments: Commitment[]): AllocationSlice[] {
   const groups: Record<string, number> = {};
   for (const c of commitments) {
@@ -54,6 +68,12 @@ export function aggregateByAsset(commitments: Commitment[]): AllocationSlice[] {
   }));
 }
 
+/**
+ * Formats a numeric allocation value into a locale string with up to two decimal places.
+ *
+ * @param value - The numeric value to format
+ * @returns The formatted string
+ */
 export function formatAllocationValue(value: number): string {
   return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
