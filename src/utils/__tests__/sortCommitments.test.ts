@@ -127,18 +127,109 @@ describe('sortCommitments', () => {
   it('returns the input order unchanged for an unrecognized sortBy value', () => {
     const sorted = sortCommitments(mockCommitments, 'UnrecognizedOption' as SortOption);
     expect(sorted).toEqual(mockCommitments);
+    expect(sorted).toBe(mockCommitments);
   });
 
-  it('handles malformed numeric field gracefully without breaking other elements ordering', () => {
+  it('returns empty array unchanged for an unrecognized sortBy value', () => {
+    const empty: Commitment[] = [];
+    const sorted = sortCommitments(empty, 'UnrecognizedOption' as SortOption);
+    expect(sorted).toEqual([]);
+    expect(sorted).toBe(empty);
+  });
+
+  it('preserves the original array immutability during sorting', () => {
+    const original = [...mockCommitments];
+    const sorted = sortCommitments(original, 'Oldest');
+    expect(original[0].id).toBe('CMT-1');
+    expect(sorted).not.toBe(original);
+  });
+
+  it('handles malformed string and numeric amount fields in ValueHighLow and ValueLowHigh sorts', () => {
     const malformedCommitments: Commitment[] = [
-      { ...mockCommitments[0], amount: 'invalid-amount' },
-      { ...mockCommitments[1], amount: '20,000' },
-      { ...mockCommitments[2], amount: '10,000' },
+      { ...mockCommitments[0], id: 'CMT-MALFORMED', amount: 'invalid-amount' },
+      { ...mockCommitments[1], id: 'CMT-20K', amount: '20,000' },
+      { ...mockCommitments[2], id: 'CMT-10K', amount: '10,000' },
     ];
-    // 'invalid-amount' parsed as 0. Sorted High to Low should be: 20k (CMT-2), 10k (CMT-3), 0 (CMT-1)
-    const sorted = sortCommitments(malformedCommitments, 'ValueHighLow');
-    expect(sorted[0].id).toBe('CMT-2');
-    expect(sorted[1].id).toBe('CMT-3');
-    expect(sorted[2].id).toBe('CMT-1');
+    const highLow = sortCommitments(malformedCommitments, 'ValueHighLow');
+    expect(highLow[0].id).toBe('CMT-20K');
+    expect(highLow[1].id).toBe('CMT-10K');
+    expect(highLow[2].id).toBe('CMT-MALFORMED');
+
+    const lowHigh = sortCommitments(malformedCommitments, 'ValueLowHigh');
+    expect(lowHigh[0].id).toBe('CMT-MALFORMED');
+    expect(lowHigh[1].id).toBe('CMT-10K');
+    expect(lowHigh[2].id).toBe('CMT-20K');
+  });
+
+  it('handles non-string and non-standard amount types gracefully', () => {
+    const variedAmountCommitments: Commitment[] = [
+      { ...mockCommitments[0], id: 'CMT-NUMERIC', amount: 300000 as unknown as string },
+      { ...mockCommitments[1], id: 'CMT-NULL', amount: null as unknown as string },
+      { ...mockCommitments[2], id: 'CMT-UNDEFINED', amount: undefined as unknown as string },
+    ];
+    const sorted = sortCommitments(variedAmountCommitments, 'ValueHighLow');
+    expect(sorted[0].id).toBe('CMT-NUMERIC');
+    expect(sorted.slice(1).map((c) => c.id)).toContain('CMT-NULL');
+    expect(sorted.slice(1).map((c) => c.id)).toContain('CMT-UNDEFINED');
+  });
+
+  it('handles malformed daysRemaining in MaturitySoonest and MaturityLatest sorts', () => {
+    const malformedDays: Commitment[] = [
+      { ...mockCommitments[0], id: 'CMT-VALID-30', daysRemaining: 30 },
+      { ...mockCommitments[1], id: 'CMT-NULL-DAYS', daysRemaining: null as unknown as number },
+      { ...mockCommitments[2], id: 'CMT-STR-DAYS', daysRemaining: 'invalid' as unknown as number },
+    ];
+    const soonest = sortCommitments(malformedDays, 'MaturitySoonest');
+    expect(soonest[soonest.length - 1].id).toBe('CMT-VALID-30');
+
+    const latest = sortCommitments(malformedDays, 'MaturityLatest');
+    expect(latest[0].id).toBe('CMT-VALID-30');
+  });
+
+  it('handles malformed complianceScore in ComplianceHighLow and ComplianceLowHigh sorts', () => {
+    const malformedCompliance: Commitment[] = [
+      { ...mockCommitments[0], id: 'CMT-SCORE-99', complianceScore: 99 },
+      { ...mockCommitments[1], id: 'CMT-SCORE-NULL', complianceScore: null as unknown as number },
+      {
+        ...mockCommitments[2],
+        id: 'CMT-SCORE-STR',
+        complianceScore: 'bad-score' as unknown as number,
+      },
+    ];
+    const highLow = sortCommitments(malformedCompliance, 'ComplianceHighLow');
+    expect(highLow[0].id).toBe('CMT-SCORE-99');
+
+    const lowHigh = sortCommitments(malformedCompliance, 'ComplianceLowHigh');
+    expect(lowHigh[lowHigh.length - 1].id).toBe('CMT-SCORE-99');
+  });
+
+  it('handles malformed changePercent in YieldHighLow and YieldLowHigh sorts', () => {
+    const malformedYield: Commitment[] = [
+      { ...mockCommitments[0], id: 'CMT-YIELD-25', changePercent: 25.5 },
+      { ...mockCommitments[1], id: 'CMT-YIELD-NULL', changePercent: null as unknown as number },
+      {
+        ...mockCommitments[2],
+        id: 'CMT-YIELD-STR',
+        changePercent: 'invalid-yield' as unknown as number,
+      },
+    ];
+    const highLow = sortCommitments(malformedYield, 'YieldHighLow');
+    expect(highLow[0].id).toBe('CMT-YIELD-25');
+
+    const lowHigh = sortCommitments(malformedYield, 'YieldLowHigh');
+    expect(lowHigh[lowHigh.length - 1].id).toBe('CMT-YIELD-25');
+  });
+
+  it('handles malformed createdDate in Newest and Oldest sorts', () => {
+    const malformedDates: Commitment[] = [
+      { ...mockCommitments[0], id: 'CMT-DATE-RECENT', createdDate: '2026-03-01' },
+      { ...mockCommitments[1], id: 'CMT-DATE-INVALID', createdDate: 'not-a-valid-date' },
+      { ...mockCommitments[2], id: 'CMT-DATE-NULL', createdDate: null as unknown as string },
+    ];
+    const newest = sortCommitments(malformedDates, 'Newest');
+    expect(newest[0].id).toBe('CMT-DATE-RECENT');
+
+    const oldest = sortCommitments(malformedDates, 'Oldest');
+    expect(oldest[oldest.length - 1].id).toBe('CMT-DATE-RECENT');
   });
 });

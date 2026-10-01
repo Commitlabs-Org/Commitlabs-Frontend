@@ -7,6 +7,10 @@
 # testing
 /coverage
 
+# playwright
+/playwright-report/
+/test-results/
+
 # next.js
 /.next/
 /out/
@@ -44,3 +48,6 @@ next-env.d.ts
 
 contracts/target/
 **/target/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
