@@ -25,18 +25,18 @@ export function classifyAtRiskCommitments(
 
   return commitments
     .map((c) => {
-      const riskCategories: RiskCategory[] = [];
+      const riskCategories = new Set<RiskCategory>();
 
       if (c.complianceScore !== undefined && c.complianceScore < complianceThreshold) {
-        riskCategories.push('low_compliance');
+        riskCategories.add('low_compliance');
       }
 
       if (c.daysRemaining !== undefined && c.daysRemaining <= daysThreshold) {
-        riskCategories.push('maturing_soon');
+        riskCategories.add('maturing_soon');
       }
 
       if (c.status === 'Violated') {
-        riskCategories.push('action_required');
+        riskCategories.add('action_required');
       }
 
       // If maxLoss is exceeded or getting close
@@ -44,11 +44,11 @@ export function classifyAtRiskCommitments(
         const drawdown = parseFloat(c.currentDrawdown);
         const maxLoss = parseFloat(c.maxLoss);
         if (!isNaN(drawdown) && !isNaN(maxLoss) && drawdown >= maxLoss * 0.8) {
-          riskCategories.push('action_required');
+          riskCategories.add('action_required');
         }
       }
 
-      return { ...c, riskCategories: Array.from(new Set(riskCategories)) };
+      return { ...c, riskCategories: Array.from(riskCategories) };
     })
     .filter((c) => c.riskCategories.length > 0);
 }
