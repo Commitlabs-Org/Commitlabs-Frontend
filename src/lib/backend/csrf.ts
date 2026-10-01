@@ -1,7 +1,7 @@
-import { timingSafeEqual } from 'crypto';
 import type { NextRequest } from 'next/server';
 import { CsrfValidationError } from './errors';
 import { getSessionRecord, readSessionIdFromRequest } from './session';
+import { safeEqualToken } from './timingSafeEqual';
 
 export const CSRF_HEADER_NAME = 'x-csrf-token';
 
@@ -46,13 +46,6 @@ export function assertSameOriginForCookieSession(req: NextRequest): void {
   throw new CsrfValidationError('Missing Origin or Referer for cookie-authenticated mutation.', {
     reason: 'missing_origin',
   });
-}
-
-function safeEqualToken(a: string, b: string): boolean {
-  const ab = Buffer.from(a, 'utf8');
-  const bb = Buffer.from(b, 'utf8');
-  if (ab.length !== bb.length) return false;
-  return timingSafeEqual(ab, bb);
 }
 
 /**

@@ -1,4 +1,3 @@
-
 /**
  * Seed module for mock database.
  *
@@ -15,6 +14,7 @@
 
 import { setMockData } from './mockDb';
 import type { MockData } from './mockDb';
+import { safeEqualToken } from './timingSafeEqual';
 
 // ---------------------------------------------------------------------------
 // Sample data
@@ -107,11 +107,17 @@ export function isSeedAllowed(): boolean {
  * Validates an optional shared secret.
  * Returns true when no secret is configured (open) or when the supplied
  * value matches SEED_SECRET exactly.
+ *
+ * The comparison is constant-time: a plain `===` short-circuits on the first
+ * differing byte, which leaks how much of the secret a guess got right to
+ * anyone who can time the request. An absent or empty header is rejected
+ * before the comparison, so a missing secret can never be treated as a match.
  */
 export function isSeedSecretValid(suppliedSecret: string | null): boolean {
   const expected = process.env.SEED_SECRET;
   if (!expected) return true; // no secret configured → always valid
-  return suppliedSecret === expected;
+  if (!suppliedSecret) return false;
+  return safeEqualToken(suppliedSecret, expected);
 }
 
 // ---------------------------------------------------------------------------
