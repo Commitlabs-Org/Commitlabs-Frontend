@@ -97,6 +97,96 @@ describe('useRecentlyViewed', () => {
     expect(localStorage.getItem('marketplace-recently-viewed')).toBe('[]');
   });
 
+  it('filters out all entries when corrupted array contains no strings', async () => {
+    localStorage.setItem(
+      'marketplace-recently-viewed',
+      JSON.stringify([123, true, false, null, { foo: 'bar' }, ['nested']]),
+    );
+
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(result.current.recentIds).toEqual([]);
+  });
+
+  it('returns empty array when local storage contains non-array JSON', async () => {
+    localStorage.setItem('marketplace-recently-viewed', JSON.stringify({ notAnArray: true }));
+
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(result.current.recentIds).toEqual([]);
+  });
+
+  it('returns empty array when local storage contains unparseable corrupted JSON', async () => {
+    localStorage.setItem('marketplace-recently-viewed', 'invalid-json-{');
+
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(result.current.recentIds).toEqual([]);
+  });
+
+  it('caps initial restored ids to the specified cap parameter', async () => {
+    localStorage.setItem(
+      'marketplace-recently-viewed',
+      JSON.stringify(['001', '002', '003', '004', '005']),
+    );
+
+    const { result } = renderHook(() => useRecentlyViewed(2));
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(result.current.recentIds).toEqual(['001', '002']);
+  });
+
+  it('handles local storage read error gracefully', async () => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementationOnce(() => {
+      throw new Error('Storage read error');
+    });
+
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    expect(result.current.recentIds).toEqual([]);
+  });
+
+  it('handles local storage write error gracefully', async () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('Quota exceeded');
+    });
+
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    await vi.waitFor(() => {
+      expect(result.current.isHydrated).toBe(true);
+    });
+
+    act(() => {
+      result.current.addView('001');
+    });
+
+    await vi.waitFor(() => {
+      expect(setItemSpy).toHaveBeenCalled();
+    });
+
+    expect(result.current.recentIds).toEqual(['001']);
+  });
+
   it('tracks a custom storage key independently of the default marketplace key', async () => {
     localStorage.setItem('marketplace-recently-viewed', JSON.stringify(['listing-1']));
 
@@ -106,7 +196,6 @@ describe('useRecentlyViewed', () => {
       expect(result.current.isHydrated).toBe(true);
     });
 
-    // Unaffected by the unrelated marketplace key already in storage.
     expect(result.current.recentIds).toEqual([]);
 
     act(() => {
@@ -117,7 +206,6 @@ describe('useRecentlyViewed', () => {
     expect(localStorage.getItem(RECENTLY_VIEWED_COMMITMENTS_KEY)).toBe(
       JSON.stringify(['commitment-1']),
     );
-    // The unrelated marketplace key is untouched.
     expect(localStorage.getItem('marketplace-recently-viewed')).toBe(JSON.stringify(['listing-1']));
   });
 });

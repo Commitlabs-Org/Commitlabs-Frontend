@@ -137,5 +137,40 @@ describe('classifyAtRiskCommitments', () => {
     const [result] = classifyAtRiskCommitments([commitment], null);
     expect(result.riskCategories).toHaveLength(1);
     expect(result.riskCategories[0]).toBe('action_required');
+    expect(result.riskCategories).toEqual(['action_required']);
+    expect(result.riskCategories.filter((cat) => cat === 'action_required')).toHaveLength(1);
   });
-});
+
+  it('deduplicates action_required when all risk criteria are met simultaneously', () => {
+    const commitment: Commitment = {
+      ...base,
+      complianceScore: 50,
+      daysRemaining: 2,
+      status: 'Violated',
+      currentDrawdown: '90',
+      maxLoss: '100',
+    };
+    const [result] = classifyAtRiskCommitments([commitment], null);
+    expect(result.riskCategories).toHaveLength(3);
+    expect(result.riskCategories).toEqual(['low_compliance', 'maturing_soon', 'action_required']);
+    expect(result.riskCategories.filter((cat) => cat === 'action_required')).toHaveLength(1);
+  });
+
+  it('respects custom classification thresholds for compliance and days remaining', () => {
+    const commitment: Commitment = {
+      ...base,
+      complianceScore: 75,
+      daysRemaining: 10,
+    };
+    const defaultResult = classifyAtRiskCommitments([commitment], null);
+    expect(defaultResult).toHaveLength(0);
+
+    const customResult = classifyAtRiskCommitments([commitment], null, {
+      complianceScoreThreshold: 80,
+      daysRemainingThreshold: 12,
+    });
+    expect(customResult).toHaveLength(1);
+    expect(customResult[0].riskCategories).toContain('low_compliance');
+    expect(customResult[0].riskCategories).toContain('maturing_soon');
+  });
+})
