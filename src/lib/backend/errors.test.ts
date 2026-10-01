@@ -12,7 +12,6 @@ import {
   InternalError,
   BackendError,
   normalizeBackendError,
-  HTTP_ERROR_CODES,
 } from './errors';
 import { ERROR_CODE_REGISTRY } from './errorCodes';
 
@@ -123,24 +122,17 @@ describe('Other error classes — no retryAfter', () => {
   });
 });
 
-describe('HTTP_ERROR_CODES', () => {
-  it('should include 429 with TOO_MANY_REQUESTS', () => {
-    expect(HTTP_ERROR_CODES[429]).toBe('TOO_MANY_REQUESTS');
+describe('HTTP_ERROR_CODES removal', () => {
+  it('no longer exports the deprecated HTTP status map', async () => {
+    const errorsModule = await import('./errors');
+
+    expect('HTTP_ERROR_CODES' in errorsModule).toBe(false);
   });
 
-  it('should include 503 with SERVICE_UNAVAILABLE', () => {
-    expect(HTTP_ERROR_CODES[503]).toBe('SERVICE_UNAVAILABLE');
-  });
+  it('keeps ERROR_CODE_REGISTRY as the single error-code source of truth', async () => {
+    const errorsModule = await import('./errors');
 
-  it('should include all standard error codes', () => {
-    expect(HTTP_ERROR_CODES[400]).toBe('BAD_REQUEST');
-    expect(HTTP_ERROR_CODES[401]).toBe('UNAUTHORIZED');
-    expect(HTTP_ERROR_CODES[403]).toBe('FORBIDDEN');
-    expect(HTTP_ERROR_CODES[404]).toBe('NOT_FOUND');
-    expect(HTTP_ERROR_CODES[409]).toBe('CONFLICT');
-    expect(HTTP_ERROR_CODES[500]).toBe('INTERNAL_ERROR');
-    expect(HTTP_ERROR_CODES[502]).toBe('BAD_GATEWAY');
-    expect(HTTP_ERROR_CODES[504]).toBe('GATEWAY_TIMEOUT');
+    expect(errorsModule.ERROR_CODE_REGISTRY).toBe(ERROR_CODE_REGISTRY);
   });
 });
 
