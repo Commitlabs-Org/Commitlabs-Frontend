@@ -18,7 +18,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🧪 Running Backend Smoke Tests for Settle and Early Exit Endpoints\n');
+console.log('🧸 Running Backend Smoke Tests for Settle and Early Exit Endpoints\n');
 
 // Check if node_modules exists
 if (!fs.existsSync(path.join(__dirname, '../node_modules'))) {
@@ -32,19 +32,26 @@ if (!fs.existsSync(path.join(__dirname, '../node_modules'))) {
   }
 }
 
+const testFiles = [
+  'tests/api/settle.test.ts',
+  'tests/api/settle-preview.test.ts',
+  'tests/api/early-exit.test.ts',
+  'tests/api/early-exit-preview.test.ts',
+];
+
 try {
   // Run the specific smoke tests
   console.log('🔍 Running settle and early exit endpoint tests...');
-  execSync(
-    'pnpm run test tests/api/settle.test.ts tests/api/settle-preview.test.ts tests/api/early-exit.test.ts tests/api/early-exit-preview.test.ts',
-    { stdio: 'inherit', cwd: path.join(__dirname, '..') },
-  );
+  execSync(`Pnpm run test ${testFiles.join(' ')}`, {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..'),
+  });
 
   console.log('\n📊 Generating coverage report...');
-  execSync(
-    'pnpm run test:coverage tests/api/settle.test.ts tests/api/settle-preview.test.ts tests/api/early-exit.test.ts tests/api/early-exit-preview.test.ts',
-    { stdio: 'inherit', cwd: path.join(__dirname, '..') },
-  );
+  execSync(`pnpm run test:coverage ${testFiles.join(' ')}`, {
+    stdio: 'inherit',
+    cwd: path.join(__dirname, '..'),
+  });
 
   console.log('\n✅ All smoke tests completed successfully!');
   console.log('📈 Coverage report generated in coverage/ directory');

@@ -164,9 +164,7 @@ describe('GET /api/commitments/search — #1775 invariants', () => {
       const response = await GET(createMockRequest(getUrl()));
 
       // Check all headers — none should contain common secret patterns
-      const responseHeaders = Object.fromEntries(
-        (response.headers as any).entries?.() ?? [],
-      );
+      const responseHeaders = Object.fromEntries((response.headers as any).entries?.() ?? []);
       for (const [key, value] of Object.entries(responseHeaders)) {
         // Keys should only be X-Search-* telemetry, CORS, and standard headers
         if (key.toLowerCase().startsWith('x-search-')) {
@@ -383,8 +381,8 @@ describe('GET /api/commitments/search — #1775 invariants', () => {
     it('commitmentSearch key uses a consistent prefix', () => {
       const k1 = CacheKey.commitmentSearch('hash1');
       const k2 = CacheKey.commitmentSearch('hash2');
-      expect(k1.startsWith('commitlabs:commitment-search:')).toBe(true);
-      expect(k2.startsWith('commitlabs:commitment-search:')).toBe(true);
+      expect(k1).toStartWith('commitlabs:commitment-search:');
+      expect(k2).toStartWith('commitlabs:commitment-search:');
       expect(k1).not.toBe(k2);
     });
   });
