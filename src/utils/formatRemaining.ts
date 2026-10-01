@@ -5,9 +5,16 @@ export interface RemainingMaturity {
   status: MaturityStatus;
 }
 
+/**
+ * Calculates human-readable remaining time until maturity and determines urgency status.
+ *
+ * @param maturityTimestamp - Target maturity epoch timestamp in milliseconds.
+ * @param currentTimestamp - Current epoch timestamp in milliseconds, defaulting to Date.now().
+ * @returns Object containing formatted remaining time string and urgency status.
+ */
 export const formatRemaining = (
   maturityTimestamp: number,
-  currentTimestamp: number = Date.now()
+  currentTimestamp: number = Date.now(),
 ): RemainingMaturity => {
   const diffMs = maturityTimestamp - currentTimestamp;
 
@@ -29,7 +36,7 @@ export const formatRemaining = (
     status = 'warning';
   }
 
-  const timeParts = [];
+  const timeParts: string[] = [];
   if (days > 0) timeParts.push(`${days}d`);
   if (hours > 0 || days > 0) timeParts.push(`${hours}h`);
   timeParts.push(`${minutes}m`);
