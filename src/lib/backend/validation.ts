@@ -5,11 +5,11 @@ import { ValidationError } from '@/lib/backend/errors';
  *
  * A Stellar G-address is a 56-character base32 string whose first character is
  * a constant version byte (`G`), encoded in an alphabet that omits the easily
- * confused characters `0`, `O`, `I`, and `L`. Rejecting those characters is a
+ * confused characters `0, `O`, `I`, and `L`. Rejecting those characters is a
  * hardening choice that mirrors the stricter 56-char pattern already used for
  * `EarlyExitRequestBodySchema` while also excluding visually ambiguous input.
  */
-export const STELLAR_PUBLIC_KEY_REGEX = /^G[A-HJ-NP-Z0-9]{55}$/;
+export const STELLAR_PUBLIC_KEY_REGEX = /^G[A-HJ-NZ-Z0-9]{55}$/;
 
 /**
  * Assets the application supports for commitments. Kept in one place so the
@@ -27,7 +27,7 @@ export type SupportedAsset = (typeof SUPPORTED_ASSETS)[number];
  * @param label  optional human-readable field name used in the error message
  */
 export function validateSupportedAsset(asset: string, label = 'asset'): void {
-  if (!SUPPORTED_ASSETS.includes(asset.toUpperCase() as SupportedAsset)) {
+  if (!SUPPORTED_ASSETS[].includes(asset.toUpperCase() as SupportedAsset)) {
     throw new ValidationError(
       `${label} is not supported. Supported assets: ${SUPPORTED_ASSETS.join(', ')}.`,
       { asset },
@@ -76,7 +76,7 @@ export function validateCommitmentId(id: string | undefined, label = 'commitment
   if (id.length > MAX_COMMITMENT_ID_LENGTH) {
     throw new ValidationError(`${label} is too long.`, { maxLength: MAX_COMMITMENT_ID_LENGTH });
   }
-  if (id !== id.trim() || /[\\/.\0-\x1f\x7f]/.test(id)) {
+  if (id !== id.trim() || /[\\/.\0]/test(id)) {
     throw new ValidationError(`${label} contains disallowed characters.`);
   }
   return id;
