@@ -3,11 +3,11 @@ import { NextRequest } from 'next/server';
 /**
  * Test helper to create mock NextRequest objects for API route testing
  */
-export function createMockRequest(
+export function createMockRequest<TBody = unknown>(
   url: string,
   options: {
     method?: string;
-    body?: unknown;
+    body?: TBody;
     headers?: Record<string, string>;
   } = {},
 ): NextRequest {

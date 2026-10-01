@@ -7,6 +7,8 @@
  * @see errorCodes.ts for the centralized error code registry and documentation
  */
 
+import { ERROR_CODE_REGISTRY } from './errorCodes';
+
 // ─── Base API error ───────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
@@ -91,7 +93,7 @@ export class PayloadTooLargeError extends ApiError {
 /** 429 — client has exceeded the allowed request rate. */
 export class TooManyRequestsError extends ApiError {
   constructor(
-    message = 'Too many requests. Please try again later.',
+    message = ERROR_CODE_REGISTRY.TOO_MANY_REQUESTS.meaning,
     details?: unknown,
     retryAfterSeconds = 60,
   ) {
@@ -103,7 +105,7 @@ export class TooManyRequestsError extends ApiError {
 /** 503 — service is temporarily unavailable. */
 export class ServiceUnavailableError extends ApiError {
   constructor(
-    message = 'The service is temporarily unavailable. Please try again later.',
+    message = ERROR_CODE_REGISTRY.SERVICE_UNAVAILABLE.meaning,
     details?: unknown,
     retryAfterSeconds = 30,
   ) {
@@ -114,10 +116,7 @@ export class ServiceUnavailableError extends ApiError {
 
 /** 500 — unexpected server-side failure. */
 export class InternalError extends ApiError {
-  constructor(
-    message = 'An unexpected error occurred. Please try again later.',
-    details?: unknown,
-  ) {
+  constructor(message = ERROR_CODE_REGISTRY.INTERNAL_ERROR.meaning, details?: unknown) {
     super(message, 'INTERNAL_ERROR', 500, details);
     this.name = 'InternalError';
   }
@@ -159,6 +158,7 @@ export type BackendErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'PAYLOAD_TOO_LARGE'
+  | 'BAD_GATEWAY'
   | 'TOO_MANY_REQUESTS'
   | 'SERVICE_UNAVAILABLE'
   | 'GATEWAY_TIMEOUT'
@@ -206,8 +206,9 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
 
-function isRetryableStatus(status: number): boolean {
-  return [429, 503, 504].includes(status);
+function isRetryableError(code: BackendErrorCode, status: number): boolean {
+  const definition = ERROR_CODE_REGISTRY[code];
+  return definition?.statusCode === status && definition.retriable;
 }
 
 function classifyBackendError(error: unknown):
@@ -215,7 +216,6 @@ function classifyBackendError(error: unknown):
       code: BackendErrorCode;
       status: number;
       message: string;
-      retryable: boolean;
     }
   | undefined {
   const errMessage = error instanceof Error ? error.message : String(error);
@@ -226,7 +226,6 @@ function classifyBackendError(error: unknown):
       code: 'GATEWAY_TIMEOUT',
       status: 504,
       message: 'The blockchain operation timed out. It may still be processed later.',
-      retryable: true,
     };
   }
 
@@ -239,7 +238,6 @@ function classifyBackendError(error: unknown):
       code: 'TOO_MANY_REQUESTS',
       status: 429,
       message: 'Rate limit exceeded for blockchain calls. Please try again later.',
-      retryable: true,
     };
   }
 
@@ -252,7 +250,6 @@ function classifyBackendError(error: unknown):
       code: 'SERVICE_UNAVAILABLE',
       status: 503,
       message: 'Blockchain service is temporarily unavailable. Please try again later.',
-      retryable: true,
     };
   }
 
@@ -261,7 +258,6 @@ function classifyBackendError(error: unknown):
       code: 'NOT_FOUND',
       status: 404,
       message: 'The requested resource was not found on the blockchain.',
-      retryable: false,
     };
   }
 
@@ -274,7 +270,6 @@ function classifyBackendError(error: unknown):
       code: 'VALIDATION_ERROR',
       status: 400,
       message: 'The transaction was rejected due to invalid parameters or state.',
-      retryable: false,
     };
   }
 
@@ -290,7 +285,8 @@ export function normalizeBackendError(
       ...asRecord(error.details),
       ...asRecord(fallback.details),
     };
-    const retryable = asRecord(error.details).retryable === true || isRetryableStatus(error.status);
+    const retryable =
+      asRecord(error.details).retryable === true || isRetryableError(error.code, error.status);
 
     return new BackendError({
       code: error.code,
@@ -310,7 +306,7 @@ export function normalizeBackendError(
   const status = classified?.status ?? fallback.status;
   const code = classified?.code ?? fallback.code;
   const message = classified?.message ?? fallback.message;
-  const retryable = classified?.retryable ?? isRetryableStatus(fallback.status);
+  const retryable = isRetryableError(code, status);
 
   return new BackendError({
     code,

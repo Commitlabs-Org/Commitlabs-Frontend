@@ -144,7 +144,7 @@ describe('sortCommitments', () => {
     expect(sorted).not.toBe(original);
   });
 
-  it('handles malformed string amount gracefully in ValueHighLow and ValueLowHigh sorts', () => {
+  it('handles malformed string and numeric amount fields in ValueHighLow and ValueLowHigh sorts', () => {
     const malformedCommitments: Commitment[] = [
       { ...mockCommitments[0], id: 'CMT-MALFORMED', amount: 'invalid-amount' },
       { ...mockCommitments[1], id: 'CMT-20K', amount: '20,000' },
@@ -161,7 +161,7 @@ describe('sortCommitments', () => {
     expect(lowHigh[2].id).toBe('CMT-20K');
   });
 
-  it('handles non-string and numeric amount types gracefully', () => {
+  it('handles non-string and non-standard amount types gracefully', () => {
     const variedAmountCommitments: Commitment[] = [
       { ...mockCommitments[0], id: 'CMT-NUMERIC', amount: 300000 as unknown as string },
       { ...mockCommitments[1], id: 'CMT-NULL', amount: null as unknown as string },
