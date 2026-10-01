@@ -6,12 +6,8 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-  typescript: {
-    ignoreBuildErrors: false,
-  },
+  eslint: {},
+  typescript: {},
   webpack: (config, { isServer }) => {
     if (isServer) {
       // ioredis is an optional production dependency — exclude it from the
@@ -23,13 +19,11 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: '**.ipfs.io' },
-      { protocol: 'https', hostname: '**.ipfs.dweb.link' },
-      { protocol: 'https', hostname: '**.cf-ipfs.com' },
-      { protocol: 'https', hostname: '**.nftstorage.link' },
+      { protocol: 'https', hostname: '*.ipfs.io' },
+      { protocol: 'https', hostname: '*.ipfs.dweb.link' },
+      { protocol: 'https', hostname: '*.cf-ipfs.com' },
+      { protocol: 'https', hostname: '*.nftstorage.link' },
       { protocol: 'https', hostname: 'arweave.net' },
-      { protocol: 'https', hostname: '**.amazonaws.com' },
-      { protocol: 'https', hostname: '**.cloudfront.net' },
     ],
   },
   async headers() {
