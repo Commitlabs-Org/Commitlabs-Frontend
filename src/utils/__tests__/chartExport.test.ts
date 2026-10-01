@@ -205,14 +205,14 @@ describe('Attestation CSV export helpers', () => {
   it('buildAttestationCsvRows converts Date objects to ISO strings', () => {
     const rows = buildAttestationCsvRows([sampleAttestationWithDate]);
     expect(rows).toHaveLength(1);
-    expect(rows[0][4]).toBe('2026-06-26T08:30:00.000Z');
+    expect(rows[0]?.[4]).toBe('2026-06-26T08:30:00.000Z');
   });
 
   it('buildAttestationCsvRows handles mixed string and Date timestamps', () => {
     const rows = buildAttestationCsvRows([sampleAttestation, sampleAttestationWithDate]);
     expect(rows).toHaveLength(2);
-    expect(rows[0][4]).toBe('2026-06-27T12:00:00.000Z');
-    expect(rows[1][4]).toBe('2026-06-26T08:30:00.000Z');
+    expect(rows[0]?.[4]).toBe('2026-06-27T12:00:00.000Z');
+    expect(rows[1]?.[4]).toBe('2026-06-26T08:30:00.000Z');
   });
 
   it('buildAttestationCsvContent produces valid CSV with header row', () => {
