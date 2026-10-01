@@ -1,7 +1,7 @@
 // Versioned contract configuration accessor
 // Provides a centralized, typed, and validated way to access contract configs
 
-import { getValidatedEnv } from "./env";
+import { getValidatedEnv } from './env';
 
 export interface ContractEntry {
   address: string;
@@ -9,24 +9,24 @@ export interface ContractEntry {
   abi?: unknown;
 }
 
-export type ContractsConfig = Record<
-  string,
-  Record<string, ContractEntry | undefined>
->;
+export type ContractsConfig = Record<string, Record<string, ContractEntry | undefined>>;
 
 function buildFromLegacyEnv(): ContractsConfig | null {
   const env = getValidatedEnv() as Record<string, string | undefined>;
-  
+
   const v1: Record<string, ContractEntry | undefined> = {};
-  
+
   const mapping: Record<string, string[]> = {
-    commitmentNFT: ["COMMITMENT_NFT_CONTRACT", "NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT"],
-    commitmentCore: ["COMMITMENT_CORE_CONTRACT", "NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT"],
-    attestationEngine: ["ATTESTATION_ENGINE_CONTRACT", "NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT"],
+    commitmentNFT: ['COMMITMENT_NFT_CONTRACT', 'NEXT_PUBLIC_COMMITMENT_NFT_CONTRACT'],
+    commitmentCore: ['COMMITMENT_CORE_CONTRACT', 'NEXT_PUBLIC_COMMITMENT_CORE_CONTRACT'],
+    attestationEngine: ['ATTESTATION_ENGINE_CONTRACT', 'NEXT_PUBLIC_ATTESTATION_ENGINE_CONTRACT'],
   };
 
   for (const [key, envNames] of Object.entries(mapping)) {
-    const addr = (envNames[0] ? env[envNames[0]] : undefined) || (envNames[1] ? env[envNames[1]] : undefined) || "";
+    const addr =
+      (envNames[0] ? env[envNames[0]] : undefined) ||
+      (envNames[1] ? env[envNames[1]] : undefined) ||
+      '';
     if (addr) v1[key] = { address: addr };
   }
 
@@ -39,16 +39,14 @@ function parseJsonEnv(): ContractsConfig | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) {
+    if (typeof parsed !== 'object' || parsed === null) {
       throw new Error(
-        "NEXT_PUBLIC_CONTRACTS_JSON must be a JSON object mapping versions to contract entries",
+        'NEXT_PUBLIC_CONTRACTS_JSON must be a JSON object mapping versions to contract entries',
       );
     }
     return parsed as ContractsConfig;
   } catch (err) {
-    throw new Error(
-      `Failed to parse NEXT_PUBLIC_CONTRACTS_JSON: ${(err as Error).message}`,
-    );
+    throw new Error(`Failed to parse NEXT_PUBLIC_CONTRACTS_JSON: ${(err as Error).message}`);
   }
 }
 
@@ -81,11 +79,7 @@ export function _resetEnvCache(): void {
 
 export function getActiveContractVersion(): string {
   const env = getValidatedEnv();
-  return (
-    env.NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION ??
-    env.ACTIVE_CONTRACT_VERSION ??
-    "v1"
-  );
+  return env.NEXT_PUBLIC_ACTIVE_CONTRACT_VERSION ?? env.ACTIVE_CONTRACT_VERSION ?? 'v1';
 }
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -98,7 +92,7 @@ export function getActiveContracts(): Record<string, ContractEntry> {
   const versionConfig = config[active];
   assert(
     !!versionConfig,
-    `Active contract version "${active}" not found. Available versions: ${Object.keys(config).join(", ") || "<none>"}`,
+    `Active contract version "${active}" not found. Available versions: ${Object.keys(config).join(', ') || '<none>'}`,
   );
 
   // Ensure that entries have addresses
@@ -140,7 +134,7 @@ export interface ContractAddresses {
 /**
  * Environment type for the application.
  */
-export type Environment = "development" | "preview" | "production";
+export type Environment = 'development' | 'preview' | 'production';
 
 /**
  * Backend configuration for API routes and server-side code.
@@ -168,22 +162,22 @@ export interface BackendConfig {
  */
 function getEnvironment(): Environment {
   const env = getValidatedEnv();
-  if (env.VERCEL_ENV === "production") return "production";
-  if (env.VERCEL_ENV === "preview") return "preview";
-  if (env.NODE_ENV === "production") return "production";
-  if (env.NODE_ENV === "test") return "development";
-  return "development";
+  if (env.VERCEL_ENV === 'production') return 'production';
+  if (env.VERCEL_ENV === 'preview') return 'preview';
+  if (env.NODE_ENV === 'production') return 'production';
+  if (env.NODE_ENV === 'test') return 'development';
+  return 'development';
 }
 
 function isTestEnvironment(): boolean {
-  return getValidatedEnv().NODE_ENV === "test";
+  return getValidatedEnv().NODE_ENV === 'test';
 }
 
 export interface BackendFeatureFlags {
-    analyticsUser: boolean;
-    analyticsProtocol: boolean;
-    marketplace: boolean;
-    marketplaceMockData: boolean;
+  analyticsUser: boolean;
+  analyticsProtocol: boolean;
+  marketplace: boolean;
+  marketplaceMockData: boolean;
 }
 
 type FeatureFlagKey = keyof BackendFeatureFlags;
@@ -191,63 +185,49 @@ type FeatureFlagKey = keyof BackendFeatureFlags;
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
 
 function parseBooleanFlag(value: string | undefined, defaultValue: boolean): boolean {
-    if (value === undefined) return defaultValue;
-    return TRUE_VALUES.has(value.trim().toLowerCase());
+  if (value === undefined) return defaultValue;
+  return TRUE_VALUES.has(value.trim().toLowerCase());
 }
 
 function parseFeatureFlagsJson(): Partial<BackendFeatureFlags> {
-    const raw = getValidatedEnv().COMMITLABS_FEATURE_FLAGS_JSON;
-    if (!raw) return {};
+  const raw = getValidatedEnv().COMMITLABS_FEATURE_FLAGS_JSON;
+  if (!raw) return {};
 
-    try {
-        const parsed = JSON.parse(raw) as Partial<Record<FeatureFlagKey, unknown>>;
-        return {
-            analyticsUser:
-                typeof parsed.analyticsUser === 'boolean'
-                    ? parsed.analyticsUser
-                    : undefined,
-            analyticsProtocol:
-                typeof parsed.analyticsProtocol === 'boolean'
-                    ? parsed.analyticsProtocol
-                    : undefined,
-            marketplace:
-                typeof parsed.marketplace === 'boolean'
-                    ? parsed.marketplace
-                    : undefined,
-            marketplaceMockData:
-                typeof parsed.marketplaceMockData === 'boolean'
-                    ? parsed.marketplaceMockData
-                    : undefined
-        };
-    } catch (err) {
-        throw new Error(
-            `Failed to parse COMMITLABS_FEATURE_FLAGS_JSON: ${(err as Error).message}`
-        );
-    }
+  try {
+    const parsed = JSON.parse(raw) as Partial<Record<FeatureFlagKey, unknown>>;
+    return {
+      analyticsUser: typeof parsed.analyticsUser === 'boolean' ? parsed.analyticsUser : undefined,
+      analyticsProtocol:
+        typeof parsed.analyticsProtocol === 'boolean' ? parsed.analyticsProtocol : undefined,
+      marketplace: typeof parsed.marketplace === 'boolean' ? parsed.marketplace : undefined,
+      marketplaceMockData:
+        typeof parsed.marketplaceMockData === 'boolean' ? parsed.marketplaceMockData : undefined,
+    };
+  } catch (err) {
+    throw new Error(`Failed to parse COMMITLABS_FEATURE_FLAGS_JSON: ${(err as Error).message}`);
+  }
 }
 
 export function getFeatureFlags(): BackendFeatureFlags {
-    const fromJson = parseFeatureFlagsJson();
-    const env = getValidatedEnv();
+  const fromJson = parseFeatureFlagsJson();
+  const env = getValidatedEnv();
 
-    return {
-        analyticsUser:
-            fromJson.analyticsUser ??
-            parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
-        analyticsProtocol:
-            fromJson.analyticsProtocol ??
-            parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_PROTOCOL, false),
-        marketplace:
-            fromJson.marketplace ??
-            parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE, false),
-        marketplaceMockData:
-            fromJson.marketplaceMockData ??
-            parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA, true),
-    };
+  return {
+    analyticsUser:
+      fromJson.analyticsUser ?? parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_USER, false),
+    analyticsProtocol:
+      fromJson.analyticsProtocol ??
+      parseBooleanFlag(env.COMMITLABS_FEATURE_ANALYTICS_PROTOCOL, false),
+    marketplace:
+      fromJson.marketplace ?? parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE, false),
+    marketplaceMockData:
+      fromJson.marketplaceMockData ??
+      parseBooleanFlag(env.COMMITLABS_FEATURE_MARKETPLACE_MOCK_DATA, true),
+  };
 }
 
 export function isFeatureEnabled(feature: FeatureFlagKey): boolean {
-    return getFeatureFlags()[feature];
+  return getFeatureFlags()[feature];
 }
 
 /**
@@ -275,21 +255,21 @@ export function getBackendConfig(): BackendConfig {
   const sorobanRpcUrl =
     env.SOROBAN_RPC_URL ??
     env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
-    "https://soroban-testnet.stellar.org:443";
+    'https://soroban-testnet.stellar.org:443';
 
   const networkPassphrase =
     env.SOROBAN_NETWORK_PASSPHRASE ??
     env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
-    "Test SDF Network ; September 2015";
+    'Test SDF Network ; September 2015';
 
   // Resolve contract addresses via versioned config
   const activeVersion = getActiveContractVersion();
   const contracts = getActiveContracts();
 
   const contractAddresses: ContractAddresses = {
-    commitmentNFT: contracts.commitmentNFT?.address || "",
-    commitmentCore: contracts.commitmentCore?.address || "",
-    attestationEngine: contracts.attestationEngine?.address || "",
+    commitmentNFT: contracts.commitmentNFT?.address || '',
+    commitmentCore: contracts.commitmentCore?.address || '',
+    attestationEngine: contracts.attestationEngine?.address || '',
   };
 
   if (!isTestEnvironment()) {
@@ -312,7 +292,7 @@ export function getBackendConfig(): BackendConfig {
     networkPassphrase,
     contractAddresses,
     environment: getEnvironment(),
-    chainWritesEnabled: env.COMMITLABS_ENABLE_CHAIN_WRITES === "true",
+    chainWritesEnabled: env.COMMITLABS_ENABLE_CHAIN_WRITES === 'true',
     activeVersion,
   };
 }
@@ -350,14 +330,32 @@ export const PARAMETER_BOUNDS: ParameterBounds = {
 };
 
 export const RISK_PROFILES: RiskProfile[] = [
-  { id: "conservative", name: "Conservative", description: "Strict capital preservation", maxLossBps: 1000, lockDurationDays: 30 },
-  { id: "balanced", name: "Balanced", description: "Moderate drawdowns allowed", maxLossBps: 5000, lockDurationDays: 60 },
-  { id: "aggressive", name: "Aggressive", description: "High loss tolerance", maxLossBps: 10000, lockDurationDays: 90 },
+  {
+    id: 'conservative',
+    name: 'Conservative',
+    description: 'Strict capital preservation',
+    maxLossBps: 1000,
+    lockDurationDays: 30,
+  },
+  {
+    id: 'balanced',
+    name: 'Balanced',
+    description: 'Moderate drawdowns allowed',
+    maxLossBps: 5000,
+    lockDurationDays: 60,
+  },
+  {
+    id: 'aggressive',
+    name: 'Aggressive',
+    description: 'High loss tolerance',
+    maxLossBps: 10000,
+    lockDurationDays: 90,
+  },
 ];
 
 export const SUPPORTED_ASSETS: SupportedAsset[] = [
-  { code: "XLM", name: "Stellar Lumens", decimals: 7 },
-  { code: "USDC", name: "USD Coin", decimals: 7 },
+  { code: 'XLM', name: 'Stellar Lumens', decimals: 7 },
+  { code: 'USDC', name: 'USD Coin', decimals: 7 },
 ];
 
 export function getSupportedConfig(): SupportedConfig {

@@ -10,15 +10,15 @@ const FALLBACK_NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
  * validation throws (e.g. in a misconfigured or test environment).
  */
 export function getAppExplorerNetwork(): ExplorerNetwork {
-    try {
-        return getExplorerNetworkFromPassphrase(
-            getValidatedClientEnv().NEXT_PUBLIC_NETWORK_PASSPHRASE ??
-                process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
-                FALLBACK_NETWORK_PASSPHRASE,
-        );
-    } catch {
-        return getExplorerNetworkFromPassphrase(
-            process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? FALLBACK_NETWORK_PASSPHRASE,
-        );
-    }
+  try {
+    return getExplorerNetworkFromPassphrase(
+      getValidatedClientEnv().NEXT_PUBLIC_NETWORK_PASSPHRASE ??
+        process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ??
+        FALLBACK_NETWORK_PASSPHRASE,
+    );
+  } catch {
+    return getExplorerNetworkFromPassphrase(
+      process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? FALLBACK_NETWORK_PASSPHRASE,
+    );
+  }
 }

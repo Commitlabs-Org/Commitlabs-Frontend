@@ -149,11 +149,7 @@ describe('useOverviewTimeRange – filterByRange', () => {
     sessionStorage.setItem('overview.selectedRange', 'all');
     const { result } = renderHook(() => useOverviewTimeRange());
 
-    const data = [
-      { date: daysAgo(0) },
-      { date: daysAgo(100) },
-      { date: daysAgo(365) },
-    ];
+    const data = [{ date: daysAgo(0) }, { date: daysAgo(100) }, { date: daysAgo(365) }];
 
     const filtered = result.current.filterByRange(data, (item) => item.date);
     expect(filtered).toHaveLength(3);
@@ -164,20 +160,16 @@ describe('useOverviewTimeRange – filterByRange', () => {
     const { result } = renderHook(() => useOverviewTimeRange());
 
     const data = [
-      { date: daysAgo(0) },   // today — in range
-      { date: daysAgo(3) },   // 3 days ago — in range
-      { date: daysAgo(7) },   // 7 days ago — should be included (inclusive boundary)
-      { date: daysAgo(8) },   // 8 days ago — outside range
-      { date: daysAgo(30) },  // 30 days ago — outside range
+      { date: daysAgo(0) }, // today — in range
+      { date: daysAgo(3) }, // 3 days ago — in range
+      { date: daysAgo(7) }, // 7 days ago — should be included (inclusive boundary)
+      { date: daysAgo(8) }, // 8 days ago — outside range
+      { date: daysAgo(30) }, // 30 days ago — outside range
     ];
 
     const filtered = result.current.filterByRange(data, (item) => item.date);
     expect(filtered).toHaveLength(3);
-    expect(filtered.map((d) => d.date)).toEqual([
-      daysAgo(0),
-      daysAgo(3),
-      daysAgo(7),
-    ]);
+    expect(filtered.map((d) => d.date)).toEqual([daysAgo(0), daysAgo(3), daysAgo(7)]);
   });
 
   it('includes items exactly at the rangeStart boundary (inclusive)', () => {
@@ -190,10 +182,7 @@ describe('useOverviewTimeRange – filterByRange', () => {
     const exactBoundary = new Date(rangeStartDate);
     exactBoundary.setHours(0, 0, 0, 0);
 
-    const data = [
-      { date: exactBoundary.toISOString() },
-      { date: daysAgo(31) },
-    ];
+    const data = [{ date: exactBoundary.toISOString() }, { date: daysAgo(31) }];
 
     const filtered = result.current.filterByRange(data, (item) => item.date);
     expect(filtered).toHaveLength(1);
@@ -204,10 +193,7 @@ describe('useOverviewTimeRange – filterByRange', () => {
     sessionStorage.setItem('overview.selectedRange', '7d');
     const { result } = renderHook(() => useOverviewTimeRange());
 
-    const data = [
-      { date: new Date(daysAgo(2)) },
-      { date: new Date(daysAgo(20)) },
-    ];
+    const data = [{ date: new Date(daysAgo(2)) }, { date: new Date(daysAgo(20)) }];
 
     const filtered = result.current.filterByRange(data, (item) => item.date);
     expect(filtered).toHaveLength(1);
@@ -217,10 +203,7 @@ describe('useOverviewTimeRange – filterByRange', () => {
     sessionStorage.setItem('overview.selectedRange', '7d');
     const { result } = renderHook(() => useOverviewTimeRange());
 
-    const data = [
-      { date: daysAgo(100) },
-      { date: daysAgo(200) },
-    ];
+    const data = [{ date: daysAgo(100) }, { date: daysAgo(200) }];
 
     const filtered = result.current.filterByRange(data, (item) => item.date);
     expect(filtered).toHaveLength(0);

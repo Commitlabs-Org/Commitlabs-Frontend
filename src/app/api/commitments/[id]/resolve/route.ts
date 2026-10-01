@@ -2,98 +2,115 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit } from '@/lib/backend/rateLimit';
 import { withApiHandler } from '@/lib/backend/withApiHandler';
-import { ok } from '@/lib/backend/apiResponse';
-import { TooManyRequestsError, ValidationError, ConflictError, ForbiddenError, InternalError } from '@/lib/backend/errors';
+import { ok, methodNotAllowed } from '@/lib/backend/apiResponse';
+import { assertMutationCsrf } from '@/lib/backend/csrf';
+import { TooManyRequestsError, ValidationError } from '@/lib/backend/errors';
 import { getClientIp } from '@/lib/backend/getClientIp';
 import { resolveDisputeOnChain } from '@/lib/backend/services/contracts';
 import { logDisputeResolved } from '@/lib/backend/logger';
 import { recordAuditEvent } from '@/lib/backend/auditLog';
 import { requireAdmin } from '@/lib/backend/requireAuth';
+import { validateCommitmentId } from '@/lib/backend/validation';
 
 const ResolveDisputeRequestSchema = z.object({
-    resolution: z.enum(['resolved_in_favor_of_owner', 'resolved_in_favor_of_counterparty', 'dismissed']),
-    notes: z.string().max(1000).optional(),
+  resolution: z.enum([
+    'resolved_in_favor_of_owner',
+    'resolved_in_favor_of_counterparty',
+    'dismissed',
+  ]),
+  notes: z.string().max(1000).optional(),
 });
 
-interface Params {
-    params: { id: string };
-}
+/**
+ * POST /api/commitments/[id]/resolve
+ *
+ * Admin-only. Enforces, in order of increasing cost:
+ * 1. CSRF / same-origin boundary for cookie-session mutations.
+ * 2. Admin authorization (requireAdmin) before any parsing or chain work.
+ * 3. Rate limit on the caller.
+ * 4. Route-parameter (commitment id) validation against hostile input.
+ * 5. Request-body validation.
+ */
+export const POST = withApiHandler(async (req: NextRequest, { params }, correlationId) => {
+  assertMutationCsrf(req);
 
-export const POST = withApiHandler(async (req: NextRequest, { params }: Params) => {
-    const { id } = params;
-    const ip = getClientIp(req);
+  const admin = requireAdmin(req);
 
-    const { allowed, retryAfterSeconds } = await checkRateLimit(ip, 'api/commitments/resolve');
-    if (!allowed) {
-        throw new TooManyRequestsError(undefined, undefined, retryAfterSeconds);
-    }
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(ip, 'api/commitments/resolve'))) {
+    throw new TooManyRequestsError();
+  }
 
-    if (!id || id.trim().length === 0) {
-        throw new ValidationError('Commitment ID is required');
-    }
+  const id = validateCommitmentId(params.id, 'Commitment ID');
 
-    const admin = requireAdmin(req);
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    throw new ValidationError('Invalid JSON in request body');
+  }
 
-    let body;
-    try {
-        body = await req.json();
-    } catch {
-        throw new ValidationError('Invalid JSON in request body');
-    }
+  const validation = ResolveDisputeRequestSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Invalid request data', validation.error.issues);
+  }
 
-    const validation = ResolveDisputeRequestSchema.safeParse(body);
-    if (!validation.success) {
-        throw new ValidationError('Invalid request data', validation.error.errors);
-    }
+  const { resolution, notes } = validation.data;
 
-    const { resolution, notes } = validation.data;
+  try {
+    const resolveResult = await resolveDisputeOnChain({
+      commitmentId: id,
+      resolution,
+      notes: notes ?? '',
+      resolverAddress: admin.address,
+    });
 
-    try {
-        const resolveResult = await resolveDisputeOnChain({
-            commitmentId: id,
-            resolution,
-            notes,
-            resolverAddress: admin.address,
-        });
+    logDisputeResolved({
+      ip,
+      commitmentId: id,
+      resolution,
+      resolverAddress: admin.address,
+      disputeId: resolveResult.disputeId,
+      txHash: resolveResult.txHash,
+    });
 
-        logDisputeResolved({
-            ip,
-            commitmentId: id,
-            resolution,
-            resolverAddress: admin.address,
-            disputeId: resolveResult.disputeId,
-            txHash: resolveResult.txHash,
-        });
+    recordAuditEvent({
+      eventType: 'DISPUTE_RESOLVED',
+      actorAddress: admin.address,
+      commitmentId: id,
+      details: {
+        resolution,
+        notes: notes ?? '',
+        disputeId: resolveResult.disputeId,
+        txHash: resolveResult.txHash,
+      },
+    });
 
-        recordAuditEvent({
-            eventType: 'DISPUTE_RESOLVED',
-            actorAddress: admin.address,
-            commitmentId: id,
-            details: {
-                resolution,
-                notes: notes ?? '',
-                disputeId: resolveResult.disputeId,
-                txHash: resolveResult.txHash,
-            },
-        });
+    return ok(
+      {
+        commitmentId: id,
+        disputeId: resolveResult.disputeId,
+        resolution: resolveResult.resolution,
+        finalStatus: resolveResult.finalStatus,
+        txHash: resolveResult.txHash,
+        resolvedAt: resolveResult.resolvedAt,
+      },
+      undefined,
+      200,
+      correlationId,
+    );
+  } catch (error) {
+    logDisputeResolved({
+      ip,
+      commitmentId: id,
+      resolution,
+      resolverAddress: admin.address,
+      error: error instanceof Error ? error.message : 'Unknown resolution error',
+    });
 
-        return ok({
-            commitmentId: id,
-            disputeId: resolveResult.disputeId,
-            resolution: resolveResult.resolution,
-            finalStatus: resolveResult.finalStatus,
-            txHash: resolveResult.txHash,
-            resolvedAt: resolveResult.resolvedAt,
-        });
-    } catch (error) {
-        logDisputeResolved({
-            ip,
-            commitmentId: id,
-            resolution,
-            resolverAddress: admin.address,
-            error: error instanceof Error ? error.message : 'Unknown resolution error',
-        });
-
-        throw error;
-    }
+    throw error;
+  }
 });
+
+const _405 = methodNotAllowed(['POST']);
+export { _405 as GET, _405 as PUT, _405 as PATCH, _405 as DELETE };

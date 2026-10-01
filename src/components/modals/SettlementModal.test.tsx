@@ -3,7 +3,9 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import SettlementModal, { getSettlementIneligibleReasonCopy } from '@/components/modals/SettlementModal';
+import SettlementModal, {
+  getSettlementIneligibleReasonCopy,
+} from '@/components/modals/SettlementModal';
 
 // ── Shared default props ─────────────────────────────────────────────────────
 
@@ -130,9 +132,11 @@ describe('SettlementModal', () => {
   describe('error state', () => {
     it('shows error heading and default message', () => {
       renderModal({ state: 'error' });
-      expect(screen.getByRole('heading', { name: 'Settlement could not be completed' })).toBeTruthy();
       expect(
-        screen.getByText(/The settlement flow stopped before reaching a final state/)
+        screen.getByRole('heading', { name: 'Settlement could not be completed' }),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(/The settlement flow stopped before reaching a final state/),
       ).toBeTruthy();
     });
 

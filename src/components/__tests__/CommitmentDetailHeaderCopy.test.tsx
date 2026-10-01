@@ -60,9 +60,7 @@ describe('CommitmentDetailHeader copy and explorer actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy commitment ID' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('Copied');
-    expect(screen.getByRole('button', { name: 'Copy commitment ID' })).toHaveTextContent(
-      'Copied',
-    );
+    expect(screen.getByRole('button', { name: 'Copy commitment ID' })).toHaveTextContent('Copied');
   });
 
   it('renders a sanitized explorer link with anti-tabnabbing attributes', () => {
@@ -72,9 +70,7 @@ describe('CommitmentDetailHeader copy and explorer actions', () => {
       name: 'Open commitment in Stellar explorer',
     }) as HTMLAnchorElement;
 
-    expect(link.href).toBe(
-      `https://stellar.expert/explorer/testnet/contract/${validContractId}`,
-    );
+    expect(link.href).toBe(`https://stellar.expert/explorer/testnet/contract/${validContractId}`);
     expect(link.target).toBe('_blank');
     expect(link.rel).toContain('noopener');
     expect(link.rel).toContain('noreferrer');
@@ -87,9 +83,7 @@ describe('CommitmentDetailHeader copy and explorer actions', () => {
       name: 'Open commitment in Stellar explorer',
     }) as HTMLAnchorElement;
 
-    expect(link.href).toBe(
-      `https://stellar.expert/explorer/public/contract/${validContractId}`,
-    );
+    expect(link.href).toBe(`https://stellar.expert/explorer/public/contract/${validContractId}`);
   });
 
   it('builds a public-network explorer link when explorerNetwork is "public"', () => {
@@ -99,17 +93,13 @@ describe('CommitmentDetailHeader copy and explorer actions', () => {
       name: 'Open commitment in Stellar explorer',
     }) as HTMLAnchorElement;
 
-    expect(link.href).toBe(
-      `https://stellar.expert/explorer/public/contract/${validContractId}`,
-    );
+    expect(link.href).toBe(`https://stellar.expert/explorer/public/contract/${validContractId}`);
   });
 
   it('does not render an explorer link for an invalid commitment id', () => {
     renderHeader({ commitmentId: 'CMT-001' });
 
-    expect(
-      screen.queryByRole('link', { name: 'Open commitment in Stellar explorer' }),
-    ).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open commitment in Stellar explorer' })).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Explorer link unavailable for this commitment' }),
     ).toBeDisabled();
@@ -125,9 +115,7 @@ describe('CommitmentDetailHeader copy and explorer actions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy commitment ID' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Clipboard unavailable',
-    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Clipboard unavailable');
   });
 
   it('keeps the existing back and share controls working', () => {

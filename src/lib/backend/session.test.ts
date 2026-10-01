@@ -109,12 +109,10 @@ describe('session store — pluggable backend injection (issue #1288 acceptance)
   });
 
   it('setSessionBackend rejects nullish inputs to prevent accidental no-op DI', () => {
-    expect(() => setSessionBackend(null as unknown as SessionBackend)).toThrow(
+    expect(() => setSessionBackend(null as unknown as SessionBackend)).toThrow(/SessionBackend/);
+    expect(() => setSessionBackend(undefined as unknown as SessionBackend)).toThrow(
       /SessionBackend/,
     );
-    expect(() =>
-      setSessionBackend(undefined as unknown as SessionBackend),
-    ).toThrow(/SessionBackend/);
   });
 });
 
@@ -124,9 +122,7 @@ describe('UpstashSessionBackend — clearAll() cursor loop (issue #1288 acceptan
    * pre-scripted transcript of SCAN replies. Tracks every command so we
    * can assert DEL was issued for every batch.
    */
-  function scriptedExecutor(
-    scanReplies: Array<[string, string[]]>,
-  ): {
+  function scriptedExecutor(scanReplies: Array<[string, string[]]>): {
     executor: UpstashCommandExecutor;
     calls: unknown[][];
   } {
@@ -156,11 +152,7 @@ describe('UpstashSessionBackend — clearAll() cursor loop (issue #1288 acceptan
       ['0', []],
     ]);
 
-    const backend = new UpstashSessionBackend(
-      'https://example.invalid',
-      'token',
-      executor,
-    );
+    const backend = new UpstashSessionBackend('https://example.invalid', 'token', executor);
 
     const result = await backend.clearAll();
     expect(result).toEqual({ scanned: 3, deleted: 3, errors: 0 });
@@ -168,9 +160,7 @@ describe('UpstashSessionBackend — clearAll() cursor loop (issue #1288 acceptan
     // Cursor was issued three times. Each DEL receives exactly the number
     // of keys that its source SCAN batch contained.
     const scanCalls = calls.filter((c) => c[0] === 'SCAN');
-    const delBatchSizes = calls
-      .filter((c) => c[0] === 'DEL')
-      .map((c) => c.length - 1);
+    const delBatchSizes = calls.filter((c) => c[0] === 'DEL').map((c) => c.length - 1);
 
     expect(scanCalls).toHaveLength(3);
     expect(delBatchSizes).toEqual([2, 1]);
@@ -179,15 +169,9 @@ describe('UpstashSessionBackend — clearAll() cursor loop (issue #1288 acceptan
   it('terminates after a SCAN failure and reports the error', async () => {
     // First SCAN returns a non-zero cursor so the loop continues; second
     // hit exhausts the transcript and triggers the simulated failure.
-    const { executor, calls } = scriptedExecutor([
-      ['7', ['cl:session:a', 'cl:session:b']],
-    ]);
+    const { executor, calls } = scriptedExecutor([['7', ['cl:session:a', 'cl:session:b']]]);
 
-    const backend = new UpstashSessionBackend(
-      'https://example.invalid',
-      'token',
-      executor,
-    );
+    const backend = new UpstashSessionBackend('https://example.invalid', 'token', executor);
 
     const result = await backend.clearAll();
     expect(result.errors).toBe(1);
@@ -199,11 +183,7 @@ describe('UpstashSessionBackend — clearAll() cursor loop (issue #1288 acceptan
 
   it('exits prematurely if Upstash returns an unparsable shape', async () => {
     const executor: UpstashCommandExecutor = async () => 'not-an-array';
-    const backend = new UpstashSessionBackend(
-      'https://example.invalid',
-      'token',
-      executor,
-    );
+    const backend = new UpstashSessionBackend('https://example.invalid', 'token', executor);
 
     const result = await backend.clearAll();
     expect(result).toEqual({ scanned: 0, deleted: 0, errors: 0 });
@@ -223,11 +203,7 @@ describe('__resetSessionStoreForTests — in-memory guard', () => {
 
   it('throws when the active backend is not the in-memory backend', () => {
     setSessionBackend(
-      new UpstashSessionBackend(
-        'https://example.invalid',
-        'token',
-        async () => null,
-      ),
+      new UpstashSessionBackend('https://example.invalid', 'token', async () => null),
     );
     expect(__resetSessionStoreForTests).toThrow(/MemorySessionBackend/);
   });

@@ -22,11 +22,7 @@
 const FALLBACK_SITE_URL = 'https://commitlabs.com';
 
 function resolveRawSiteUrl(): string {
-  const candidates = [
-    process.env.NEXT_PUBLIC_SITE_URL,
-    process.env.SITE_URL,
-    FALLBACK_SITE_URL,
-  ];
+  const candidates = [process.env.NEXT_PUBLIC_SITE_URL, process.env.SITE_URL, FALLBACK_SITE_URL];
   for (const value of candidates) {
     if (typeof value === 'string' && value.trim().length > 0) {
       return value.trim();

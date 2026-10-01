@@ -1,5 +1,5 @@
 .container {
-  background: #0A0A0AE5;
+  background: #0a0a0ae5;
   border: 0.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 1.25rem 1.5rem;
@@ -37,7 +37,7 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   background: rgba(15, 240, 252, 0.1);
-  color: #0FF0FC;
+  color: #0ff0fc;
   border: 0.5px solid rgba(15, 240, 252, 0.2);
   white-space: nowrap;
 }
@@ -45,7 +45,7 @@
 .percentLabel {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #0FF0FC;
+  color: #0ff0fc;
 }
 
 /* ── Meter bar container ─────────────────────────── */
@@ -105,12 +105,7 @@
   max-width: 600px;
   height: 100%;
   border-radius: 10px;
-  background: linear-gradient(
-    90deg,
-    #00C950 0%,
-    #FF6900 60%,
-    #FB2C36 100%
-  );
+  background: linear-gradient(90deg, #00c950 0%, #ff6900 60%, #fb2c36 100%);
 }
 
 /* ── Zone labels row ─────────────────────────────── */
@@ -128,7 +123,9 @@
   color: rgba(255, 255, 255, 0.35);
   padding: 2px 6px;
   border-radius: 4px;
-  transition: color 200ms ease, background 200ms ease;
+  transition:
+    color 200ms ease,
+    background 200ms ease;
   cursor: default;
 }
 
@@ -138,15 +135,15 @@
 }
 
 .zoneLabelSafe.zoneLabelActive {
-  color: #00C950;
+  color: #00c950;
 }
 
 .zoneLabelCaution.zoneLabelActive {
-  color: #FFA500;
+  color: #ffa500;
 }
 
 .zoneLabelDanger.zoneLabelActive {
-  color: #FB2C36;
+  color: #fb2c36;
 }
 
 /* ── Annotation box (active zone text) ───────────── */
@@ -189,7 +186,9 @@
   font-size: 0.7rem;
   cursor: help;
   flex-shrink: 0;
-  transition: background 150ms ease, color 150ms ease;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
 }
 
 .tooltipTrigger:hover,

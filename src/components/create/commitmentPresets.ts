@@ -13,7 +13,8 @@ export const COMMITMENT_PRESETS: CommitmentPreset[] = [
   {
     id: 'conservative-90',
     label: 'Conservative 90-day',
-    description: 'Safe type, 90-day lock, 2% max loss — steady yield with strong principal protection.',
+    description:
+      'Safe type, 90-day lock, 2% max loss — steady yield with strong principal protection.',
     type: 'safe',
     durationDays: 90,
     maxLossPercent: 2,

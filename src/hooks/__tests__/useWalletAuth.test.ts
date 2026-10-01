@@ -23,7 +23,7 @@ describe('useWallet authentication', () => {
     // Clear cookies cleanly
     document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    
+
     // Default mock response to avoid unhandled TypeErrors in the background
     mockSignMessage.mockResolvedValue({ signedMessage: 'mock_signature' });
   });
@@ -194,7 +194,9 @@ describe('useWallet authentication', () => {
   });
 
   it('re-fetches the address when signIn starts without a connected wallet', async () => {
-    mockGetAddress.mockResolvedValueOnce({ error: 'User rejected request' }).mockResolvedValueOnce({ address: 'GCONNECTED' });
+    mockGetAddress
+      .mockResolvedValueOnce({ error: 'User rejected request' })
+      .mockResolvedValueOnce({ address: 'GCONNECTED' });
 
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce({
@@ -255,7 +257,9 @@ describe('useWallet authentication', () => {
 
     const { result } = renderHook(() => useWallet());
 
-    await waitFor(() => expect(result.current.error).toBe('Unable to connect to Freighter. Please try again.'));
+    await waitFor(() =>
+      expect(result.current.error).toBe('Unable to connect to Freighter. Please try again.'),
+    );
     expect(result.current.connected).toBe(false);
   });
 
@@ -447,9 +451,16 @@ describe('useWallet authentication', () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => new Promise(resolve => setTimeout(() => resolve({
-        data: { nonce: 'n', message: 'msg' },
-      }), 50)),
+      json: async () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                data: { nonce: 'n', message: 'msg' },
+              }),
+            50,
+          ),
+        ),
     } as Response);
 
     mockFetch.mockResolvedValueOnce({

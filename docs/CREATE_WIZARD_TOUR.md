@@ -30,11 +30,13 @@ The guided tour is built with a modular, highly testable structure:
 The tour traverses 12 specific target zones across the 3 wizard steps:
 
 ### Step 1: Select Type
+
 1. **Wizard Steps Stepper**: Highlights the progress navigation.
 2. **Commitment Types Cards**: Explains the difference between Safe, Balanced, and Aggressive profiles.
 3. **Continue Button**: Directs the user on how to advance.
 
 ### Step 2: Configure Parameters
+
 4. **Commitment Amount**: Explains selecting the amount and currency.
 5. **Duration Slider**: Explains lock-in periods, yields, and early exit penalties.
 6. **Max Loss Stop-Loss**: Teaches how automatic stop-loss protects capital on-chain.
@@ -43,6 +45,7 @@ The tour traverses 12 specific target zones across the 3 wizard steps:
 9. **Configure Continue Button**: Directs the user to the review stage.
 
 ### Step 3: Review & Confirm
+
 10. **Review Details**: Explains verifying the immutable parameters.
 11. **Terms Checkboxes**: Emphasizes reading exit rules and agreeing to DeFi risks.
 12. **Create Commitment Button**: Explains triggering the blockchain transaction.

@@ -26,9 +26,7 @@ export interface AddressEntry {
   label: string;
 }
 
-export type AddressBookPatch = Partial<
-  Pick<AddressEntry, 'label' | 'address'>
->;
+export type AddressBookPatch = Partial<Pick<AddressEntry, 'label' | 'address'>>;
 
 function hasWindowStorage(): boolean {
   return typeof window !== 'undefined' && !!window.localStorage;
@@ -96,10 +94,7 @@ export function load(): AddressEntry[] {
 function persist(entries: AddressEntry[]): void {
   if (!hasWindowStorage()) return;
   try {
-    window.localStorage.setItem(
-      ADDRESS_BOOK_STORAGE_KEY,
-      JSON.stringify(entries),
-    );
+    window.localStorage.setItem(ADDRESS_BOOK_STORAGE_KEY, JSON.stringify(entries));
   } catch {
     // Storage may be full or disabled (e.g. Safari private mode).
     // Swallow the error so address-book changes are best-effort.
@@ -114,22 +109,16 @@ function generateId(): string {
   }
   // Fallback: time + entropy — collision risk is negligible for a personal
   // address book of well under a million entries.
-  return `addr_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
+  return `addr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function assertStellarAddress(address: unknown): string {
   if (typeof address !== 'string') {
-    throw new TypeError(
-      'address must be a string Stellar public key (G... format).',
-    );
+    throw new TypeError('address must be a string Stellar public key (G... format).');
   }
   const trimmed = address.trim();
   if (!StrKey.isValidEd25519PublicKey(trimmed)) {
-    throw new TypeError(
-      'address must be a valid Stellar StrKey public key (G... format).',
-    );
+    throw new TypeError('address must be a valid Stellar StrKey public key (G... format).');
   }
   return trimmed;
 }
@@ -162,9 +151,7 @@ export function add(address: string, label: string): AddressEntry {
   const validatedAddress = assertStellarAddress(address);
   const validatedLabel = assertLabel(label);
   const entries = load();
-  const existing = entries.find(
-    (entry) => entry.address === validatedAddress,
-  );
+  const existing = entries.find((entry) => entry.address === validatedAddress);
   if (existing) {
     existing.label = validatedLabel;
     persist(entries);
@@ -186,10 +173,7 @@ export function add(address: string, label: string): AddressEntry {
  * exists. Throws `TypeError` when a new `address` is provided but is not a
  * valid Stellar public key.
  */
-export function update(
-  id: string,
-  patch: AddressBookPatch,
-): AddressEntry | null {
+export function update(id: string, patch: AddressBookPatch): AddressEntry | null {
   if (typeof id !== 'string' || id.length === 0) {
     throw new TypeError('id must be a non-empty string.');
   }

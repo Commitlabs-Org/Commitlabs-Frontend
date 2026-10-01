@@ -1,13 +1,13 @@
 /**
  * @vitest-environment jsdom
  */
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { AccountWalletSection } from './AccountWalletSection'
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { AccountWalletSection } from './AccountWalletSection';
 
-const mockConnect = vi.fn()
-const mockDisconnect = vi.fn()
+const mockConnect = vi.fn();
+const mockDisconnect = vi.fn();
 
 vi.mock('@/hooks/useWallet', () => ({
   useWallet: vi.fn(() => ({
@@ -16,18 +16,17 @@ vi.mock('@/hooks/useWallet', () => ({
     connect: mockConnect,
     disconnect: mockDisconnect,
   })),
-}))
+}));
 
 vi.mock('@/utils/explorerLinks', () => ({
-  buildExplorerUrl: vi.fn(
-    (_kind: string, address: string | undefined, _network: string) =>
-      address ? `https://stellar.expert/explorer/public/account/${address}` : null,
+  buildExplorerUrl: vi.fn((_kind: string, address: string | undefined, _network: string) =>
+    address ? `https://stellar.expert/explorer/public/account/${address}` : null,
   ),
-}))
+}));
 
 vi.mock('../WalletConnectButton', () => ({
   WalletConnectButton: () => <button>Connect Wallet</button>,
-}))
+}));
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -36,13 +35,13 @@ vi.mock('framer-motion', () => ({
     ),
   },
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
-}))
+}));
 
-import { useWallet } from '@/hooks/useWallet'
+import { useWallet } from '@/hooks/useWallet';
 
-const mockedUseWallet = vi.mocked(useWallet)
+const mockedUseWallet = vi.mocked(useWallet);
 
-const MOCK_ADDRESS = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV'
+const MOCK_ADDRESS = 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV';
 
 const setConnectedWallet = (overrides: Partial<ReturnType<typeof useWallet>> = {}) => {
   mockedUseWallet.mockReturnValue({
@@ -60,8 +59,8 @@ const setConnectedWallet = (overrides: Partial<ReturnType<typeof useWallet>> = {
     signOut: vi.fn(),
     walletNetwork: null,
     ...overrides,
-  })
-}
+  });
+};
 
 const setDisconnectedWallet = () => {
   mockedUseWallet.mockReturnValue({
@@ -78,192 +77,178 @@ const setDisconnectedWallet = () => {
     signIn: vi.fn(),
     signOut: vi.fn(),
     walletNetwork: null,
-  })
-}
+  });
+};
 
 describe('AccountWalletSection', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
-  })
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+  });
 
   afterEach(() => {
-    vi.restoreAllMocks()
-  })
+    vi.restoreAllMocks();
+  });
 
   it('renders section title and description', () => {
-    setDisconnectedWallet()
-    render(<AccountWalletSection />)
-    expect(screen.getByText('Account & Wallet')).toBeInTheDocument()
-    expect(
-      screen.getByText(/manage your wallet connection/i),
-    ).toBeInTheDocument()
-  })
+    setDisconnectedWallet();
+    render(<AccountWalletSection />);
+    expect(screen.getByText('Account & Wallet')).toBeInTheDocument();
+    expect(screen.getByText(/manage your wallet connection/i)).toBeInTheDocument();
+  });
 
   describe('disconnected state', () => {
-    beforeEach(() => setDisconnectedWallet())
+    beforeEach(() => setDisconnectedWallet());
 
     it('shows connect prompt when wallet is not connected', () => {
-      render(<AccountWalletSection />)
-      expect(
-        screen.getByText(/connect your wallet to manage/i),
-      ).toBeInTheDocument()
-    })
+      render(<AccountWalletSection />);
+      expect(screen.getByText(/connect your wallet to manage/i)).toBeInTheDocument();
+    });
 
     it('renders the WalletConnectButton', () => {
-      render(<AccountWalletSection />)
-      expect(
-        screen.getByRole('button', { name: /connect wallet/i }),
-      ).toBeInTheDocument()
-    })
+      render(<AccountWalletSection />);
+      expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument();
+    });
 
     it('does not render the sign-out button', () => {
-      render(<AccountWalletSection />)
-      expect(
-        screen.queryByRole('button', { name: /sign out/i }),
-      ).not.toBeInTheDocument()
-    })
-  })
+      render(<AccountWalletSection />);
+      expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
+    });
+  });
 
   describe('connected-wallet display', () => {
-    beforeEach(() => setConnectedWallet())
+    beforeEach(() => setConnectedWallet());
 
     it('renders the truncated wallet address', () => {
-      render(<AccountWalletSection />)
-      const truncated = `${MOCK_ADDRESS.slice(0, 4)}…${MOCK_ADDRESS.slice(-4)}`
-      expect(screen.getByText(truncated)).toBeInTheDocument()
-    })
+      render(<AccountWalletSection />);
+      const truncated = `${MOCK_ADDRESS.slice(0, 4)}…${MOCK_ADDRESS.slice(-4)}`;
+      expect(screen.getByText(truncated)).toBeInTheDocument();
+    });
 
     it('shows the "Connected Address" label', () => {
-      render(<AccountWalletSection />)
-      expect(screen.getByText('Connected Address')).toBeInTheDocument()
-    })
+      render(<AccountWalletSection />);
+      expect(screen.getByText('Connected Address')).toBeInTheDocument();
+    });
 
     it('renders a link to the Stellar Explorer', () => {
-      render(<AccountWalletSection />)
-      const explorerLink = screen.getByTitle('View on Stellar Explorer')
-      expect(explorerLink).toBeInTheDocument()
+      render(<AccountWalletSection />);
+      const explorerLink = screen.getByTitle('View on Stellar Explorer');
+      expect(explorerLink).toBeInTheDocument();
       expect(explorerLink).toHaveAttribute(
         'href',
         `https://stellar.expert/explorer/public/account/${MOCK_ADDRESS}`,
-      )
-      expect(explorerLink).toHaveAttribute('target', '_blank')
-    })
+      );
+      expect(explorerLink).toHaveAttribute('target', '_blank');
+    });
 
     it('renders the copy and sign-out buttons', () => {
-      render(<AccountWalletSection />)
-      expect(screen.getByTitle('Copy Address')).toBeInTheDocument()
-      expect(screen.getByText('Sign Out')).toBeInTheDocument()
-    })
-  })
+      render(<AccountWalletSection />);
+      expect(screen.getByTitle('Copy Address')).toBeInTheDocument();
+      expect(screen.getByText('Sign Out')).toBeInTheDocument();
+    });
+  });
 
   describe('copy-address action', () => {
-    beforeEach(() => setConnectedWallet())
+    beforeEach(() => setConnectedWallet());
 
     it('copies address to clipboard on success', async () => {
-      const writeTextMock = vi.fn().mockResolvedValue(undefined)
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
       Object.assign(navigator, {
         clipboard: { writeText: writeTextMock },
-      })
+      });
 
-      render(<AccountWalletSection />)
-      fireEvent.click(screen.getByTitle('Copy Address'))
-
-      await waitFor(() => {
-        expect(writeTextMock).toHaveBeenCalledWith(MOCK_ADDRESS)
-      })
+      render(<AccountWalletSection />);
+      fireEvent.click(screen.getByTitle('Copy Address'));
 
       await waitFor(() => {
-        expect(screen.getByTitle('Copied!')).toBeInTheDocument()
-      })
-    })
+        expect(writeTextMock).toHaveBeenCalledWith(MOCK_ADDRESS);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTitle('Copied!')).toBeInTheDocument();
+      });
+    });
 
     it('logs error on clipboard failure', async () => {
-      const clipboardError = new Error('Clipboard blocked')
-      const writeTextMock = vi.fn().mockRejectedValue(clipboardError)
+      const clipboardError = new Error('Clipboard blocked');
+      const writeTextMock = vi.fn().mockRejectedValue(clipboardError);
       Object.assign(navigator, {
         clipboard: { writeText: writeTextMock },
-      })
+      });
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      render(<AccountWalletSection />)
-      fireEvent.click(screen.getByTitle('Copy Address'))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<AccountWalletSection />);
+      fireEvent.click(screen.getByTitle('Copy Address'));
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'Failed to copy address:',
-          clipboardError,
-        )
-      })
-    })
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to copy address:', clipboardError);
+      });
+    });
 
     it('does not attempt copy when address is empty', () => {
-      setConnectedWallet({ address: '' })
-      const writeTextMock = vi.fn()
+      setConnectedWallet({ address: '' });
+      const writeTextMock = vi.fn();
       Object.assign(navigator, {
         clipboard: { writeText: writeTextMock },
-      })
+      });
 
-      render(<AccountWalletSection />)
-      const copyBtn = screen.getByTitle('Copy Address')
-      fireEvent.click(copyBtn)
+      render(<AccountWalletSection />);
+      const copyBtn = screen.getByTitle('Copy Address');
+      fireEvent.click(copyBtn);
 
-      expect(writeTextMock).not.toHaveBeenCalled()
-    })
-  })
+      expect(writeTextMock).not.toHaveBeenCalled();
+    });
+  });
 
   describe('sign-out action', () => {
-    beforeEach(() => setConnectedWallet())
+    beforeEach(() => setConnectedWallet());
 
     it('calls logout API and disconnects on success', async () => {
-      const fetchMock = vi.fn().mockResolvedValue({ ok: true })
-      vi.stubGlobal('fetch', fetchMock)
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      vi.stubGlobal('fetch', fetchMock);
 
-      render(<AccountWalletSection />)
-      fireEvent.click(screen.getByText('Sign Out'))
+      render(<AccountWalletSection />);
+      fireEvent.click(screen.getByText('Sign Out'));
 
       await waitFor(() => {
         expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', {
           method: 'POST',
           credentials: 'same-origin',
-        })
-      })
+        });
+      });
 
       await waitFor(() => {
-        expect(mockDisconnect).toHaveBeenCalledOnce()
-      })
-    })
+        expect(mockDisconnect).toHaveBeenCalledOnce();
+      });
+    });
 
     it('logs error on sign-out failure and still resets state', async () => {
-      const signOutError = new Error('Network error')
-      const fetchMock = vi.fn().mockRejectedValue(signOutError)
-      vi.stubGlobal('fetch', fetchMock)
+      const signOutError = new Error('Network error');
+      const fetchMock = vi.fn().mockRejectedValue(signOutError);
+      vi.stubGlobal('fetch', fetchMock);
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      render(<AccountWalletSection />)
-      fireEvent.click(screen.getByText('Sign Out'))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<AccountWalletSection />);
+      fireEvent.click(screen.getByText('Sign Out'));
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'Failed to sign out:',
-          signOutError,
-        )
-      })
-    })
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to sign out:', signOutError);
+      });
+    });
 
     it('disables sign-out button while signing out', async () => {
       const fetchMock = vi.fn(
         () => new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 100)),
-      )
-      vi.stubGlobal('fetch', fetchMock)
+      );
+      vi.stubGlobal('fetch', fetchMock);
 
-      render(<AccountWalletSection />)
-      const btn = screen.getByText('Sign Out').closest('button')!
-      fireEvent.click(btn)
+      render(<AccountWalletSection />);
+      const btn = screen.getByText('Sign Out').closest('button')!;
+      fireEvent.click(btn);
 
       await waitFor(() => {
-        expect(btn).toBeDisabled()
-      })
-    })
-  })
-})
+        expect(btn).toBeDisabled();
+      });
+    });
+  });
+});

@@ -17,13 +17,13 @@ Identity-bound fields — `id`, `ownerAddress`, on-chain state — are intention
 
 ### Prefilled fields
 
-| Field | Type | Notes |
-|---|---|---|
-| `commitmentType` | `"safe" \| "balanced" \| "aggressive"` | Falls back to `"balanced"` if invalid |
-| `amount` | `string` | Converted to string; user may edit freely |
-| `asset` | `string` | e.g. `"XLM"`, `"USDC"` |
-| `durationDays` | `number` | Clamped to `[1, 365]` |
-| `maxLossPercent` | `number` | Clamped to `[0, 100]` |
+| Field            | Type                                   | Notes                                     |
+| ---------------- | -------------------------------------- | ----------------------------------------- |
+| `commitmentType` | `"safe" \| "balanced" \| "aggressive"` | Falls back to `"balanced"` if invalid     |
+| `amount`         | `string`                               | Converted to string; user may edit freely |
+| `asset`          | `string`                               | e.g. `"XLM"`, `"USDC"`                    |
+| `durationDays`   | `number`                               | Clamped to `[1, 365]`                     |
+| `maxLossPercent` | `number`                               | Clamped to `[0, 100]`                     |
 
 ---
 
@@ -41,7 +41,7 @@ commitment cannot be loaded (network error, 404, etc.).
 
 ```ts
 interface PrefillData {
-  commitmentType: "safe" | "balanced" | "aggressive";
+  commitmentType: 'safe' | 'balanced' | 'aggressive';
   amount: string;
   asset: string;
   durationDays: number;
@@ -97,8 +97,8 @@ the source is unaffected.
 
 ```tsx
 // On a commitment detail page:
-import { useRouter } from "next/navigation";
-import { CommitmentDetailActions } from "@/components/CommitmentDetailActions";
+import { useRouter } from 'next/navigation';
+import { CommitmentDetailActions } from '@/components/CommitmentDetailActions';
 
 function CommitmentDetailPage({ commitmentId }: { commitmentId: string }) {
   const router = useRouter();
@@ -121,15 +121,15 @@ function CommitmentDetailPage({ commitmentId }: { commitmentId: string }) {
 
 ## Edge cases
 
-| Scenario | Behaviour |
-|---|---|
-| `sourceId` not in URL | `usePrefillFromCommitment` returns `null`; wizard starts normally |
-| Source commitment returns 404 | Returns `null`; wizard starts normally; no error thrown |
-| Network failure during fetch | Returns `null`; wizard starts normally |
-| `commitmentType` value unknown | Falls back to `"balanced"` |
-| `durationDays` out of range | Clamped to `[1, 365]` |
-| `maxLossPercent` out of range | Clamped to `[0, 100]` |
-| Draft exists + sourceId present | Prefill wins; resume prompt is dismissed |
+| Scenario                        | Behaviour                                                         |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `sourceId` not in URL           | `usePrefillFromCommitment` returns `null`; wizard starts normally |
+| Source commitment returns 404   | Returns `null`; wizard starts normally; no error thrown           |
+| Network failure during fetch    | Returns `null`; wizard starts normally                            |
+| `commitmentType` value unknown  | Falls back to `"balanced"`                                        |
+| `durationDays` out of range     | Clamped to `[1, 365]`                                             |
+| `maxLossPercent` out of range   | Clamped to `[0, 100]`                                             |
+| Draft exists + sourceId present | Prefill wins; resume prompt is dismissed                          |
 
 ---
 

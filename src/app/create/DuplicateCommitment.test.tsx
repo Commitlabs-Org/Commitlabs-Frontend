@@ -28,9 +28,14 @@ vi.mock('@/hooks/useDraftPersistence', () => ({
 }));
 vi.mock('@/hooks/useGuidedTour', () => ({
   useGuidedTour: () => ({
-    isActive: false, currentStepIndex: 0, currentStepConfig: null,
-    totalSteps: 0, nextStep: vi.fn(), prevStep: vi.fn(),
-    skipTour: vi.fn(), startTour: vi.fn(),
+    isActive: false,
+    currentStepIndex: 0,
+    currentStepConfig: null,
+    totalSteps: 0,
+    nextStep: vi.fn(),
+    prevStep: vi.fn(),
+    skipTour: vi.fn(),
+    startTour: vi.fn(),
   }),
 }));
 vi.mock('@/components/shell/AppShellLayout', () => ({
@@ -45,15 +50,36 @@ vi.mock('@/components/onboarding/GuidedTour', () => ({
 }));
 vi.mock('@/components/CreateCommitmentStepSelectType', () => ({
   default: ({ onSelectType, onNext }: { onSelectType: (t: string) => void; onNext: () => void }) =>
-    React.createElement('div', { 'data-testid': 'step-select-type' },
-      React.createElement('button', { onClick: () => { onSelectType('balanced'); onNext(); } }, 'Select balanced')
+    React.createElement(
+      'div',
+      { 'data-testid': 'step-select-type' },
+      React.createElement(
+        'button',
+        {
+          onClick: () => {
+            onSelectType('balanced');
+            onNext();
+          },
+        },
+        'Select balanced',
+      ),
     ),
 }));
 vi.mock('@/components/CreateCommitmentStepConfigure', () => ({
-  default: ({ amount, asset, durationDays, maxLossPercent }: {
-    amount: string; asset: string; durationDays: number; maxLossPercent: number;
+  default: ({
+    amount,
+    asset,
+    durationDays,
+    maxLossPercent,
+  }: {
+    amount: string;
+    asset: string;
+    durationDays: number;
+    maxLossPercent: number;
   }) =>
-    React.createElement('div', { 'data-testid': 'step-configure' },
+    React.createElement(
+      'div',
+      { 'data-testid': 'step-configure' },
       React.createElement('span', { 'data-testid': 'prefill-amount' }, amount),
       React.createElement('span', { 'data-testid': 'prefill-asset' }, asset),
       React.createElement('span', { 'data-testid': 'prefill-duration' }, String(durationDays)),
@@ -74,7 +100,9 @@ vi.mock('@/utils/explorerLinks', () => ({
 describe('usePrefillFromCommitment', () => {
   const SOURCE_URL = '/api/commitments/CMT-42';
 
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('returns prefill data when source commitment is found', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
@@ -119,7 +147,9 @@ describe('usePrefillFromCommitment', () => {
     const { result } = renderHook(() => usePrefillFromCommitment());
 
     // Give the async effect a chance to run
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
 
     expect(result.current).toBeNull();
   });
@@ -130,7 +160,9 @@ describe('usePrefillFromCommitment', () => {
     const { usePrefillFromCommitment } = await import('@/hooks/usePrefillFromCommitment');
     const { result } = renderHook(() => usePrefillFromCommitment());
 
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
 
     expect(result.current).toBeNull();
   });
@@ -138,7 +170,15 @@ describe('usePrefillFromCommitment', () => {
   it('clamps durationDays to valid range [1, 365]', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ data: { commitmentType: 'safe', amount: '10', asset: 'XLM', durationDays: 9999, maxLossPercent: 50 } }),
+      json: async () => ({
+        data: {
+          commitmentType: 'safe',
+          amount: '10',
+          asset: 'XLM',
+          durationDays: 9999,
+          maxLossPercent: 50,
+        },
+      }),
     });
 
     const { usePrefillFromCommitment } = await import('@/hooks/usePrefillFromCommitment');
@@ -151,7 +191,15 @@ describe('usePrefillFromCommitment', () => {
   it('clamps maxLossPercent to [0, 100]', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ data: { commitmentType: 'balanced', amount: '10', asset: 'XLM', durationDays: 30, maxLossPercent: 200 } }),
+      json: async () => ({
+        data: {
+          commitmentType: 'balanced',
+          amount: '10',
+          asset: 'XLM',
+          durationDays: 30,
+          maxLossPercent: 200,
+        },
+      }),
     });
 
     const { usePrefillFromCommitment } = await import('@/hooks/usePrefillFromCommitment');
@@ -164,7 +212,15 @@ describe('usePrefillFromCommitment', () => {
   it('falls back to "balanced" when commitmentType is invalid', async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ data: { commitmentType: 'UNKNOWN_TYPE', amount: '10', asset: 'XLM', durationDays: 30, maxLossPercent: 50 } }),
+      json: async () => ({
+        data: {
+          commitmentType: 'UNKNOWN_TYPE',
+          amount: '10',
+          asset: 'XLM',
+          durationDays: 30,
+          maxLossPercent: 50,
+        },
+      }),
     });
 
     const { usePrefillFromCommitment } = await import('@/hooks/usePrefillFromCommitment');
@@ -258,24 +314,22 @@ describe('CreateCommitment page – prefill integration', () => {
     });
   });
 
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('shows the duplicate prefill banner when a sourceId is in the URL', async () => {
     const CreateCommitment = (await import('@/app/create/page')).default;
     render(React.createElement(CreateCommitment));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('duplicate-prefill-banner')).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.getByTestId('duplicate-prefill-banner')).toBeTruthy());
   });
 
   it('prefills configure step with source commitment parameters', async () => {
     const CreateCommitment = (await import('@/app/create/page')).default;
     render(React.createElement(CreateCommitment));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('step-configure')).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.getByTestId('step-configure')).toBeTruthy());
 
     expect(screen.getByTestId('prefill-amount').textContent).toBe('750');
     expect(screen.getByTestId('prefill-asset').textContent).toBe('USDC');
@@ -287,9 +341,7 @@ describe('CreateCommitment page – prefill integration', () => {
     const CreateCommitment = (await import('@/app/create/page')).default;
     render(React.createElement(CreateCommitment));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('step-configure')).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.getByTestId('step-configure')).toBeTruthy());
 
     // Step 1 (type selection) must NOT be visible
     expect(screen.queryByTestId('step-select-type')).toBeNull();

@@ -1,9 +1,5 @@
 {
-  "extends": [
-    "next/core-web-vitals",
-    "next/typescript",
-    "plugin:jsx-a11y/recommended"
-  ],
+  "extends": ["next/core-web-vitals", "next/typescript", "plugin:jsx-a11y/recommended"],
   "rules": {
     "@typescript-eslint/no-unused-vars": [
       "error",

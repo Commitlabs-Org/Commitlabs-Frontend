@@ -19,6 +19,7 @@ This document describes the secure cookie-based session management system implem
 ### Security Features
 
 #### Opaque Session Tokens
+
 - **Format**: 16-byte random hex string prefixed with `session_`
 - **Expiry**: 24 hours
 - **Storage**: Server-side in-memory `Map` containing user address, issued timestamp, expiry timestamp, and CSRF token.
@@ -26,11 +27,13 @@ This document describes the secure cookie-based session management system implem
 - **Limitation (Known Issue)**: The current session store is strictly in-memory (`sessionStoreMap`) and does not support cross-instance persistence. This limitation is tracked in an existing issue. A multi-instance production deployment currently requires sticky sessions or will drop sessions on request routing changes.
 
 #### Cookie Security
+
 - **Session Cookie**: HTTP-only, Secure (production), SameSite=Lax, 24-hour expiry
 - **CSRF Cookie**: Non-HttpOnly, Secure (production), SameSite=Lax, 24-hour expiry
 - **Path**: `/` (site-wide availability)
 
 #### CSRF Protection
+
 - **Synchronizer Token Pattern**: CSRF token stored in server-side session and mirrored in header
 - **Double-Submit Cookie Pattern**: CSRF token available in non-HttpOnly cookie
 - **Origin Validation**: Additional defense-in-depth with Origin/Referer header checks
@@ -40,6 +43,7 @@ This document describes the secure cookie-based session management system implem
 ### Core Functions
 
 #### `createSessionToken(address: string)`
+
 Generates an opaque session token and stores session context (including CSRF token) in the server-side store.
 
 ```typescript
@@ -49,6 +53,7 @@ const token = createSessionToken(address);
 **Returns**: The opaque session token (string)
 
 #### `verifySessionToken(token: string)`
+
 Validates the opaque token against the session store and returns session information.
 
 ```typescript
@@ -59,6 +64,7 @@ const result = verifySessionToken(token);
 **Returns**: SessionVerificationResult with validity status and user data
 
 #### `revokeSession(token: string)`
+
 Revokes a session token for logout functionality, clearing it from the in-memory store.
 
 ```typescript
@@ -70,6 +76,7 @@ const revoked = revokeSession(token);
 ### Authentication Middleware
 
 #### `requireAuth(req: NextRequest)`
+
 Middleware function for protecting routes that extracts and validates session cookies against the store.
 
 ```typescript
@@ -80,6 +87,7 @@ const authenticatedReq = requireAuth(req);
 **Throws**: UnauthorizedError for invalid/missing sessions
 
 #### `validateCsrfToken(req: NextRequest, expectedCsrfToken: string)`
+
 Validates CSRF token for state-changing requests (POST, PUT, PATCH, DELETE).
 
 ```typescript
@@ -89,6 +97,7 @@ validateCsrfToken(req, expectedCsrfToken);
 **Throws**: UnauthorizedError for missing/invalid CSRF tokens
 
 #### `validateOrigin(req: NextRequest)`
+
 Validates Origin/Referer headers for additional CSRF protection.
 
 ```typescript
@@ -100,9 +109,11 @@ validateOrigin(req);
 ## API Endpoints
 
 ### POST /api/auth/verify
+
 Authenticates user via Stellar signature and creates session.
 
 **Request Body**:
+
 ```json
 {
   "address": "G...",
@@ -112,6 +123,7 @@ Authenticates user via Stellar signature and creates session.
 ```
 
 **Response**:
+
 ```json
 {
   "verified": true,
@@ -122,15 +134,18 @@ Authenticates user via Stellar signature and creates session.
 ```
 
 **Cookies Set**:
+
 - `session`: HTTP-only opaque token (24 hours)
 - `csrf`: Non-HttpOnly CSRF token (24 hours)
 
 ### POST /api/auth/logout
+
 Terminates user session and clears cookies.
 
 **Headers**: Requires valid session cookie
 
 **Response**:
+
 ```json
 {
   "loggedOut": true,
@@ -151,16 +166,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export const POST = async (req: NextRequest) => {
   // Authenticate user
   const authenticatedReq = requireAuth(req);
-  
+
   // Validate CSRF for state-changing requests
   validateCsrfToken(req, authenticatedReq.user.csrfToken);
-  
+
   // Additional origin validation
   validateOrigin(req);
-  
+
   // Process authenticated request
   const userAddress = authenticatedReq.user.address;
-  
+
   return NextResponse.json({
     message: 'Action completed successfully',
     user: userAddress,
@@ -207,22 +222,26 @@ const protectedResponse = await fetch('/api/protected-route', {
 ### Threat Mitigations
 
 #### Session Hijacking
+
 - HTTP-only cookies prevent JavaScript access
 - SameSite=Lax (with double constraints) prevents cross-site request forgery
 - Secure flag ensures HTTPS-only transmission
 - 24-hour expiry limits exposure window
 
 #### CSRF Attacks
+
 - Synchronizer token pattern requires server-managed token
 - Origin validation provides additional protection
 - Double-submit cookie pattern for client-side access
 
 #### Token Replay
+
 - Session records include issued timestamp and expiry
 - Server-side map for immediate logout
 - Nonce consumption prevents signature replay
 
 #### Cross-Origin Attacks
+
 - SameSite=Lax and CSRF tokens prevent cross-site action execution
 - Origin/Referer header validation
 - Host header validation in production
@@ -306,6 +325,7 @@ NODE_ENV=production
 ### Debug Mode
 
 Enable debug logging by setting:
+
 ```bash
 DEBUG=session:* npm run dev
 ```

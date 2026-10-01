@@ -113,16 +113,7 @@
                   "u32": 300
                 },
                 {
-                  "map": [
-                    {
-                      "key": {
-                        "string": "source"
-                      },
-                      "val": {
-                        "string": "issue-463"
-                      }
-                    }
-                  ]
+                  "map": []
                 }
               ]
             }
@@ -187,7 +178,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
                 },
                 {
-                  "string": "value mismatch during settlement"
+                  "string": "test dispute reason"
                 }
               ]
             }
@@ -432,16 +423,7 @@
                         "symbol": "metadata"
                       },
                       "val": {
-                        "map": [
-                          {
-                            "key": {
-                              "string": "source"
-                            },
-                            "val": {
-                              "string": "issue-463"
-                            }
-                          }
-                        ]
+                        "map": []
                       }
                     },
                     {
@@ -490,7 +472,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518500
         ]
       ],
       [
@@ -551,7 +533,7 @@
                         "symbol": "reason_category"
                       },
                       "val": {
-                        "u32": 0
+                        "u32": 4
                       }
                     },
                     {
@@ -559,7 +541,7 @@
                         "symbol": "reason_text"
                       },
                       "val": {
-                        "string": "value mismatch during settlement"
+                        "string": "test dispute reason"
                       }
                     }
                   ]
@@ -617,7 +599,7 @@
             },
             "ext": "v0"
           },
-          4095
+          518500
         ]
       ],
       [
@@ -1157,10 +1139,10 @@
                 "symbol": "dispute"
               },
               {
-                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                "u64": "0"
               },
               {
-                "u64": "0"
+                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
               }
             ],
             "data": {
@@ -1194,7 +1176,7 @@
                     "symbol": "reason_category"
                   },
                   "val": {
-                    "u32": 0
+                    "u32": 4
                   }
                 },
                 {
@@ -1202,7 +1184,7 @@
                     "symbol": "reason_text"
                   },
                   "val": {
-                    "string": "value mismatch during settlement"
+                    "string": "test dispute reason"
                   }
                 },
                 {

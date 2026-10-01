@@ -21,10 +21,7 @@ describe('useTestNotification', () => {
     mockSuccess.mockClear();
     mockError.mockClear();
 
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response));
   });
 
   afterEach(() => {
@@ -56,17 +53,12 @@ describe('useTestNotification', () => {
 
     expect(result.current.isSending).toBe(false);
     expect(mockSuccess).toHaveBeenCalledOnce();
-    expect(mockSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Test Sent' }),
-    );
+    expect(mockSuccess).toHaveBeenCalledWith(expect.objectContaining({ title: 'Test Sent' }));
     expect(mockError).not.toHaveBeenCalled();
   });
 
   it('transitions idle -> sending -> error when fetch throws', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('Network error')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
     const { result } = renderHook(() => useTestNotification('slack'));
 
@@ -78,9 +70,7 @@ describe('useTestNotification', () => {
 
     expect(result.current.isSending).toBe(false);
     expect(mockError).toHaveBeenCalledOnce();
-    expect(mockError).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Test Failed' }),
-    );
+    expect(mockError).toHaveBeenCalledWith(expect.objectContaining({ title: 'Test Failed' }));
     expect(mockSuccess).not.toHaveBeenCalled();
   });
 
@@ -107,10 +97,7 @@ describe('useTestNotification', () => {
   });
 
   it('shows error toast when fetch returns a non-ok, non-404 response', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response));
 
     const { result } = renderHook(() => useTestNotification('email'));
 
@@ -122,17 +109,12 @@ describe('useTestNotification', () => {
 
     expect(result.current.isSending).toBe(false);
     expect(mockError).toHaveBeenCalledOnce();
-    expect(mockError).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Test Failed' }),
-    );
+    expect(mockError).toHaveBeenCalledWith(expect.objectContaining({ title: 'Test Failed' }));
     expect(mockSuccess).not.toHaveBeenCalled();
   });
 
   it('shows success toast when fetch returns 404 (missing mock endpoint)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 } as Response));
 
     const { result } = renderHook(() => useTestNotification('email'));
 
@@ -160,12 +142,8 @@ describe('useTestNotification', () => {
   });
 
   it('tracks two channels independently', async () => {
-    const { result: emailHook } = renderHook(() =>
-      useTestNotification('email'),
-    );
-    const { result: slackHook } = renderHook(() =>
-      useTestNotification('slack'),
-    );
+    const { result: emailHook } = renderHook(() => useTestNotification('email'));
+    const { result: slackHook } = renderHook(() => useTestNotification('slack'));
 
     let p1: Promise<void>;
     let p2: Promise<void>;
