@@ -39,6 +39,11 @@ export interface CommitmentExposureResult {
   zoneThresholds: typeof EXPOSURE_ZONE_THRESHOLDS;
 }
 
+export interface VolatilityExposureResult {
+  percent: number;
+  insufficientData: boolean;
+}
+
 const DRAWDOWN_WEIGHT = 0.6;
 const VOLATILITY_WEIGHT = 0.4;
 const VOLATILITY_RETURN_SCALE = 20;
@@ -74,15 +79,48 @@ function computeDrawdownExposurePercent(drawdownFraction: number, maxLossPercent
   return Math.min(100, Math.max(0, (drawdownPercent / maxLossPercent) * 100));
 }
 
-function computeVolatilityExposurePercent(
+/**
+ * Computes volatility-based exposure percentage scaled against a protocol maximum loss ceiling.
+ *
+ * @param values Array of historical asset valuation numbers.
+ * @param protocolMaxLossPercentCeiling Maximum loss percent ceiling configured by the protocol.
+ * @returns Exposure percentage between 0 and 100, or null if insufficient data or ceiling is non-positive.
+ */
+export function computeVolatilityExposurePercent(
   values: number[],
   protocolMaxLossPercentCeiling: number,
-): number | null {
+): number | null;
+/**
+ * Computes volatility-based exposure percentage from mean absolute return.
+ *
+ * @param meanAbsReturn Mean absolute return fraction.
+ * @param protocolMaxLossPercentCeiling Maximum loss percent ceiling configured by the protocol.
+ * @returns Result object containing the calculated percentage and insufficient data flag.
+ */
+export function computeVolatilityExposurePercent(
+  meanAbsReturn: number,
+  protocolMaxLossPercentCeiling: number,
+): VolatilityExposureResult;
+export function computeVolatilityExposurePercent(
+  input: number[] | number,
+  protocolMaxLossPercentCeiling: number,
+): number | null | VolatilityExposureResult {
+  if (typeof input === 'number') {
+    if (!Number.isFinite(protocolMaxLossPercentCeiling) || protocolMaxLossPercentCeiling <= 0) {
+      return { percent: 0, insufficientData: true };
+    }
+    if (!Number.isFinite(input) || input < 0) {
+      return { percent: 0, insufficientData: true };
+    }
+    const scale = (VOLATILITY_RETURN_SCALE * 100) / protocolMaxLossPercentCeiling;
+    const raw = input * 100 * scale;
+    const percent = Math.min(100, Math.max(0, raw));
+    return { percent, insufficientData: false };
+  }
+
+  const values = input;
   if (values.length < 2) return null;
 
-  // Guard against a zero/negative/non-finite ceiling — without this the
-  // scale factor below divides by zero and produces NaN/Infinity, which
-  // would otherwise leak into the chart as an invalid exposure percent.
   if (!Number.isFinite(protocolMaxLossPercentCeiling) || protocolMaxLossPercentCeiling <= 0) {
     return null;
   }
