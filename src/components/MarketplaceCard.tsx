@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { RISK_COLOR_CLASSES } from '@/constants/riskColors';
 
 export type CommitmentType = 'Safe' | 'Balanced' | 'Aggressive';
 
@@ -45,11 +46,7 @@ function clampScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-const typeColorClass: Record<CommitmentType, string> = {
-  Safe: 'text-[#00C950]',
-  Balanced: 'text-[#51A2FF]',
-  Aggressive: 'text-[#FF8904]',
-};
+const typeColorClass: Record<CommitmentType, string> = RISK_COLOR_CLASSES;
 
 const MarketplaceCardComponent = memo(function MarketplaceCard({
   id,
