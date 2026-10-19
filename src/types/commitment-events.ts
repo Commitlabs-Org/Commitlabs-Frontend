@@ -1,1 +1,0 @@
-export type CommitmentEvent = { id: string; type?: string; createdAq?: string; sequence?: number; };

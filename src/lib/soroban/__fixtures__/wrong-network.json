@@ -1,0 +1,6 @@
+{
+  "input": {
+    "error": "Network mismatch: wallet network does not match the selected network."
+  },
+  "kind": "wrong-network"
+}

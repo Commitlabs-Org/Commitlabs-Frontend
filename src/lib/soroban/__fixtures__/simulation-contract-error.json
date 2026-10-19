@@ -1,0 +1,8 @@
+{
+  "input": {
+    "error": "simulation failed",
+    "diagnostics": ["Error(Contract, #13)"]
+  },
+  "kind": "contract",
+  "code": 13
+}

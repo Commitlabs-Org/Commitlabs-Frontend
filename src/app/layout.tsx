@@ -1,108 +1,35 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
-import ScrollToTopButton from '@/components/landing-page/ui/ScrollToTop';
-import { SITE_URL } from '@/lib/site';
-import { CommandPalette, CommandPaletteProvider } from '@/components/CommandPalette';
+import { WalletProvider } from '@/components/WalletProvider';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
+import { WalletNotice } from '@/components/WalletNotice';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
   title: 'CommitLabs - Liquidity as a Commitment',
   description:
-    'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-  keywords: 'liquidity, commitment, blockchain, DeFi, NFT, Stellar, Soroban',
-  authors: [{ name: 'CommitLabs' }],
-  creator: 'CommitLabs',
-  publisher: 'CommitLabs',
-  openGraph: {
-    title: 'CommitLabs - Liquidity as a Commitment',
-    description:
-      'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-    url: `${SITE_URL}/`,
-    siteName: 'CommitLabs',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'CommitLabs - Liquidity as a Commitment',
-      },
-    ],
-    locale: 'en_US',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'CommitLabs - Liquidity as a Commitment',
-    description:
-      'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-    images: ['/og-image.jpg'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-    ? {
-        verification: {
-          google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-        },
-      }
-    : {}),
+    'Turn passive liquidity into enforceable, attestable on-chain commitments on Stellar Soroban.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // The middleware sets a per-request nonce (see src/middleware.ts): it goes
+  // out on the CSP response header and comes back on the request as `x-nonce`.
+  // Reading a request header here also opts every route into dynamic
+  // rendering, which is required — with static prerendering Next.js cannot
+  // stamp the nonce onto its own <script> tags and the browser would block
+  // them under `script-src 'strict-dynamic'`.
+  const nonce = headers().get('x-nonce') ?? undefined;
+
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={['scroll-smooth', inter.variable, robotoMono.variable].join(' ')}
-    >
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'WebSite',
-              name: 'CommitLabs',
-              description:
-                'Transform passive liquidity into enforceable, attestable, and composable on-chain commitments',
-              url: `${SITE_URL}/`,
-              publisher: {
-                '@type': 'Organization',
-                name: 'CommitLabs',
-                url: `${SITE_URL}/`,
-              },
-            }),
-          }}
-        />
-      </head>
+    <html lang="en" nonce={nonce}>
       <body>
-        <WebVitalsReporter />
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        <ThemeProvider>
-          <WalletProvider>
-            <MotionProvider>
-              <ToastProvider>
-                <NetworkMismatchBanner />
-                <CommandPaletteProvider>
-                  <AppShellConnectionStatus>{children}</AppShellConnectionStatus>
-                  <CommandPalette />
-                </CommandPaletteProvider>
-                <ScrollToTopButton />
-              </ToastProvider>
-            </MotionProvider>
-          </WalletProvider>
-        </ThemeProvider>
+        <WalletProvider>
+          <Header />
+          <WalletNotice />
+          <main id="main-content">{children}</main>
+          <Footer />
+        </WalletProvider>
       </body>
     </html>
   );

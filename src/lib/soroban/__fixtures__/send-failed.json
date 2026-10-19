@@ -1,0 +1,7 @@
+{
+  "input": {
+    "status": "ERROR",
+    "error": "Transaction could not be submitted."
+  },
+  "kind": "failed"
+}

@@ -38,6 +38,14 @@ This project pins its toolchain so contributors and CI run a consistent environm
 - Before opening your PR, run tests and check coverage locally using `npm run test:coverage` (or `pnpm test:coverage`).
 - The build, tests, and linters must pass in CI before the PR can be merged.
 
+## Frontend Performance Budgets
+
+The production build is checked against gzip-compressed first-load JavaScript budgets for `/`, `/create`, and `/dashboard`. The baseline comes from the Next.js build output: 96.2 kB, 100 kB, and 99.8 kB, respectively. The exact byte baselines and limits (10% headroom) are recorded in [`performance-budgets.json`](./performance-budgets.json); `/` has its own lower limit. The check also fails if the Freighter API implementation appears in the `/` first-load chunks.
+
+After building, run `npm run size`; run `npm run test:size` to test the manifest parser and budget failure cases. To inspect bundle contents, run `npm run analyze` (which enables the analyzer only for that build).
+
+Lighthouse CI checks `/`, `/create`, and `/dashboard` using three mobile runs and median assertions for performance, LCP, CLS, and TBT. Run it locally after building with `npx lhci autorun`. To intentionally update the budgets, rebuild and compare the route first-load values, confirm that Freighter remains out of `/` first-load JavaScript, then update the corresponding baseline and 10%-headroom maximum in `performance-budgets.json` in the same change.
+
 ## 96-Hour Timeframe Convention
 
 To keep the momentum of the project moving, we enforce a **96-hour timeframe convention**:
