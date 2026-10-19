@@ -51,7 +51,7 @@ describe('contract error table', () => {
     expect(errorBlock).not.toBeNull();
 
     const contractErrors = [...(errorBlock?.[1] ?? '').matchAll(/^\s*(\w+)\s*=\s*(\d+)\s*,/gm)];
-    expect(contractErrors).toHaveLength(15);
+    expect(contractErrors).toHaveLength(17);
     for (const [, name, rawCode] of contractErrors) {
       const code = Number(rawCode) as EscrowErrorCode;
       expect(CONTRACT_ERRORS[code]).toMatchObject({ name, code });

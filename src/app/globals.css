@@ -108,6 +108,8 @@ h2:focus { outline: none; }
 .badge.matured { color: var(--warn); border-color: var(--warn); }
 .badge.settled { color: var(--ok); border-color: var(--ok); }
 .badge.exited { color: var(--danger); border-color: var(--danger); }
+.badge.disputed { color: var(--warn); border-color: var(--warn); }
+.badge.violated { color: var(--danger); border-color: var(--danger); }
 .badge.demo { color: var(--accent2); border-color: var(--accent2); }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .dialog { max-width: 440px; width: calc(100% - 32px); background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
