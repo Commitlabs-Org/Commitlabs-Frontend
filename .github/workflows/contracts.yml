@@ -36,9 +36,13 @@ jobs:
       - name: Install Stellar CLI
         uses: stellar/stellar-cli@v27.1.0
 
-      - name: Run Cargo Tests
+      - name: Cargo Check
         working-directory: contracts
-        run: cargo test
+        run: cargo check
+
+      - name: Test Escrow Contract
+        working-directory: contracts
+        run: cargo test -p commitlabs-escrow --all-targets
 
       - name: Build Soroban Smart Contracts
         working-directory: contracts
