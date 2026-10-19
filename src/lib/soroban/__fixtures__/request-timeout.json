@@ -1,0 +1,7 @@
+{
+  "input": {
+    "name": "AbortError",
+    "message": "The operation was aborted."
+  },
+  "kind": "timeout"
+}

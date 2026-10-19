@@ -1,0 +1,6 @@
+{
+  "input": {
+    "error": "Host function simulation failed: insufficient fee."
+  },
+  "kind": "simulation"
+}

@@ -1,0 +1,7 @@
+{
+  "input": {
+    "code": 4001,
+    "message": "User rejected the request."
+  },
+  "kind": "rejected"
+}

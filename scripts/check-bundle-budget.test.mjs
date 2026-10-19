@@ -40,7 +40,7 @@ test('fails when route first-load JavaScript exceeds its budget', () => {
 
   assert.throws(
     () => assertWithinBudget('/create', actualBytes, actualBytes - 1),
-    /over its .*bate budget/,
+    /over its .*byte budget/,
   );
 });
 

@@ -1,0 +1,7 @@
+{
+  "input": {
+    "name": "TypeError",
+    "message": "Failed to fetch"
+  },
+  "kind": "network"
+}

@@ -1,6 +1,6 @@
 # CommitLabs Soroban Contracts
 
-Soroban (Rust) smart-contract workspace backing the CommitLabs liquidity commitment protocol. The frontend and backend service layer interact with the escrow contract through Stellar Soroban RPC, so this document treats `contracts/escrow/src/lib.rs` as the source of truth and cross-checks behavior against `contracts/escrow/src/test.rs`.
+Soroban (Rust) smart-contract workspace backing the CommitLabs liquidity commitment protocol. The frontend and backend service layer interact with the escrow contract through Stellar Soroban RPC, so this document treats `contracts/escrow/src/lib.rs` as the source of truth and cross-checks behavior against the focused tests in `contracts/escrow/src/test_funding_window.rs`.
 
 ## Workspace Layout
 
@@ -11,11 +11,27 @@ contracts/
 |   |-- Cargo.toml                # commitlabs-escrow crate
 |   `-- src/
 |       |-- lib.rs                # EscrowContract implementation, types, errors
-|       `-- test.rs               # Contract unit tests and lifecycle examples
+|       |-- test_funding_window.rs # Funding-time maturity, expiry, and cancellation tests
+|       `-- test_yield_reserve.rs # Yield-pool reservation accounting tests
 `-- scripts/
     |-- deploy-testnet.sh         # Build, deploy, initialize helper
     `-- deploy-testnet.smoke.mjs  # Dry-run smoke validation
 ```
+
+## Testnet Deployment
+
+The escrow contract is deployed on Stellar **testnet**: [`CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4`](https://stellar.expert/explorer/testnet/contract/CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4) (see [DEPLOYMENTS.md](../DEPLOYMENTS.md)).
+
+Build and invoke:
+
+```bash
+cd contracts && stellar contract build
+stellar contract invoke --id CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4 --source-account <KEY> --network testnet -- get_default_penalty --risk Balanced
+stellar contract invoke --id CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4 --source-account <KEY> --network testnet -- create_commitment --owner <ADDR> --asset CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC --amount 10000000 --risk Balanced --duration_days 30 --penalty_bps 500 --metadata '{"name":"demo"}'
+stellar contract invoke --id CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4 --source-account <KEY> --network testnet -- fund_escrow --commitment_id 0
+```
+
+Note: commitment ids start at 0. The function reference is the Entrypoints table above, which matches the contract's public functions in `escrow/src/lib.rs`.
 
 ## Escrow Lifecycle
 
@@ -23,24 +39,28 @@ The escrow contract manages a liquidity commitment from creation through funding
 
 ```text
 create_commitment/create_commitment_default
-  -> fund_escrow
+  -> fund_escrow (within 7 days; lock and yield period starts at funding)
     -> release OR settle_commitment
     -> refund OR early_exit_commitment OR refund_partial
     -> dispute -> resolve_dispute
     -> transfer_ownership -> later release/refund/dispute by the new owner
     -> record_attestation below threshold -> Violated -> resolve_dispute
+  -> cancel_commitment by owner, or permissionlessly after 7 days -> Cancelled
 ```
 
 ### State Machine
 
 | State      | Meaning                                                                                                          | Allowed next actions                                                                                                                       |
 | ---------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Created`  | Commitment exists but funds have not been transferred into escrow.                                               | `fund_escrow`                                                                                                                              |
+| `Created`  | Commitment exists but funds have not been transferred into escrow; funding is allowed for 7 days after creation.   | `fund_escrow`, `cancel_commitment`                                                                                                         |
 | `Funded`   | Principal is locked and the commitment is active.                                                                | `release`, `settle_commitment`, `refund`, `early_exit_commitment`, `refund_partial`, `dispute`, `record_attestation`, `transfer_ownership` |
-| `Released` | Matured commitment paid principal plus accrued yield to the owner. Terminal.                                     | None                                                                                                                                       |
+| `Released` | Owner or admin settled a matured commitment; principal plus accrued yield paid to the current owner. Terminal.                                     | None                                                                                                                                       |
 | `Refunded` | Early exit/refund paid principal minus penalty, unless grace period waived it. Terminal.                         | None                                                                                                                                       |
 | `Disputed` | Owner or admin froze the funded commitment pending admin resolution.                                             | `resolve_dispute`                                                                                                                          |
 | `Violated` | `record_attestation` observed a score below `ViolationThreshold`; transfers are frozen pending admin resolution. | `resolve_dispute`                                                                                                                          |
+| `Cancelled` | Unfunded commitment was cancelled by its owner or after its funding window expired. Terminal.                    | None                                                                                                                                       |
+
+Creation records the selected lock length in the existing `maturity - created_at` fields. Funding must happen no later than `created_at + FUNDING_WINDOW_SECONDS` (7 days); at funding, maturity is reset to funding time plus that same lock length. This keeps the `Commitment` storage layout unchanged, so records written before this upgrade decode normally and retain their configured lock length. The early-exit grace period is measured against this funding-based maturity.
 
 ### Entrypoints
 
@@ -49,19 +69,21 @@ create_commitment/create_commitment_default
 | `initialize(admin, token, fee_recipient, safe_default_penalty_bps, balanced_default_penalty_bps, aggressive_default_penalty_bps)` | `admin` auth           | One-time setup. Stores admin, escrow token, fee recipient, default risk-profile penalties, `NextId`, and zero-second grace period.                                                                                                                                            |
 | `create_commitment(owner, asset, amount, risk, duration_days, penalty_bps, metadata)`                                             | `owner` auth           | Creates `Created` commitment after validating `amount`, `duration_days`, and `penalty_bps`; indexes it under the owner.                                                                                                                                                       |
 | `create_commitment_default` / `create_commitment_with_default`                                                                    | `owner` auth           | Same as `create_commitment`, but reads the default penalty for `risk`.                                                                                                                                                                                                        |
-| `fund_escrow(commitment_id)`                                                                                                      | Commitment owner auth  | Requires `Created`; transfers `amount` from owner to contract; moves to `Funded`.                                                                                                                                                                                             |
-| `release(commitment_id)`                                                                                                          | No owner auth required | Requires `Funded` and ledger timestamp at or after maturity; pays principal plus accrued yield to owner; moves to `Released`.                                                                                                                                                 |
-| `settle_commitment(commitment_id, caller)`                                                                                        | `caller` auth          | ABI alias for matured release used by the backend. Returns `SettlementResult { settlementAmount, finalStatus }`.                                                                                                                                                              |
-| `refund(commitment_id)`                                                                                                           | Commitment owner auth  | Requires `Funded`; applies early-exit penalty unless inside `GracePeriodSeconds`; moves to `Refunded`.                                                                                                                                                                        |
+| `fund_escrow(commitment_id)`                                                                                                      | Commitment owner auth  | Requires `Created` and funding within 7 days of creation; transfers `amount` from owner to contract, resets maturity to funding time plus the configured lock duration, checks the yield pool can cover `accrued_yield` and reserves it; moves to `Funded`.                                                                                 |
+| `cancel_commitment(commitment_id, caller)`                                                                                        | Owner before expiry; permissionless after expiry | Requires `Created`; before expiry, `caller` must be the owner and authorize; after expiry, anyone may cancel. Marks `Cancelled` and removes the id from the owner's index without transferring tokens. |
+| `release(commitment_id, caller)`                                                                                                  | Owner or admin auth    | Requires `Funded` and ledger timestamp at or after maturity; consumes the commitment's yield reservation and transfers principal plus accrued yield to the current owner; moves to `Released`.                               |
+| `settle_commitment(commitment_id, caller)`                                                                                        | Owner or admin auth    | ABI alias for matured release used by the backend. Returns `SettlementResult { settlementAmount, finalStatus }`.                                                                                                                                                              |
+| `refund(commitment_id)`                                                                                                           | Commitment owner auth  | Requires `Funded`; applies early-exit penalty unless inside `GracePeriodSeconds`; releases the yield reservation; moves to `Refunded`.                                                                                                                                        |
 | `early_exit_commitment(commitment_id, caller)`                                                                                    | `caller` auth          | Backend-facing early-exit alias around refund semantics. Returns `EarlyExitResult { exitAmount, penaltyAmount, finalStatus }`.                                                                                                                                                |
-| `refund_partial(commitment_id, amount)`                                                                                           | Commitment owner auth  | Partial early exit on a funded commitment; remaining principal stays funded unless fully withdrawn.                                                                                                                                                                           |
-| `dispute(commitment_id, caller, reason)`                                                                                          | Owner or admin auth    | Requires `Funded`; stores a `DisputeRecord`, categorizes the reason, and moves to `Disputed`.                                                                                                                                                                                 |
-| `resolve_dispute(commitment_id, release_to_owner)`                                                                                | Admin auth             | Resolves `Disputed` or `Violated` commitments. If `release_to_owner` is true, pays owner; otherwise refunds/penalizes according to the dispute path.                                                                                                                          |
+| `refund_partial(commitment_id, amount)`                                                                                           | Commitment owner auth  | Partial early exit on a funded commitment; remaining principal stays funded unless fully withdrawn. The yield reservation is released only when the remaining principal reaches zero.                                                                                           |
+| `dispute(commitment_id, caller, reason)`                                                                                          | Owner or admin auth    | Requires `Funded`; stores a `DisputeRecord`, categorizes the reason, and moves to `Disputed`. The yield reservation stays held while frozen.                                                                                                                                   |
+| `resolve_dispute(commitment_id, release_to_owner)`                                                                                | Admin auth             | Resolves `Disputed` or `Violated` commitments. If `release_to_owner` is true, pays owner; otherwise refunds/penalizes according to the dispute path. Consumes the reservation on a matured release, and releases it on any yield-forfeiting path.                              |
 | `transfer_ownership(commitment_id, new_owner)`                                                                                    | Current owner auth     | Requires `Funded`; updates `Commitment.owner`, removes the id from the old `OwnerIndex`, adds it to the new owner index, and keeps status `Funded`.                                                                                                                           |
 | `record_attestation(commitment_id, attestor, score)`                                                                              | `attestor` auth        | Records score history. If `score < ViolationThreshold` while funded, moves status to `Violated` and emits a violation event.                                                                                                                                                  |
 | `deposit_yield_pool(admin, amount)`                                                                                               | Admin auth             | Transfers tokens from admin into the contract yield pool for matured release payouts.                                                                                                                                                                                         |
+| `withdraw_yield_pool(to, amount)`                                                                                                 | Admin auth             | Transfers only the available (unreserved) yield-pool surplus to `to`; reverts with `InsufficientYieldPool` above it. Emits `withdraw_yield_pool`.                                                                                                                              |
 | `pause` / `unpause`                                                                                                               | Admin auth             | Toggles write-operation pause flag. Mature `release` remains available while paused.                                                                                                                                                                                          |
-| Read methods                                                                                                                      | None                   | `get_commitment`, `get_user_commitments`, `get_user_commitment_ids`, `get_user_commitment_ids_page`, `get_owner_commitments`, `get_attestations`, `get_dispute`, `get_default_penalty`, `get_yield_pool_balance`, `get_grace_period`, `get_violation_threshold`, `is_paused`. |
+| Read methods                                                                                                                      | None                   | `get_commitment`, `get_user_commitments`, `get_user_commitment_ids`, `get_user_commitment_ids_page`, `get_owner_commitments`, `get_attestations`, `get_dispute`, `get_default_penalty`, `get_yield_pool_balance`, `get_yield_pool_status`, `get_grace_period`, `get_violation_threshold`, `is_paused`. |
 
 ## Configuration Surface
 
@@ -76,7 +98,28 @@ create_commitment/create_commitment_default
 | `MAX_DURATION_DAYS`        | `365`                                                                       | Maximum duration accepted by `create_commitment`.                                                                                           |
 | `MAX_PENALTY_BPS`          | `10_000`                                                                    | Maximum penalty basis points, where `10_000` is 100%.                                                                                       |
 | Yield rates                | `yield_rate_bps` / `calculate_accrued_yield`                                | Safe: 500 bps annualized, Balanced: 700 bps, Aggressive: 1000 bps.                                                                          |
-| Yield pool                 | `deposit_yield_pool` / `get_yield_pool_balance`                             | Matured `release`/`settle_commitment` payouts require enough pool balance for accrued yield, otherwise they return `InsufficientYieldPool`. |
+| Yield pool                 | `deposit_yield_pool` / `withdraw_yield_pool` / `get_yield_pool_status`      | `available = balance - reserved`. `fund_escrow` reserves `accrued_yield` from `available`, so matured releases can always be paid.                                                                    |
+
+## Yield-Pool Accounting
+
+The yield pool tracks two numbers in instance storage:
+
+| Storage          | Meaning                                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| `YieldPool`      | Total tokens held in the contract for yield payouts.                                             |
+| `ReservedYield`  | Sum of `accrued_yield` already promised to funded commitments.                                   |
+| `available`      | Derived: `YieldPool - ReservedYield`, the portion an admin may withdraw or promise to new commitments. |
+
+Solvency is enforced when the promise is made, not when it is redeemed:
+
+- `fund_escrow` requires `available >= accrued_yield` (else `InsufficientYieldPool`) and then adds `accrued_yield` to `ReservedYield`. Commitments with a zero rounded-down yield reserve nothing and always fund.
+- A matured release (`release`, `settle_commitment`, or `resolve_dispute(release_to_owner = true)` after maturity) decreases both `YieldPool` and `ReservedYield` by `accrued_yield`, so it no longer fails because of pool exhaustion. A defensive check returns `ReservedYieldInvariant` if `reserved < accrued_yield`.
+- Every exit that forfeits yield (`refund`, `early_exit_commitment`, `refund_partial` on full exit, `resolve_dispute` refund branch, and a pre-maturity `resolve_dispute(release_to_owner = true)`) drops the reservation while leaving `YieldPool` untouched.
+- `refund_partial` keeps the whole reservation until the remaining principal reaches zero, since the reservation is recorded per commitment rather than pro-rated. This over-reserves (never under-reserves) during a partial exit.
+- `withdraw_yield_pool(to, amount)` is admin-only and may only take from `available`; `reserved` can never be drained. `get_yield_pool_status()` exposes `{ balance, reserved, available }` for admins and UIs.
+- `0 <= reserved <= balance` holds after every entrypoint. All arithmetic is checked; overflow returns `InvalidAmount` and a broken invariant returns `ReservedYieldInvariant` instead of panicking.
+
+Commitments funded before reservation accounting existed have no entry under `DataKey::Reserved(id)`. They are never un-reserved, and their matured release falls back to the previous behaviour of paying `accrued_yield` straight out of `YieldPool`, which can still return `InsufficientYieldPool`.
 
 ## Worked Refund and Grace-Period Example
 
@@ -116,8 +159,14 @@ The `Error` enum in `contracts/escrow/src/lib.rs` is `#[repr(u32)]`; these numer
 | 9    | `PenaltyTooHigh`        | Penalty exceeds `MAX_PENALTY_BPS`.                                          |
 | 10   | `InsufficientYieldPool` | Yield pool cannot cover accrued yield for a mature release.                 |
 | 11   | `Paused`                | Write operation was attempted while contract writes are paused.             |
+| 16   | `FundingWindowExpired`  | Funding was attempted after the 7-day funding window elapsed.               |
+| 17   | `ReservedYieldInvariant`| Yield reservation accounting invariant is broken (e.g. `reserved < accrued_yield`); should be unreachable. |
 
 Backend callers should use the normalized `BackendError` response shape and preserve method context in details. Contract errors that cannot be parsed should still be surfaced as `BLOCKCHAIN_CALL_FAILED` with the method name so API consumers can distinguish RPC/configuration failures from business-rule failures.
+
+`FundingWindowExpired` is error code `16`; it is returned without moving tokens when funding is attempted after the 7-day window. Codes 1-15 and their enum positions remain unchanged. `ReservedYieldInvariant` is error code `17`.
+
+Run the isolated funding-window tests with `cd contracts && cargo test -p commitlabs-escrow`.
 
 ## Deployment Flow
 

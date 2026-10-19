@@ -1,0 +1,17 @@
+{
+  "baselineSource": "Next.js 14.2.35 production build; route first-load JS from build output",
+  "routes": {
+    "/": {
+      "baselineBytes": 96242,
+      "maxBytes": 105867
+    },
+    "/create": {
+      "baselineBytes": 100380,
+      "maxBytes": 110418
+    },
+    "/dashboard": {
+      "baselineBytes": 99811,
+      "maxBytes": 109793
+    }
+  }
+}
