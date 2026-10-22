@@ -221,6 +221,8 @@ pub enum Error {
     /// Yield reservation accounting invariant is broken (e.g. reserved balance
     /// cannot cover a commitment that was funded with a reservation).
     ReservedYieldInvariant = 17,
+    /// Grace period exceeds the maximum lock duration.
+    InvalidGracePeriod = 18,
 }
 
 /// Result of an early exit commitment.
@@ -378,12 +380,7 @@ impl EscrowContract {
     /// - `Unauthorized` — caller is not the current admin
     pub fn set_admin(env: Env, new_admin: Address) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage().instance().set(&DataKey::Admin, &new_admin);
         env.events()
             .publish((Symbol::new(&env, "set_admin"), admin), new_admin);
@@ -399,12 +396,7 @@ impl EscrowContract {
     /// - `NotInitialized` — contract not initialized
     pub fn set_fee_recipient(env: Env, new_fee_recipient: Address) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage()
             .instance()
             .set(&DataKey::FeeRecipient, &new_fee_recipient);
@@ -418,12 +410,7 @@ impl EscrowContract {
     /// Pause contract writes. Admin only.
     pub fn pause(env: Env) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage().instance().set(&DataKey::Paused, &true);
         env.events()
             .publish((Symbol::new(&env, "pause"), admin), ());
@@ -433,12 +420,7 @@ impl EscrowContract {
     /// Resume contract writes after an emergency pause. Admin only.
     pub fn unpause(env: Env) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage().instance().set(&DataKey::Paused, &false);
         env.events()
             .publish((Symbol::new(&env, "unpause"), admin), ());
@@ -702,9 +684,16 @@ impl EscrowContract {
     }
 
     /// Deposit yield tokens into the contract's dedicated yield pool. Admin only.
-    pub fn deposit_yield_pool(env: Env, admin: Address, amount: i128) -> Result<(), Error> {
+    ///
+    /// # Authorization
+    /// Only callable by: admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `Unauthorized` — caller is not the current admin
+    pub fn deposit_yield_pool(env: Env, amount: i128) -> Result<(), Error> {
         Self::require_init(&env)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
@@ -747,12 +736,7 @@ impl EscrowContract {
     /// yield already promised to funded commitments can never be drained.
     pub fn withdraw_yield_pool(env: Env, to: Address, amount: i128) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
 
         if amount <= 0 {
             return Err(Error::InvalidAmount);
@@ -1006,12 +990,7 @@ impl EscrowContract {
         release_to_owner: bool,
     ) -> Result<i128, Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
 
         let mut c = Self::load(&env, commitment_id)?;
         if c.status != EscrowStatus::Disputed && c.status != EscrowStatus::Violated {
@@ -1065,13 +1044,7 @@ impl EscrowContract {
     /// Upgrade the escrow contract to a new WASM implementation. Admin only.
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), Error> {
         Self::require_init(&env)?;
-
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
 
         let zero_hash = BytesN::from_array(&env, &[0u8; 32]);
         if new_wasm_hash == zero_hash {
@@ -1089,12 +1062,7 @@ impl EscrowContract {
     /// Set the minimum compliance score threshold for auto-violation. Admin only.
     pub fn set_violation_threshold(env: Env, threshold: u32) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         let clamped = threshold.min(100);
         env.storage()
             .instance()
@@ -1270,13 +1238,25 @@ impl EscrowContract {
     }
 
     /// Admin-only setter for the penalty-free grace period before maturity.
-    pub fn set_grace_period(
-        env: Env,
-        admin: Address,
-        grace_period_seconds: u64,
-    ) -> Result<(), Error> {
+    ///
+    /// # Authorization
+    /// Only callable by: admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `Unauthorized` — caller is not the current admin
+    /// - `InvalidGracePeriod` — grace period exceeds maximum lock duration
+    pub fn set_grace_period(env: Env, grace_period_seconds: u64) -> Result<(), Error> {
         Self::require_init(&env)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
+        
+        let max_grace = u64::from(MAX_DURATION_DAYS)
+            .checked_mul(SECONDS_PER_DAY)
+            .ok_or(Error::InvalidGracePeriod)?;
+        if grace_period_seconds > max_grace {
+            return Err(Error::InvalidGracePeriod);
+        }
+        
         env.storage()
             .instance()
             .set(&DataKey::GracePeriodSeconds, &grace_period_seconds);
@@ -1294,6 +1274,24 @@ impl EscrowContract {
     }
 
     // ── Internal helpers ────────────────────────────────────────────────────
+
+    /// Load the stored admin address and require its authorization.
+    ///
+    /// # Returns
+    /// The admin `Address` on success.
+    ///
+    /// # Errors
+    /// - `NotInitialized` if no admin is set
+    /// - Panics if the admin does not authorize the call
+    fn require_admin(env: &Env) -> Result<Address, Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        Ok(admin)
+    }
 
     fn publish_commitment_event<T>(env: &Env, name: &str, c: &Commitment, data: T)
     where
@@ -1685,3 +1683,5 @@ impl EscrowContract {
 mod test_funding_window;
 #[cfg(test)]
 mod test_yield_reserve;
+#[cfg(test)]
+mod test_admin_auth;
