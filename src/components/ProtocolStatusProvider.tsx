@@ -15,6 +15,15 @@ export interface ProtocolStatusContextValue {
 
 const ProtocolStatusContext = createContext<ProtocolStatusContextValue | null>(null);
 
+function afterPageLoad(): Promise<void> {
+  if (typeof document === 'undefined' || document.readyState === 'complete') {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    window.addEventListener('load', () => resolve(), { once: true });
+  });
+}
+
 export function ProtocolStatusProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<{
     status: ProtocolStatusState;
@@ -38,7 +47,9 @@ export function ProtocolStatusProvider({ children }: { children: React.ReactNode
 
     const task = (async () => {
       try {
-        // Loaded on demand so stellar-sdk stays out of the first-load bundle.
+        // Loaded on demand, after the page has finished loading, so stellar-sdk
+        // stays out of the first-load bundle and does not compete with first paint.
+        await afterPageLoad();
         const { getProtocolStatus } = await import('@/lib/soroban/protocol-status');
         const res: ProtocolStatus = await getProtocolStatus();
         setState({
