@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { getProtocolStatus, type ProtocolStatus } from '@/lib/soroban/protocol-status';
+import type { ProtocolStatus } from '@/lib/soroban/protocol-policy';
 
 export type ProtocolStatusState = 'loading' | 'ok' | 'unavailable';
 
@@ -38,7 +38,9 @@ export function ProtocolStatusProvider({ children }: { children: React.ReactNode
 
     const task = (async () => {
       try {
-        const res = await getProtocolStatus();
+        // Loaded on demand so stellar-sdk stays out of the first-load bundle.
+        const { getProtocolStatus } = await import('@/lib/soroban/protocol-status');
+        const res: ProtocolStatus = await getProtocolStatus();
         setState({
           status: res.status,
           paused: res.paused,

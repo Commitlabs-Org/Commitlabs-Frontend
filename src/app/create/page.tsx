@@ -22,7 +22,7 @@ import {
 } from '@/lib/commitments';
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
-import { getActionPauseReason } from '@/lib/soroban/protocol-status';
+import { getActionPauseReason } from '@/lib/soroban/protocol-policy';
 import { ESCROW_CONTRACT_ID, explorerContractUrl, config } from '@/lib/config';
 import { useProtocolParams } from '@/lib/protocol';
 import {

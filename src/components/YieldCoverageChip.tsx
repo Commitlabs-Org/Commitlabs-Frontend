@@ -1,5 +1,5 @@
 import React from 'react';
-import { COVERAGE_WARNING_MESSAGE, isPayoutUncovered } from '@/lib/soroban/protocol-status';
+import { COVERAGE_WARNING_MESSAGE, isPayoutUncovered } from '@/lib/soroban/protocol-policy';
 
 export interface YieldCoverageChipProps {
   accruedYield: bigint | number;

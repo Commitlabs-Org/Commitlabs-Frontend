@@ -22,7 +22,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DisputeDialog } from '@/components/DisputeDialog';
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
-import { getActionPauseReason } from '@/lib/soroban/protocol-status';
+import { getActionPauseReason } from '@/lib/soroban/protocol-policy';
 import { YieldCoverageChip } from '@/components/YieldCoverageChip';
 import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
