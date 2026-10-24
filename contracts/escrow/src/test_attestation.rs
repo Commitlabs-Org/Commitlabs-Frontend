@@ -48,7 +48,7 @@ impl AttestationFixture {
             &300,
             &Map::new(&env),
         );
-        client.deposit_yield_pool(&admin, &pool);
+        client.deposit_yield_pool(&pool);
         client.fund_escrow(&id);
         env.mock_auths(&[]);
 

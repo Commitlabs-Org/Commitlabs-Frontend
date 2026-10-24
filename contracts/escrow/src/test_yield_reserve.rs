@@ -178,7 +178,7 @@ fn lifecycle_table_reserves_then_releases_or_forfeits_yield() {
     for exit in EXITS {
         let env = Env::default();
         let ctx = setup(&env);
-        ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+        ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
         assert_status(&ctx, POOL_DEPOSIT, 0);
 
         let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Aggressive, DURATION_DAYS, 500);
@@ -245,7 +245,7 @@ fn lifecycle_table_reserves_then_releases_or_forfeits_yield() {
 fn release_decreases_balance_and_reserved_by_accrued_yield() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
 
     let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Safe, DURATION_DAYS, 500);
     ctx.client.fund_escrow(&id);
@@ -264,7 +264,7 @@ fn release_decreases_balance_and_reserved_by_accrued_yield() {
 fn refund_releases_reservation_without_touching_balance() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
 
     let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Safe, DURATION_DAYS, 500);
     ctx.client.fund_escrow(&id);
@@ -284,7 +284,7 @@ fn refund_releases_reservation_without_touching_balance() {
 fn partial_refund_keeps_reservation_until_full_exit() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
 
     let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Safe, DURATION_DAYS, 500);
     ctx.client.fund_escrow(&id);
@@ -302,7 +302,7 @@ fn partial_refund_keeps_reservation_until_full_exit() {
 fn second_commitment_is_rejected_at_funding_when_pool_is_committed() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &100);
+    ctx.client.deposit_yield_pool(&100);
 
     // Aggressive for the full 365 days yields exactly 10% of principal.
     let first = create_commitment(&ctx, 600, RiskProfile::Aggressive, 365, 500);
@@ -362,7 +362,7 @@ fn zero_yield_commitment_funds_and_releases() {
 fn withdraw_yield_pool_succeeds_up_to_available_only() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
 
     let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Safe, DURATION_DAYS, 500);
     ctx.client.fund_escrow(&id);
@@ -394,7 +394,7 @@ fn withdraw_yield_pool_succeeds_up_to_available_only() {
 fn withdraw_yield_pool_requires_authorization() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
 
     let recipient = Address::generate(&env);
     env.set_auths(&[]);
@@ -407,7 +407,7 @@ fn withdraw_yield_pool_requires_authorization() {
 fn commitment_funded_before_reservation_accounting_can_still_release() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    ctx.client.deposit_yield_pool(&POOL_DEPOSIT);
 
     let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Safe, DURATION_DAYS, 500);
     ctx.client.fund_escrow(&id);
@@ -470,7 +470,7 @@ proptest! {
         for op in ops {
             match op {
                 Op::Deposit(amount) => {
-                    let _ = ctx.client.try_deposit_yield_pool(&ctx.admin, &amount);
+                    let _ = ctx.client.try_deposit_yield_pool(&amount);
                 }
                 Op::Fund(slot) => {
                     let _ = ctx.client.try_fund_escrow(&ids[slot as usize]);

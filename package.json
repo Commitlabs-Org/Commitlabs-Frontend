@@ -17,11 +17,13 @@
     "size": "node scripts/check-bundle-budget.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:size": "node --test scripts/check-bundle-budget.test.mjs"
+    "test:size": "node --test scripts/check-bundle-budget.test.mjs",
+    "bindings": "bash scripts/gen-escrow-bindings.sh"
   },
   "dependencies": {
     "@stellar/freighter-api": "^1.7.1",
     "@stellar/stellar-sdk": "^17.2.1",
+    "escrow-client": "file:packages/escrow-client",
     "next": "14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

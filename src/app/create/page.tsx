@@ -3,8 +3,16 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
+  AMOUNT_ERROR_MESSAGES,
+  MAX_AMOUNT,
+  formatAmount,
+  parseAmount,
+  parseDays,
+  type DaysError,
+} from '@/lib/amount';
+import {
   TYPES,
-  fmt,
+  fmtUnits,
   loadCommitments,
   newId,
   saveCommitments,
@@ -14,12 +22,34 @@ import {
 } from '@/lib/commitments';
 import { useWallet } from '@/components/WalletProvider';
 import { ESCROW_CONTRACT_ID, explorerContractUrl, config } from '@/lib/config';
+import { useProtocolParams } from '@/lib/protocol';
+import {
+  DISPLAY_APY,
+  MAX_DURATION_DAYS,
+  MIN_DURATION_DAYS,
+  projectYieldStroops,
+} from '@/lib/yield';
+import { Skeleton } from '@/components/Skeleton';
 
 const ASSETS = ['USDC', 'XLM', 'EURC'];
 const STEP_LABELS = ['Type', 'Configure', 'Review', 'Done'];
 
+function daysMessage(reason: DaysError, minDays: number): string {
+  switch (reason) {
+    case 'empty':
+      return 'Enter the lock duration in days.';
+    case 'invalid_characters':
+      return 'Use whole days only, digits 0 to 9.';
+    case 'below_min':
+      return `Minimum lock is ${minDays} day${minDays === 1 ? '' : 's'}.`;
+    case 'above_max':
+      return `Maximum lock is ${MAX_DURATION_DAYS} days.`;
+  }
+}
+
 export default function CreatePage() {
   const { address } = useWallet();
+  const { params, loading: paramsLoading, isFallback } = useProtocolParams();
   const [step, setStep] = useState(0);
   const [type, setType] = useState<CommitmentType>('balanced');
   const [asset, setAsset] = useState('USDC');
@@ -55,22 +85,23 @@ export default function CreatePage() {
   }, []);
 
   const spec = specFor(type);
-  const amt = Number(amount);
-  const dur = Number(days);
-  const amountErr = !Number.isFinite(amt) || amt <= 0 ? 'Enter an amount greater than zero.' : null;
-  const daysErr =
-    !Number.isInteger(dur) || dur < spec.minDays
-      ? `Minimum lock for ${spec.name} is ${spec.minDays} days.`
-      : dur > 365
-        ? 'Maximum lock is 365 days.'
-        : null;
-  const valid = !amountErr && !daysErr;
-  const projected = valid ? (amt * (spec.apy / 100) * dur) / 365 : 0;
+  const currentApy = DISPLAY_APY[type];
+  const penaltyBps = params.penalties[type];
+  const currentPenaltyPct = penaltyBps / 100;
+
+  // Exact fixed-point parsing; yield and penalty use the contract's integer math.
+  const parsedAmount = parseAmount(amount);
+  const parsedDays = parseDays(days, { min: MIN_DURATION_DAYS, max: MAX_DURATION_DAYS });
+  const amountErr = parsedAmount.ok ? null : AMOUNT_ERROR_MESSAGES[parsedAmount.reason];
+  const daysErr = parsedDays.ok ? null : daysMessage(parsedDays.reason, MIN_DURATION_DAYS);
+  const amt = parsedAmount.ok ? parsedAmount.value : 0n;
+  const dur = parsedDays.ok ? parsedDays.value : 0;
+  const valid = parsedAmount.ok && parsedDays.ok;
+  const projected = valid ? projectYieldStroops(amt, dur, type) : 0n;
+  const penalty = valid ? (amt * BigInt(penaltyBps)) / 10_000n : 0n;
 
   function pickType(t: CommitmentType) {
     setType(t);
-    const min = specFor(t).minDays;
-    if (!Number.isInteger(Number(days)) || Number(days) < min) setDays(String(min));
   }
 
   function submit() {
@@ -78,11 +109,11 @@ export default function CreatePage() {
       id: newId(),
       type,
       asset,
-      amount: amt,
+      amount: amt.toString(),
       durationDays: dur,
       maxLoss: spec.maxLoss,
-      penalty: spec.penalty,
-      apy: spec.apy,
+      penalty: currentPenaltyPct,
+      apy: currentApy,
       createdAt: Date.now(),
       status: 'active',
       owner: address,
@@ -161,7 +192,7 @@ export default function CreatePage() {
               >
                 <h3>{t.name}</h3>
                 <p className="muted">{t.tagline}</p>
-                <b>{t.apy}% APY</b>
+                <b>{DISPLAY_APY[t.id]}% APY</b>
               </button>
             ))}
           </div>
@@ -178,6 +209,11 @@ export default function CreatePage() {
           <h2 ref={headingRef} tabIndex={-1}>
             Configure
           </h2>
+          {isFallback && (
+            <p className="muted small" role="note">
+              Could not verify on-chain parameters. Displaying default protocol parameters.
+            </p>
+          )}
           <label>
             Asset
             <select value={asset} onChange={(e) => setAsset(e.target.value)}>
@@ -192,6 +228,7 @@ export default function CreatePage() {
               <input
                 ref={amountRef}
                 inputMode="decimal"
+                pattern="\d+(\.\d+)?"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 onBlur={() => setAmountTouched(true)}
@@ -200,7 +237,7 @@ export default function CreatePage() {
               />
             </label>
             <small id="amount" className="muted">
-              Enter a number greater than zero.
+              Digits and an optional decimal point, up to 7 decimals (max {formatAmount(MAX_AMOUNT)} {asset}).
             </small>
             {showAmountErr && (
               <small id="amount-err" className="err">
@@ -214,6 +251,7 @@ export default function CreatePage() {
               <input
                 ref={daysRef}
                 inputMode="numeric"
+                pattern="\d+"
                 value={days}
                 onChange={(e) => setDays(e.target.value)}
                 onBlur={() => setDaysTouched(true)}
@@ -222,7 +260,7 @@ export default function CreatePage() {
               />
             </label>
             <small id="days" className="muted">
-              Whole days, from {spec.minDays} to 365.
+              Whole days, from {MIN_DURATION_DAYS} to {MAX_DURATION_DAYS} (recommended for {spec.name}: {spec.minDays}+ days).
             </small>
             {showDaysErr && (
               <small id="days-err" className="err">
@@ -237,12 +275,16 @@ export default function CreatePage() {
             </li>
             <li>
               <span>Early exit penalty</span>
-              <b>{spec.penalty}%</b>
+              {paramsLoading ? (
+                <Skeleton width="60px" height="20px" />
+              ) : (
+                <b>{currentPenaltyPct}%</b>
+              )}
             </li>
             <li>
               <span>Projected yield</span>
               <b>
-                {fmt(projected)} {asset}
+                {fmtUnits(projected)} {asset}
               </b>
             </li>
           </ul>
@@ -262,6 +304,11 @@ export default function CreatePage() {
           <h2 ref={headingRef} tabIndex={-1}>
             Review
           </h2>
+          {isFallback && (
+            <p className="muted small" role="note">
+              Could not verify on-chain parameters. Displaying default protocol parameters.
+            </p>
+          )}
           <ul className="kv">
             <li>
               <span>Type</span>
@@ -270,7 +317,7 @@ export default function CreatePage() {
             <li>
               <span>Principal</span>
               <b>
-                {fmt(amt)} {asset}
+                {formatAmount(amt)} {asset}
               </b>
             </li>
             <li>
@@ -279,19 +326,23 @@ export default function CreatePage() {
             </li>
             <li>
               <span>Target APY</span>
-              <b>{spec.apy}%</b>
+              <b>{currentApy}%</b>
             </li>
             <li>
               <span>Projected yield</span>
               <b>
-                {fmt(projected)} {asset}
+                {formatAmount(projected)} {asset}
               </b>
             </li>
             <li>
               <span>Early exit penalty</span>
-              <b>
-                {spec.penalty}% ({fmt((amt * spec.penalty) / 100)} {asset})
-              </b>
+              {paramsLoading ? (
+                <Skeleton width="120px" height="20px" />
+              ) : (
+                <b>
+                  {currentPenaltyPct}% ({formatAmount(penalty)} {asset})
+                </b>
+              )}
             </li>
           </ul>
           <label className="check">
@@ -323,7 +374,7 @@ export default function CreatePage() {
             Commitment created
           </h2>
           <p className="muted">
-            {created.id} &middot; {fmt(created.amount)} {created.asset} for {created.durationDays}{' '}
+            {created.id} &middot; {formatAmount(BigInt(created.amount))} {created.asset} for {created.durationDays}{' '}
             days
           </p>
           {ESCROW_CONTRACT_ID && (

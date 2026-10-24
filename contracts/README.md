@@ -76,16 +76,56 @@ Creation records the selected lock length in the existing `maturity - created_at
 | `refund(commitment_id)`                                                                                                           | Commitment owner auth  | Requires `Funded`; applies early-exit penalty unless inside `GracePeriodSeconds`; releases the yield reservation; moves to `Refunded`.                                                                                                                                        |
 | `early_exit_commitment(commitment_id, caller)`                                                                                    | `caller` auth          | Backend-facing early-exit alias around refund semantics. Returns `EarlyExitResult { exitAmount, penaltyAmount, finalStatus }`.                                                                                                                                                |
 | `refund_partial(commitment_id, amount)`                                                                                           | Commitment owner auth  | Partial early exit on a funded commitment; remaining principal stays funded unless fully withdrawn. The yield reservation is released only when the remaining principal reaches zero.                                                                                           |
-| `dispute(commitment_id, caller, reason)`                                                                                          | Owner or admin auth    | Requires `Funded`; stores a `DisputeRecord`, categorizes the reason, and moves to `Disputed`. The yield reservation stays held while frozen.                                                                                                                                   |
-| `resolve_dispute(commitment_id, release_to_owner)`                                                                                | Admin auth             | Resolves `Disputed` or `Violated` commitments. If `release_to_owner` is true, pays owner; otherwise refunds/penalizes according to the dispute path. Consumes the reservation on a matured release, and releases it on any yield-forfeiting path.                              |
-| `transfer_ownership(commitment_id, new_owner)`                                                                                    | Current owner auth     | Requires `Funded`; updates `Commitment.owner`, removes the id from the old `OwnerIndex`, adds it to the new owner index, and keeps status `Funded`.                                                                                                                           |
-| `record_attestation(commitment_id, attestor, score)`                                                                              | `attestor` auth        | Requires `Funded` and allowlisted attestor. Records score history. If `score < ViolationThreshold`, moves status to `Violated` and emits a violation event. |
+| `dispute(commitment_id, caller, reason)`                                                                                          | Owner or admin auth    | Requires `Funded`; stores a `DisputeRecord`, categorizes the reason, and moves to `Disputed`. The yield reservation stays held while frozen. Clears any pending ownership transfer.                                                                                                    |
+| `resolve_dispute(commitment_id, release_to_owner)`                                                                                | Admin auth             | Resolves `Disputed` or `Violated` commitments. If `release_to_owner` is true, pays owner; otherwise refunds/penalizes according to the dispute path. Consumes the reservation on a matured release, and releases it on any yield-forfeiting path. Clears any pending ownership transfer. |
+| `transfer_ownership(commitment_id, new_owner)`                                                                                    | Current owner auth     | Creates a pending ownership transfer offer expiring in 7 days. Requires `Funded`. The commitment remains owned by the current owner until `accept_ownership` is called. No-op if `new_owner` equals current owner. Rejects transfers to the contract's own address.                       |
+| `accept_ownership(commitment_id)`                                                                                                 | Proposed new owner auth| Accepts a pending ownership transfer. Requires `Funded`, valid offer, and ledger time before expiry. Updates `Commitment.owner`, moves the id between owner indexes, and clears the pending offer.                                                                                        |
+| `cancel_ownership_transfer(commitment_id)`                                                                                        | Current owner auth     | Cancels a pending ownership transfer offer for the commitment.                                                                                                                                                                                                                          |
+| `get_pending_owner(commitment_id)`                                                                                                | None                   | Returns the pending ownership transfer, if any, including the proposed owner address and expiry timestamp.                                                                                                                                                                               |
+| `record_attestation(commitment_id, attestor, score)`                                                                              | `attestor` auth        | Requires `Funded` and allowlisted attestor. Records score history. If `score < ViolationThreshold`, moves status to `Violated` and emits a violation event. Clears any pending ownership transfer. |
 | `add_attestor(attestor)`                                                                                                          | Admin auth             | Authorizes an attestor address to record compliance attestations. Idempotent. Emits `attestor_added`.                                                                         |
 | `remove_attestor(attestor)`                                                                                                       | Admin auth             | Revokes an attestor address from recording compliance attestations. Idempotent. Emits `attestor_removed`.                                                                     |
-| `deposit_yield_pool(admin, amount)`                                                                                               | Admin auth             | Transfers tokens from admin into the contract yield pool for matured release payouts.                                                                                                                                                                                         |
+| `deposit_yield_pool(amount)`                                                                                                      | Admin auth             | Transfers tokens from the stored admin into the contract yield pool for matured release payouts.                                                                                                                                                                               |
 | `withdraw_yield_pool(to, amount)`                                                                                                 | Admin auth             | Transfers only the available (unreserved) yield-pool surplus to `to`; reverts with `InsufficientYieldPool` above it. Emits `withdraw_yield_pool`.                                                                                                                              |
-| `pause` / `unpause`                                                                                                               | Admin auth             | Toggles write-operation pause flag. Mature `release` remains available while paused.                                                                                                                                                                                          |
+| `set_grace_period(grace_period_seconds)`                                                                                          | Admin auth             | Sets the penalty-free grace period before maturity. Rejects values above `MAX_DURATION_DAYS * SECONDS_PER_DAY` with `InvalidGracePeriod`.                                                                                                                                      |
+| `set_admin(new_admin)` / `propose_admin(new_admin)`                                                                               | Admin auth             | Proposes a new admin address. The proposal must be accepted by the proposed address before the admin changes. `set_admin` is an alias for `propose_admin` for ABI compatibility. No-op if proposed admin equals current admin.                                                  |
+| `accept_admin()`                                                                                                                  | Pending admin auth     | Accepts a pending admin proposal. Moves pending admin to admin and clears the pending proposal.                                                                                                                                                                                |
+| `cancel_admin_proposal()`                                                                                                         | Admin auth             | Cancels a pending admin proposal.                                                                                                                                                                                                                                               |
+| `get_admin()`                                                                                                                     | None                   | Returns the current admin address.                                                                                                                                                                                                                                              |
+| `get_pending_admin()`                                                                                                             | None                   | Returns the pending admin address, if any.                                                                                                                                                                                                                                      |
+| `set_fee_recipient(new_fee_recipient)`, `set_violation_threshold(threshold)`, `upgrade(new_wasm_hash)`                           | Admin auth             | Updates fee recipient, violation threshold, or upgrades the contract WASM.                                                                                                                                                                                                      |
+| `pause` / `unpause`                                                                                                               | Admin auth             | Toggles emergency pause flag. Halts all user-initiated state changes and capital outflows while preserving admin incident recovery paths (resolve_dispute, set_admin, upgrade, unpause). |
 | Read methods                                                                                                                      | None                   | `get_commitment`, `get_user_commitments`, `get_user_commitment_ids`, `get_user_commitment_ids_page`, `get_owner_commitments`, `get_attestations`, `get_dispute`, `get_default_penalty`, `get_yield_pool_balance`, `get_yield_pool_status`, `get_grace_period`, `get_violation_threshold`, `is_paused`, `is_attestor`. |
+
+## Pause Policy
+
+The `pause` entrypoint halts state-changing operations and token outflows during incidents or emergency investigations. In accordance with the protocol safety invariants, the contract strictly segregates user operations from admin recovery paths:
+
+| Entrypoint | Type | Behavior Under Pause | Rationale |
+| ---------- | ---- | -------------------- | --------- |
+| `create_commitment` | User Write | **Blocked** (`Error::Paused`) | Prevents new commitment creation during incidents. |
+| `create_commitment_default` / `with_default` | User Write | **Blocked** (`Error::Paused`) | Prevents new commitment creation during incidents. |
+| `fund_escrow` | User Write / Inflow | **Blocked** (`Error::Paused`) | Halts incoming capital locking while investigations are active. |
+| `release` | User Write / Outflow | **Blocked** (`Error::Paused`) | Halts token outflows to prevent draining under compromised or faulty state. |
+| `settle_commitment` | User Write / Outflow | **Blocked** (`Error::Paused`) | Settlement alias halts outflows identically to `release`. |
+| `refund` | User Write / Outflow | **Blocked** (`Error::Paused`) | Halts early-exit token outflows. |
+| `refund_partial` | User Write / Outflow | **Blocked** (`Error::Paused`) | Halts partial principal outflows. |
+| `early_exit_commitment` | User Write / Outflow | **Blocked** (`Error::Paused`) | Enforces exact parity with `refund`, closing the early exit bypass. |
+| `dispute` | User Write | **Blocked** (`Error::Paused`) | Freezes dispute state mutations until normal operations resume. |
+| `transfer_ownership` | User Write | **Blocked** (`Error::Paused`) | Freezes secondary-market ownership transfers during incidents. |
+| `record_attestation` | User/Oracle Write | **Blocked** (`Error::Paused`) | Prevents status transitions (`Violated`) and score updates during pause. |
+| `deposit_yield_pool` | Admin Write | **Blocked** (`Error::Paused`) | Freezes yield pool adjustments. |
+| `withdraw_yield_pool` | Admin Outflow | **Blocked** (`Error::Paused`) | Prevents any yield pool drain or capital outflow while paused. |
+| `cancel_commitment` (pre-expiry) | User Write | **Blocked** (`Error::Paused`) | Owner-initiated cancellation blocked during pause. |
+| `cancel_commitment` (post-expiry) | Cleanup | **Allowed** | Expired, unfunded commitments may be permissionlessly cleaned up without token transfers. |
+| `resolve_dispute` | Admin Recovery | **Allowed** | Admin recovery path required to unfreeze or settle commitments during incident mitigation. |
+| `unpause` | Admin Recovery | **Allowed** | Required to lift emergency halt and resume writes. |
+| `set_admin` | Admin Recovery | **Allowed** | Admin key rotation during incident containment. |
+| `upgrade` | Admin Recovery | **Allowed** | Enables deploying bug-fix WASM patches without having to unpause first. |
+| Read-only getters | Query | **Allowed** | All view functions (`get_commitment`, `get_yield_pool_status`, `is_paused`, etc.) remain fully functional. |
+
+Pause checks are executed immediately after initialization check (`require_init`), ensuring that paused invocations fail fast before consuming user authorization or loading persistent records.
+
 
 ## Configuration Surface
 
@@ -140,9 +180,29 @@ Outside the grace window, the same 500 bps early exit returns `950` to the owner
 
 `record_attestation(commitment_id, attestor, score)` appends an `AttestationRecord` with the attestor, score, and ledger timestamp. Attestors must be authorized by the admin via `add_attestor(attestor)`; non-allowlisted callers receive `Error::Unauthorized`. Attestations are only accepted on active commitments in `EscrowStatus::Funded` (non-funded or terminal states return `Error::InvalidState`). If a funded commitment receives a score below `ViolationThreshold`, the contract sets `EscrowStatus::Violated` and emits a violation event. A violated commitment is frozen until an admin calls `resolve_dispute` to release or refund it. Integrators should read the commitment status before presenting settlement or early-exit actions.
 
-## Ownership Transfer Path
+## Two-Step Admin Handover
 
-`transfer_ownership(commitment_id, new_owner)` supports secondary-market ownership handoff without settling funds. It is owner-authorized, requires the commitment to be `Funded`, updates `Commitment.owner`, removes the id from the previous owner's index, adds it to `new_owner`'s index, emits `transfer_ownership`, and leaves all economics and maturity terms unchanged.
+Admin transfers use a propose → accept flow to prevent accidental loss of admin control:
+
+1. Current admin calls `propose_admin(new_admin)` (or `set_admin(new_admin)`, which is an alias). The current admin remains in control.
+2. Proposed admin calls `accept_admin()` to complete the transfer. The new admin is now in control and the old admin immediately loses access.
+3. Current admin can call `cancel_admin_proposal()` to revoke a pending proposal at any time before acceptance.
+
+Proposing the current admin as the new admin is a no-op. `get_admin()` returns the current admin address, and `get_pending_admin()` returns the pending proposal if any.
+
+## Two-Step Ownership Transfer
+
+Commitment ownership transfers use an offer → accept flow to prevent sending commitments to uncontrolled addresses:
+
+1. Current owner calls `transfer_ownership(commitment_id, new_owner)` while the commitment is `Funded`. This creates a pending transfer offer expiring in 7 days. The commitment remains owned by the current owner.
+2. Proposed new owner calls `accept_ownership(commitment_id)` before expiry to complete the transfer. The commitment is now owned by the new owner, who appears in the owner index and can perform owner-only actions.
+3. Current owner can call `cancel_ownership_transfer(commitment_id)` to revoke the offer at any time before acceptance.
+
+Pending ownership offers are automatically cleared when a commitment leaves the `Funded` state (refund, release, dispute, or violation), so a stale offer cannot be accepted after the commitment is settled. Transfers to the contract's own address are rejected. `get_pending_owner(commitment_id)` returns the pending transfer if any, including the proposed owner address and expiry timestamp.
+
+## Ownership Transfer Path (Legacy)
+
+Before the two-step change, `transfer_ownership(commitment_id, new_owner)` immediately transferred ownership. The function now creates a pending offer instead. See "Two-Step Ownership Transfer" above for current behavior.
 
 ## Stable Error Codes
 
@@ -163,6 +223,10 @@ The `Error` enum in `contracts/escrow/src/lib.rs` is `#[repr(u32)]`; these numer
 | 11   | `Paused`                | Write operation was attempted while contract writes are paused.             |
 | 16   | `FundingWindowExpired`  | Funding was attempted after the 7-day funding window elapsed.               |
 | 17   | `ReservedYieldInvariant`| Yield reservation accounting invariant is broken (e.g. `reserved < accrued_yield`); should be unreachable. |
+| 18   | `InvalidGracePeriod`    | Grace period exceeds the maximum lock duration (`MAX_DURATION_DAYS * SECONDS_PER_DAY`). |
+| 19   | `NoPendingAdmin`        | No pending admin proposal exists.                                                        |
+| 20   | `NoPendingTransfer`     | No pending ownership transfer exists for this commitment.                                |
+| 21   | `TransferExpired`       | The ownership transfer offer has expired.                                                |
 
 Backend callers should use the normalized `BackendError` response shape and preserve method context in details. Contract errors that cannot be parsed should still be surfaced as `BLOCKCHAIN_CALL_FAILED` with the method name so API consumers can distinguish RPC/configuration failures from business-rule failures.
 

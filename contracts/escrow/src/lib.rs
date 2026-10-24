@@ -32,6 +32,9 @@ pub const SECONDS_PER_DAY: u64 = 86_400;
 /// Maximum time a commitment may remain unfunded after creation.
 pub const FUNDING_WINDOW_SECONDS: u64 = 7 * SECONDS_PER_DAY;
 
+/// Ownership transfer offer expiry period (7 days).
+pub const TRANSFER_EXPIRY_SECONDS: u64 = 7 * SECONDS_PER_DAY;
+
 /// Upper bound for commitment amount enforced by `create_commitment`.
 /// Aligns with backend `CommitmentLimits.max_amount`.
 pub const MAX_AMOUNT: i128 = 1_000_000_000_000;
@@ -95,6 +98,10 @@ pub enum DataKey {
     ViolationThreshold,
     /// Authorised compliance attestor in the allowlist.
     Attestor(Address),
+    /// Pending admin proposal awaiting acceptance.
+    PendingAdmin,
+    /// Pending ownership transfer for a commitment, keyed by commitment id.
+    PendingOwner(u64),
 }
 
 /// Risk profile chosen at creation time. Determines the early-exit penalty
@@ -168,6 +175,14 @@ pub struct AttestationRecord {
     pub timestamp: u64,
 }
 
+/// Pending ownership transfer for a commitment.
+#[contracttype]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingTransfer {
+    pub to: Address,
+    pub expires_at: u64,
+}
+
 /// A single escrow / commitment record.
 #[contracttype]
 #[derive(Clone)]
@@ -223,6 +238,14 @@ pub enum Error {
     /// Yield reservation accounting invariant is broken (e.g. reserved balance
     /// cannot cover a commitment that was funded with a reservation).
     ReservedYieldInvariant = 17,
+    /// Grace period exceeds the maximum lock duration.
+    InvalidGracePeriod = 18,
+    /// No pending admin proposal exists.
+    NoPendingAdmin = 19,
+    /// No pending ownership transfer exists for this commitment.
+    NoPendingTransfer = 20,
+    /// The ownership transfer offer has expired.
+    TransferExpired = 21,
 }
 
 /// Result of an early exit commitment.
@@ -372,6 +395,11 @@ impl EscrowContract {
 
     /// Update the contract admin. Only the current admin may call this.
     ///
+    /// # Behavior Change
+    /// This function now initiates a two-step admin handover. It proposes the
+    /// new admin, who must call `accept_admin()` to complete the transfer.
+    /// The current admin remains in control until the proposal is accepted.
+    ///
     /// # Authorization
     /// Only callable by: current admin
     ///
@@ -379,17 +407,96 @@ impl EscrowContract {
     /// - `NotInitialized` — contract not initialized
     /// - `Unauthorized` — caller is not the current admin
     pub fn set_admin(env: Env, new_admin: Address) -> Result<(), Error> {
+        Self::propose_admin(env, new_admin)
+    }
+
+    /// Propose a new admin address. The proposal must be accepted by the
+    /// proposed address before the admin changes.
+    ///
+    /// # Authorization
+    /// Only callable by: current admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `Unauthorized` — caller is not the current admin
+    pub fn propose_admin(env: Env, new_admin: Address) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
+        let admin = Self::require_admin(&env)?;
+        
+        // Reject proposal to current admin (no-op)
+        if admin == new_admin {
+            return Ok(());
+        }
+        
+        env.storage().instance().set(&DataKey::PendingAdmin, &new_admin);
+        env.events().publish(
+            (Symbol::new(&env, "admin_proposed"), admin),
+            new_admin.clone(),
+        );
+        Ok(())
+    }
+
+    /// Accept a pending admin proposal. Must be called by the proposed admin.
+    ///
+    /// # Authorization
+    /// Only callable by: pending admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `NoPendingAdmin` — no pending admin proposal exists
+    /// - `Unauthorized` — caller is not the pending admin
+    pub fn accept_admin(env: Env) -> Result<(), Error> {
+        Self::require_init(&env)?;
+        
+        let pending: Address = env
             .storage()
             .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
-        env.storage().instance().set(&DataKey::Admin, &new_admin);
-        env.events()
-            .publish((Symbol::new(&env, "set_admin"), admin), new_admin);
+            .get(&DataKey::PendingAdmin)
+            .ok_or(Error::NoPendingAdmin)?;
+        
+        pending.require_auth();
+        
+        env.storage().instance().set(&DataKey::Admin, &pending);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+        
+        env.events().publish(
+            (Symbol::new(&env, "admin_accepted"), pending.clone()),
+            pending.clone(),
+        );
         Ok(())
+    }
+
+    /// Cancel a pending admin proposal.
+    ///
+    /// # Authorization
+    /// Only callable by: current admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `Unauthorized` — caller is not the current admin
+    pub fn cancel_admin_proposal(env: Env) -> Result<(), Error> {
+        Self::require_init(&env)?;
+        let admin = Self::require_admin(&env)?;
+        
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+        env.events().publish(
+            (Symbol::new(&env, "admin_proposal_cancelled"), admin),
+            (),
+        );
+        Ok(())
+    }
+
+    /// Get the current admin address.
+    pub fn get_admin(env: Env) -> Result<Address, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)
+    }
+
+    /// Get the pending admin address, if any.
+    pub fn get_pending_admin(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingAdmin)
     }
 
     /// Update the fee recipient. Only the current admin may call this.
@@ -401,12 +508,7 @@ impl EscrowContract {
     /// - `NotInitialized` — contract not initialized
     pub fn set_fee_recipient(env: Env, new_fee_recipient: Address) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage()
             .instance()
             .set(&DataKey::FeeRecipient, &new_fee_recipient);
@@ -420,12 +522,7 @@ impl EscrowContract {
     /// Pause contract writes. Admin only.
     pub fn pause(env: Env) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage().instance().set(&DataKey::Paused, &true);
         env.events()
             .publish((Symbol::new(&env, "pause"), admin), ());
@@ -435,12 +532,7 @@ impl EscrowContract {
     /// Resume contract writes after an emergency pause. Admin only.
     pub fn unpause(env: Env) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         env.storage().instance().set(&DataKey::Paused, &false);
         env.events()
             .publish((Symbol::new(&env, "unpause"), admin), ());
@@ -704,9 +796,17 @@ impl EscrowContract {
     }
 
     /// Deposit yield tokens into the contract's dedicated yield pool. Admin only.
-    pub fn deposit_yield_pool(env: Env, admin: Address, amount: i128) -> Result<(), Error> {
+    ///
+    /// # Authorization
+    /// Only callable by: admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `Unauthorized` — caller is not the current admin
+    pub fn deposit_yield_pool(env: Env, amount: i128) -> Result<(), Error> {
         Self::require_init(&env)?;
-        admin.require_auth();
+        Self::require_not_paused(&env)?;
+        let admin = Self::require_admin(&env)?;
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
@@ -749,12 +849,8 @@ impl EscrowContract {
     /// yield already promised to funded commitments can never be drained.
     pub fn withdraw_yield_pool(env: Env, to: Address, amount: i128) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        Self::require_not_paused(&env)?;
+        let admin = Self::require_admin(&env)?;
 
         if amount <= 0 {
             return Err(Error::InvalidAmount);
@@ -813,6 +909,7 @@ impl EscrowContract {
         // transfer. The yield was reserved at funding time, so this cannot fail
         // for pool solvency reasons; the checked path only guards invariants.
         Self::consume_reserved_yield(env, commitment_id, c.accrued_yield)?;
+        Self::clear_pending_ownership(env, commitment_id);
         c.status = EscrowStatus::Released;
         Self::save(env, &c);
 
@@ -824,6 +921,7 @@ impl EscrowContract {
     /// Release the escrowed funds back to the owner once the commitment has matured.
     pub fn release(env: Env, commitment_id: u64, caller: Address) -> Result<i128, Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         let payout = Self::perform_release(&env, commitment_id, &caller)?;
         let c = Self::load(&env, commitment_id)?;
         // Use the same raw publish pattern as create_commitment for consistent
@@ -843,6 +941,7 @@ impl EscrowContract {
         caller: Address,
     ) -> Result<SettlementResult, Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         let payout = Self::perform_release(&env, commitment_id, &caller)?;
         let c = Self::load(&env, commitment_id)?;
         Self::publish_commitment_event(
@@ -896,6 +995,7 @@ impl EscrowContract {
         let remaining = c.amount.checked_sub(amount).ok_or(Error::InvalidAmount)?;
         c.amount = remaining;
         if remaining == 0 {
+            Self::clear_pending_ownership(&env, commitment_id);
             c.status = EscrowStatus::Refunded;
             // The reservation covers the whole original principal; a partial
             // refund keeps it in place and it is released only on full exit, so
@@ -931,6 +1031,7 @@ impl EscrowContract {
         caller: Address,
     ) -> Result<EarlyExitResult, Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         caller.require_auth();
         let c = Self::load(&env, commitment_id)?;
         if caller != c.owner {
@@ -953,6 +1054,7 @@ impl EscrowContract {
         reason: String,
     ) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         caller.require_auth();
         let mut c = Self::load(&env, commitment_id)?;
 
@@ -978,6 +1080,7 @@ impl EscrowContract {
             disputed_by: caller.clone(),
         };
 
+        Self::clear_pending_ownership(&env, commitment_id);
         c.status = EscrowStatus::Disputed;
         Self::save(&env, &c);
 
@@ -1008,12 +1111,7 @@ impl EscrowContract {
         release_to_owner: bool,
     ) -> Result<i128, Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
 
         let mut c = Self::load(&env, commitment_id)?;
         if c.status != EscrowStatus::Disputed && c.status != EscrowStatus::Violated {
@@ -1034,10 +1132,12 @@ impl EscrowContract {
                 // leave the pool balance untouched.
                 Self::release_reservation(&env, commitment_id, c.accrued_yield)?;
             }
+            Self::clear_pending_ownership(&env, commitment_id);
             c.status = EscrowStatus::Released;
             paid = payout;
         } else {
             let (penalty, refund_amount) = Self::compute_refund_amount(c.amount, c.penalty_bps)?;
+            Self::clear_pending_ownership(&env, commitment_id);
             c.status = EscrowStatus::Refunded;
             paid = refund_amount;
 
@@ -1067,13 +1167,7 @@ impl EscrowContract {
     /// Upgrade the escrow contract to a new WASM implementation. Admin only.
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), Error> {
         Self::require_init(&env)?;
-
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
 
         let zero_hash = BytesN::from_array(&env, &[0u8; 32]);
         if new_wasm_hash == zero_hash {
@@ -1091,12 +1185,7 @@ impl EscrowContract {
     /// Set the minimum compliance score threshold for auto-violation. Admin only.
     pub fn set_violation_threshold(env: Env, threshold: u32) -> Result<(), Error> {
         Self::require_init(&env)?;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .ok_or(Error::NotInitialized)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
         let clamped = threshold.min(100);
         env.storage()
             .instance()
@@ -1173,6 +1262,7 @@ impl EscrowContract {
         compliance_score: u32,
     ) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         attestor.require_auth();
 
         if !Self::is_attestor(env.clone(), attestor.clone()) {
@@ -1193,6 +1283,7 @@ impl EscrowContract {
             .get(&DataKey::ViolationThreshold)
             .unwrap_or(0);
         if threshold > 0 && score < threshold && c.status == EscrowStatus::Funded {
+            Self::clear_pending_ownership(&env, commitment_id);
             c.status = EscrowStatus::Violated;
             env.events().publish(
                 (Symbol::new(&env, "commitment_violated"), attestor.clone()),
@@ -1231,37 +1322,164 @@ impl EscrowContract {
     }
 
     /// Transfer marketplace ownership for secondary trading.
+    ///
+    /// # Behavior Change
+    /// This function now creates a pending ownership transfer offer that must
+    /// be accepted by the proposed new owner. The commitment remains owned by
+    /// the current owner until the offer is accepted.
+    ///
+    /// # Authorization
+    /// Only callable by: current commitment owner
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `NotFound` — commitment does not exist
+    /// - `InvalidState` — commitment is not funded
+    /// - `Unauthorized` — caller is not the commitment owner
     pub fn transfer_ownership(
         env: Env,
         commitment_id: u64,
         new_owner: Address,
     ) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
 
-        let mut c = Self::load(&env, commitment_id)?;
+        let c = Self::load(&env, commitment_id)?;
         c.owner.require_auth();
 
         if c.status != EscrowStatus::Funded {
             return Err(Error::InvalidState);
         }
 
-        let old_owner = c.owner.clone();
-        if old_owner == new_owner {
+        if c.owner == new_owner {
             return Ok(());
         }
 
-        Self::deindex_owner(&env, &old_owner, commitment_id);
-        Self::index_owner(&env, &new_owner, commitment_id);
+        // Reject transfer to contract's own address
+        if new_owner == env.current_contract_address() {
+            return Err(Error::Unauthorized);
+        }
 
-        c.owner = new_owner.clone();
-        Self::save(&env, &c);
+        let now = env.ledger().timestamp();
+        let expires_at = now
+            .checked_add(TRANSFER_EXPIRY_SECONDS)
+            .ok_or(Error::InvalidDuration)?;
+
+        let pending = PendingTransfer {
+            to: new_owner.clone(),
+            expires_at,
+        };
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::PendingOwner(commitment_id), &pending);
+
+        // Set TTL for the pending transfer entry to match expiry + buffer
+        let ttl_seconds = TRANSFER_EXPIRY_SECONDS
+            .checked_add(TTL_MATURITY_BUFFER_LEDGERS as u64 * ESTIMATED_LEDGER_SECONDS)
+            .unwrap_or(TRANSFER_EXPIRY_SECONDS);
+        let ttl_ledgers = (ttl_seconds / ESTIMATED_LEDGER_SECONDS) as u32;
+        env.storage().persistent().extend_ttl(
+            &DataKey::PendingOwner(commitment_id),
+            ttl_ledgers / 2,
+            ttl_ledgers,
+        );
 
         env.events().publish(
-            (Symbol::new(&env, "transfer_ownership"), old_owner),
-            (commitment_id, new_owner),
+            (Symbol::new(&env, "ownership_transfer_offered"), c.owner),
+            (commitment_id, new_owner, expires_at),
         );
 
         Ok(())
+    }
+
+    /// Accept a pending ownership transfer offer.
+    ///
+    /// # Authorization
+    /// Only callable by: proposed new owner
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `NotFound` — commitment does not exist
+    /// - `NoPendingTransfer` — no pending transfer exists for this commitment
+    /// - `TransferExpired` — the transfer offer has expired
+    /// - `InvalidState` — commitment is no longer funded
+    /// - `Unauthorized` — caller is not the proposed new owner
+    pub fn accept_ownership(env: Env, commitment_id: u64) -> Result<(), Error> {
+        Self::require_init(&env)?;
+
+        let pending: PendingTransfer = env
+            .storage()
+            .persistent()
+            .get(&DataKey::PendingOwner(commitment_id))
+            .ok_or(Error::NoPendingTransfer)?;
+
+        pending.to.require_auth();
+
+        let now = env.ledger().timestamp();
+        if now > pending.expires_at {
+            return Err(Error::TransferExpired);
+        }
+
+        let mut c = Self::load(&env, commitment_id)?;
+        if c.status != EscrowStatus::Funded {
+            return Err(Error::InvalidState);
+        }
+
+        let old_owner = c.owner.clone();
+        
+        // Perform the ownership transfer
+        Self::deindex_owner(&env, &old_owner, commitment_id);
+        Self::index_owner(&env, &pending.to, commitment_id);
+
+        c.owner = pending.to.clone();
+        Self::save(&env, &c);
+
+        // Clear the pending transfer
+        env.storage()
+            .persistent()
+            .remove(&DataKey::PendingOwner(commitment_id));
+
+        env.events().publish(
+            (Symbol::new(&env, "ownership_accepted"), pending.to.clone()),
+            (commitment_id, old_owner, pending.to.clone()),
+        );
+
+        Ok(())
+    }
+
+    /// Cancel a pending ownership transfer offer.
+    ///
+    /// # Authorization
+    /// Only callable by: current commitment owner
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `NotFound` — commitment does not exist
+    /// - `Unauthorized` — caller is not the commitment owner
+    pub fn cancel_ownership_transfer(env: Env, commitment_id: u64) -> Result<(), Error> {
+        Self::require_init(&env)?;
+
+        let c = Self::load(&env, commitment_id)?;
+        c.owner.require_auth();
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::PendingOwner(commitment_id));
+
+        env.events().publish(
+            (Symbol::new(&env, "ownership_transfer_cancelled"), c.owner),
+            commitment_id,
+        );
+
+        Ok(())
+    }
+
+    /// Get the pending ownership transfer for a commitment, if any.
+    pub fn get_pending_owner(env: Env, commitment_id: u64) -> Option<PendingTransfer> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::PendingOwner(commitment_id))
     }
 
     /// Return the attestation history for a commitment id.
@@ -1330,13 +1548,25 @@ impl EscrowContract {
     }
 
     /// Admin-only setter for the penalty-free grace period before maturity.
-    pub fn set_grace_period(
-        env: Env,
-        admin: Address,
-        grace_period_seconds: u64,
-    ) -> Result<(), Error> {
+    ///
+    /// # Authorization
+    /// Only callable by: admin
+    ///
+    /// # Errors
+    /// - `NotInitialized` — contract not initialized
+    /// - `Unauthorized` — caller is not the current admin
+    /// - `InvalidGracePeriod` — grace period exceeds maximum lock duration
+    pub fn set_grace_period(env: Env, grace_period_seconds: u64) -> Result<(), Error> {
         Self::require_init(&env)?;
-        admin.require_auth();
+        let admin = Self::require_admin(&env)?;
+        
+        let max_grace = u64::from(MAX_DURATION_DAYS)
+            .checked_mul(SECONDS_PER_DAY)
+            .ok_or(Error::InvalidGracePeriod)?;
+        if grace_period_seconds > max_grace {
+            return Err(Error::InvalidGracePeriod);
+        }
+        
         env.storage()
             .instance()
             .set(&DataKey::GracePeriodSeconds, &grace_period_seconds);
@@ -1354,6 +1584,32 @@ impl EscrowContract {
     }
 
     // ── Internal helpers ────────────────────────────────────────────────────
+
+    /// Load the stored admin address and require its authorization.
+    ///
+    /// # Returns
+    /// The admin `Address` on success.
+    ///
+    /// # Errors
+    /// - `NotInitialized` if no admin is set
+    /// - Panics if the admin does not authorize the call
+    fn require_admin(env: &Env) -> Result<Address, Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        Ok(admin)
+    }
+
+    /// Clear any pending ownership transfer for a commitment.
+    /// Called when a commitment leaves the Funded state.
+    fn clear_pending_ownership(env: &Env, commitment_id: u64) {
+        env.storage()
+            .persistent()
+            .remove(&DataKey::PendingOwner(commitment_id));
+    }
 
     fn publish_commitment_event<T>(env: &Env, name: &str, c: &Commitment, data: T)
     where
@@ -1398,6 +1654,7 @@ impl EscrowContract {
         }
         token.transfer(&contract, &c.owner, &refund_amount);
 
+        Self::clear_pending_ownership(env, c.id);
         c.status = EscrowStatus::Refunded;
         Self::save(env, &c);
 
@@ -1752,5 +2009,10 @@ mod test_funding_window;
 #[cfg(test)]
 mod test_yield_reserve;
 #[cfg(test)]
+mod test_admin_auth;
+#[cfg(test)]
+mod test_two_step;
+#[cfg(test)]
+mod test_pause;
+#[cfg(test)]
 mod test_attestation;
-

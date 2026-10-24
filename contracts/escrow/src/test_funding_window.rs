@@ -189,10 +189,10 @@ fn early_exit_after_old_maturity_still_applies_penalty_not_grace() {
     let token = TokenClient::new(&env, &token_address);
     let t0 = 30_000;
     set_time(&env, t0);
-    client.set_grace_period(&admin, &SECONDS_PER_DAY);
+    client.set_grace_period(&SECONDS_PER_DAY);
     // fund_escrow reserves the promised yield up front, so the pool must cover it.
     asset.mint(&admin, &1_000);
-    client.deposit_yield_pool(&admin, &1_000);
+    client.deposit_yield_pool(&1_000);
     let commitment_id = create(&client, &env, &owner, &token_address, 10_000, 30, 500);
 
     set_time(&env, t0 + 5 * SECONDS_PER_DAY);
