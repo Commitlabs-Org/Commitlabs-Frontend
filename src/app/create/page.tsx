@@ -14,12 +14,24 @@ import {
 } from '@/lib/commitments';
 import { useWallet } from '@/components/WalletProvider';
 import { ESCROW_CONTRACT_ID, explorerContractUrl, config } from '@/lib/config';
+import { useProtocolParams } from '@/lib/protocol';
+import {
+  DISPLAY_APY,
+  MAX_AMOUNT_STROOPS,
+  MAX_DURATION_DAYS,
+  MIN_DURATION_DAYS,
+  formatStroops,
+  parseToStroops,
+  projectYieldStroops,
+} from '@/lib/yield';
+import { Skeleton } from '@/components/Skeleton';
 
 const ASSETS = ['USDC', 'XLM', 'EURC'];
 const STEP_LABELS = ['Type', 'Configure', 'Review', 'Done'];
 
 export default function CreatePage() {
   const { address } = useWallet();
+  const { params, loading: paramsLoading, isFallback } = useProtocolParams();
   const [step, setStep] = useState(0);
   const [type, setType] = useState<CommitmentType>('balanced');
   const [asset, setAsset] = useState('USDC');
@@ -55,22 +67,34 @@ export default function CreatePage() {
   }, []);
 
   const spec = specFor(type);
+  const currentApy = DISPLAY_APY[type];
+  const penaltyBps = params.penalties[type];
+  const currentPenaltyPct = penaltyBps / 100;
+
   const amt = Number(amount);
   const dur = Number(days);
-  const amountErr = !Number.isFinite(amt) || amt <= 0 ? 'Enter an amount greater than zero.' : null;
-  const daysErr =
-    !Number.isInteger(dur) || dur < spec.minDays
-      ? `Minimum lock for ${spec.name} is ${spec.minDays} days.`
-      : dur > 365
-        ? 'Maximum lock is 365 days.'
-        : null;
-  const valid = !amountErr && !daysErr;
-  const projected = valid ? (amt * (spec.apy / 100) * dur) / 365 : 0;
+  const stroops = parseToStroops(amount);
+
+  let amountErr: string | null = null;
+  if (!Number.isFinite(amt) || amt <= 0 || stroops === null || stroops <= 0n) {
+    amountErr = 'Enter an amount greater than zero.';
+  } else if (stroops > MAX_AMOUNT_STROOPS) {
+    amountErr = `Maximum commitment amount is ${formatStroops(MAX_AMOUNT_STROOPS)} ${asset}.`;
+  }
+
+  let daysErr: string | null = null;
+  if (!Number.isInteger(dur) || dur < MIN_DURATION_DAYS) {
+    daysErr = `Minimum lock is ${MIN_DURATION_DAYS} day.`;
+  } else if (dur > MAX_DURATION_DAYS) {
+    daysErr = `Maximum lock is ${MAX_DURATION_DAYS} days.`;
+  }
+
+  const valid = !amountErr && !daysErr && stroops !== null;
+  const projectedYieldStroopsVal = valid ? projectYieldStroops(stroops, dur, type) : 0n;
+  const penaltyStroopsVal = valid ? (stroops * BigInt(penaltyBps)) / 10_000n : 0n;
 
   function pickType(t: CommitmentType) {
     setType(t);
-    const min = specFor(t).minDays;
-    if (!Number.isInteger(Number(days)) || Number(days) < min) setDays(String(min));
   }
 
   function submit() {
@@ -81,8 +105,8 @@ export default function CreatePage() {
       amount: amt,
       durationDays: dur,
       maxLoss: spec.maxLoss,
-      penalty: spec.penalty,
-      apy: spec.apy,
+      penalty: currentPenaltyPct,
+      apy: currentApy,
       createdAt: Date.now(),
       status: 'active',
       owner: address,
@@ -161,7 +185,7 @@ export default function CreatePage() {
               >
                 <h3>{t.name}</h3>
                 <p className="muted">{t.tagline}</p>
-                <b>{t.apy}% APY</b>
+                <b>{DISPLAY_APY[t.id]}% APY</b>
               </button>
             ))}
           </div>
@@ -178,6 +202,11 @@ export default function CreatePage() {
           <h2 ref={headingRef} tabIndex={-1}>
             Configure
           </h2>
+          {isFallback && (
+            <p className="muted small" role="note">
+              Could not verify on-chain parameters. Displaying default protocol parameters.
+            </p>
+          )}
           <label>
             Asset
             <select value={asset} onChange={(e) => setAsset(e.target.value)}>
@@ -200,7 +229,7 @@ export default function CreatePage() {
               />
             </label>
             <small id="amount" className="muted">
-              Enter a number greater than zero.
+              Enter a number greater than zero (max {formatStroops(MAX_AMOUNT_STROOPS)} {asset}).
             </small>
             {showAmountErr && (
               <small id="amount-err" className="err">
@@ -222,7 +251,7 @@ export default function CreatePage() {
               />
             </label>
             <small id="days" className="muted">
-              Whole days, from {spec.minDays} to 365.
+              Whole days, from {MIN_DURATION_DAYS} to {MAX_DURATION_DAYS} (recommended for {spec.name}: {spec.minDays}+ days).
             </small>
             {showDaysErr && (
               <small id="days-err" className="err">
@@ -237,12 +266,16 @@ export default function CreatePage() {
             </li>
             <li>
               <span>Early exit penalty</span>
-              <b>{spec.penalty}%</b>
+              {paramsLoading ? (
+                <Skeleton width="60px" height="20px" />
+              ) : (
+                <b>{currentPenaltyPct}%</b>
+              )}
             </li>
             <li>
               <span>Projected yield</span>
               <b>
-                {fmt(projected)} {asset}
+                {formatStroops(projectedYieldStroopsVal)} {asset}
               </b>
             </li>
           </ul>
@@ -262,6 +295,11 @@ export default function CreatePage() {
           <h2 ref={headingRef} tabIndex={-1}>
             Review
           </h2>
+          {isFallback && (
+            <p className="muted small" role="note">
+              Could not verify on-chain parameters. Displaying default protocol parameters.
+            </p>
+          )}
           <ul className="kv">
             <li>
               <span>Type</span>
@@ -279,19 +317,23 @@ export default function CreatePage() {
             </li>
             <li>
               <span>Target APY</span>
-              <b>{spec.apy}%</b>
+              <b>{currentApy}%</b>
             </li>
             <li>
               <span>Projected yield</span>
               <b>
-                {fmt(projected)} {asset}
+                {formatStroops(projectedYieldStroopsVal)} {asset}
               </b>
             </li>
             <li>
               <span>Early exit penalty</span>
-              <b>
-                {spec.penalty}% ({fmt((amt * spec.penalty) / 100)} {asset})
-              </b>
+              {paramsLoading ? (
+                <Skeleton width="120px" height="20px" />
+              ) : (
+                <b>
+                  {currentPenaltyPct}% ({formatStroops(penaltyStroopsVal)} {asset})
+                </b>
+              )}
             </li>
           </ul>
           <label className="check">

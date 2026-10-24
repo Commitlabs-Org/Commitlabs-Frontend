@@ -704,6 +704,7 @@ impl EscrowContract {
     /// Deposit yield tokens into the contract's dedicated yield pool. Admin only.
     pub fn deposit_yield_pool(env: Env, admin: Address, amount: i128) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         admin.require_auth();
         if amount <= 0 {
             return Err(Error::InvalidAmount);
@@ -747,6 +748,7 @@ impl EscrowContract {
     /// yield already promised to funded commitments can never be drained.
     pub fn withdraw_yield_pool(env: Env, to: Address, amount: i128) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         let admin: Address = env
             .storage()
             .instance()
@@ -822,6 +824,7 @@ impl EscrowContract {
     /// Release the escrowed funds back to the owner once the commitment has matured.
     pub fn release(env: Env, commitment_id: u64, caller: Address) -> Result<i128, Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         let payout = Self::perform_release(&env, commitment_id, &caller)?;
         let c = Self::load(&env, commitment_id)?;
         // Use the same raw publish pattern as create_commitment for consistent
@@ -841,6 +844,7 @@ impl EscrowContract {
         caller: Address,
     ) -> Result<SettlementResult, Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         let payout = Self::perform_release(&env, commitment_id, &caller)?;
         let c = Self::load(&env, commitment_id)?;
         Self::publish_commitment_event(
@@ -929,6 +933,7 @@ impl EscrowContract {
         caller: Address,
     ) -> Result<EarlyExitResult, Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         caller.require_auth();
         let c = Self::load(&env, commitment_id)?;
         if caller != c.owner {
@@ -951,6 +956,7 @@ impl EscrowContract {
         reason: String,
     ) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         caller.require_auth();
         let mut c = Self::load(&env, commitment_id)?;
 
@@ -1122,6 +1128,7 @@ impl EscrowContract {
         compliance_score: u32,
     ) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
         attestor.require_auth();
         let mut c = Self::load(&env, commitment_id)?;
         let score = compliance_score.min(100);
@@ -1177,6 +1184,7 @@ impl EscrowContract {
         new_owner: Address,
     ) -> Result<(), Error> {
         Self::require_init(&env)?;
+        Self::require_not_paused(&env)?;
 
         let mut c = Self::load(&env, commitment_id)?;
         c.owner.require_auth();
@@ -1685,3 +1693,6 @@ impl EscrowContract {
 mod test_funding_window;
 #[cfg(test)]
 mod test_yield_reserve;
+#[cfg(test)]
+mod test_pause;
+

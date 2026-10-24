@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'escrow-client': fileURLToPath(
+        new URL('./packages/escrow-client/src/index.ts', import.meta.url)
+      ),
     },
   },
   test: {

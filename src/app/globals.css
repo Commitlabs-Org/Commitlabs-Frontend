@@ -108,6 +108,8 @@ h2:focus { outline: none; }
 .badge.matured { color: var(--warn); border-color: var(--warn); }
 .badge.settled { color: var(--ok); border-color: var(--ok); }
 .badge.exited { color: var(--danger); border-color: var(--danger); }
+.badge.disputed { color: var(--warn); border-color: var(--warn); }
+.badge.violated { color: var(--danger); border-color: var(--danger); }
 .badge.demo { color: var(--accent2); border-color: var(--accent2); }
 .badge.created { color: var(--accent2); border-color: var(--accent2); }
 .badge.funded { color: var(--accent); border-color: var(--accent); }

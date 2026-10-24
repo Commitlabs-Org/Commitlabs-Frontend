@@ -5,11 +5,17 @@ on:
     branches: [master, main]
     paths:
       - 'contracts/**'
+      - 'packages/escrow-client/**'
+      - 'scripts/gen-escrow-bindings.sh'
+      - 'src/lib/soroban/**'
       - '.github/workflows/contracts.yml'
   pull_request:
     branches: [master, main]
     paths:
       - 'contracts/**'
+      - 'packages/escrow-client/**'
+      - 'scripts/gen-escrow-bindings.sh'
+      - 'src/lib/soroban/**'
       - '.github/workflows/contracts.yml'
 
 jobs:
@@ -47,3 +53,44 @@ jobs:
       - name: Build Soroban Smart Contracts
         working-directory: contracts
         run: stellar contract build
+
+  abi-drift-check:
+    name: Escrow Bindings Drift & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown, wasm32v1-none
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts
+
+      - name: Install Stellar CLI
+        uses: stellar/stellar-cli@v27.1.0
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Rebuild WASM and regenerate bindings
+        run: bash scripts/gen-escrow-bindings.sh
+
+      - name: Fail on bindings ABI drift
+        run: git diff --exit-code packages/escrow-client
+
+      - name: Verify frontend type-check
+        run: npm run typecheck
