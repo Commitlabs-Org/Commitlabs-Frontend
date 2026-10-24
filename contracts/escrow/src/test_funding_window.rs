@@ -166,6 +166,7 @@ fn cancellation_rejects_every_non_created_status() {
     client.refund(&refunded);
     client.dispute(&disputed, &owner, &String::from_str(&env, "test dispute"));
     client.set_violation_threshold(&90);
+    client.add_attestor(&attestor);
     client.record_attestation(&violated, &attestor, &10);
 
     let maturity = client.get_commitment(&released).maturity;
