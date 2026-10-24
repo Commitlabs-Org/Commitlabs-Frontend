@@ -16,6 +16,8 @@ export enum EscrowErrorCode {
   InsufficientBalance = 13,
   CommitmentViolated = 14,
   InvalidWasmHash = 15,
+  FundingWindowExpired = 16,
+  ReservedYieldInvariant = 17,
 }
 
 export interface ContractError {
@@ -115,6 +117,18 @@ export const CONTRACT_ERRORS: Record<EscrowErrorCode, ContractError> = {
     name: 'InvalidWasmHash',
     message: 'The contract Wasm hash is invalid.',
     hint: 'Check the contract configuration and try again.',
+  },
+  [EscrowErrorCode.FundingWindowExpired]: {
+    code: EscrowErrorCode.FundingWindowExpired,
+    name: 'FundingWindowExpired',
+    message: 'The commitment funding window has expired.',
+    hint: 'Create a new commitment to try again.',
+  },
+  [EscrowErrorCode.ReservedYieldInvariant]: {
+    code: EscrowErrorCode.ReservedYieldInvariant,
+    name: 'ReservedYieldInvariant',
+    message: 'The yield pool cannot fulfill the yield reservation for this commitment.',
+    hint: 'Try again later or contact the contract administrator.',
   },
 };
 
