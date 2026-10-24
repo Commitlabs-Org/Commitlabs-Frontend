@@ -7,11 +7,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "node api.js && next dev",
+    "dev": "next dev",
     "prebuild": "node scripts/validate-env.mjs",
-    "build": "node api.js && next build",
+    "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
-    "start": "node api.js && next start",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
     "circular": "madge --circular --extensions ts,tsx src",
     "size": "node scripts/check-bundle-budget.mjs",
