@@ -110,6 +110,7 @@ fn assert_invariant(ctx: &Ctx) {
 
 /// Every terminal path, with the pool state it must leave behind.
 #[derive(Clone, Copy, Debug)]
+#[allow(clippy::enum_variant_names)]
 enum Exit {
     /// `release` after maturity.
     Release,
@@ -167,6 +168,7 @@ impl Exit {
 fn mark_violated(ctx: &Ctx, commitment_id: u64) {
     ctx.client.set_violation_threshold(&50u32);
     let attestor = Address::generate(ctx.env);
+    ctx.client.add_attestor(&attestor);
     ctx.client
         .record_attestation(&commitment_id, &attestor, &10u32);
 }

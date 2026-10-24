@@ -96,6 +96,8 @@ pub enum DataKey {
     GracePeriodSeconds,
     /// Compliance score threshold that auto-freezes funded commitments.
     ViolationThreshold,
+    /// Authorised compliance attestor in the allowlist.
+    Attestor(Address),
     /// Pending admin proposal awaiting acceptance.
     PendingAdmin,
     /// Pending ownership transfer for a commitment, keyed by commitment id.
@@ -1203,6 +1205,55 @@ impl EscrowContract {
             .unwrap_or(0)
     }
 
+    /// Add an authorised attestor to the allowlist. Admin only.
+    pub fn add_attestor(env: Env, attestor: Address) -> Result<(), Error> {
+        Self::require_init(&env)?;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+
+        let key = DataKey::Attestor(attestor.clone());
+        env.storage().persistent().set(&key, &true);
+        Self::bump_persistent_ttl(&env, &key);
+
+        env.events().publish(
+            (Symbol::new(&env, "attestor_added"), admin),
+            attestor,
+        );
+        Ok(())
+    }
+
+    /// Remove an authorised attestor from the allowlist. Admin only.
+    pub fn remove_attestor(env: Env, attestor: Address) -> Result<(), Error> {
+        Self::require_init(&env)?;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+
+        let key = DataKey::Attestor(attestor.clone());
+        env.storage().persistent().remove(&key);
+
+        env.events().publish(
+            (Symbol::new(&env, "attestor_removed"), admin),
+            attestor,
+        );
+        Ok(())
+    }
+
+    /// Return whether an address is an authorised attestor.
+    pub fn is_attestor(env: Env, address: Address) -> bool {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Attestor(address))
+            .unwrap_or(false)
+    }
+
     /// Record a compliance attestation (0..=100) against a commitment.
     pub fn record_attestation(
         env: Env,
@@ -1213,7 +1264,16 @@ impl EscrowContract {
         Self::require_init(&env)?;
         Self::require_not_paused(&env)?;
         attestor.require_auth();
+
+        if !Self::is_attestor(env.clone(), attestor.clone()) {
+            return Err(Error::Unauthorized);
+        }
+
         let mut c = Self::load(&env, commitment_id)?;
+        if c.status != EscrowStatus::Funded {
+            return Err(Error::InvalidState);
+        }
+
         let score = compliance_score.min(100);
         c.compliance_score = score;
 
@@ -1808,6 +1868,12 @@ impl EscrowContract {
             .extend_ttl(key, threshold, extend_to);
     }
 
+    fn bump_persistent_ttl(env: &Env, key: &DataKey) {
+        let max_ttl = env.storage().max_ttl();
+        let threshold = max_ttl.saturating_sub(TTL_MATURITY_BUFFER_LEDGERS);
+        env.storage().persistent().extend_ttl(key, threshold, max_ttl);
+    }
+
     fn ttl_ledgers_for_maturity(env: &Env, maturity: u64) -> u32 {
         let now = env.ledger().timestamp();
         let remaining_seconds = maturity.saturating_sub(now);
@@ -1948,3 +2014,5 @@ mod test_admin_auth;
 mod test_two_step;
 #[cfg(test)]
 mod test_pause;
+#[cfg(test)]
+mod test_attestation;
