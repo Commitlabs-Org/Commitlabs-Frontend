@@ -4,6 +4,13 @@ import { render, act, screen } from '@testing-library/react';
 import { ProtocolStatusProvider, useProtocolStatus } from '../ProtocolStatusProvider';
 import * as statusModule from '@/lib/soroban/protocol-status';
 
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  const escrowContractId = 'CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4';
+  return { ...actual, ESCROW_CONTRACT_ID: escrowContractId, config: { ...actual.config, escrowContractId } };
+});
+
+
 function StatusConsumer() {
   const { status, paused, yieldPool, refresh } = useProtocolStatus();
   return (

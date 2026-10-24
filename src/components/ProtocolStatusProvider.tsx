@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ProtocolStatus } from '@/lib/soroban/protocol-policy';
+import { config } from '@/lib/config';
 
 export type ProtocolStatusState = 'loading' | 'ok' | 'unavailable';
 
@@ -49,6 +50,11 @@ export function ProtocolStatusProvider({ children }: { children: React.ReactNode
       try {
         // Loaded on demand, after the page has finished loading, so stellar-sdk
         // stays out of the first-load bundle and does not compete with first paint.
+        if (!config.escrowContractId) {
+          // Nothing to read without a deployed contract; skip loading stellar-sdk.
+          setState({ status: 'unavailable', paused: false, yieldPool: 0n, fetchedAt: Date.now() });
+          return;
+        }
         await afterPageLoad();
         const { getProtocolStatus } = await import('@/lib/soroban/protocol-status');
         const res: ProtocolStatus = await getProtocolStatus();

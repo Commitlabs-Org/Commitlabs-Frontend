@@ -9,6 +9,13 @@ import CreatePage from '@/app/create/page';
 import DashboardPage from '@/app/dashboard/page';
 import * as commitmentsModule from '@/lib/commitments';
 
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  const escrowContractId = 'CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4';
+  return { ...actual, ESCROW_CONTRACT_ID: escrowContractId, config: { ...actual.config, escrowContractId } };
+});
+
+
 // Mock commitments data for dashboard test
 vi.mock('@/lib/commitments', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/commitments')>();
