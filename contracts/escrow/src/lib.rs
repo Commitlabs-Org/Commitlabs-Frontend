@@ -43,6 +43,12 @@ pub const MAX_DURATION_DAYS: u32 = 365;
 /// Upper bound for penalty basis points (10_000 = 100%).
 pub const MAX_PENALTY_BPS: u32 = 10_000;
 
+/// Minimum amount that may be withdrawn via `refund_partial` (10_000_000 = 1 XLM at 7 decimals).
+pub const MIN_PARTIAL_WITHDRAWAL: i128 = 10_000_000;
+
+/// Minimum principal that must remain in a commitment after `refund_partial` unless fully withdrawn (10_000_000 = 1 XLM at 7 decimals).
+pub const MIN_REMAINING_PRINCIPAL: i128 = 10_000_000;
+
 /// Bound full-record owner reads so a single query does not exceed Soroban
 /// simulation/result size limits.
 const MAX_USER_COMMITMENTS_READ: u32 = 100;
@@ -221,6 +227,8 @@ pub enum Error {
     /// Yield reservation accounting invariant is broken (e.g. reserved balance
     /// cannot cover a commitment that was funded with a reservation).
     ReservedYieldInvariant = 17,
+    /// Partial withdrawal amount or remaining principal is below minimum threshold.
+    BelowMinimum = 18,
 }
 
 /// Result of an early exit commitment.
@@ -889,9 +897,14 @@ impl EscrowContract {
             return Err(Error::InvalidAmount);
         }
 
-        let (penalty, refund_amount) = Self::compute_refund_amount(amount, c.penalty_bps)?;
-
         let remaining = c.amount.checked_sub(amount).ok_or(Error::InvalidAmount)?;
+        if remaining > 0
+            && (amount < MIN_PARTIAL_WITHDRAWAL || remaining < MIN_REMAINING_PRINCIPAL)
+        {
+            return Err(Error::BelowMinimum);
+        }
+
+        let (penalty, refund_amount) = Self::penalty_for(amount, c.penalty_bps)?;
         c.amount = remaining;
         if remaining == 0 {
             c.status = EscrowStatus::Refunded;
@@ -1035,7 +1048,7 @@ impl EscrowContract {
             c.status = EscrowStatus::Released;
             paid = payout;
         } else {
-            let (penalty, refund_amount) = Self::compute_refund_amount(c.amount, c.penalty_bps)?;
+            let (penalty, refund_amount) = Self::penalty_for(c.amount, c.penalty_bps)?;
             c.status = EscrowStatus::Refunded;
             paid = refund_amount;
 
@@ -1311,16 +1324,11 @@ impl EscrowContract {
             return Err(Error::InvalidState);
         }
 
-        let penalty = if Self::is_within_grace_period(env, &c) {
-            0
+        let (penalty, refund_amount) = if Self::is_within_grace_period(env, &c) {
+            (0, c.amount)
         } else {
-            let penalty_mul = c
-                .amount
-                .checked_mul(i128::from(c.penalty_bps))
-                .ok_or(Error::InvalidAmount)?;
-            penalty_mul / i128::from(MAX_PENALTY_BPS)
+            Self::penalty_for(c.amount, c.penalty_bps)?
         };
-        let refund_amount = c.amount.checked_sub(penalty).ok_or(Error::InvalidAmount)?;
 
         // Early exit forfeits yield: drop the reservation but keep the pool
         // balance untouched.
@@ -1363,7 +1371,10 @@ impl EscrowContract {
         Ok(())
     }
 
-    fn compute_refund_amount(amount: i128, penalty_bps: u32) -> Result<(i128, i128), Error> {
+    /// Calculate early-exit penalty rounded up in the protocol's favour, and the resulting refund.
+    /// Uses ceiling division: `(amount * bps + 9_999) / 10_000`.
+    /// Guaranteed: `penalty <= amount` and `penalty + refund == amount`.
+    pub(crate) fn penalty_for(amount: i128, penalty_bps: u32) -> Result<(i128, i128), Error> {
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
@@ -1371,13 +1382,24 @@ impl EscrowContract {
             return Err(Error::PenaltyTooHigh);
         }
 
-        let penalty = amount
-            .checked_mul(i128::from(penalty_bps))
-            .ok_or(Error::InvalidAmount)?
-            / i128::from(MAX_PENALTY_BPS);
-        let refund_amount = amount.checked_sub(penalty).ok_or(Error::InvalidAmount)?;
+        let penalty = if penalty_bps == 0 {
+            0
+        } else {
+            let mul = amount
+                .checked_mul(i128::from(penalty_bps))
+                .ok_or(Error::InvalidAmount)?;
+            let ceil_add = mul
+                .checked_add(i128::from(MAX_PENALTY_BPS - 1))
+                .ok_or(Error::InvalidAmount)?;
+            let raw_penalty = ceil_add / i128::from(MAX_PENALTY_BPS);
+            raw_penalty.min(amount)
+        };
 
-        Ok((penalty, refund_amount))
+        let refund = amount
+            .checked_sub(penalty)
+            .ok_or(Error::InvalidAmount)?;
+
+        Ok((penalty, refund))
     }
 
     fn get_default_penalty_internal(env: &Env, risk: RiskProfile) -> Result<u32, Error> {
@@ -1685,3 +1707,6 @@ impl EscrowContract {
 mod test_funding_window;
 #[cfg(test)]
 mod test_yield_reserve;
+#[cfg(test)]
+mod test_penalty_math;
+

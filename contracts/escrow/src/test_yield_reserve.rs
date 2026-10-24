@@ -110,6 +110,7 @@ fn assert_invariant(ctx: &Ctx) {
 
 /// Every terminal path, with the pool state it must leave behind.
 #[derive(Clone, Copy, Debug)]
+#[allow(clippy::enum_variant_names)]
 enum Exit {
     /// `release` after maturity.
     Release,
@@ -282,18 +283,19 @@ fn refund_releases_reservation_without_touching_balance() {
 fn partial_refund_keeps_reservation_until_full_exit() {
     let env = Env::default();
     let ctx = setup(&env);
-    ctx.client.deposit_yield_pool(&ctx.admin, &POOL_DEPOSIT);
+    let pool_deposit = 1_000_000;
+    ctx.client.deposit_yield_pool(&ctx.admin, &pool_deposit);
 
-    let id = create_commitment(&ctx, PRINCIPAL, RiskProfile::Safe, DURATION_DAYS, 500);
+    let id = create_commitment(&ctx, 20_000_000, RiskProfile::Safe, DURATION_DAYS, 500);
     ctx.client.fund_escrow(&id);
     let accrued_yield = ctx.client.get_commitment(&id).accrued_yield;
 
-    // Partial exits keep the full reservation: over-reserved, never under.
-    ctx.client.refund_partial(&id, &400);
-    assert_status(&ctx, POOL_DEPOSIT, accrued_yield);
+    // Partial exits meet minimums and keep the full reservation: over-reserved, never under.
+    ctx.client.refund_partial(&id, &10_000_000);
+    assert_status(&ctx, pool_deposit, accrued_yield);
 
-    ctx.client.refund_partial(&id, &600);
-    assert_status(&ctx, POOL_DEPOSIT, 0);
+    ctx.client.refund_partial(&id, &10_000_000);
+    assert_status(&ctx, pool_deposit, 0);
 }
 
 #[test]
