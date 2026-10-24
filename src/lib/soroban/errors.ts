@@ -16,6 +16,13 @@ export enum EscrowErrorCode {
   InsufficientBalance = 13,
   CommitmentViolated = 14,
   InvalidWasmHash = 15,
+  FundingWindowExpired = 16,
+  ReservedYieldInvariant = 17,
+  InvalidGracePeriod = 18,
+  NoPendingAdmin = 19,
+  NoPendingTransfer = 20,
+  TransferExpired = 21,
+  BelowMinimum = 22,
 }
 
 export interface ContractError {
@@ -115,6 +122,48 @@ export const CONTRACT_ERRORS: Record<EscrowErrorCode, ContractError> = {
     name: 'InvalidWasmHash',
     message: 'The contract Wasm hash is invalid.',
     hint: 'Check the contract configuration and try again.',
+  },
+  [EscrowErrorCode.FundingWindowExpired]: {
+    code: EscrowErrorCode.FundingWindowExpired,
+    name: 'FundingWindowExpired',
+    message: "This commitment's funding window has elapsed.",
+    hint: 'The commitment can no longer be funded. Contact support for options.',
+  },
+  [EscrowErrorCode.ReservedYieldInvariant]: {
+    code: EscrowErrorCode.ReservedYieldInvariant,
+    name: 'ReservedYieldInvariant',
+    message: 'Yield reservation accounting invariant is broken.',
+    hint: 'Contact the contract administrator for assistance.',
+  },
+  [EscrowErrorCode.InvalidGracePeriod]: {
+    code: EscrowErrorCode.InvalidGracePeriod,
+    name: 'InvalidGracePeriod',
+    message: 'The grace period exceeds the maximum lock duration.',
+    hint: 'Choose a shorter grace period and try again.',
+  },
+  [EscrowErrorCode.NoPendingAdmin]: {
+    code: EscrowErrorCode.NoPendingAdmin,
+    name: 'NoPendingAdmin',
+    message: 'There is no pending admin proposal.',
+    hint: 'Ask the current admin to propose a new admin first.',
+  },
+  [EscrowErrorCode.NoPendingTransfer]: {
+    code: EscrowErrorCode.NoPendingTransfer,
+    name: 'NoPendingTransfer',
+    message: 'There is no pending ownership transfer for this commitment.',
+    hint: 'Ask the current owner to start the transfer first.',
+  },
+  [EscrowErrorCode.TransferExpired]: {
+    code: EscrowErrorCode.TransferExpired,
+    name: 'TransferExpired',
+    message: 'The ownership transfer offer has expired.',
+    hint: 'Ask the current owner to create a new transfer offer.',
+  },
+  [EscrowErrorCode.BelowMinimum]: {
+    code: EscrowErrorCode.BelowMinimum,
+    name: 'BelowMinimum',
+    message: 'The partial withdrawal or the remaining principal is below the 1-unit minimum.',
+    hint: 'Withdraw at least 1 unit and leave at least 1 unit, or exit the full amount.',
   },
 };
 

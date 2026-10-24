@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { formatAmount, penaltyOf } from '@/lib/amount';
 import {
   effectiveStatus,
   fmt,
+  fmtUnits,
   loadCommitments,
   maturityOf,
   progressOf,
@@ -17,12 +19,18 @@ import {
   type Commitment,
 } from '@/lib/commitments';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { DisputeDialog } from '@/components/DisputeDialog';
 import { useWallet } from '@/components/WalletProvider';
-import { fetchXlmBalance } from '@/lib/wallet';
+import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
+import { getActionPauseReason } from '@/lib/soroban/protocol-status';
+import { YieldCoverageChip } from '@/components/YieldCoverageChip';
+import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
+import { DISPUTE_CATEGORY_LABELS, type DisputeRecord } from '@/lib/soroban/dispute';
 import { config, explorerTx } from '@/lib/config';
 import { InlineError } from '@/components/InlineError';
 import { Skeleton } from '@/components/Skeleton';
+import { TxErrorNotice } from '@/components/TxErrorNotice';
 import DashboardLoading from './loading';
 
 interface Notice {
@@ -32,8 +40,9 @@ interface Notice {
 
 // Single source for the numbers shown in the exit dialog and applied to the commitment.
 function exitBreakdown(c: Commitment) {
-  const penaltyAmount = (c.amount * c.penalty) / 100;
-  return { principal: c.amount, penaltyPct: c.penalty, penaltyAmount, returned: c.amount - penaltyAmount };
+  const principal = BigInt(c.amount);
+  const penaltyAmount = penaltyOf(principal, c.penalty);
+  return { principal, penaltyPct: c.penalty, penaltyAmount, returned: principal - penaltyAmount };
 }
 
 type BalanceState =
@@ -45,6 +54,9 @@ type BalanceState =
 
 export default function DashboardPage() {
   const { status, address } = useWallet();
+  const protocolStatus = useProtocolStatus();
+  const isPaused = protocolStatus.status === 'ok' && protocolStatus.paused;
+  const exitPauseReason = getActionPauseReason('early_exit', isPaused);
   const [list, setList] = useState<Commitment[] | null>(null);
   const [pending, setPending] = useState<{ kind: 'exit' | 'remove'; id: string } | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -53,6 +65,9 @@ export default function DashboardPage() {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [balanceState, setBalanceState] = useState<BalanceState>({ status: 'idle' });
+  const [disputeDialog, setDisputeDialog] = useState<Commitment | null>(null);
+  const [disputeRecords, setDisputeRecords] = useState<Record<string, DisputeRecord>>({});
+  const [disputeError, setDisputeError] = useState<unknown>(null);
 
   const reload = useCallback(() => {
     const result = loadCommitments();
@@ -140,6 +155,36 @@ export default function DashboardPage() {
     }
   }, [address]);
 
+  useEffect(() => {
+    if (!address || list === null) return;
+    const pending = new Map<string, Promise<void>>();
+    for (const c of list) {
+      const st = effectiveStatus(c);
+      if (
+        (st === 'disputed' || st === 'violated') &&
+        !disputeRecords[c.id] &&
+        !pending.has(c.id)
+      ) {
+        pending.set(
+          c.id,
+          (async () => {
+            try {
+              // Loaded on demand so stellar-sdk stays out of the dashboard's first-load bundle.
+              const { getDispute } = await import('@/lib/soroban/escrow');
+              const record = await getDispute(c.id, address ?? undefined);
+              if (record) {
+                setDisputeRecords((prev) => ({ ...prev, [c.id]: record }));
+              }
+            } catch {
+              // Swallow read failures: the frozen state is still informative
+              // without the dispute record.
+            }
+          })(),
+        );
+      }
+    }
+  }, [list, address, disputeRecords]);
+
   function update(id: string, patch: Partial<Commitment>) {
     setList((prev) => {
       const next = (prev ?? []).map((c) => (c.id === id ? { ...c, ...patch } : c));
@@ -180,14 +225,36 @@ export default function DashboardPage() {
     }
   }
 
+  function handleReportProblem(c: Commitment) {
+    setDisputeError(null);
+    setDisputeDialog(c);
+  }
+
+  async function handleDisputeOpened(c: Commitment) {
+    setDisputeDialog(null);
+    setDisputeError(null);
+    try {
+      update(c.id, { status: 'disputed' });
+      setAnnouncement(`Commitment ${c.id} is now disputed — funds are frozen until resolved.`);
+      const { getDispute } = await import('@/lib/soroban/escrow');
+      const record = await getDispute(c.id, address ?? undefined);
+      if (record) {
+        setDisputeRecords((prev) => ({ ...prev, [c.id]: record }));
+      }
+    } catch (err) {
+      setDisputeError(err);
+    }
+  }
+
   if (!list) return <DashboardLoading />;
 
   const target = pending ? list.find((c) => c.id === pending.id) : undefined;
   const breakdown = target ? exitBreakdown(target) : null;
 
   const live = list.filter((c) => ['active', 'matured'].includes(effectiveStatus(c)));
-  const locked = live.reduce((s, c) => s + c.amount, 0);
-  const yieldTotal = live.reduce((s, c) => s + projectedYield(c), 0);
+  const frozen = list.filter((c) => effectiveStatus(c) === 'disputed' || effectiveStatus(c) === 'violated');
+  const locked = [...live, ...frozen].reduce((s, c) => s + BigInt(c.amount), 0n);
+  const yieldTotal = [...live, ...frozen].reduce((s, c) => s + projectedYield(c), 0n);
   const matured = list.filter((c) => effectiveStatus(c) === 'matured').length;
 
   return (
@@ -220,13 +287,19 @@ export default function DashboardPage() {
           <span className="muted">Active commitments</span>
           <b>{live.length}</b>
         </div>
+        {frozen.length > 0 && (
+          <div className="card metric" style={{ borderColor: 'var(--warn)' }}>
+            <span className="muted" style={{ color: 'var(--warn)' }}>Frozen commitments</span>
+            <b style={{ color: 'var(--warn)' }}>{frozen.length}</b>
+          </div>
+        )}
         <div className="card metric">
           <span className="muted">Total locked</span>
-          <b>{fmt(locked)}</b>
+          <b>{fmtUnits(locked)}</b>
         </div>
         <div className="card metric">
           <span className="muted">Projected yield</span>
-          <b>{fmt(yieldTotal)}</b>
+          <b>{fmtUnits(yieldTotal)}</b>
         </div>
         <div className="card metric">
           <span className="muted">{status === 'connected' ? `Wallet XLM (${config.networkDetails.label.toLowerCase()})` : 'Ready to settle'}</span>
@@ -280,25 +353,70 @@ export default function DashboardPage() {
         <div className="stack">
           {list.map((c) => {
             const st = effectiveStatus(c);
+            const record = disputeRecords[c.id];
             const pct = Math.round(progressOf(c) * 100);
             const shown = st === 'settled' || st === 'exited' ? 100 : pct;
-            const left =Math.max(0, Math.ceil((maturityOf(c) - Date.now()) / 86_400_000));
+            const left = Math.max(0, Math.ceil((maturityOf(c) - Date.now()) / 86_400_000));
+            const frozen = st === 'disputed' || st === 'violated';
+            const ownerIsConnected = !!address && c.owner === address;
+            const isNearOrMatured =
+              st === 'matured' ||
+              (st === 'active' && maturityOf(c) - Date.now() <= 7 * 86_400_000);
+            const isOnChain = !c.demo;
+            const accruedYield = BigInt(
+              (c as any).accrued_yield ?? (c as any).accruedYield ?? projectedYield(c),
+            );
+            const showCoverageWarning =
+              isOnChain &&
+              isNearOrMatured &&
+              protocolStatus.status === 'ok' &&
+              protocolStatus.yieldPool < accruedYield;
+
             return (
               <article className="card commit" key={c.id}>
                 <div className="row between wrap">
                   <div>
                     <h3>
-                      {fmt(c.amount)} {c.asset}{' '}
+                      {fmtUnits(BigInt(c.amount))} {c.asset}{' '}
                       <span className={`badge ${st}`}>{st}</span>
                       {c.demo && <span className="badge demo">demo</span>}
                     </h3>
                     <p className="muted small">
-                      {c.id} &middot; {specFor(c.type).name} &middot; {c.apy}% APY &middot; max
+                      {/^\d+$/.test(c.id) ? (
+                        <Link
+                          href={`/commitments/${c.id}`}
+                          className="link"
+                          title={`View on-chain commitment #${c.id}`}
+                        >
+                          #{c.id}
+                        </Link>
+                      ) : (
+                        <span>{c.id}</span>
+                      )}{' '}
+                      &middot; {specFor(c.type).name} &middot; {c.apy}% APY &middot; max
                       loss {c.maxLoss}%
                     </p>
+                    {frozen && record && (
+                      <p className="muted small">
+                        Reported by {shortAddress(record.disputedBy)} on{' '}
+                        {new Date(record.disputedAt).toLocaleDateString()}{' '}
+                        — {DISPUTE_CATEGORY_LABELS[record.reasonCategory]}.
+                      </p>
+                    )}
+                    {frozen && !record && (
+                      <p className="muted small">
+                        Funds are frozen. Loading the dispute record...
+                      </p>
+                    )}
+                    {showCoverageWarning && (
+                      <YieldCoverageChip
+                        accruedYield={accruedYield}
+                        yieldPool={protocolStatus.yieldPool}
+                      />
+                    )}
                   </div>
-                  <div className="row">
-                    {st === 'matured' && (
+                  <div className="row wrap" style={{ alignItems: 'center', gap: '8px' }}>
+                    {!frozen && st === 'matured' && (
                       <button
                         className="btn btn-primary"
                         onClick={() => {
@@ -309,12 +427,30 @@ export default function DashboardPage() {
                         Settle
                       </button>
                     )}
-                    {st === 'active' && (
+                    {!frozen && st === 'active' && (
+                      <div className="row wrap" style={{ alignItems: 'center', gap: '8px' }}>
+                        <button
+                          className="btn btn-ghost"
+                          disabled={isPaused}
+                          title={isPaused ? exitPauseReason : undefined}
+                          onClick={() => setPending({ kind: 'exit', id: c.id })}
+                        >
+                          Early exit
+                        </button>
+                        {isPaused && (
+                          <span className="err small" role="status">
+                            {exitPauseReason}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {!frozen && (st === 'active' || st === 'matured') && (
                       <button
                         className="btn btn-ghost"
-                        onClick={() => setPending({ kind: 'exit', id: c.id })}
+                        disabled={!ownerIsConnected || !address}
+                        onClick={() => handleReportProblem(c)}
                       >
-                        Early exit
+                        Report a problem
                       </button>
                     )}
                     {(st === 'settled' || st === 'exited') && (
@@ -323,6 +459,15 @@ export default function DashboardPage() {
                         onClick={() => setPending({ kind: 'remove', id: c.id })}
                       >
                         Remove
+                      </button>
+                    )}
+                    {frozen && (
+                      <button
+                        className="btn btn-ghost"
+                        disabled
+                        title="Funds are frozen until an operator resolves the dispute."
+                      >
+                        Frozen
                       </button>
                     )}
                   </div>
@@ -341,7 +486,11 @@ export default function DashboardPage() {
                         ? '100% elapsed, matured'
                         : st === 'settled'
                           ? 'Settled'
-                          : 'Exited early'
+                          : st === 'disputed'
+                            ? 'Frozen — disputed, pending operator resolution'
+                            : st === 'violated'
+                              ? 'Frozen — violated, pending operator resolution'
+                              : 'Exited early'
                   }
                 >
                   <div style={{ width: `${shown}%` }} />
@@ -350,10 +499,12 @@ export default function DashboardPage() {
                   {st === 'active'
                     ? `${pct}% elapsed, ${left} day${left === 1 ? '' : 's'} to maturity`
                     : st === 'matured'
-                      ? `Matured. Projected payout ${fmt(c.amount + projectedYield(c))} ${c.asset}`
+                      ? `Matured. Projected payout ${formatAmount(BigInt(c.amount) + projectedYield(c))} ${c.asset}`
                       : st === 'settled'
-                        ? `Settled with ${fmt(projectedYield(c))} ${c.asset} yield`
-                        : `Exited early, ${fmt(exitBreakdown(c).penaltyAmount)} ${c.asset} penalty paid`}
+                        ? `Settled with ${formatAmount(projectedYield(c))} ${c.asset} yield`
+                        : st === 'disputed' || st === 'violated'
+                          ? `Frozen. Only the operator can release or refund the funds after resolving the dispute.`
+                          : `Exited early, ${formatAmount(exitBreakdown(c).penaltyAmount)} ${c.asset} penalty paid`}
                 </p>
               </article>
             );
@@ -381,21 +532,43 @@ export default function DashboardPage() {
           <dl className="dialog-breakdown">
             <dt>Principal</dt>
             <dd>
-              {fmt(breakdown.principal)} {target.asset}
+              {formatAmount(breakdown.principal)} {target.asset}
             </dd>
             <dt>Penalty</dt>
             <dd>{breakdown.penaltyPct}%</dd>
             <dt>Penalty amount</dt>
             <dd>
-              {fmt(breakdown.penaltyAmount)} {target.asset}
+              {formatAmount(breakdown.penaltyAmount)} {target.asset}
             </dd>
             <dt>Amount returned</dt>
             <dd>
-              {fmt(breakdown.returned)} {target.asset}
+              {formatAmount(breakdown.returned)} {target.asset}
             </dd>
           </dl>
         )}
       </ConfirmDialog>
+
+      {disputeError != null && (
+        <div className="notice" role="alert">
+          <TxErrorNotice error={disputeError} />
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ marginLeft: '10px' }}
+            onClick={() => setDisputeError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {disputeDialog && (
+        <DisputeDialog
+          open
+          commitment={disputeDialog}
+          onClose={() => setDisputeDialog(null)}
+          onSuccess={handleDisputeOpened}
+        />
+      )}
 
       <div className="row between wrap mt">
         <h2>Recent activity</h2>
@@ -426,7 +599,17 @@ export default function DashboardPage() {
               <div className="row gap">
                 <span className={`badge ${ev.kind}`}>{ev.kind}</span>
                 <span>
-                  {ev.commitmentId ? `Commitment #${ev.commitmentId}` : 'Contract Action'}
+                  {ev.commitmentId ? (
+                    <Link
+                      href={`/commitments/${ev.commitmentId}`}
+                      className="link"
+                      title={`View Commitment #${ev.commitmentId}`}
+                    >
+                      Commitment #{ev.commitmentId}
+                    </Link>
+                  ) : (
+                    'Contract Action'
+                  )}
                 </span>
                 {ev.amount && <b className="small">{fmt(Number(ev.amount))} XLM</b>}
               </div>

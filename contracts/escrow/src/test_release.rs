@@ -22,6 +22,16 @@ fn release_pays_current_owner_after_transfer() {
         },
     }]);
     f.client().transfer_ownership(&f.id, &new_owner);
+    f.env.mock_auths(&[MockAuth {
+        address: &new_owner,
+        invoke: &MockAuthInvoke {
+            contract: &f.contract,
+            fn_name: "accept_ownership",
+            args: (f.id,).into_val(&f.env),
+            sub_invokes: &[],
+        },
+    }]);
+    f.client().accept_ownership(&f.id);
     f.owner = new_owner;
     f.mature();
     let c = f.commitment();
@@ -226,7 +236,7 @@ fn insufficient_yield_pool_is_rejected_atomically_at_funding() {
     let sac = token::StellarAssetClient::new(&env, &token);
     sac.mint(&owner, &PRINCIPAL);
     sac.mint(&admin, &1);
-    client.deposit_yield_pool(&admin, &1);
+    client.deposit_yield_pool(&1);
     let id = client.create_commitment(
         &owner,
         &token,
@@ -366,7 +376,7 @@ impl Fixture {
         );
         // fund_escrow reserves the promised yield, so the pool is seeded first.
         if pool > 0 {
-            client.deposit_yield_pool(&admin, &pool);
+            client.deposit_yield_pool(&pool);
         }
         client.fund_escrow(&id);
         env.mock_auths(&[]);

@@ -180,7 +180,7 @@ impl<'a> TestFixture<'a> {
 
     fn create_and_fund(&self, amount: i128, penalty_bps: u32) -> u64 {
         let pool = 10_000_000;
-        self.client.deposit_yield_pool(&self.admin, &pool);
+        self.client.deposit_yield_pool(&pool);
 
         let id = self.client.create_commitment(
             &self.owner,
