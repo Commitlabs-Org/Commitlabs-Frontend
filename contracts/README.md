@@ -1,6 +1,6 @@
 # CommitLabs Soroban Contracts
 
-Soroban (Rust) smart-contract workspace backing the CommitLabs liquidity commitment protocol. The frontend and backend service layer interact with the escrow contract through Stellar Soroban RPC, so this document treats `contracts/escrow/src/lib.rs` as the source of truth and cross-checks behavior against the focused tests in `contracts/escrow/src/test_funding_window.rs`.
+Soroban (Rust) smart-contract workspace backing the CommitLabs liquidity commitment protocol. The frontend and backend service layer interact with the escrow contract through Stellar Soroban RPC, so this document treats `contracts/escrow/src/lib.rs` as the source of truth and cross-checks behavior against the focused tests in `contracts/escrow/src/test_funding_window.rs`, `contracts/escrow/src/test_yield_reserve.rs`, and `contracts/escrow/src/test_penalty_math.rs`.
 
 ## Workspace Layout
 
@@ -12,6 +12,7 @@ contracts/
 |   `-- src/
 |       |-- lib.rs                # EscrowContract implementation, types, errors
 |       |-- test_funding_window.rs # Funding-time maturity, expiry, and cancellation tests
+|       |-- test_penalty_math.rs   # Penalty rounding and minimum partial-withdrawal tests
 |       `-- test_yield_reserve.rs # Yield-pool reservation accounting tests
 `-- scripts/
     |-- deploy-testnet.sh         # Build, deploy, initialize helper
@@ -75,7 +76,7 @@ Creation records the selected lock length in the existing `maturity - created_at
 | `settle_commitment(commitment_id, caller)`                                                                                        | Owner or admin auth    | ABI alias for matured release used by the backend. Returns `SettlementResult { settlementAmount, finalStatus }`.                                                                                                                                                              |
 | `refund(commitment_id)`                                                                                                           | Commitment owner auth  | Requires `Funded`; applies early-exit penalty unless inside `GracePeriodSeconds`; releases the yield reservation; moves to `Refunded`.                                                                                                                                        |
 | `early_exit_commitment(commitment_id, caller)`                                                                                    | `caller` auth          | Backend-facing early-exit alias around refund semantics. Returns `EarlyExitResult { exitAmount, penaltyAmount, finalStatus }`.                                                                                                                                                |
-| `refund_partial(commitment_id, amount)`                                                                                           | Commitment owner auth  | Partial early exit on a funded commitment; remaining principal stays funded unless fully withdrawn. The yield reservation is released only when the remaining principal reaches zero.                                                                                           |
+| `refund_partial(commitment_id, amount)`                                                                                           | Commitment owner auth  | Partial early exit on a funded commitment; remaining principal stays funded unless fully withdrawn. Requires `amount >= MIN_PARTIAL_WITHDRAWAL` (`10_000_000` stroops / 1 XLM) and either `remaining == 0` or `remaining >= MIN_REMAINING_PRINCIPAL` (`10_000_000` stroops / 1 XLM), else returns `BelowMinimum`. Computes penalty via ceiling rounding `penalty_for`. The yield reservation is released only when the remaining principal reaches zero. |
 | `dispute(commitment_id, caller, reason)`                                                                                          | Owner or admin auth    | Requires `Funded`; stores a `DisputeRecord`, categorizes the reason, and moves to `Disputed`. The yield reservation stays held while frozen. Clears any pending ownership transfer.                                                                                                    |
 | `resolve_dispute(commitment_id, release_to_owner)`                                                                                | Admin auth             | Resolves `Disputed` or `Violated` commitments. If `release_to_owner` is true, pays owner; otherwise refunds/penalizes according to the dispute path. Consumes the reservation on a matured release, and releases it on any yield-forfeiting path. Clears any pending ownership transfer. |
 | `transfer_ownership(commitment_id, new_owner)`                                                                                    | Current owner auth     | Creates a pending ownership transfer offer expiring in 7 days. Requires `Funded`. The commitment remains owned by the current owner until `accept_ownership` is called. No-op if `new_owner` equals current owner. Rejects transfers to the contract's own address.                       |
@@ -139,6 +140,8 @@ Pause checks are executed immediately after initialization check (`require_init`
 | `MAX_AMOUNT`               | `1_000_000_000_000`                                                         | Maximum commitment principal accepted by `create_commitment`.                                                                               |
 | `MAX_DURATION_DAYS`        | `365`                                                                       | Maximum duration accepted by `create_commitment`.                                                                                           |
 | `MAX_PENALTY_BPS`          | `10_000`                                                                    | Maximum penalty basis points, where `10_000` is 100%.                                                                                       |
+| `MIN_PARTIAL_WITHDRAWAL`   | `10_000_000`                                                                | Minimum partial withdrawal amount (1 XLM at 7 decimals); full exits allow amounts below this threshold.                                     |
+| `MIN_REMAINING_PRINCIPAL`  | `10_000_000`                                                                | Minimum remaining principal for partial exits (1 XLM at 7 decimals); leaving `0 < remaining < min` returns `BelowMinimum`.                  |
 | Yield rates                | `yield_rate_bps` / `calculate_accrued_yield`                                | Safe: 500 bps annualized, Balanced: 700 bps, Aggressive: 1000 bps.                                                                          |
 | Yield pool                 | `deposit_yield_pool` / `withdraw_yield_pool` / `get_yield_pool_status`      | `available = balance - reserved`. `fund_escrow` reserves `accrued_yield` from `available`, so matured releases can always be paid.                                                                    |
 
@@ -163,6 +166,15 @@ Solvency is enforced when the promise is made, not when it is redeemed:
 
 Commitments funded before reservation accounting existed have no entry under `DataKey::Reserved(id)`. They are never un-reserved, and their matured release falls back to the previous behaviour of paying `accrued_yield` straight out of `YieldPool`, which can still return `InsufficientYieldPool`.
 
+## Penalty Math
+
+Early-exit penalties favor the protocol and are computed consistently across all refund paths (`refund`, `early_exit_commitment`, `refund_partial`, and `resolve_dispute` refund branch) using the shared `penalty_for(amount, penalty_bps)` helper:
+
+- **Ceiling Division**: Penalty is calculated as `(amount * bps + 9_999) / 10_000` (for `bps > 0`), ensuring any non-zero withdrawal fraction rounds up in the protocol's favour (e.g. 1 stroop pays 1 stroop penalty; 49 stroops at 200 bps pays 1 stroop; 1,001 stroops at 500 bps pays 51 stroops penalty). When `bps == 0`, penalty is `0`.
+- **Fund Conservation & Clamping**: Penalty is clamped so `0 <= penalty <= amount`, and `refund = amount - penalty`, guaranteeing `penalty + refund == amount` for all inputs.
+- **Slicing Invariant**: Because penalties round up, slicing a withdrawal into smaller chunks never incurs a lower total penalty than withdrawing the full amount at once.
+- **Minimum Partial Withdrawals and Remainders**: `refund_partial` enforces `amount >= MIN_PARTIAL_WITHDRAWAL` (`10_000_000` stroops / 1 XLM) and requires any non-zero remaining balance to satisfy `remaining >= MIN_REMAINING_PRINCIPAL` (`10_000_000` stroops / 1 XLM). Violations return `Error::BelowMinimum = 22`. Full withdrawals (`remaining == 0`) bypass these minimums to support legacy or small positions.
+
 ## Worked Refund and Grace-Period Example
 
 The test suite's `refund_within_grace_period_is_penalty_free` covers the intended grace-window behavior:
@@ -174,7 +186,7 @@ The test suite's `refund_within_grace_period_is_penalty_free` covers the intende
 5. Owner calls `refund(commitment_id)`.
 6. Because the current time is inside the configured grace window, the penalty is `0`, owner receives the full `1_000`, fee recipient receives `0`, and commitment becomes `Refunded`.
 
-Outside the grace window, the same 500 bps early exit returns `950` to the owner and sends `50` to the fee recipient, as covered by `refund_outside_grace_period_still_applies_penalty` and the default-penalty refund tests.
+Outside the grace window, the same 500 bps early exit returns `950` to the owner and sends `50` to the fee recipient (or 1,001 units returns `950` refund and `51` penalty), as covered by `refund_outside_grace_period_still_applies_penalty` and the penalty math tests.
 
 ## Violation Path
 
@@ -227,12 +239,13 @@ The `Error` enum in `contracts/escrow/src/lib.rs` is `#[repr(u32)]`; these numer
 | 19   | `NoPendingAdmin`        | No pending admin proposal exists.                                                        |
 | 20   | `NoPendingTransfer`     | No pending ownership transfer exists for this commitment.                                |
 | 21   | `TransferExpired`       | The ownership transfer offer has expired.                                                |
+| 22   | `BelowMinimum`          | Partial withdrawal amount or remaining principal is below the required minimum (`10_000_000` stroops). |
 
 Backend callers should use the normalized `BackendError` response shape and preserve method context in details. Contract errors that cannot be parsed should still be surfaced as `BLOCKCHAIN_CALL_FAILED` with the method name so API consumers can distinguish RPC/configuration failures from business-rule failures.
 
-`FundingWindowExpired` is error code `16`; it is returned without moving tokens when funding is attempted after the 7-day window. Codes 1-15 and their enum positions remain unchanged. `ReservedYieldInvariant` is error code `17`.
+`FundingWindowExpired` is error code `16`; it is returned without moving tokens when funding is attempted after the 7-day window. Codes 1-15 and their enum positions remain unchanged. `ReservedYieldInvariant` is error code `17`. `BelowMinimum` is error code `18`.
 
-Run the isolated funding-window tests with `cd contracts && cargo test -p commitlabs-escrow`.
+Run the isolated test suites with `cd contracts && cargo test -p commitlabs-escrow`.
 
 ## Deployment Flow
 

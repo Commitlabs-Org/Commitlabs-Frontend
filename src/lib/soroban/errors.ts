@@ -22,6 +22,7 @@ export enum EscrowErrorCode {
   NoPendingAdmin = 19,
   NoPendingTransfer = 20,
   TransferExpired = 21,
+  BelowMinimum = 22,
 }
 
 export interface ContractError {
@@ -157,6 +158,12 @@ export const CONTRACT_ERRORS: Record<EscrowErrorCode, ContractError> = {
     name: 'TransferExpired',
     message: 'The ownership transfer offer has expired.',
     hint: 'Ask the current owner to create a new transfer offer.',
+  },
+  [EscrowErrorCode.BelowMinimum]: {
+    code: EscrowErrorCode.BelowMinimum,
+    name: 'BelowMinimum',
+    message: 'The partial withdrawal or the remaining principal is below the 1-unit minimum.',
+    hint: 'Withdraw at least 1 unit and leave at least 1 unit, or exit the full amount.',
   },
 };
 
