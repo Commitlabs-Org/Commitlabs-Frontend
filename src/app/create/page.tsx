@@ -21,6 +21,8 @@ import {
   type CommitmentType,
 } from '@/lib/commitments';
 import { useWallet } from '@/components/WalletProvider';
+import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
+import { getActionPauseReason } from '@/lib/soroban/protocol-status';
 import { ESCROW_CONTRACT_ID, explorerContractUrl, config } from '@/lib/config';
 import { useProtocolParams } from '@/lib/protocol';
 import {
@@ -49,6 +51,9 @@ function daysMessage(reason: DaysError, minDays: number): string {
 
 export default function CreatePage() {
   const { address } = useWallet();
+  const protocolStatus = useProtocolStatus();
+  const isPaused = protocolStatus.status === 'ok' && protocolStatus.paused;
+  const pauseReason = getActionPauseReason('create_commitment', isPaused);
   const { params, loading: paramsLoading, isFallback } = useProtocolParams();
   const [step, setStep] = useState(0);
   const [type, setType] = useState<CommitmentType>('balanced');
@@ -354,13 +359,25 @@ export default function CreatePage() {
             {config.networkDetails.label.toLowerCase()} escrow contract is enabled once a contract ID is configured
             {ESCROW_CONTRACT_ID ? '.' : ' (none set in this deployment).'}
           </p>
-          <div className="row between">
+          <div className="row between wrap">
             <button className="btn btn-ghost" onClick={() => setStep(1)}>
               Back
             </button>
-            <button className="btn btn-primary" disabled={!agree} onClick={submit}>
-              Create commitment
-            </button>
+            <div className="row end wrap" style={{ gap: '12px', alignItems: 'center' }}>
+              {isPaused && (
+                <span className="err small" role="status">
+                  {pauseReason}
+                </span>
+              )}
+              <button
+                className="btn btn-primary"
+                disabled={!agree || isPaused}
+                onClick={submit}
+                title={isPaused ? pauseReason : undefined}
+              >
+                Create commitment
+              </button>
+            </div>
           </div>
         </div>
       )}

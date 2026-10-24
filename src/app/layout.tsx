@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import './globals.css';
 import { WalletProvider } from '@/components/WalletProvider';
+import { ProtocolStatusProvider } from '@/components/ProtocolStatusProvider';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { WalletNotice } from '@/components/WalletNotice';
+import { PausedBanner } from '@/components/PausedBanner';
 
 export const metadata: Metadata = {
   title: 'CommitLabs - Liquidity as a Commitment',
@@ -25,10 +27,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" nonce={nonce}>
       <body>
         <WalletProvider>
-          <Header />
-          <WalletNotice />
-          <main id="main-content">{children}</main>
-          <Footer />
+          <ProtocolStatusProvider>
+            <Header />
+            <PausedBanner />
+            <WalletNotice />
+            <main id="main-content">{children}</main>
+            <Footer />
+          </ProtocolStatusProvider>
         </WalletProvider>
       </body>
     </html>

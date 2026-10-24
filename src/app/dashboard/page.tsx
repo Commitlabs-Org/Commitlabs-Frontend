@@ -21,6 +21,9 @@ import {
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DisputeDialog } from '@/components/DisputeDialog';
 import { useWallet } from '@/components/WalletProvider';
+import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
+import { getActionPauseReason } from '@/lib/soroban/protocol-status';
+import { YieldCoverageChip } from '@/components/YieldCoverageChip';
 import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
 import { DISPUTE_CATEGORY_LABELS, type DisputeRecord } from '@/lib/soroban/dispute';
@@ -51,6 +54,9 @@ type BalanceState =
 
 export default function DashboardPage() {
   const { status, address } = useWallet();
+  const protocolStatus = useProtocolStatus();
+  const isPaused = protocolStatus.status === 'ok' && protocolStatus.paused;
+  const exitPauseReason = getActionPauseReason('early_exit', isPaused);
   const [list, setList] = useState<Commitment[] | null>(null);
   const [pending, setPending] = useState<{ kind: 'exit' | 'remove'; id: string } | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -350,9 +356,22 @@ export default function DashboardPage() {
             const record = disputeRecords[c.id];
             const pct = Math.round(progressOf(c) * 100);
             const shown = st === 'settled' || st === 'exited' ? 100 : pct;
-            const left =Math.max(0, Math.ceil((maturityOf(c) - Date.now()) / 86_400_000));
+            const left = Math.max(0, Math.ceil((maturityOf(c) - Date.now()) / 86_400_000));
             const frozen = st === 'disputed' || st === 'violated';
             const ownerIsConnected = !!address && c.owner === address;
+            const isNearOrMatured =
+              st === 'matured' ||
+              (st === 'active' && maturityOf(c) - Date.now() <= 7 * 86_400_000);
+            const isOnChain = !c.demo;
+            const accruedYield = BigInt(
+              (c as any).accrued_yield ?? (c as any).accruedYield ?? projectedYield(c),
+            );
+            const showCoverageWarning =
+              isOnChain &&
+              isNearOrMatured &&
+              protocolStatus.status === 'ok' &&
+              protocolStatus.yieldPool < accruedYield;
+
             return (
               <article className="card commit" key={c.id}>
                 <div className="row between wrap">
@@ -389,8 +408,14 @@ export default function DashboardPage() {
                         Funds are frozen. Loading the dispute record...
                       </p>
                     )}
+                    {showCoverageWarning && (
+                      <YieldCoverageChip
+                        accruedYield={accruedYield}
+                        yieldPool={protocolStatus.yieldPool}
+                      />
+                    )}
                   </div>
-                  <div className="row">
+                  <div className="row wrap" style={{ alignItems: 'center', gap: '8px' }}>
                     {!frozen && st === 'matured' && (
                       <button
                         className="btn btn-primary"
@@ -403,12 +428,21 @@ export default function DashboardPage() {
                       </button>
                     )}
                     {!frozen && st === 'active' && (
-                      <button
-                        className="btn btn-ghost"
-                        onClick={() => setPending({ kind: 'exit', id: c.id })}
-                      >
-                        Early exit
-                      </button>
+                      <div className="row wrap" style={{ alignItems: 'center', gap: '8px' }}>
+                        <button
+                          className="btn btn-ghost"
+                          disabled={isPaused}
+                          title={isPaused ? exitPauseReason : undefined}
+                          onClick={() => setPending({ kind: 'exit', id: c.id })}
+                        >
+                          Early exit
+                        </button>
+                        {isPaused && (
+                          <span className="err small" role="status">
+                            {exitPauseReason}
+                          </span>
+                        )}
+                      </div>
                     )}
                     {!frozen && (st === 'active' || st === 'matured') && (
                       <button
