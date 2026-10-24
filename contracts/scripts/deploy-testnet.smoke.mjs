@@ -53,15 +53,15 @@ function run() {
       'dry-run output did not include the initialize invoke command',
     )
     assert(
-      /--safe_default_penalty_bps\s+200/.test(success.stderr),
+      /--safe_default_penalty_bps[\s=]+200\b/.test(success.stderr),
       'dry-run initialize invoke did not include --safe_default_penalty_bps',
     )
     assert(
-      /--balanced_default_penalty_bps\s+300/.test(success.stderr),
+      /--balanced_default_penalty_bps[\s=]+300\b/.test(success.stderr),
       'dry-run initialize invoke did not include --balanced_default_penalty_bps',
     )
     assert(
-      /--aggressive_default_penalty_bps\s+500/.test(success.stderr),
+      /--aggressive_default_penalty_bps[\s=]+500\b/.test(success.stderr),
       'dry-run initialize invoke did not include --aggressive_default_penalty_bps',
     )
 

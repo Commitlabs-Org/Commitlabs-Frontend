@@ -42,7 +42,7 @@ jobs:
 
       - name: Test Escrow Contract
         working-directory: contracts
-        run: cargo test -p commitlabs-escrow
+        run: cargo test -p commitlabs-escrow --all-targets
 
       - name: Build Soroban Smart Contracts
         working-directory: contracts
