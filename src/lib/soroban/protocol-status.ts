@@ -158,6 +158,13 @@ export function decodeI128(val: unknown): bigint {
   throw new Error(`Unable to decode value into i128 / bigint: ${val}`);
 }
 
+/** Runs a read-only simulation and returns the raw return value, throwing on failure. */
+async function readValue(method: string): Promise<unknown> {
+  const res = await simulateRead({ method, args: [] });
+  if (res.error) throw new Error(res.error);
+  return res.result;
+}
+
 export interface GetProtocolStatusOptions {
   contractId?: string;
   rpcUrl?: string;
@@ -184,8 +191,8 @@ export async function getProtocolStatus(
 
   try {
     const [pausedScVal, yieldPoolScVal] = await Promise.all([
-      simulateRead('is_paused', [], options),
-      simulateRead('get_yield_pool_balance', [], options),
+      readValue('is_paused'),
+      readValue('get_yield_pool_balance'),
     ]);
 
     const paused = decodeBool(pausedScVal);

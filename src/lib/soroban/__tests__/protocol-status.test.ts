@@ -40,12 +40,12 @@ describe('protocol-status decoders and reads', () => {
   });
 
   it('reads protocol status when simulations succeed', async () => {
-    const spy = vi.spyOn(txModule, 'simulateRead').mockImplementation(async (method) => {
+    const spy = vi.spyOn(txModule, 'simulateRead').mockImplementation(async ({ method }) => {
       if (method === 'is_paused') {
-        return nativeToScVal(true);
+        return { result: nativeToScVal(true) };
       }
       if (method === 'get_yield_pool_balance') {
-        return nativeToScVal(75000000n, { type: 'i128' });
+        return { result: nativeToScVal(75000000n, { type: 'i128' }) };
       }
       throw new Error(`Unexpected method: ${method}`);
     });

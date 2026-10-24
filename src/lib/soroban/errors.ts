@@ -18,6 +18,10 @@ export enum EscrowErrorCode {
   InvalidWasmHash = 15,
   FundingWindowExpired = 16,
   ReservedYieldInvariant = 17,
+  InvalidGracePeriod = 18,
+  NoPendingAdmin = 19,
+  NoPendingTransfer = 20,
+  TransferExpired = 21,
 }
 
 export interface ContractError {
@@ -121,14 +125,38 @@ export const CONTRACT_ERRORS: Record<EscrowErrorCode, ContractError> = {
   [EscrowErrorCode.FundingWindowExpired]: {
     code: EscrowErrorCode.FundingWindowExpired,
     name: 'FundingWindowExpired',
-    message: 'The commitment funding window has expired.',
-    hint: 'Create a new commitment to try again.',
+    message: "This commitment's funding window has elapsed.",
+    hint: 'The commitment can no longer be funded. Contact support for options.',
   },
   [EscrowErrorCode.ReservedYieldInvariant]: {
     code: EscrowErrorCode.ReservedYieldInvariant,
     name: 'ReservedYieldInvariant',
-    message: 'The yield pool cannot fulfill the yield reservation for this commitment.',
-    hint: 'Try again later or contact the contract administrator.',
+    message: 'Yield reservation accounting invariant is broken.',
+    hint: 'Contact the contract administrator for assistance.',
+  },
+  [EscrowErrorCode.InvalidGracePeriod]: {
+    code: EscrowErrorCode.InvalidGracePeriod,
+    name: 'InvalidGracePeriod',
+    message: 'The grace period exceeds the maximum lock duration.',
+    hint: 'Choose a shorter grace period and try again.',
+  },
+  [EscrowErrorCode.NoPendingAdmin]: {
+    code: EscrowErrorCode.NoPendingAdmin,
+    name: 'NoPendingAdmin',
+    message: 'There is no pending admin proposal.',
+    hint: 'Ask the current admin to propose a new admin first.',
+  },
+  [EscrowErrorCode.NoPendingTransfer]: {
+    code: EscrowErrorCode.NoPendingTransfer,
+    name: 'NoPendingTransfer',
+    message: 'There is no pending ownership transfer for this commitment.',
+    hint: 'Ask the current owner to start the transfer first.',
+  },
+  [EscrowErrorCode.TransferExpired]: {
+    code: EscrowErrorCode.TransferExpired,
+    name: 'TransferExpired',
+    message: 'The ownership transfer offer has expired.',
+    hint: 'Ask the current owner to create a new transfer offer.',
   },
 };
 

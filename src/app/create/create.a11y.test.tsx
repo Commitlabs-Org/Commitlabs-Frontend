@@ -84,7 +84,7 @@ describe('create wizard accessibility', () => {
     expect(amount.getAttribute('aria-describedby')).toContain('amount');
 
     fireEvent.change(amount, { target: { value: '100' } });
-    fireEvent.change(screen.getByLabelText('Lock duration (days)'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Lock duration (days)'), { target: { value: '0' } });
     click('Review');
     const days = screen.getByLabelText('Lock duration (days)');
     expect(days.getAttribute('aria-describedby')).toContain('days-err');

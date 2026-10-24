@@ -1,92 +1,136 @@
-import { Account, Contract, nativeToScVal, rpc, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
-import { config } from '../config';
+import { Account, BASE_FEE, Keypair, Operation, Transaction, TransactionBuilder, rpc, xdr } from '@stellar/stellar-sdk';
+import { getPublicKey, isConnected, signTransaction } from '@stellar/freighter-api';
+import { config } from '@/lib/config';
+import { TxError, toTxError } from '@/lib/soroban/errors';
 
-export interface SimulateReadOptions {
-  contractId?: string;
-  rpcUrl?: string;
-  server?: rpc.Server;
+const TX_TIMEOUT_SECONDS = 300;
+const POLL_ATTEMPTS = 60;
+
+function rpcServer(): rpc.Server {
+  return new rpc.Server(config.sorobanRpcUrl);
 }
 
-/**
- * Simulate a read-only invocation on a Soroban contract.
- */
-export async function simulateRead(
-  method: string,
-  args: (xdr.ScVal | any)[] = [],
-  options: SimulateReadOptions = {},
-): Promise<xdr.ScVal> {
-  const contractId = options.contractId || config.escrowContractId;
-  if (!contractId) {
-    throw new Error('Escrow contract ID is not configured');
-  }
-
-  const server = options.server || new rpc.Server(options.rpcUrl || config.sorobanRpcUrl);
-  const contract = new Contract(contractId);
-  const scValArgs = args.map((arg) => (arg instanceof xdr.ScVal ? arg : nativeToScVal(arg)));
-
-  // Dummy account for read-only contract simulation
-  const dummyAccount = new Account('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', '0');
-  const tx = new TransactionBuilder(dummyAccount, {
-    fee: '100',
-    networkPassphrase: config.passphrase,
-  })
-    .addOperation(contract.call(method, ...(scValArgs as any)))
-    .setTimeout(30)
-    .build();
-
-  const sim = await server.simulateTransaction(tx);
-  if (rpc.Api.isSimulationError(sim)) {
-    throw new Error(sim.error || `Simulation of ${method} failed`);
-  }
-  if (!rpc.Api.isSimulationSuccess(sim) || !sim.result?.retval) {
-    throw new Error(`Simulation of ${method} returned no value`);
-  }
-  return sim.result.retval;
+/** Fallback source account for read-only simulations that do not mutate state. */
+function simulationSource(): Account {
+  return new Account(Keypair.random().publicKey(), '0');
 }
 
 export interface InvokeContractParams {
   method: string;
-  args?: (xdr.ScVal | any)[];
+  args: xdr.ScVal[];
   source: string;
-  signer?: (txXdr: string) => Promise<string>;
-  contractId?: string;
-  rpcUrl?: string;
-  server?: rpc.Server;
+  signer: string;
 }
 
-/**
- * Minimal invokeContract helper matching the required exported API.
- */
-export async function invokeContract({
-  method,
-  args = [],
-  source,
-  signer,
-  contractId = config.escrowContractId,
-  rpcUrl = config.sorobanRpcUrl,
-  server = new rpc.Server(rpcUrl),
-}: InvokeContractParams): Promise<{ status: string; txHash?: string }> {
-  if (!contractId) {
-    throw new Error('Escrow contract ID is not configured');
+export interface InvokeResult {
+  transactionHash: string;
+}
+
+export interface SimulateReadParams {
+  method: string;
+  args: xdr.ScVal[];
+  source?: string;
+}
+
+export interface SimulateReadResult {
+  error?: string;
+  result?: unknown;
+}
+
+export async function invokeContract({ method, args, source, signer }: InvokeContractParams): Promise<InvokeResult> {
+  if (!config.escrowContractId) {
+    throw new TxError('network', 'The escrow contract is not configured for this deployment.', {
+      hint: 'Set NEXT_PUBLIC_ESCROW_CONTRACT_ID and redeploy.',
+    });
   }
 
-  const contract = new Contract(contractId);
-  const scValArgs = args.map((arg) => (arg instanceof xdr.ScVal ? arg : nativeToScVal(arg)));
-  const dummyAccount = new Account(source, '0');
-  const tx = new TransactionBuilder(dummyAccount, {
-    fee: '1000',
+  const connected = await isConnected();
+  if (!connected) {
+    throw new TxError('failed', 'Freighter wallet is not connected.', {
+      hint: 'Connect your wallet, then try again.',
+    });
+  }
+
+  const walletAddress = await getPublicKey();
+  if (!walletAddress) {
+    throw new TxError('failed', 'Wallet access was not granted.', {
+      hint: 'Approve the connection request in Freighter and try again.',
+    });
+  }
+  if (walletAddress !== source || walletAddress !== signer) {
+    throw new TxError('rejected', 'The connected wallet is not the owner of this commitment.', {
+      hint: 'Connect the wallet that owns this commitment and try again.',
+    });
+  }
+
+  let account: Account;
+  try {
+    account = await rpcServer().getAccount(source);
+  } catch (err) {
+    throw toTxError(err);
+  }
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
     networkPassphrase: config.passphrase,
   })
-    .addOperation(contract.call(method, ...(scValArgs as any)))
-    .setTimeout(30)
+    .addOperation(Operation.invokeContractFunction({ contract: config.escrowContractId, function: method, args }))
+    .setTimeout(TX_TIMEOUT_SECONDS)
     .build();
 
-  if (signer) {
-    const signedXdr = await signer(tx.toXDR());
-    const sendRes = await server.sendTransaction(
-      TransactionBuilder.fromXDR(signedXdr, config.passphrase) as any,
-    );
-    return { status: sendRes.status, txHash: sendRes.hash };
+  // Simulate before asking the user to sign so rejections surface immediately.
+  const simulation = await rpcServer().simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(simulation)) {
+    throw toTxError(simulation.error ?? simulation);
   }
-  return { status: 'simulated' };
+
+  const signed = await signTransaction(tx.toXDR(), { networkPassphrase: config.passphrase });
+  const sent = await rpcServer().sendTransaction(new Transaction(signed, config.passphrase));
+  if (sent.status === 'ERROR') {
+    throw toTxError(sent);
+  }
+
+  const result = await rpcServer().pollTransaction(sent.hash, { attempts: POLL_ATTEMPTS });
+  if (result.status === 'FAILED') {
+    throw toTxError({ message: `Transaction ${sent.hash} failed on chain.`, transactionHash: sent.hash, resultXdr: result.resultXdr });
+  }
+  if (result.status !== 'SUCCESS') {
+    throw new TxError('failed', `Transaction ${sent.hash} ended with status ${result.status}.`, { transactionHash: sent.hash });
+  }
+
+  return { transactionHash: sent.hash };
+}
+
+export async function simulateRead({ method, args, source }: SimulateReadParams): Promise<SimulateReadResult> {
+  if (!config.escrowContractId) {
+    return { error: 'The escrow contract is not configured for this deployment.' };
+  }
+
+  let account: Account;
+  try {
+    account = await rpcServer().getAccount(source ?? simulationSource().accountId());
+  } catch {
+    account = simulationSource();
+  }
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: config.passphrase,
+  })
+    .addOperation(Operation.invokeContractFunction({ contract: config.escrowContractId, function: method, args }))
+    .setTimeout(TX_TIMEOUT_SECONDS)
+    .build();
+
+  try {
+    const simulation = await rpcServer().simulateTransaction(tx);
+    if (rpc.Api.isSimulationError(simulation)) {
+      return { error: String(simulation.error ?? 'Read simulation failed.') };
+    }
+    if (rpc.Api.isSimulationSuccess(simulation)) {
+      return { result: simulation.result?.retval };
+    }
+    return { error: 'Read simulation did not return a result.' };
+  } catch (err) {
+    return { error: toTxError(err).message };
+  }
 }
