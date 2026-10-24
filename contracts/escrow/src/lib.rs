@@ -18,8 +18,6 @@
 //! `fund_escrow`, `release`, `refund`, and `dispute`.
 
 #[cfg(test)]
-mod test;
-#[cfg(test)]
 mod test_release;
 
 use soroban_sdk::{
