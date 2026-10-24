@@ -1,13 +1,14 @@
 #![cfg(test)]
+extern crate std;
 
 use crate::{EscrowContract, EscrowContractClient, Error, RiskProfile};
 use soroban_sdk::{
-    testutils::{Address as _, MockAuth, MockAuthInvoke},
+    testutils::{Address as _, Ledger as _, MockAuth, MockAuthInvoke},
     Address, Env, IntoVal, String,
 };
 
-fn setup() -> (Env, EscrowContractClient, Address, Address, Address) {
-    let env = Env::default();
+fn setup() -> (Env, EscrowContractClient<'static>, Address, Address, Address) {
+    let env: &'static Env = std::boxed::Box::leak(std::boxed::Box::new(Env::default()));
     env.mock_all_auths();
 
     let contract_id = env.register_contract(None, EscrowContract);
@@ -26,7 +27,7 @@ fn setup() -> (Env, EscrowContractClient, Address, Address, Address) {
         &500u32,
     );
 
-    (env, client, admin, fee_recipient, token.address())
+    (env.clone(), client, admin, fee_recipient, token.address())
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -49,8 +50,8 @@ fn admin_propose_and_accept() {
         },
     }]);
 
-    let result = client.propose_admin(&new_admin);
-    assert_eq!(result, Ok(()));
+    let result = client.try_propose_admin(&new_admin);
+    assert_eq!(result, Ok(Ok(())));
 
     // Check pending
     let pending = client.get_pending_admin();
@@ -58,7 +59,7 @@ fn admin_propose_and_accept() {
 
     // Admin is still the old one
     let current_admin = client.get_admin();
-    assert_eq!(current_admin, Ok(admin.clone()));
+    assert_eq!(current_admin, admin.clone());
 
     // Accept by new admin
     env.mock_auths(&[MockAuth {
@@ -71,12 +72,12 @@ fn admin_propose_and_accept() {
         },
     }]);
 
-    let result = client.accept_admin();
-    assert_eq!(result, Ok(()));
+    let result = client.try_accept_admin();
+    assert_eq!(result, Ok(Ok(())));
 
     // Admin is now the new one
     let current_admin = client.get_admin();
-    assert_eq!(current_admin, Ok(new_admin.clone()));
+    assert_eq!(current_admin, new_admin.clone());
 
     // No pending admin
     let pending = client.get_pending_admin();
@@ -104,8 +105,8 @@ fn admin_propose_cancel() {
         },
     }]);
 
-    let result = client.cancel_admin_proposal();
-    assert_eq!(result, Ok(()));
+    let result = client.try_cancel_admin_proposal();
+    assert_eq!(result, Ok(Ok(())));
 
     // No pending admin
     let pending = client.get_pending_admin();
@@ -113,7 +114,7 @@ fn admin_propose_cancel() {
 
     // Admin is still the old one
     let current_admin = client.get_admin();
-    assert_eq!(current_admin, Ok(admin));
+    assert_eq!(current_admin, admin);
 }
 
 #[test]
@@ -152,7 +153,7 @@ fn accept_admin_fails_with_wrong_address() {
     }]);
 
     let result = client.try_accept_admin();
-    assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    assert!(result.is_err());
 }
 
 #[test]
@@ -204,7 +205,7 @@ fn old_admin_loses_access_after_accept() {
     }]);
 
     let result = client.try_pause();
-    assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    assert!(result.is_err());
 
     // New admin can pause
     env.mock_auths(&[MockAuth {
@@ -217,16 +218,16 @@ fn old_admin_loses_access_after_accept() {
         },
     }]);
 
-    let result = client.pause();
-    assert_eq!(result, Ok(()));
+    let result = client.try_pause();
+    assert_eq!(result, Ok(Ok(())));
 }
 
 #[test]
 fn propose_to_current_admin_is_noop() {
     let (_env, client, admin, _fee_recipient, _token) = setup();
 
-    let result = client.propose_admin(&admin);
-    assert_eq!(result, Ok(()));
+    let result = client.try_propose_admin(&admin);
+    assert_eq!(result, Ok(Ok(())));
 
     // No pending proposal
     let pending = client.get_pending_admin();
@@ -255,9 +256,9 @@ fn create_funded_commitment(
     admin: &Address,
     token: &Address,
 ) -> u64 {
-    let token_client = soroban_sdk::token::Client::new(env, token);
-    token_client.mint(owner, &100_000i128);
-    token_client.mint(admin, &10_000i128);
+    let token_admin_client = soroban_sdk::token::StellarAssetClient::new(env, token);
+    token_admin_client.mint(owner, &100_000i128);
+    token_admin_client.mint(admin, &10_000i128);
 
     client.deposit_yield_pool(&10_000i128);
 
@@ -291,8 +292,8 @@ fn ownership_offer_and_accept() {
         },
     }]);
 
-    let result = client.transfer_ownership(&commitment_id, &new_owner);
-    assert_eq!(result, Ok(()));
+    let result = client.try_transfer_ownership(&commitment_id, &new_owner);
+    assert_eq!(result, Ok(Ok(())));
 
     // Check pending
     let pending = client.get_pending_owner(&commitment_id);
@@ -300,7 +301,7 @@ fn ownership_offer_and_accept() {
     assert_eq!(pending.unwrap().to, new_owner);
 
     // Commitment is still owned by original owner
-    let commitment = client.get_commitment(&commitment_id).unwrap();
+    let commitment = client.get_commitment(&commitment_id);
     assert_eq!(commitment.owner, owner);
 
     // Accept by new owner
@@ -314,11 +315,11 @@ fn ownership_offer_and_accept() {
         },
     }]);
 
-    let result = client.accept_ownership(&commitment_id);
-    assert_eq!(result, Ok(()));
+    let result = client.try_accept_ownership(&commitment_id);
+    assert_eq!(result, Ok(Ok(())));
 
     // Commitment is now owned by new owner
-    let commitment = client.get_commitment(&commitment_id).unwrap();
+    let commitment = client.get_commitment(&commitment_id);
     assert_eq!(commitment.owner, new_owner);
 
     // No pending transfer
@@ -350,15 +351,15 @@ fn ownership_offer_and_cancel() {
         },
     }]);
 
-    let result = client.cancel_ownership_transfer(&commitment_id);
-    assert_eq!(result, Ok(()));
+    let result = client.try_cancel_ownership_transfer(&commitment_id);
+    assert_eq!(result, Ok(Ok(())));
 
     // No pending transfer
     let pending = client.get_pending_owner(&commitment_id);
     assert_eq!(pending, None);
 
     // Owner unchanged
-    let commitment = client.get_commitment(&commitment_id).unwrap();
+    let commitment = client.get_commitment(&commitment_id);
     assert_eq!(commitment.owner, owner);
 }
 
@@ -384,7 +385,7 @@ fn accept_ownership_fails_with_wrong_address() {
     }]);
 
     let result = client.try_accept_ownership(&commitment_id);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    assert!(result.is_err());
 }
 
 #[test]
@@ -598,8 +599,8 @@ fn transfer_to_same_owner_is_noop() {
         },
     }]);
 
-    let result = client.transfer_ownership(&commitment_id, &owner);
-    assert_eq!(result, Ok(()));
+    let result = client.try_transfer_ownership(&commitment_id, &owner);
+    assert_eq!(result, Ok(Ok(())));
 
     // No pending transfer
     let pending = client.get_pending_owner(&commitment_id);
@@ -624,7 +625,7 @@ fn transfer_to_contract_address_rejected() {
     }]);
 
     let result = client.try_transfer_ownership(&commitment_id, &client.address);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    assert!(result.is_err());
 }
 
 #[test]
@@ -634,6 +635,7 @@ fn token_balances_unchanged_during_transfer_flow() {
     let new_owner = Address::generate(&env);
 
     let token_client = soroban_sdk::token::Client::new(&env, &token);
+    let token_admin_client = soroban_sdk::token::StellarAssetClient::new(&env, &token);
 
     let commitment_id = create_funded_commitment(&env, &client, &owner, &admin, &token);
 

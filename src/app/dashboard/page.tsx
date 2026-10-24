@@ -17,12 +17,15 @@ import {
   type Commitment,
 } from '@/lib/commitments';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { DisputeDialog } from '@/components/DisputeDialog';
 import { useWallet } from '@/components/WalletProvider';
-import { fetchXlmBalance } from '@/lib/wallet';
+import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
+import { DISPUTE_CATEGORY_LABELS, type DisputeRecord } from '@/lib/soroban/dispute';
 import { config, explorerTx } from '@/lib/config';
 import { InlineError } from '@/components/InlineError';
 import { Skeleton } from '@/components/Skeleton';
+import { TxErrorNotice } from '@/components/TxErrorNotice';
 import DashboardLoading from './loading';
 
 interface Notice {
@@ -53,6 +56,9 @@ export default function DashboardPage() {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [balanceState, setBalanceState] = useState<BalanceState>({ status: 'idle' });
+  const [disputeDialog, setDisputeDialog] = useState<Commitment | null>(null);
+  const [disputeRecords, setDisputeRecords] = useState<Record<string, DisputeRecord>>({});
+  const [disputeError, setDisputeError] = useState<unknown>(null);
 
   const reload = useCallback(() => {
     const result = loadCommitments();
@@ -140,6 +146,36 @@ export default function DashboardPage() {
     }
   }, [address]);
 
+  useEffect(() => {
+    if (!address || list === null) return;
+    const pending = new Map<string, Promise<void>>();
+    for (const c of list) {
+      const st = effectiveStatus(c);
+      if (
+        (st === 'disputed' || st === 'violated') &&
+        !disputeRecords[c.id] &&
+        !pending.has(c.id)
+      ) {
+        pending.set(
+          c.id,
+          (async () => {
+            try {
+              // Loaded on demand so stellar-sdk stays out of the dashboard's first-load bundle.
+              const { getDispute } = await import('@/lib/soroban/escrow');
+              const record = await getDispute(c.id, address ?? undefined);
+              if (record) {
+                setDisputeRecords((prev) => ({ ...prev, [c.id]: record }));
+              }
+            } catch {
+              // Swallow read failures: the frozen state is still informative
+              // without the dispute record.
+            }
+          })(),
+        );
+      }
+    }
+  }, [list, address, disputeRecords]);
+
   function update(id: string, patch: Partial<Commitment>) {
     setList((prev) => {
       const next = (prev ?? []).map((c) => (c.id === id ? { ...c, ...patch } : c));
@@ -180,14 +216,36 @@ export default function DashboardPage() {
     }
   }
 
+  function handleReportProblem(c: Commitment) {
+    setDisputeError(null);
+    setDisputeDialog(c);
+  }
+
+  async function handleDisputeOpened(c: Commitment) {
+    setDisputeDialog(null);
+    setDisputeError(null);
+    try {
+      update(c.id, { status: 'disputed' });
+      setAnnouncement(`Commitment ${c.id} is now disputed — funds are frozen until resolved.`);
+      const { getDispute } = await import('@/lib/soroban/escrow');
+      const record = await getDispute(c.id, address ?? undefined);
+      if (record) {
+        setDisputeRecords((prev) => ({ ...prev, [c.id]: record }));
+      }
+    } catch (err) {
+      setDisputeError(err);
+    }
+  }
+
   if (!list) return <DashboardLoading />;
 
   const target = pending ? list.find((c) => c.id === pending.id) : undefined;
   const breakdown = target ? exitBreakdown(target) : null;
 
   const live = list.filter((c) => ['active', 'matured'].includes(effectiveStatus(c)));
-  const locked = live.reduce((s, c) => s + c.amount, 0);
-  const yieldTotal = live.reduce((s, c) => s + projectedYield(c), 0);
+  const frozen = list.filter((c) => effectiveStatus(c) === 'disputed' || effectiveStatus(c) === 'violated');
+  const locked = [...live, ...frozen].reduce((s, c) => s + c.amount, 0);
+  const yieldTotal = [...live, ...frozen].reduce((s, c) => s + projectedYield(c), 0);
   const matured = list.filter((c) => effectiveStatus(c) === 'matured').length;
 
   return (
@@ -220,6 +278,12 @@ export default function DashboardPage() {
           <span className="muted">Active commitments</span>
           <b>{live.length}</b>
         </div>
+        {frozen.length > 0 && (
+          <div className="card metric" style={{ borderColor: 'var(--warn)' }}>
+            <span className="muted" style={{ color: 'var(--warn)' }}>Frozen commitments</span>
+            <b style={{ color: 'var(--warn)' }}>{frozen.length}</b>
+          </div>
+        )}
         <div className="card metric">
           <span className="muted">Total locked</span>
           <b>{fmt(locked)}</b>
@@ -280,9 +344,12 @@ export default function DashboardPage() {
         <div className="stack">
           {list.map((c) => {
             const st = effectiveStatus(c);
+            const record = disputeRecords[c.id];
             const pct = Math.round(progressOf(c) * 100);
             const shown = st === 'settled' || st === 'exited' ? 100 : pct;
             const left =Math.max(0, Math.ceil((maturityOf(c) - Date.now()) / 86_400_000));
+            const frozen = st === 'disputed' || st === 'violated';
+            const ownerIsConnected = !!address && c.owner === address;
             return (
               <article className="card commit" key={c.id}>
                 <div className="row between wrap">
@@ -293,12 +360,35 @@ export default function DashboardPage() {
                       {c.demo && <span className="badge demo">demo</span>}
                     </h3>
                     <p className="muted small">
-                      {c.id} &middot; {specFor(c.type).name} &middot; {c.apy}% APY &middot; max
+                      {/^\d+$/.test(c.id) ? (
+                        <Link
+                          href={`/commitments/${c.id}`}
+                          className="link"
+                          title={`View on-chain commitment #${c.id}`}
+                        >
+                          #{c.id}
+                        </Link>
+                      ) : (
+                        <span>{c.id}</span>
+                      )}{' '}
+                      &middot; {specFor(c.type).name} &middot; {c.apy}% APY &middot; max
                       loss {c.maxLoss}%
                     </p>
+                    {frozen && record && (
+                      <p className="muted small">
+                        Reported by {shortAddress(record.disputedBy)} on{' '}
+                        {new Date(record.disputedAt).toLocaleDateString()}{' '}
+                        — {DISPUTE_CATEGORY_LABELS[record.reasonCategory]}.
+                      </p>
+                    )}
+                    {frozen && !record && (
+                      <p className="muted small">
+                        Funds are frozen. Loading the dispute record...
+                      </p>
+                    )}
                   </div>
                   <div className="row">
-                    {st === 'matured' && (
+                    {!frozen && st === 'matured' && (
                       <button
                         className="btn btn-primary"
                         onClick={() => {
@@ -309,12 +399,21 @@ export default function DashboardPage() {
                         Settle
                       </button>
                     )}
-                    {st === 'active' && (
+                    {!frozen && st === 'active' && (
                       <button
                         className="btn btn-ghost"
                         onClick={() => setPending({ kind: 'exit', id: c.id })}
                       >
                         Early exit
+                      </button>
+                    )}
+                    {!frozen && (st === 'active' || st === 'matured') && (
+                      <button
+                        className="btn btn-ghost"
+                        disabled={!ownerIsConnected || !address}
+                        onClick={() => handleReportProblem(c)}
+                      >
+                        Report a problem
                       </button>
                     )}
                     {(st === 'settled' || st === 'exited') && (
@@ -323,6 +422,15 @@ export default function DashboardPage() {
                         onClick={() => setPending({ kind: 'remove', id: c.id })}
                       >
                         Remove
+                      </button>
+                    )}
+                    {frozen && (
+                      <button
+                        className="btn btn-ghost"
+                        disabled
+                        title="Funds are frozen until an operator resolves the dispute."
+                      >
+                        Frozen
                       </button>
                     )}
                   </div>
@@ -341,7 +449,11 @@ export default function DashboardPage() {
                         ? '100% elapsed, matured'
                         : st === 'settled'
                           ? 'Settled'
-                          : 'Exited early'
+                          : st === 'disputed'
+                            ? 'Frozen — disputed, pending operator resolution'
+                            : st === 'violated'
+                              ? 'Frozen — violated, pending operator resolution'
+                              : 'Exited early'
                   }
                 >
                   <div style={{ width: `${shown}%` }} />
@@ -353,7 +465,9 @@ export default function DashboardPage() {
                       ? `Matured. Projected payout ${fmt(c.amount + projectedYield(c))} ${c.asset}`
                       : st === 'settled'
                         ? `Settled with ${fmt(projectedYield(c))} ${c.asset} yield`
-                        : `Exited early, ${fmt(exitBreakdown(c).penaltyAmount)} ${c.asset} penalty paid`}
+                        : st === 'disputed' || st === 'violated'
+                          ? `Frozen. Only the operator can release or refund the funds after resolving the dispute.`
+                          : `Exited early, ${fmt(exitBreakdown(c).penaltyAmount)} ${c.asset} penalty paid`}
                 </p>
               </article>
             );
@@ -397,6 +511,28 @@ export default function DashboardPage() {
         )}
       </ConfirmDialog>
 
+      {disputeError != null && (
+        <div className="notice" role="alert">
+          <TxErrorNotice error={disputeError} />
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ marginLeft: '10px' }}
+            onClick={() => setDisputeError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {disputeDialog && (
+        <DisputeDialog
+          open
+          commitment={disputeDialog}
+          onClose={() => setDisputeDialog(null)}
+          onSuccess={handleDisputeOpened}
+        />
+      )}
+
       <div className="row between wrap mt">
         <h2>Recent activity</h2>
         <Link href="/activity" className="btn btn-ghost small">
@@ -426,7 +562,17 @@ export default function DashboardPage() {
               <div className="row gap">
                 <span className={`badge ${ev.kind}`}>{ev.kind}</span>
                 <span>
-                  {ev.commitmentId ? `Commitment #${ev.commitmentId}` : 'Contract Action'}
+                  {ev.commitmentId ? (
+                    <Link
+                      href={`/commitments/${ev.commitmentId}`}
+                      className="link"
+                      title={`View Commitment #${ev.commitmentId}`}
+                    >
+                      Commitment #{ev.commitmentId}
+                    </Link>
+                  ) : (
+                    'Contract Action'
+                  )}
                 </span>
                 {ev.amount && <b className="small">{fmt(Number(ev.amount))} XLM</b>}
               </div>

@@ -92,8 +92,38 @@ Creation records the selected lock length in the existing `maturity - created_at
 | `get_admin()`                                                                                                                     | None                   | Returns the current admin address.                                                                                                                                                                                                                                              |
 | `get_pending_admin()`                                                                                                             | None                   | Returns the pending admin address, if any.                                                                                                                                                                                                                                      |
 | `set_fee_recipient(new_fee_recipient)`, `set_violation_threshold(threshold)`, `upgrade(new_wasm_hash)`                           | Admin auth             | Updates fee recipient, violation threshold, or upgrades the contract WASM.                                                                                                                                                                                                      |
-| `pause` / `unpause`                                                                                                               | Admin auth             | Toggles write-operation pause flag. Mature `release` remains available while paused.                                                                                                                                                                                          |
+| `pause` / `unpause`                                                                                                               | Admin auth             | Toggles emergency pause flag. Halts all user-initiated state changes and capital outflows while preserving admin incident recovery paths (resolve_dispute, set_admin, upgrade, unpause). |
 | Read methods                                                                                                                      | None                   | `get_commitment`, `get_user_commitments`, `get_user_commitment_ids`, `get_user_commitment_ids_page`, `get_owner_commitments`, `get_attestations`, `get_dispute`, `get_default_penalty`, `get_yield_pool_balance`, `get_yield_pool_status`, `get_grace_period`, `get_violation_threshold`, `is_paused`. |
+
+## Pause Policy
+
+The `pause` entrypoint halts state-changing operations and token outflows during incidents or emergency investigations. In accordance with the protocol safety invariants, the contract strictly segregates user operations from admin recovery paths:
+
+| Entrypoint | Type | Behavior Under Pause | Rationale |
+| ---------- | ---- | -------------------- | --------- |
+| `create_commitment` | User Write | **Blocked** (`Error::Paused`) | Prevents new commitment creation during incidents. |
+| `create_commitment_default` / `with_default` | User Write | **Blocked** (`Error::Paused`) | Prevents new commitment creation during incidents. |
+| `fund_escrow` | User Write / Inflow | **Blocked** (`Error::Paused`) | Halts incoming capital locking while investigations are active. |
+| `release` | User Write / Outflow | **Blocked** (`Error::Paused`) | Halts token outflows to prevent draining under compromised or faulty state. |
+| `settle_commitment` | User Write / Outflow | **Blocked** (`Error::Paused`) | Settlement alias halts outflows identically to `release`. |
+| `refund` | User Write / Outflow | **Blocked** (`Error::Paused`) | Halts early-exit token outflows. |
+| `refund_partial` | User Write / Outflow | **Blocked** (`Error::Paused`) | Halts partial principal outflows. |
+| `early_exit_commitment` | User Write / Outflow | **Blocked** (`Error::Paused`) | Enforces exact parity with `refund`, closing the early exit bypass. |
+| `dispute` | User Write | **Blocked** (`Error::Paused`) | Freezes dispute state mutations until normal operations resume. |
+| `transfer_ownership` | User Write | **Blocked** (`Error::Paused`) | Freezes secondary-market ownership transfers during incidents. |
+| `record_attestation` | User/Oracle Write | **Blocked** (`Error::Paused`) | Prevents status transitions (`Violated`) and score updates during pause. |
+| `deposit_yield_pool` | Admin Write | **Blocked** (`Error::Paused`) | Freezes yield pool adjustments. |
+| `withdraw_yield_pool` | Admin Outflow | **Blocked** (`Error::Paused`) | Prevents any yield pool drain or capital outflow while paused. |
+| `cancel_commitment` (pre-expiry) | User Write | **Blocked** (`Error::Paused`) | Owner-initiated cancellation blocked during pause. |
+| `cancel_commitment` (post-expiry) | Cleanup | **Allowed** | Expired, unfunded commitments may be permissionlessly cleaned up without token transfers. |
+| `resolve_dispute` | Admin Recovery | **Allowed** | Admin recovery path required to unfreeze or settle commitments during incident mitigation. |
+| `unpause` | Admin Recovery | **Allowed** | Required to lift emergency halt and resume writes. |
+| `set_admin` | Admin Recovery | **Allowed** | Admin key rotation during incident containment. |
+| `upgrade` | Admin Recovery | **Allowed** | Enables deploying bug-fix WASM patches without having to unpause first. |
+| Read-only getters | Query | **Allowed** | All view functions (`get_commitment`, `get_yield_pool_status`, `is_paused`, etc.) remain fully functional. |
+
+Pause checks are executed immediately after initialization check (`require_init`), ensuring that paused invocations fail fast before consuming user authorization or loading persistent records.
+
 
 ## Configuration Surface
 
