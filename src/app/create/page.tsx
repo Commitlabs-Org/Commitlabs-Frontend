@@ -3,8 +3,16 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
+  AMOUNT_ERROR_MESSAGES,
+  MAX_AMOUNT,
+  formatAmount,
+  parseAmount,
+  parseDays,
+  type DaysError,
+} from '@/lib/amount';
+import {
   TYPES,
-  fmt,
+  fmtUnits,
   loadCommitments,
   newId,
   saveCommitments,
@@ -17,17 +25,27 @@ import { ESCROW_CONTRACT_ID, explorerContractUrl, config } from '@/lib/config';
 import { useProtocolParams } from '@/lib/protocol';
 import {
   DISPLAY_APY,
-  MAX_AMOUNT_STROOPS,
   MAX_DURATION_DAYS,
   MIN_DURATION_DAYS,
-  formatStroops,
-  parseToStroops,
   projectYieldStroops,
 } from '@/lib/yield';
 import { Skeleton } from '@/components/Skeleton';
 
 const ASSETS = ['USDC', 'XLM', 'EURC'];
 const STEP_LABELS = ['Type', 'Configure', 'Review', 'Done'];
+
+function daysMessage(reason: DaysError, minDays: number): string {
+  switch (reason) {
+    case 'empty':
+      return 'Enter the lock duration in days.';
+    case 'invalid_characters':
+      return 'Use whole days only, digits 0 to 9.';
+    case 'below_min':
+      return `Minimum lock is ${minDays} day${minDays === 1 ? '' : 's'}.`;
+    case 'above_max':
+      return `Maximum lock is ${MAX_DURATION_DAYS} days.`;
+  }
+}
 
 export default function CreatePage() {
   const { address } = useWallet();
@@ -71,27 +89,16 @@ export default function CreatePage() {
   const penaltyBps = params.penalties[type];
   const currentPenaltyPct = penaltyBps / 100;
 
-  const amt = Number(amount);
-  const dur = Number(days);
-  const stroops = parseToStroops(amount);
-
-  let amountErr: string | null = null;
-  if (!Number.isFinite(amt) || amt <= 0 || stroops === null || stroops <= 0n) {
-    amountErr = 'Enter an amount greater than zero.';
-  } else if (stroops > MAX_AMOUNT_STROOPS) {
-    amountErr = `Maximum commitment amount is ${formatStroops(MAX_AMOUNT_STROOPS)} ${asset}.`;
-  }
-
-  let daysErr: string | null = null;
-  if (!Number.isInteger(dur) || dur < MIN_DURATION_DAYS) {
-    daysErr = `Minimum lock is ${MIN_DURATION_DAYS} day.`;
-  } else if (dur > MAX_DURATION_DAYS) {
-    daysErr = `Maximum lock is ${MAX_DURATION_DAYS} days.`;
-  }
-
-  const valid = !amountErr && !daysErr && stroops !== null;
-  const projectedYieldStroopsVal = valid ? projectYieldStroops(stroops, dur, type) : 0n;
-  const penaltyStroopsVal = valid ? (stroops * BigInt(penaltyBps)) / 10_000n : 0n;
+  // Exact fixed-point parsing; yield and penalty use the contract's integer math.
+  const parsedAmount = parseAmount(amount);
+  const parsedDays = parseDays(days, { min: MIN_DURATION_DAYS, max: MAX_DURATION_DAYS });
+  const amountErr = parsedAmount.ok ? null : AMOUNT_ERROR_MESSAGES[parsedAmount.reason];
+  const daysErr = parsedDays.ok ? null : daysMessage(parsedDays.reason, MIN_DURATION_DAYS);
+  const amt = parsedAmount.ok ? parsedAmount.value : 0n;
+  const dur = parsedDays.ok ? parsedDays.value : 0;
+  const valid = parsedAmount.ok && parsedDays.ok;
+  const projected = valid ? projectYieldStroops(amt, dur, type) : 0n;
+  const penalty = valid ? (amt * BigInt(penaltyBps)) / 10_000n : 0n;
 
   function pickType(t: CommitmentType) {
     setType(t);
@@ -102,7 +109,7 @@ export default function CreatePage() {
       id: newId(),
       type,
       asset,
-      amount: amt,
+      amount: amt.toString(),
       durationDays: dur,
       maxLoss: spec.maxLoss,
       penalty: currentPenaltyPct,
@@ -221,6 +228,7 @@ export default function CreatePage() {
               <input
                 ref={amountRef}
                 inputMode="decimal"
+                pattern="\d+(\.\d+)?"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 onBlur={() => setAmountTouched(true)}
@@ -229,7 +237,7 @@ export default function CreatePage() {
               />
             </label>
             <small id="amount" className="muted">
-              Enter a number greater than zero (max {formatStroops(MAX_AMOUNT_STROOPS)} {asset}).
+              Digits and an optional decimal point, up to 7 decimals (max {formatAmount(MAX_AMOUNT)} {asset}).
             </small>
             {showAmountErr && (
               <small id="amount-err" className="err">
@@ -243,6 +251,7 @@ export default function CreatePage() {
               <input
                 ref={daysRef}
                 inputMode="numeric"
+                pattern="\d+"
                 value={days}
                 onChange={(e) => setDays(e.target.value)}
                 onBlur={() => setDaysTouched(true)}
@@ -275,7 +284,7 @@ export default function CreatePage() {
             <li>
               <span>Projected yield</span>
               <b>
-                {formatStroops(projectedYieldStroopsVal)} {asset}
+                {fmtUnits(projected)} {asset}
               </b>
             </li>
           </ul>
@@ -308,7 +317,7 @@ export default function CreatePage() {
             <li>
               <span>Principal</span>
               <b>
-                {fmt(amt)} {asset}
+                {formatAmount(amt)} {asset}
               </b>
             </li>
             <li>
@@ -322,7 +331,7 @@ export default function CreatePage() {
             <li>
               <span>Projected yield</span>
               <b>
-                {formatStroops(projectedYieldStroopsVal)} {asset}
+                {formatAmount(projected)} {asset}
               </b>
             </li>
             <li>
@@ -331,7 +340,7 @@ export default function CreatePage() {
                 <Skeleton width="120px" height="20px" />
               ) : (
                 <b>
-                  {currentPenaltyPct}% ({formatStroops(penaltyStroopsVal)} {asset})
+                  {currentPenaltyPct}% ({formatAmount(penalty)} {asset})
                 </b>
               )}
             </li>
@@ -365,7 +374,7 @@ export default function CreatePage() {
             Commitment created
           </h2>
           <p className="muted">
-            {created.id} &middot; {fmt(created.amount)} {created.asset} for {created.durationDays}{' '}
+            {created.id} &middot; {formatAmount(BigInt(created.amount))} {created.asset} for {created.durationDays}{' '}
             days
           </p>
           {ESCROW_CONTRACT_ID && (

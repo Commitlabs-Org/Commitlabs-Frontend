@@ -1,7 +1,8 @@
+import { STELLAR_DECIMALS, formatAmount } from './amount';
 import { isStorageAvailable, readRaw, removeRaw, subscribeStorage, writeRaw } from './storage';
 import type { DisputeRecord } from '@/lib/soroban/dispute';
 
-import { DISPLAY_APY, type RiskProfile, parseToStroops, projectYieldStroops } from './yield';
+import { DISPLAY_APY, type RiskProfile, projectYieldStroops } from './yield';
 import { FALLBACK_PROTOCOL_PARAMS } from './protocol';
 
 export type CommitmentType = RiskProfile;
@@ -51,7 +52,8 @@ export interface Commitment {
   id: string;
   type: CommitmentType;
   asset: string;
-  amount: number;
+  /** Principal in base units (7 decimals), as a decimal string of digits. */
+  amount: string;
   durationDays: number;
   maxLoss: number;
   penalty: number;
@@ -79,7 +81,7 @@ export interface LoadResult {
 
 const KEY = 'commitlabs.commitments.v1';
 const DAY = 86_400_000;
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 /** Sane upper bounds so hostile or accidentally huge strings are rejected. */
 const MAX_ID = 128;
@@ -108,13 +110,12 @@ export function progressOf(c: Commitment, now = Date.now()): number {
   return Math.max(0, Math.min(1, (now - c.createdAt) / total));
 }
 
-export function projectedYield(c: Commitment): number {
-  const stroops = parseToStroops(String(c.amount));
-  if (stroops !== null) {
-    const yieldStroops = projectYieldStroops(stroops, c.durationDays, c.type);
-    return Number(yieldStroops) / 10_000_000;
-  }
-  return (c.amount * (c.apy / 100) * c.durationDays) / 365;
+/**
+ * Projected yield in base units, using the contract's integer math
+ * (`projectYieldStroops`) on the exact stored principal.
+ */
+export function projectedYield(c: Commitment): bigint {
+  return projectYieldStroops(BigInt(c.amount), c.durationDays, c.type);
 }
 
 let fallbackCounter = 0;
@@ -145,6 +146,21 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+/**
+ * Converts a stored amount to base-unit digits. Records written before exact
+ * amounts hold a float in whole units (`2500.5`); those go through
+ * `toFixed(STELLAR_DECIMALS)` so binary noise like 0.1 + 0.2 lands on 0.3, then
+ * scale to base units. Current records already hold digit strings. Anything
+ * else (negative, NaN, exponent form from huge floats, junk) returns null.
+ */
+export function normalizeStoredAmount(value: unknown): string | null {
+  if (typeof value === 'string') return /^\d+$/.test(value) ? value.replace(/^0+(?=\d)/, '') : null;
+  if (!isFiniteNumber(value) || value < 0) return null;
+  const fixed = value.toFixed(STELLAR_DECIMALS);
+  if (!/^\d+\.\d+$/.test(fixed)) return null;
+  return fixed.replace('.', '').replace(/^0+(?=\d)/, '');
+}
+
 function isBoundedString(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= max;
 }
@@ -161,7 +177,8 @@ export function validateCommitment(value: unknown): Commitment | null {
   if (!isBoundedString(o.id, MAX_ID)) return null;
   if (typeof o.type !== 'string' || !TYPE_IDS.has(o.type)) return null;
   if (!isBoundedString(o.asset, MAX_ASSET)) return null;
-  if (!isFiniteNumber(o.amount) || o.amount < 0) return null;
+  const amount = normalizeStoredAmount(o.amount);
+  if (amount === null) return null;
   if (!isFiniteNumber(o.durationDays) || o.durationDays <= 0) return null;
   if (!isFiniteNumber(o.maxLoss) || o.maxLoss < 0) return null;
   if (!isFiniteNumber(o.penalty) || o.penalty < 0) return null;
@@ -177,7 +194,7 @@ export function validateCommitment(value: unknown): Commitment | null {
     id: o.id,
     type: o.type as CommitmentType,
     asset: o.asset,
-    amount: o.amount,
+    amount,
     durationDays: o.durationDays,
     maxLoss: o.maxLoss,
     penalty: o.penalty,
@@ -197,9 +214,16 @@ export function validateCommitment(value: unknown): Commitment | null {
  * future schema version, append a step; never remove or reorder existing ones.
  *
  * Step 1: v1 (bare `Commitment[]`) -> v2 (`{ version: 2, items: [...] }`).
+ * Step 2: v2 -> v3, amounts become base-unit digit strings. The conversion itself
+ * is `normalizeStoredAmount` inside `validateCommitment`; this step only bumps the
+ * version so `loadCommitments` rewrites legacy numeric amounts in place.
  */
 const MIGRATIONS: ReadonlyArray<(value: unknown) => unknown> = [
   (value) => (Array.isArray(value) ? { version: 2, items: value } : value),
+  (value) =>
+    value && typeof value === 'object' && (value as { version?: unknown }).version === 2
+      ? { ...(value as object), version: 3 }
+      : value,
 ];
 
 /** Runs the migration pipeline over a raw parsed value. */
@@ -308,7 +332,7 @@ export function sampleCommitments(): Commitment[] {
       id: newId(),
       type: 'balanced',
       asset: 'USDC',
-      amount: 2500,
+      amount: '25000000000',
       durationDays: 30,
       maxLoss: 8,
       penalty: FALLBACK_PROTOCOL_PARAMS.penalties.balanced / 100,
@@ -323,7 +347,7 @@ export function sampleCommitments(): Commitment[] {
       id: newId(),
       type: 'safe',
       asset: 'XLM',
-      amount: 10000,
+      amount: '100000000000',
       durationDays: 14,
       maxLoss: 2,
       penalty: FALLBACK_PROTOCOL_PARAMS.penalties.safe / 100,
@@ -339,4 +363,9 @@ export function sampleCommitments(): Commitment[] {
 
 export function fmt(n: number, digits = 2): string {
   return n.toLocaleString('en-US', { maximumFractionDigits: digits });
+}
+
+/** Abbreviated base-unit display for summaries; use `formatAmount` for full precision. */
+export function fmtUnits(value: bigint, maxFraction = 2): string {
+  return formatAmount(value, STELLAR_DECIMALS, { maxFraction });
 }

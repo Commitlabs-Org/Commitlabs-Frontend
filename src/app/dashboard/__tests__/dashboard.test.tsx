@@ -43,8 +43,8 @@ let seed: Commitment[] = [];
 
 beforeEach(() => {
   seed = [
-    { ...base, id: 'CMT-DISPUTED', amount: 500, durationDays: 30, createdAt: now - 10 * DAY, status: 'disputed' } as Commitment,
-    { ...base, id: 'CMT-ACTIVE', amount: 1000, durationDays: 100, createdAt: now - 40 * DAY, status: 'active' } as Commitment,
+    { ...base, id: 'CMT-DISPUTED', amount: '5000000000', durationDays: 30, createdAt: now - 10 * DAY, status: 'disputed' } as Commitment,
+    { ...base, id: 'CMT-ACTIVE', amount: '10000000000', durationDays: 100, createdAt: now - 40 * DAY, status: 'active' } as Commitment,
   ];
   vi.mocked(getDispute).mockResolvedValue(null);
   vi.mocked(openDispute).mockResolvedValue({ transactionHash: 'abc' });

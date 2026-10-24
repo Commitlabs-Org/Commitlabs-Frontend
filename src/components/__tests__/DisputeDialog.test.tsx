@@ -18,7 +18,7 @@ const commitment: Commitment = {
   id: 'CMT-1',
   type: 'balanced',
   asset: 'USDC',
-  amount: 1000,
+  amount: '10000000000',
   durationDays: 30,
   maxLoss: 8,
   penalty: 5,
