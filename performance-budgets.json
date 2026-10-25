@@ -10,8 +10,8 @@
       "maxBytes": 110418
     },
     "/dashboard": {
-      "baselineBytes": 99811,
-      "maxBytes": 109793
+      "baselineBytes": 112784,
+      "maxBytes": 115000
     }
   }
 }

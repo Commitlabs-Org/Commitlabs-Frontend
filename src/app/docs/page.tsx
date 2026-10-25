@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TYPES } from '@/lib/commitments';
+import { DocsTypesTable } from './DocsTypesTable';
 import { ESCROW_CONTRACT_ID, NETWORK, REPO_URL, explorerContractUrl, config } from '@/lib/config';
 
 export const metadata = { title: 'Docs - CommitLabs' };
@@ -80,30 +80,7 @@ export default function DocsPage() {
         </ol>
 
         <h2 id="types">Commitment types</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Target APY</th>
-                <th>Max loss</th>
-                <th>Early exit penalty</th>
-                <th>Min lock</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TYPES.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{t.apy}%</td>
-                  <td>{t.maxLoss}%</td>
-                  <td>{t.penalty}%</td>
-                  <td>{t.minDays} days</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DocsTypesTable />
 
         <h2 id="contracts">Contracts</h2>
         <p>Network: Stellar {NETWORK}. Contract source lives in the repository under contracts/.</p>

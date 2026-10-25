@@ -39,8 +39,8 @@ async function seriousViolations() {
 beforeEach(() => {
   const now = Date.now();
   seed = [
-    { ...base, id: 'CMT-ACTIVE', amount: 1000, durationDays: 100, createdAt: now - 40 * DAY, status: 'active' },
-    { ...base, id: 'CMT-MATURED', amount: 500, durationDays: 10, createdAt: now - 20 * DAY, status: 'active' },
+    { ...base, id: 'CMT-ACTIVE', amount: '10000000000', durationDays: 100, createdAt: now - 40 * DAY, status: 'active' },
+    { ...base, id: 'CMT-MATURED', amount: '5000000000', durationDays: 10, createdAt: now - 20 * DAY, status: 'active' },
   ];
 });
 

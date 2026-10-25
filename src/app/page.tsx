@@ -1,6 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { TYPES } from '@/lib/commitments';
 import { config } from '@/lib/config';
+import { useProtocolParams } from '@/lib/protocol';
+import { DISPLAY_APY } from '@/lib/yield';
+import { Skeleton } from '@/components/Skeleton';
 
 const STEPS = [
   {
@@ -28,6 +33,7 @@ const FEATURES = [
 ];
 
 export default function Home() {
+  const { params, loading, isFallback } = useProtocolParams();
   return (
     <>
       <section className="hero">
@@ -84,6 +90,11 @@ export default function Home() {
 
       <section className="container section">
         <h2>Choose your risk profile</h2>
+        {isFallback && (
+          <p className="muted small" role="note" style={{ marginBottom: '1rem' }}>
+            Could not verify on-chain parameters. Displaying default protocol parameters.
+          </p>
+        )}
         <div className="grid3">
           {TYPES.map((t) => (
             <article className="card type-card" key={t.id}>
@@ -92,7 +103,7 @@ export default function Home() {
               <ul className="kv">
                 <li>
                   <span>Target APY</span>
-                  <b>{t.apy}%</b>
+                  <b>{DISPLAY_APY[t.id]}%</b>
                 </li>
                 <li>
                   <span>Max loss</span>
@@ -100,7 +111,11 @@ export default function Home() {
                 </li>
                 <li>
                   <span>Early exit penalty</span>
-                  <b>{t.penalty}%</b>
+                  {loading ? (
+                    <Skeleton width="60px" height="20px" />
+                  ) : (
+                    <b>{params.penalties[t.id] / 100}%</b>
+                  )}
                 </li>
                 <li>
                   <span>Minimum lock</span>
