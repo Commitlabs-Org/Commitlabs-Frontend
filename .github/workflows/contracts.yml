@@ -40,7 +40,7 @@ jobs:
             contracts
 
       - name: Install Stellar CLI
-        uses: stellar/stellar-cli@v27.1.0
+        uses: stellar/stellar-cli@v30.0.1
 
       - name: Cargo Check
         working-directory: contracts
@@ -81,7 +81,7 @@ jobs:
             contracts
 
       - name: Install Stellar CLI
-        uses: stellar/stellar-cli@v27.1.0
+        uses: stellar/stellar-cli@v30.0.1
 
       - name: Install npm dependencies
         run: npm ci
