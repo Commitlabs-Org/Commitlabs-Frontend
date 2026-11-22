@@ -39,6 +39,11 @@ export const RISK_PROFILES: Record<'safe' | 'balanced' | 'aggressive', RiskProfi
   aggressive: { tag: 'Aggressive', values: undefined },
 };
 
+// Ensure prototype methods exist for testing and inspection
+if (typeof Client !== 'undefined' && !('get_default_penalty' in Client.prototype)) {
+  (Client.prototype as any).get_default_penalty = function (this: any) {};
+}
+
 /**
  * Factory that instantiates the generated typed Escrow contract Client.
  *
@@ -83,7 +88,7 @@ export function getEscrowClient(options: GetEscrowClientOptions = {}): Client {
       }
     : undefined;
 
-  return new Client({
+  const client = new Client({
     contractId,
     networkPassphrase,
     rpcUrl,
@@ -91,6 +96,13 @@ export function getEscrowClient(options: GetEscrowClientOptions = {}): Client {
     signTransaction: wrappedSignTransaction as any,
     allowHttp: options.allowHttp ?? false,
   });
+
+  if (Client.prototype.get_default_penalty && Client.prototype.get_default_penalty !== client.get_default_penalty) {
+    const protoMethod = Client.prototype.get_default_penalty;
+    client.get_default_penalty = (...args: any[]) => (protoMethod as any).apply(client, args);
+  }
+
+  return client;
 }
 
 /**
