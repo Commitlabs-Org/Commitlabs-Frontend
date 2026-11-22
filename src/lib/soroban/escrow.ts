@@ -9,6 +9,36 @@ import {
 
 export { DisputeCategory, DISPUTE_CATEGORY_LABELS, MAX_DISPUTE_REASON } from './dispute';
 export type { DisputeRecord } from './dispute';
+export { submitPrepared } from './tx';
+export type { PreparedInvocation } from './tx';
+
+/** Friendly human-readable labels for escrow contract methods. */
+export const ESCROW_METHOD_LABELS: Record<string, string> = {
+  create_commitment: 'Create commitment',
+  create_commitment_default: 'Create commitment',
+  create_commitment_with_default: 'Create commitment',
+  fund_escrow: 'Fund escrow',
+  release: 'Release matured commitment',
+  settle_commitment: 'Settle commitment',
+  refund: 'Early exit refund',
+  refund_partial: 'Partial early exit refund',
+  early_exit_commitment: 'Early exit commitment',
+  dispute: 'Report a problem (open dispute)',
+  resolve_dispute: 'Resolve dispute',
+  cancel_commitment: 'Cancel commitment',
+  record_attestation: 'Record compliance attestation',
+  transfer_ownership: 'Transfer commitment ownership',
+  accept_ownership: 'Accept commitment ownership',
+  cancel_ownership_transfer: 'Cancel ownership transfer',
+  pause: 'Pause escrow contract',
+  unpause: 'Unpause escrow contract',
+  deposit_yield_pool: 'Deposit into yield pool',
+  withdraw_yield_pool: 'Withdraw from yield pool',
+};
+
+export function getMethodLabel(method: string): string {
+  return ESCROW_METHOD_LABELS[method] ?? method;
+}
 
 export interface OpenDisputeParams {
   commitmentId: string;
@@ -18,6 +48,18 @@ export interface OpenDisputeParams {
 
 export interface OpenDisputeResult {
   transactionHash: string;
+}
+
+export interface EarlyExitParams {
+  commitmentId: string;
+  caller: string;
+}
+
+export interface EarlyExitResult {
+  transactionHash: string;
+  exitAmount: bigint;
+  penaltyAmount: bigint;
+  finalStatus: string;
 }
 
 export interface PendingTransferRecord {
@@ -125,11 +167,7 @@ function normalizeCategory(value: unknown): DisputeCategory {
     : DisputeCategory.Other;
 }
 
-/** Flag a funded commitment as disputed, freezing release and refund until the
- * operator resolves it. Submits `dispute(commitment_id, caller, reason)` via
- * Freighter. The reason is client-side bounded because the contract accepts an
- * unbounded string. */
-export async function openDispute({ commitmentId, caller, reason }: OpenDisputeParams): Promise<OpenDisputeResult> {
+function validateDisputeInput({ commitmentId, caller, reason }: OpenDisputeParams) {
   const trimmed = (reason ?? '').trim();
   if (!trimmed) {
     throw new TxError('failed', 'Please describe the problem you want to report.');
@@ -145,12 +183,34 @@ export async function openDispute({ commitmentId, caller, reason }: OpenDisputeP
     });
   }
 
-  return invokeContract({
+  const callerArg = /^[GC][A-Z2-7]{55}$/.test(caller)
+    ? nativeToScVal(Address.fromString(caller))
+    : nativeToScVal(caller);
+
+  return {
     method: 'dispute',
-    args: [nativeToScVal(BigInt(id)), nativeToScVal(Address.fromString(caller)), nativeToScVal(trimmed)],
+    args: [nativeToScVal(BigInt(id)), callerArg, nativeToScVal(trimmed)],
     source: caller,
     signer: caller,
-  });
+  };
+}
+
+/**
+ * Prepares and simulates `dispute(commitment_id, caller, reason)` without
+ * prompting the wallet to sign.
+ */
+export async function prepareDispute(params: OpenDisputeParams): Promise<PreparedInvocation> {
+  const invocation = validateDisputeInput(params);
+  return prepareInvocation(invocation);
+}
+
+/** Flag a funded commitment as disputed, freezing release and refund until the
+ * operator resolves it. Submits `dispute(commitment_id, caller, reason)` via
+ * Freighter. The reason is client-side bounded because the contract accepts an
+ * unbounded string. */
+export async function openDispute(params: OpenDisputeParams): Promise<OpenDisputeResult> {
+  const invocation = validateDisputeInput(params);
+  return invokeContract(invocation);
 }
 
 /** Read the dispute record for a commitment, if one exists. Returns null when
@@ -163,6 +223,103 @@ export async function getDispute(commitmentId: string, source?: string): Promise
   if (result.error || result.result == null) return null;
 
   return decodeDisputeRecord(scValToNative(result.result as unknown as xdr.ScVal));
+}
+
+function toBigIntAmount(value: unknown): bigint | null {
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value)) {
+    return BigInt(value);
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    return BigInt(value.trim());
+  }
+  return null;
+}
+
+function normalizeFinalStatus(value: unknown): string {
+  if (Array.isArray(value)) {
+    return String(value[0] ?? 'exited');
+  }
+  if (value === undefined || value === null) return 'exited';
+  return String(value);
+}
+
+/**
+ * Decodes an `EarlyExitResult` returned by `early_exit_commitment`:
+ * `{ exit_amount, penalty_amount, final_status }`.
+ */
+export function decodeEarlyExitResult(
+  value: unknown,
+): Omit<EarlyExitResult, 'transactionHash'> | null {
+  if (Array.isArray(value)) {
+    if (value.length < 2) return null;
+    const exitAmount = toBigIntAmount(value[0]);
+    const penaltyAmount = toBigIntAmount(value[1]);
+    if (exitAmount === null || penaltyAmount === null) return null;
+    return {
+      exitAmount,
+      penaltyAmount,
+      finalStatus: normalizeFinalStatus(value[2]),
+    };
+  }
+
+  if (!isPlainObject(value)) return null;
+
+  const exitAmount = toBigIntAmount(pick(value, 'exit_amount', 'exitAmount'));
+  const penaltyAmount = toBigIntAmount(pick(value, 'penalty_amount', 'penaltyAmount'));
+  if (exitAmount === null || penaltyAmount === null) return null;
+
+  return {
+    exitAmount,
+    penaltyAmount,
+    finalStatus: normalizeFinalStatus(pick(value, 'final_status', 'finalStatus')),
+  };
+}
+
+/**
+ * Exit an active on-chain commitment early via `early_exit_commitment(commitment_id, caller)`.
+ * Returns the exact `exitAmount`, `penaltyAmount`, and `finalStatus` decoded from the
+ * contract's `EarlyExitResult`.
+ */
+export async function earlyExitCommitment({
+  commitmentId,
+  caller,
+}: EarlyExitParams): Promise<EarlyExitResult> {
+  const id = toCommitmentId(commitmentId);
+  if (id === null) {
+    throw new TxError('failed', 'This commitment is not on-chain and cannot be exited on-chain.', {
+      hint: 'Only on-chain commitments with a numeric id can be exited via the contract.',
+    });
+  }
+
+  const res = await invokeContract({
+    method: 'early_exit_commitment',
+    args: [nativeToScVal(BigInt(id)), nativeToScVal(Address.fromString(caller))],
+    source: caller,
+    signer: caller,
+  });
+
+  if (!res.returnValue) {
+    throw new TxError(
+      'failed',
+      'Early exit transaction succeeded, but the contract did not return an EarlyExitResult.',
+      { transactionHash: res.transactionHash },
+    );
+  }
+
+  const decoded = decodeEarlyExitResult(scValToNative(res.returnValue));
+  if (!decoded) {
+    throw new TxError(
+      'failed',
+      'Early exit transaction succeeded, but the contract result could not be decoded.',
+      { transactionHash: res.transactionHash },
+    );
+  }
+
+  return {
+    transactionHash: res.transactionHash,
+    ...decoded,
+  };
 }
 
 function toTimestampSeconds(value: unknown): bigint {

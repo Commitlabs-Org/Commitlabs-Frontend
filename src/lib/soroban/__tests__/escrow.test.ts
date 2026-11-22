@@ -126,6 +126,55 @@ describe('getDispute', () => {
   });
 });
 
+describe('earlyExitCommitment', () => {
+  it('rejects non-on-chain commitment ids', async () => {
+    await expect(earlyExitCommitment({ commitmentId: 'CMT-1', caller })).rejects.toThrow(
+      'not on-chain',
+    );
+    expect(invokeContract).not.toHaveBeenCalled();
+  });
+
+  it('sends early_exit_commitment(id, caller) and decodes EarlyExitResult', async () => {
+    vi.mocked(invokeContract).mockResolvedValue({
+      transactionHash: 'tx-exit-123',
+      returnValue: nativeToScVal({
+        exit_amount: 9_500_000_000n,
+        penalty_amount: 500_000_000n,
+        final_status: 'Exited',
+      }),
+    });
+
+    const res = await earlyExitCommitment({ commitmentId: '42', caller });
+    expect(invokeContract).toHaveBeenCalledWith({
+      method: 'early_exit_commitment',
+      args: [expect.anything(), expect.anything()],
+      source: caller,
+      signer: caller,
+    });
+    expect(res).toEqual({
+      transactionHash: 'tx-exit-123',
+      exitAmount: 9_500_000_000n,
+      penaltyAmount: 500_000_000n,
+      finalStatus: 'Exited',
+    });
+  });
+
+  it('throws when the transaction succeeds without a returnValue', async () => {
+    vi.mocked(invokeContract).mockResolvedValue({ transactionHash: 'tx-no-val' });
+    await expect(earlyExitCommitment({ commitmentId: '42', caller })).rejects.toThrow(
+      /EarlyExitResult/,
+    );
+  });
+
+  it('decodes positional EarlyExitResult tuples', () => {
+    expect(decodeEarlyExitResult([9_000n, 1_000n, ['Exited']])).toEqual({
+      exitAmount: 9_000n,
+      penaltyAmount: 1_000n,
+      finalStatus: 'Exited',
+    });
+  });
+});
+
 describe('decodePendingTransfer', () => {
   const recipient = Keypair.random().publicKey();
   const timestamp = 1735689600n;

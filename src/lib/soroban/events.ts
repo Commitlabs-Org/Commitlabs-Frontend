@@ -13,34 +13,36 @@ export interface DecodedEscrowEvent {
   at: string;
 }
 
+export type RawEvent = Pick<rpc.Api.EventResponse, 'ledger'> &
+  Partial<Omit<rpc.Api.EventResponse, 'ledger' | 'topic' | 'value'>> & {
+    topic: (xdr.ScVal | string)[];
+    value: xdr.ScVal | string | { xdr: string };
+  };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function toScVal(val: unknown): xdr.ScVal {
   if (val instanceof xdr.ScVal) {
     return val as unknown as xdr.ScVal;
   }
   if (
-    val &&
-    typeof val === 'object' &&
-    ('switch' in val || 'arm' in val || 'type' in val || typeof (val as any).toXDR === 'function')
+    isRecord(val) &&
+    ('switch' in val || 'arm' in val || 'type' in val || typeof val.toXDR === 'function')
   ) {
     return val as xdr.ScVal;
   }
   if (typeof val === 'string') {
     return xdr.ScVal.fromXDR(val, 'base64');
   }
-  if (val && typeof val === 'object' && 'xdr' in val && typeof (val as any).xdr === 'string') {
-    return xdr.ScVal.fromXDR((val as any).xdr, 'base64');
+  if (isRecord(val) && typeof val.xdr === 'string') {
+    return xdr.ScVal.fromXDR(val.xdr, 'base64');
   }
   throw new Error('Unsupported ScVal representation');
 }
 
-export function decodeEscrowEvent(event: {
-  id?: string;
-  ledger: number;
-  ledgerClosedAt?: string;
-  topic: (xdr.ScVal | string)[];
-  value: xdr.ScVal | string | { xdr: string };
-  txHash?: string;
-}): DecodedEscrowEvent {
+export function decodeEscrowEvent(event: RawEvent): DecodedEscrowEvent {
   const eventId = event.id || `${event.ledger}-${event.txHash || 'event'}`;
   const at = event.ledgerClosedAt || new Date().toISOString();
   const txHash = event.txHash || '';
@@ -59,7 +61,7 @@ export function decodeEscrowEvent(event: {
       }
     });
 
-    let decodedValue: any = null;
+    let decodedValue: unknown = null;
     try {
       decodedValue = scValToNative(toScVal(event.value));
     } catch {
@@ -84,7 +86,7 @@ export function decodeEscrowEvent(event: {
         amount = String(decodedValue);
       } else if (Array.isArray(decodedValue) && decodedValue.length > 0) {
         amount = String(decodedValue[0]);
-      } else if (decodedValue && typeof decodedValue === 'object') {
+      } else if (isRecord(decodedValue)) {
         if ('amount' in decodedValue) amount = String(decodedValue.amount);
         if ('reason' in decodedValue) description = String(decodedValue.reason).slice(0, 100);
       }
@@ -97,7 +99,7 @@ export function decodeEscrowEvent(event: {
       if (Array.isArray(decodedValue)) {
         if (decodedValue[0] !== undefined) commitmentId = String(decodedValue[0]);
         if (decodedValue[1] !== undefined) amount = String(decodedValue[1]);
-      } else if (decodedValue && typeof decodedValue === 'object') {
+      } else if (isRecord(decodedValue)) {
         if ('id' in decodedValue) commitmentId = String(decodedValue.id);
         if ('amount' in decodedValue) amount = String(decodedValue.amount);
         if ('reason' in decodedValue) description = String(decodedValue.reason).slice(0, 100);
@@ -107,7 +109,7 @@ export function decodeEscrowEvent(event: {
     }
     // Shape C: (name)
     else {
-      if (typeof decodedValue === 'object' && decodedValue !== null) {
+      if (isRecord(decodedValue)) {
         if ('owner' in decodedValue) owner = String(decodedValue.owner);
         if ('id' in decodedValue) commitmentId = String(decodedValue.id);
         if ('amount' in decodedValue) amount = String(decodedValue.amount);
@@ -136,10 +138,16 @@ export function decodeEscrowEvent(event: {
   }
 }
 
+export const MAX_EVENTS_IN_MEMORY = 500;
+export const DEFAULT_PAGE_LIMIT = 50;
+export const RETENTION_WINDOW = 2000;
+const MAX_FILTER_PAGES = 10;
+
 export interface FetchEventsOptions {
   startLedger?: number;
   cursor?: string;
   limit?: number;
+  maxPages?: number;
   contractId?: string;
   filters?: {
     kind?: string;
@@ -151,7 +159,25 @@ export interface FetchEventsResult {
   events: DecodedEscrowEvent[];
   cursor?: string;
   latestLedger: number;
+  rawCount: number;
+  hasMore: boolean;
   olderEventsAvailable: boolean;
+  retentionOutOfRange?: boolean;
+  retentionMessage?: string;
+}
+
+export function isLedgerOutOfRangeError(err: unknown): boolean {
+  const msg =
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : String(err ?? '');
+  return /startLedger|start is before oldest ledger|start is after newest ledger|ledger range|out of range|retention|oldest ledger|outside.*range|-32600|-32602/i.test(
+    msg
+  );
 }
 
 export async function fetchEscrowEvents(
@@ -164,6 +190,8 @@ export async function fetchEscrowEvents(
     return {
       events: [],
       latestLedger: 0,
+      rawCount: 0,
+      hasMore: false,
       olderEventsAvailable: false,
     };
   }
@@ -172,11 +200,14 @@ export async function fetchEscrowEvents(
   const latestLedgerRes = await server.getLatestLedger();
   const latestLedger = latestLedgerRes.sequence;
 
-  // Testnet retention window
-  const RETENTION_WINDOW = 2000;
+  const limit = options.limit ?? DEFAULT_PAGE_LIMIT;
   const startLedger = options.startLedger ?? Math.max(1, latestLedger - RETENTION_WINDOW);
+  const hasActiveFilters = Boolean(
+    (options.filters?.kind && options.filters.kind !== 'all') || options.filters?.owner
+  );
+  const maxPages = options.maxPages ?? (hasActiveFilters ? MAX_FILTER_PAGES : 1);
 
-  const getEventsParams: any = {
+  const getEventsParams: Parameters<rpc.Server['getEvents']>[0] = {
     filters: [
       {
         type: 'contract',
@@ -195,36 +226,96 @@ export async function fetchEscrowEvents(
   const response = await server.getEvents(getEventsParams);
   const seenIds = new Set<string>();
   const decoded: DecodedEscrowEvent[] = [];
+  let currentCursor = options.cursor;
+  let lastCursor = options.cursor;
+  let totalRawCount = 0;
+  let hasMore = false;
+  let pagesFetched = 0;
 
-  for (const raw of response.events || []) {
-    if (seenIds.has(raw.id)) continue;
-    seenIds.add(raw.id);
+  while (pagesFetched < maxPages) {
+    const getEventsParams: any = {
+      filters: [
+        {
+          type: 'contract',
+          contractIds: [contractId],
+        },
+      ],
+      limit,
+    };
 
-    const item = decodeEscrowEvent(raw as any);
+    const item = decodeEscrowEvent(raw);
 
-    if (
-      options.filters?.kind &&
-      options.filters.kind !== 'all' &&
-      item.kind !== options.filters.kind
-    ) {
-      continue;
+    let response: any;
+    try {
+      response = await server.getEvents(getEventsParams);
+    } catch (err) {
+      if (isLedgerOutOfRangeError(err)) {
+        return {
+          events: decoded.slice(0, MAX_EVENTS_IN_MEMORY),
+          cursor: lastCursor,
+          latestLedger,
+          rawCount: totalRawCount,
+          hasMore: false,
+          olderEventsAvailable: false,
+          retentionOutOfRange: true,
+          retentionMessage:
+            'Requested startLedger is outside the Soroban RPC retention window. Showing available recent events within the retention range.',
+        };
+      }
+      throw err;
     }
-    if (options.filters?.owner && item.owner !== options.filters.owner) {
-      continue;
+
+    pagesFetched += 1;
+    const rawEvents: any[] = response?.events || [];
+    const pageRawCount = rawEvents.length;
+    totalRawCount += pageRawCount;
+
+    const nextCursor: string | undefined =
+      response?.cursor || (pageRawCount > 0 ? rawEvents[pageRawCount - 1]?.id : undefined);
+    if (nextCursor) {
+      lastCursor = nextCursor;
     }
 
-    decoded.push(item);
+    for (const raw of rawEvents) {
+      if (seenIds.has(raw.id)) continue;
+      seenIds.add(raw.id);
+
+      const item = decodeEscrowEvent(raw as any);
+
+      if (
+        options.filters?.kind &&
+        options.filters.kind !== 'all' &&
+        item.kind !== options.filters.kind
+      ) {
+        continue;
+      }
+      if (options.filters?.owner && item.owner !== options.filters.owner) {
+        continue;
+      }
+
+      decoded.push(item);
+    }
+
+    const pageIsFull = pageRawCount >= limit;
+    const cursorAdvanced = Boolean(nextCursor && nextCursor !== currentCursor);
+    hasMore = Boolean(pageIsFull && cursorAdvanced);
+
+    if (!hasMore || decoded.length >= limit || decoded.length >= MAX_EVENTS_IN_MEMORY) {
+      break;
+    }
+
+    currentCursor = nextCursor;
   }
 
   // Bound in-memory events to 500
-  const boundedEvents = decoded.slice(0, 500);
+  const boundedEvents = decoded.slice(0, MAX_EVENTS_IN_MEMORY);
 
   return {
     events: boundedEvents,
-    cursor: response.cursor,
+    cursor: lastCursor,
     latestLedger,
-    olderEventsAvailable: Boolean(
-      response.cursor && response.events?.length === (options.limit ?? 50)
-    ),
+    rawCount: totalRawCount,
+    hasMore,
+    olderEventsAvailable: hasMore,
   };
 }
