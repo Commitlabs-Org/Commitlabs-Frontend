@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWallet } from './WalletProvider';
-import { shortAddress } from '@/lib/wallet';
+import { shortAddress } from '@/lib/format';
 
 const LINKS = [
   { href: '/create', label: 'Create' },

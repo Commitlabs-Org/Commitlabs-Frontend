@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/components/WalletProvider';
-import { shortAddress } from '@/lib/wallet';
+import { shortAddress } from '@/lib/format';
 import { explorerContractUrl } from '@/lib/config';
 import {
   fetchEscrowEvents,
