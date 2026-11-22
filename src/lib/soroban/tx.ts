@@ -24,6 +24,7 @@ export interface InvokeContractParams {
 
 export interface InvokeResult {
   transactionHash: string;
+  returnValue?: xdr.ScVal;
 }
 
 export interface SimulateReadParams {
@@ -98,7 +99,7 @@ export async function invokeContract({ method, args, source, signer }: InvokeCon
     throw new TxError('failed', `Transaction ${sent.hash} ended with status ${result.status}.`, { transactionHash: sent.hash });
   }
 
-  return { transactionHash: sent.hash };
+  return { transactionHash: sent.hash, returnValue: result.returnValue };
 }
 
 export async function simulateRead({ method, args, source }: SimulateReadParams): Promise<SimulateReadResult> {

@@ -22,7 +22,9 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DisputeDialog } from '@/components/DisputeDialog';
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
-import { getActionPauseReason } from '@/lib/soroban/protocol-policy';
+import { getActionPauseReason, isActionBlocked } from '@/lib/soroban/protocol-policy';
+import { useProtocolParams } from '@/lib/protocol';
+import { TxError } from '@/lib/soroban/errors';
 import { YieldCoverageChip } from '@/components/YieldCoverageChip';
 import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
@@ -38,11 +40,27 @@ interface Notice {
   canReset: boolean;
 }
 
-// Single source for the numbers shown in the exit dialog and applied to the commitment.
-function exitBreakdown(c: Commitment) {
+interface ExitSuccessNotice {
+  commitmentId: string;
+  asset: string;
+  exitAmount: bigint;
+  penaltyAmount: bigint;
+  transactionHash: string;
+}
+
+// Single source for the preview numbers shown in the exit dialog.
+function exitBreakdown(c: Commitment, gracePeriodSeconds = 0, now = Date.now()) {
   const principal = BigInt(c.amount);
-  const penaltyAmount = penaltyOf(principal, c.penalty);
-  return { principal, penaltyPct: c.penalty, penaltyAmount, returned: principal - penaltyAmount };
+  const inGracePeriod =
+    gracePeriodSeconds > 0 && now <= c.createdAt + gracePeriodSeconds * 1000;
+  const penaltyAmount = inGracePeriod ? 0n : penaltyOf(principal, c.penalty);
+  return {
+    principal,
+    penaltyPct: inGracePeriod ? 0 : c.penalty,
+    penaltyAmount,
+    returned: principal - penaltyAmount,
+    inGracePeriod,
+  };
 }
 
 type BalanceState =
@@ -55,10 +73,16 @@ type BalanceState =
 export default function DashboardPage() {
   const { status, address } = useWallet();
   const protocolStatus = useProtocolStatus();
+  const { params: protocolParams } = useProtocolParams();
+  const gracePeriodSeconds = protocolParams.gracePeriodSeconds;
   const isPaused = protocolStatus.status === 'ok' && protocolStatus.paused;
+  const exitBlocked = isActionBlocked('early_exit', isPaused);
   const exitPauseReason = getActionPauseReason('early_exit', isPaused);
   const [list, setList] = useState<Commitment[] | null>(null);
   const [pending, setPending] = useState<{ kind: 'exit' | 'remove'; id: string } | null>(null);
+  const [exitPending, setExitPending] = useState(false);
+  const [exitError, setExitError] = useState<unknown>(null);
+  const [exitResult, setExitResult] = useState<ExitSuccessNotice | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
   const [recentEvents, setRecentEvents] = useState<DecodedEscrowEvent[]>([]);
@@ -211,17 +235,67 @@ export default function DashboardPage() {
     reload();
   }
 
-  function confirmPending() {
+  async function confirmPending() {
     if (!pending) return;
     const c = (list ?? []).find((x) => x.id === pending.id);
-    setPending(null);
-    if (!c) return;
-    if (pending.kind === 'exit') {
-      update(c.id, { status: 'exited' });
-      setAnnouncement(`Commitment ${c.id} exited early`);
-    } else {
+    if (!c) {
+      setPending(null);
+      return;
+    }
+
+    if (pending.kind === 'remove') {
+      setPending(null);
       remove(c.id);
       setAnnouncement(`Commitment ${c.id} removed`);
+      return;
+    }
+
+    if (exitBlocked) {
+      setPending(null);
+      return;
+    }
+
+    const isOnChain = !c.demo && /^\d+$/.test(c.id);
+    if (!isOnChain) {
+      setPending(null);
+      update(c.id, { status: 'exited' });
+      setAnnouncement(`Commitment ${c.id} exited early`);
+      return;
+    }
+
+    if (!address) {
+      setPending(null);
+      setExitError(new TxError('failed', 'Connect your wallet to exit this commitment on-chain.'));
+      return;
+    }
+
+    setExitPending(true);
+    setExitError(null);
+    try {
+      const { earlyExitCommitment } = await import('@/lib/soroban/escrow');
+      const result = await earlyExitCommitment({ commitmentId: c.id, caller: address });
+      update(c.id, {
+        status: 'exited',
+        exitAmount: result.exitAmount.toString(),
+        exitPenaltyAmount: result.penaltyAmount.toString(),
+        exitTxHash: result.transactionHash,
+      });
+      setPending(null);
+      setExitResult({
+        commitmentId: c.id,
+        asset: c.asset,
+        exitAmount: result.exitAmount,
+        penaltyAmount: result.penaltyAmount,
+        transactionHash: result.transactionHash,
+      });
+      setAnnouncement(
+        `Commitment ${c.id} exited early: ${formatAmount(result.exitAmount)} ${c.asset} returned, ${formatAmount(result.penaltyAmount)} ${c.asset} penalty paid`,
+      );
+    } catch (err) {
+      setExitError(err);
+      setPending(null);
+    } finally {
+      setExitPending(false);
     }
   }
 
@@ -249,7 +323,7 @@ export default function DashboardPage() {
   if (!list) return <DashboardLoading />;
 
   const target = pending ? list.find((c) => c.id === pending.id) : undefined;
-  const breakdown = target ? exitBreakdown(target) : null;
+  const breakdown = target ? exitBreakdown(target, gracePeriodSeconds) : null;
 
   const live = list.filter((c) => ['active', 'matured'].includes(effectiveStatus(c)));
   const frozen = list.filter((c) => effectiveStatus(c) === 'disputed' || effectiveStatus(c) === 'violated');
@@ -431,13 +505,16 @@ export default function DashboardPage() {
                       <div className="row wrap" style={{ alignItems: 'center', gap: '8px' }}>
                         <button
                           className="btn btn-ghost"
-                          disabled={isPaused}
-                          title={isPaused ? exitPauseReason : undefined}
-                          onClick={() => setPending({ kind: 'exit', id: c.id })}
+                          disabled={exitBlocked}
+                          title={exitBlocked ? exitPauseReason : undefined}
+                          onClick={() => {
+                            setExitError(null);
+                            setPending({ kind: 'exit', id: c.id });
+                          }}
                         >
                           Early exit
                         </button>
-                        {isPaused && (
+                        {exitBlocked && (
                           <span className="err small" role="status">
                             {exitPauseReason}
                           </span>
@@ -504,7 +581,31 @@ export default function DashboardPage() {
                         ? `Settled with ${formatAmount(projectedYield(c))} ${c.asset} yield`
                         : st === 'disputed' || st === 'violated'
                           ? `Frozen. Only the operator can release or refund the funds after resolving the dispute.`
-                          : `Exited early, ${formatAmount(exitBreakdown(c).penaltyAmount)} ${c.asset} penalty paid`}
+                          : c.exitPenaltyAmount !== undefined
+                            ? (
+                                <>
+                                  Exited early,{' '}
+                                  {c.exitAmount !== undefined
+                                    ? `${formatAmount(BigInt(c.exitAmount))} ${c.asset} returned, `
+                                    : ''}
+                                  {formatAmount(BigInt(c.exitPenaltyAmount))} {c.asset} penalty paid
+                                  {c.exitTxHash && (
+                                    <>
+                                      {' '}
+                                      &middot;{' '}
+                                      <a
+                                        href={explorerTx(c.exitTxHash)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="link"
+                                      >
+                                        View transaction
+                                      </a>
+                                    </>
+                                  )}
+                                </>
+                              )
+                            : `Exited early, ${formatAmount(exitBreakdown(c, gracePeriodSeconds).penaltyAmount)} ${c.asset} penalty paid`}
                 </p>
               </article>
             );
@@ -517,13 +618,16 @@ export default function DashboardPage() {
         title={pending?.kind === 'exit' ? 'Exit early?' : 'Remove commitment?'}
         description={
           pending?.kind === 'exit'
-            ? 'Exiting early forfeits part of your principal and cannot be undone.'
+            ? breakdown?.inGracePeriod
+              ? 'This commitment is within the grace period, so the early exit penalty is waived. This action cannot be undone.'
+              : 'Exiting early forfeits part of your principal and cannot be undone.'
             : target
               ? `Remove ${target.id} from your dashboard. This cannot be undone.`
               : undefined
         }
         confirmLabel={pending?.kind === 'exit' ? 'Exit early' : 'Remove'}
         cancelLabel="Keep commitment"
+        pending={exitPending}
         destructive
         onConfirm={confirmPending}
         onCancel={() => setPending(null)}
@@ -535,7 +639,11 @@ export default function DashboardPage() {
               {formatAmount(breakdown.principal)} {target.asset}
             </dd>
             <dt>Penalty</dt>
-            <dd>{breakdown.penaltyPct}%</dd>
+            <dd>
+              {breakdown.inGracePeriod
+                ? '0% (waived by grace period)'
+                : `${breakdown.penaltyPct}%`}
+            </dd>
             <dt>Penalty amount</dt>
             <dd>
               {formatAmount(breakdown.penaltyAmount)} {target.asset}
@@ -547,6 +655,45 @@ export default function DashboardPage() {
           </dl>
         )}
       </ConfirmDialog>
+
+      {exitResult != null && (
+        <div className="notice" role="status">
+          <div className="row between wrap">
+            <span>
+              Commitment #{exitResult.commitmentId} exited early:{' '}
+              {formatAmount(exitResult.exitAmount)} {exitResult.asset} returned,{' '}
+              {formatAmount(exitResult.penaltyAmount)} {exitResult.asset} penalty paid.{' '}
+              <a
+                href={explorerTx(exitResult.transactionHash)}
+                target="_blank"
+                rel="noreferrer"
+                className="link"
+              >
+                View transaction
+              </a>
+            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setExitResult(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {exitError != null && (
+        <div className="notice" role="alert">
+          <TxErrorNotice error={exitError} />
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ marginLeft: '10px' }}
+            onClick={() => setExitError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {disputeError != null && (
         <div className="notice" role="alert">
