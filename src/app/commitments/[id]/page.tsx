@@ -18,6 +18,7 @@ import {
 import { explorerAccount, explorerContractUrl } from '@/lib/config';
 import { useNetwork } from '@/components/NetworkProvider';
 import { Skeleton } from '@/components/Skeleton';
+import { TransferPanel } from '@/components/TransferPanel';
 
 interface PageProps {
   params: {
@@ -484,6 +485,9 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           </ul>
         </section>
       )}
+
+      {/* Section: Ownership Transfer Panel (Rendered only for Funded commitments) */}
+      <TransferPanel commitment={commitment} onTransferred={fetchData} />
 
       {/* Section: Compliance & Attestations */}
       <section className="card mt" aria-labelledby="attestations-heading">

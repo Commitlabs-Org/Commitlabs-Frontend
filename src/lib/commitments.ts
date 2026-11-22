@@ -64,6 +64,8 @@ export interface Commitment {
   txHash: string | null;
   /** Present and true for sample records loaded from the empty state. */
   demo?: boolean;
+  accrued_yield?: string | number | bigint;
+  accruedYield?: string | number | bigint;
   /** Present when the commitment is frozen and its dispute record is known. */
   dispute?: DisputeRecord;
   /** Exact amount returned by the contract on early exit (base units, digit string). */

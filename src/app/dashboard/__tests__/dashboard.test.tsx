@@ -17,6 +17,15 @@ vi.mock('@/lib/commitments', async (orig) => ({
 vi.mock('@/components/WalletProvider', () => ({
   useWallet: () => ({ status: 'connected', address: 'GCALLER', message: null }),
 }));
+vi.mock('@/components/ProtocolStatusProvider', () => ({
+  useProtocolStatus: () => ({
+    status: 'ok',
+    paused: false,
+    yieldPool: 100_000_000n,
+    fetchedAt: null,
+    refresh: async () => {},
+  }),
+}));
 vi.mock('@/lib/wallet', () => ({
   fetchXlmBalance: vi.fn().mockResolvedValue(null),
   shortAddress: vi.fn((a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`),
@@ -115,6 +124,24 @@ describe('dashboard dispute state', () => {
     await screen.findByText('CMT-ACTIVE');
     const btn = screen.getByRole('button', { name: 'Report a problem' });
     expect(btn).toBeDefined();
+  });
+
+  it('uses accrued_yield for the near-maturity coverage warning', async () => {
+    seed = [
+      {
+        ...base,
+        id: 'CMT-ACCRUED-YIELD',
+        amount: '5000000000',
+        durationDays: 30,
+        createdAt: now - 25 * DAY,
+        status: 'active',
+        accrued_yield: '200000000',
+      } as Commitment,
+    ];
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByTestId('yield-coverage-warning')).toBeDefined();
   });
 
   it('submits a dispute when the owner reports a problem', async () => {

@@ -20,7 +20,10 @@ export type EscrowAction =
   | 'refund_partial'
   | 'early_exit'
   | 'release'
-  | 'settle';
+  | 'settle'
+  | 'transfer_ownership'
+  | 'accept_ownership'
+  | 'cancel_ownership_transfer';
 
 export interface ActionPolicy {
   action: EscrowAction;
@@ -87,6 +90,22 @@ export const ACTION_POLICIES: Record<EscrowAction, ActionPolicy> = {
     action: 'settle',
     pausedBlocked: false,
     contractDoc: 'contracts/escrow/src/lib.rs: settle_commitment / release does not check pause',
+  },
+  transfer_ownership: {
+    action: 'transfer_ownership',
+    pausedBlocked: true,
+    pausedReason: 'Ownership transfers cannot be proposed while the contract is paused.',
+    contractDoc: 'contracts/escrow/src/lib.rs: transfer_ownership checks require_not_paused',
+  },
+  accept_ownership: {
+    action: 'accept_ownership',
+    pausedBlocked: false,
+    contractDoc: 'contracts/escrow/src/lib.rs: accept_ownership does not check pause',
+  },
+  cancel_ownership_transfer: {
+    action: 'cancel_ownership_transfer',
+    pausedBlocked: false,
+    contractDoc: 'contracts/escrow/src/lib.rs: cancel_ownership_transfer does not check pause',
   },
 };
 

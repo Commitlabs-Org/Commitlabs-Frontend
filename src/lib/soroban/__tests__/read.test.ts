@@ -49,6 +49,49 @@ describe('validateCommitmentId', () => {
   });
 });
 
+describe('raw Soroban value normalization', () => {
+  it('accepts camelCase commitment, attestation, and dispute fields', () => {
+    expect(
+      normalizeCommitment({
+        id: 7n,
+        accruedYield: 12n,
+        penaltyBps: 250,
+        complianceScore: 90,
+        createdAt: 100n,
+      }),
+    ).toMatchObject({
+      id: '7',
+      accruedYield: 12n,
+      penaltyBps: 250,
+      complianceScore: 90,
+      createdAt: 100n,
+    });
+
+    expect(
+      normalizeAttestation({
+        attestor: 'GATTESTOR',
+        complianceScore: 95,
+        timestamp: 200n,
+      }),
+    ).toEqual({ attestor: 'GATTESTOR', complianceScore: 95, timestamp: 200n });
+
+    expect(
+      normalizeDispute({
+        reasonCategory: 1,
+        reasonText: 'Non-compliance',
+        disputedAt: 300n,
+        disputedBy: 'GDISPUTER',
+      }),
+    ).toEqual({
+      reasonCategory: 'Non-Compliance',
+      reasonCode: 1,
+      reasonText: 'Non-compliance',
+      disputedAt: 300n,
+      disputedBy: 'GDISPUTER',
+    });
+  });
+});
+
 describe('Soroban read helpers with mocked simulation', () => {
   let mockServer: { simulateTransaction: ReturnType<typeof vi.fn> };
 

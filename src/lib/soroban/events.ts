@@ -13,34 +13,36 @@ export interface DecodedEscrowEvent {
   at: string;
 }
 
+export type RawEvent = Pick<rpc.Api.EventResponse, 'ledger'> &
+  Partial<Omit<rpc.Api.EventResponse, 'ledger' | 'topic' | 'value'>> & {
+    topic: (xdr.ScVal | string)[];
+    value: xdr.ScVal | string | { xdr: string };
+  };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function toScVal(val: unknown): xdr.ScVal {
   if (val instanceof xdr.ScVal) {
     return val as unknown as xdr.ScVal;
   }
   if (
-    val &&
-    typeof val === 'object' &&
-    ('switch' in val || 'arm' in val || 'type' in val || typeof (val as any).toXDR === 'function')
+    isRecord(val) &&
+    ('switch' in val || 'arm' in val || 'type' in val || typeof val.toXDR === 'function')
   ) {
     return val as xdr.ScVal;
   }
   if (typeof val === 'string') {
     return xdr.ScVal.fromXDR(val, 'base64');
   }
-  if (val && typeof val === 'object' && 'xdr' in val && typeof (val as any).xdr === 'string') {
-    return xdr.ScVal.fromXDR((val as any).xdr, 'base64');
+  if (isRecord(val) && typeof val.xdr === 'string') {
+    return xdr.ScVal.fromXDR(val.xdr, 'base64');
   }
   throw new Error('Unsupported ScVal representation');
 }
 
-export function decodeEscrowEvent(event: {
-  id?: string;
-  ledger: number;
-  ledgerClosedAt?: string;
-  topic: (xdr.ScVal | string)[];
-  value: xdr.ScVal | string | { xdr: string };
-  txHash?: string;
-}): DecodedEscrowEvent {
+export function decodeEscrowEvent(event: RawEvent): DecodedEscrowEvent {
   const eventId = event.id || `${event.ledger}-${event.txHash || 'event'}`;
   const at = event.ledgerClosedAt || new Date().toISOString();
   const txHash = event.txHash || '';
@@ -59,7 +61,7 @@ export function decodeEscrowEvent(event: {
       }
     });
 
-    let decodedValue: any = null;
+    let decodedValue: unknown = null;
     try {
       decodedValue = scValToNative(toScVal(event.value));
     } catch {
@@ -84,7 +86,7 @@ export function decodeEscrowEvent(event: {
         amount = String(decodedValue);
       } else if (Array.isArray(decodedValue) && decodedValue.length > 0) {
         amount = String(decodedValue[0]);
-      } else if (decodedValue && typeof decodedValue === 'object') {
+      } else if (isRecord(decodedValue)) {
         if ('amount' in decodedValue) amount = String(decodedValue.amount);
         if ('reason' in decodedValue) description = String(decodedValue.reason).slice(0, 100);
       }
@@ -97,7 +99,7 @@ export function decodeEscrowEvent(event: {
       if (Array.isArray(decodedValue)) {
         if (decodedValue[0] !== undefined) commitmentId = String(decodedValue[0]);
         if (decodedValue[1] !== undefined) amount = String(decodedValue[1]);
-      } else if (decodedValue && typeof decodedValue === 'object') {
+      } else if (isRecord(decodedValue)) {
         if ('id' in decodedValue) commitmentId = String(decodedValue.id);
         if ('amount' in decodedValue) amount = String(decodedValue.amount);
         if ('reason' in decodedValue) description = String(decodedValue.reason).slice(0, 100);
@@ -107,7 +109,7 @@ export function decodeEscrowEvent(event: {
     }
     // Shape C: (name)
     else {
-      if (typeof decodedValue === 'object' && decodedValue !== null) {
+      if (isRecord(decodedValue)) {
         if ('owner' in decodedValue) owner = String(decodedValue.owner);
         if ('id' in decodedValue) commitmentId = String(decodedValue.id);
         if ('amount' in decodedValue) amount = String(decodedValue.amount);
@@ -206,6 +208,23 @@ export async function fetchEscrowEvents(
   );
   const maxPages = options.maxPages ?? (hasActiveFilters ? MAX_FILTER_PAGES : 1);
 
+  const getEventsParams: Parameters<rpc.Server['getEvents']>[0] = {
+    filters: [
+      {
+        type: 'contract',
+        contractIds: [contractId],
+      },
+    ],
+    limit: options.limit ?? 50,
+  };
+
+  if (options.cursor) {
+    getEventsParams.cursor = options.cursor;
+  } else {
+    getEventsParams.startLedger = startLedger;
+  }
+
+  const response = await server.getEvents(getEventsParams);
   const seenIds = new Set<string>();
   const decoded: DecodedEscrowEvent[] = [];
   let currentCursor = options.cursor;
@@ -225,11 +244,7 @@ export async function fetchEscrowEvents(
       limit,
     };
 
-    if (currentCursor) {
-      getEventsParams.cursor = currentCursor;
-    } else {
-      getEventsParams.startLedger = startLedger;
-    }
+    const item = decodeEscrowEvent(raw);
 
     let response: any;
     try {
