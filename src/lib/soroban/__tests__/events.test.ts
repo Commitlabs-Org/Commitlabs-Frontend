@@ -188,4 +188,115 @@ describe('fetchEscrowEvents', () => {
       })
     );
   });
+
+  it('page of 50 raw events with 3 matches still reports olderEventsAvailable and hasMore', async () => {
+    const page1Events = Array.from({ length: 50 }, (_, idx) => ({
+      id: `evt-${idx + 1}`,
+      ledger: 4900 + idx,
+      topic: [
+        nativeToScVal(idx < 3 ? 'fund' : 'release'),
+        nativeToScVal(idx + 1),
+        nativeToScVal('GUSER1'),
+      ],
+      value: nativeToScVal(100),
+    }));
+
+    mockServer.getEvents.mockResolvedValue({
+      cursor: 'cursor-page-1',
+      events: page1Events,
+    });
+
+    const res = await fetchEscrowEvents(
+      {
+        limit: 50,
+        maxPages: 1,
+        filters: { kind: 'fund' },
+      },
+      mockServer
+    );
+
+    expect(res.events).toHaveLength(3);
+    expect(res.rawCount).toBe(50);
+    expect(res.hasMore).toBe(true);
+    expect(res.olderEventsAvailable).toBe(true);
+    expect(res.cursor).toBe('cursor-page-1');
+  });
+
+  it('fills a filtered page by fetching the next cursor when initial raw page has empty or partial filtered matches', async () => {
+    const page1NonMatching = Array.from({ length: 10 }, (_, idx) => ({
+      id: `p1-${idx}`,
+      ledger: 4800 + idx,
+      topic: [nativeToScVal('release'), nativeToScVal(idx), nativeToScVal('GOTHER')],
+      value: nativeToScVal(100),
+    }));
+
+    const page2Matching = Array.from({ length: 4 }, (_, idx) => ({
+      id: `p2-${idx}`,
+      ledger: 4850 + idx,
+      topic: [nativeToScVal('fund'), nativeToScVal(idx + 100), nativeToScVal('GUSER1')],
+      value: nativeToScVal(250),
+    }));
+
+    mockServer.getEvents
+      .mockResolvedValueOnce({
+        cursor: 'cursor-after-p1',
+        events: page1NonMatching,
+      })
+      .mockResolvedValueOnce({
+        cursor: 'cursor-after-p2',
+        events: page2Matching,
+      });
+
+    const res = await fetchEscrowEvents(
+      {
+        limit: 10,
+        filters: { kind: 'fund', owner: 'GUSER1' },
+      },
+      mockServer
+    );
+
+    expect(mockServer.getEvents).toHaveBeenCalledTimes(2);
+    expect(mockServer.getEvents).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        cursor: 'cursor-after-p1',
+        limit: 10,
+      })
+    );
+    expect(res.events).toHaveLength(4);
+    expect(res.rawCount).toBe(14);
+    expect(res.hasMore).toBe(false);
+    expect(res.olderEventsAvailable).toBe(false);
+    expect(res.cursor).toBe('cursor-after-p2');
+  });
+
+  it('returns explanatory retention state when startLedger is out of RPC retention range', async () => {
+    mockServer.getEvents.mockRejectedValueOnce(
+      new Error('startLedger is before oldest ledger (out of range)')
+    );
+
+    const res = await fetchEscrowEvents({ startLedger: 10 }, mockServer);
+
+    expect(res.retentionOutOfRange).toBe(true);
+    expect(res.retentionMessage).toMatch(/retention/i);
+    expect(res.events).toEqual([]);
+    expect(res.olderEventsAvailable).toBe(false);
+  });
+
+  it('keeps returned events bounded at 500', async () => {
+    const hugeBatch = Array.from({ length: 550 }, (_, idx) => ({
+      id: `evt-${idx}`,
+      ledger: 4000 + idx,
+      topic: [nativeToScVal('fund'), nativeToScVal(idx), nativeToScVal('GUSER1')],
+      value: nativeToScVal(10),
+    }));
+
+    mockServer.getEvents.mockResolvedValue({
+      cursor: 'cursor-550',
+      events: hugeBatch,
+    });
+
+    const res = await fetchEscrowEvents({ limit: 550 }, mockServer);
+    expect(res.events).toHaveLength(500);
+  });
 });
