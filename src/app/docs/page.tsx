@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { DocsTypesTable } from './DocsTypesTable';
+import { DocsErrorsTable, DocsPauseTable } from './DocsErrorsTable';
 import { ESCROW_CONTRACT_ID, NETWORK, REPO_URL, explorerContractUrl, config } from '@/lib/config';
 
 export const metadata = { title: 'Docs - CommitLabs' };
@@ -10,6 +11,8 @@ const TOC = [
   ['lifecycle', 'Commitment lifecycle'],
   ['types', 'Commitment types'],
   ['contracts', 'Contracts'],
+  ['errors', 'Error codes'],
+  ['pause', 'Pause behaviour'],
   ['setup', 'Run locally'],
   ['env', 'Environment variables'],
   ['faq', 'FAQ'],
@@ -108,6 +111,13 @@ export default function DocsPage() {
             </tbody>
           </table>
         </div>
+
+        <h2 id="errors">Error codes</h2>
+        <DocsErrorsTable />
+
+        <h2 id="pause">Pause behaviour</h2>
+        <p>These actions remain available or become blocked when the escrow contract is paused.</p>
+        <DocsPauseTable />
 
         <h2 id="setup">Run locally</h2>
         <pre>
