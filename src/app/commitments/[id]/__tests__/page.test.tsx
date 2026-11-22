@@ -3,13 +3,38 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CommitmentDetailPage from '../page';
+import { Keypair } from '@stellar/stellar-sdk';
 import * as readModule from '@/lib/soroban/read';
+import * as escrowModule from '@/lib/soroban/escrow';
 import {
   formatRelativeTime,
   formatAbsoluteTime,
   shortenAddress,
 } from '@/lib/soroban/read';
 import { EscrowErrorCode, TxError } from '@/lib/soroban/errors';
+
+let mockWalletAddress: string | null = null;
+
+vi.mock('@/components/WalletProvider', () => ({
+  useWallet: () => ({
+    status: mockWalletAddress ? 'connected' : 'idle',
+    address: mockWalletAddress,
+    message: null,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/soroban/escrow', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/soroban/escrow')>('@/lib/soroban/escrow');
+  return {
+    ...actual,
+    getPendingOwner: vi.fn(),
+    proposeTransfer: vi.fn(),
+    acceptTransfer: vi.fn(),
+    cancelTransfer: vi.fn(),
+  };
+});
 
 vi.mock('@/lib/soroban/read', async () => {
   const actual = await vi.importActual<typeof import('@/lib/soroban/read')>('@/lib/soroban/read');
@@ -24,6 +49,11 @@ vi.mock('@/lib/soroban/read', async () => {
 describe('CommitmentDetailPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockWalletAddress = null;
+    vi.mocked(escrowModule.getPendingOwner).mockResolvedValue(null);
+    vi.mocked(escrowModule.proposeTransfer).mockResolvedValue({ transactionHash: 'hash-prop' });
+    vi.mocked(escrowModule.acceptTransfer).mockResolvedValue({ transactionHash: 'hash-acc' });
+    vi.mocked(escrowModule.cancelTransfer).mockResolvedValue({ transactionHash: 'hash-canc' });
   });
 
   describe('ID Validation & Invalid State', () => {
@@ -243,6 +273,183 @@ describe('CommitmentDetailPage Component', () => {
         'GAAAAA...AAAWHF',
       );
       expect(shortenAddress('SHORT')).toBe('SHORT');
+    });
+  });
+
+  describe('Ownership Transfer Panel', () => {
+    const validOwner = Keypair.random().publicKey();
+    const validRecipient = Keypair.random().publicKey();
+    const validStranger = Keypair.random().publicKey();
+
+    const fundedCommitment: readModule.OnChainCommitment = {
+      id: '100',
+      owner: validOwner,
+      asset: 'CASSET12345678901234567890123456789012345678901234567890',
+      amount: 5000000000n,
+      accruedYield: 250000000n,
+      risk: 'Balanced',
+      status: 'Funded',
+      maturity: 1735689600n,
+      penaltyBps: 300,
+      complianceScore: 92,
+      createdAt: 1733097600n,
+      metadata: {},
+    };
+
+    it('owner sees Propose transfer and invalid G-address blocks submit', async () => {
+      const user = userEvent.setup();
+      mockWalletAddress = validOwner;
+      vi.mocked(readModule.getCommitment).mockResolvedValue(fundedCommitment);
+      vi.mocked(readModule.getAttestations).mockResolvedValue([]);
+      vi.mocked(readModule.getDispute).mockResolvedValue(null);
+      vi.mocked(escrowModule.getPendingOwner).mockResolvedValue(null);
+
+      render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Ownership Transfer')).toBeTruthy();
+      });
+
+      const proposeBtn = screen.getByRole('button', { name: /propose transfer/i });
+      expect(proposeBtn).toBeTruthy();
+
+      const input = screen.getByLabelText(/proposed new owner address/i);
+      await user.type(input, 'invalid-G-address');
+      await user.click(proposeBtn);
+
+      expect(screen.getByRole('alert')).toBeTruthy();
+      expect(screen.getByText(/Invalid Stellar address/i)).toBeTruthy();
+      expect(escrowModule.proposeTransfer).not.toHaveBeenCalled();
+    });
+
+    it('proposed recipient sees Accept with expiry countdown', async () => {
+      mockWalletAddress = validRecipient;
+      vi.mocked(readModule.getCommitment).mockResolvedValue(fundedCommitment);
+      vi.mocked(readModule.getAttestations).mockResolvedValue([]);
+      vi.mocked(readModule.getDispute).mockResolvedValue(null);
+
+      const futureExpiry = new Date(Date.now() + 86400 * 5 * 1000);
+      vi.mocked(escrowModule.getPendingOwner).mockResolvedValue({
+        to: validRecipient,
+        expiresAt: futureExpiry,
+        rawExpiresAt: BigInt(Math.floor(futureExpiry.getTime() / 1000)),
+      });
+
+      render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Ownership Transfer')).toBeTruthy();
+      });
+
+      expect(screen.getByRole('button', { name: /accept transfer/i })).toBeTruthy();
+      expect(screen.getByText(/Expires in/i)).toBeTruthy();
+    });
+
+    it('stranger sees no transfer controls', async () => {
+      mockWalletAddress = validStranger;
+      vi.mocked(readModule.getCommitment).mockResolvedValue(fundedCommitment);
+      vi.mocked(readModule.getAttestations).mockResolvedValue([]);
+      vi.mocked(readModule.getDispute).mockResolvedValue(null);
+      vi.mocked(escrowModule.getPendingOwner).mockResolvedValue(null);
+
+      render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Ownership Transfer')).toBeTruthy();
+      });
+
+      expect(screen.queryByRole('button', { name: /propose transfer/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /accept transfer/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /cancel transfer/i })).toBeNull();
+      expect(screen.queryByLabelText(/proposed new owner address/i)).toBeNull();
+    });
+
+    it('expired offer (TransferExpired) hides Accept and shows message', async () => {
+      mockWalletAddress = validRecipient;
+      vi.mocked(readModule.getCommitment).mockResolvedValue(fundedCommitment);
+      vi.mocked(readModule.getAttestations).mockResolvedValue([]);
+      vi.mocked(readModule.getDispute).mockResolvedValue(null);
+
+      const pastExpiry = new Date(Date.now() - 60 * 1000);
+      vi.mocked(escrowModule.getPendingOwner).mockResolvedValue({
+        to: validRecipient,
+        expiresAt: pastExpiry,
+        rawExpiresAt: BigInt(Math.floor(pastExpiry.getTime() / 1000)),
+      });
+
+      render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/TransferExpired/i)).toBeTruthy();
+      });
+
+      expect(screen.queryByRole('button', { name: /accept transfer/i })).toBeNull();
+    });
+
+    it('Cancel calls cancel_ownership_transfer', async () => {
+      const user = userEvent.setup();
+      mockWalletAddress = validOwner;
+      vi.mocked(readModule.getCommitment).mockResolvedValue(fundedCommitment);
+      vi.mocked(readModule.getAttestations).mockResolvedValue([]);
+      vi.mocked(readModule.getDispute).mockResolvedValue(null);
+
+      const futureExpiry = new Date(Date.now() + 86400 * 3 * 1000);
+      vi.mocked(escrowModule.getPendingOwner).mockResolvedValue({
+        to: validRecipient,
+        expiresAt: futureExpiry,
+        rawExpiresAt: BigInt(Math.floor(futureExpiry.getTime() / 1000)),
+      });
+
+      render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /cancel transfer/i })).toBeTruthy();
+      });
+
+      await user.click(screen.getByRole('button', { name: /cancel transfer/i }));
+
+      const confirmBtn = screen.getByRole('button', { name: 'Cancel Transfer' });
+      await user.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(escrowModule.cancelTransfer).toHaveBeenCalledWith({
+          commitmentId: '100',
+          caller: validOwner,
+        });
+      });
+    });
+
+    it('panel hidden for Disputed and Violated commitments', async () => {
+      mockWalletAddress = validOwner;
+      vi.mocked(readModule.getCommitment).mockResolvedValue({
+        ...fundedCommitment,
+        status: 'Disputed',
+      });
+      vi.mocked(readModule.getAttestations).mockResolvedValue([]);
+      vi.mocked(readModule.getDispute).mockResolvedValue(null);
+
+      const { unmount } = render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Commitment #100')).toBeTruthy();
+      });
+      expect(screen.queryByTestId('transfer-panel')).toBeNull();
+      expect(screen.queryByText('Ownership Transfer')).toBeNull();
+
+      unmount();
+
+      vi.mocked(readModule.getCommitment).mockResolvedValue({
+        ...fundedCommitment,
+        status: 'Violated',
+      });
+
+      render(<CommitmentDetailPage params={{ id: '100' }} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Commitment #100')).toBeTruthy();
+      });
+      expect(screen.queryByTestId('transfer-panel')).toBeNull();
+      expect(screen.queryByText('Ownership Transfer')).toBeNull();
     });
   });
 });
