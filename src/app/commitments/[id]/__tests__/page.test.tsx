@@ -6,6 +6,7 @@ import CommitmentDetailPage from '../page';
 import { Keypair } from '@stellar/stellar-sdk';
 import * as readModule from '@/lib/soroban/read';
 import * as escrowModule from '@/lib/soroban/escrow';
+import * as eventsModule from '@/lib/soroban/events';
 import {
   formatRelativeTime,
   formatAbsoluteTime,
@@ -46,10 +47,27 @@ vi.mock('@/lib/soroban/read', async () => {
   };
 });
 
+vi.mock('@/lib/soroban/events', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/soroban/events')>(
+    '@/lib/soroban/events'
+  );
+  return {
+    ...actual,
+    fetchEscrowEvents: vi.fn(),
+  };
+});
+
 describe('CommitmentDetailPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWalletAddress = null;
+    vi.mocked(eventsModule.fetchEscrowEvents).mockResolvedValue({
+      events: [],
+      latestLedger: 0,
+      rawCount: 0,
+      hasMore: false,
+      olderEventsAvailable: false,
+    });
     vi.mocked(escrowModule.getPendingOwner).mockResolvedValue(null);
     vi.mocked(escrowModule.proposeTransfer).mockResolvedValue({ transactionHash: 'hash-prop' });
     vi.mocked(escrowModule.acceptTransfer).mockResolvedValue({ transactionHash: 'hash-acc' });
@@ -185,6 +203,11 @@ describe('CommitmentDetailPage Component', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Commitment #0')).toBeTruthy();
+      });
+      await waitFor(() => {
+        expect(eventsModule.fetchEscrowEvents).toHaveBeenCalledWith(
+          expect.objectContaining({ filters: { commitmentId: '0' } })
+        );
       });
 
       expect(screen.getByText('5,000,000,000')).toBeTruthy();
