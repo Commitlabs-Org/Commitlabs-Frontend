@@ -12,6 +12,16 @@ export interface ProtocolStatus {
   error?: string;
 }
 
+/** Mirrors the escrow contract's `YieldPoolStatus` struct (contracts/escrow/src/lib.rs). */
+export interface YieldPoolStatus {
+  /** Total tokens held by the yield pool. */
+  balance: bigint;
+  /** Yield already promised to funded commitments. */
+  reserved: bigint;
+  /** Portion available to promise to new commitments or withdraw. */
+  available: bigint;
+}
+
 export type EscrowAction =
   | 'create_commitment'
   | 'create_commitment_default'

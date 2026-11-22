@@ -8,6 +8,7 @@ export function Footer() {
         <span>CommitLabs &middot; Liquidity as a commitment on Stellar Soroban</span>
         <span className="footer-links">
           <Link href="/docs">Docs</Link>
+          <Link href="/protocol">Protocol health</Link>
           <a href={LIVE_URL} target="_blank" rel="noreferrer">
             Live demo
           </a>
