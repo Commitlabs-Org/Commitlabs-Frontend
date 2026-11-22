@@ -4,6 +4,7 @@ import type { DisputeRecord } from '@/lib/soroban/dispute';
 
 import { DISPLAY_APY, type RiskProfile, projectYieldStroops } from './yield';
 import { FALLBACK_PROTOCOL_PARAMS } from './protocol';
+import type { OnChainCommitment } from './soroban/read';
 
 export type CommitmentType = RiskProfile;
 export type CommitmentStatus = 'active' | 'matured' | 'settled' | 'exited' | 'disputed' | 'violated';
@@ -102,6 +103,54 @@ const STATUS_IDS = new Set<CommitmentStatus>(['active', 'matured', 'settled', 'e
 
 export function specFor(type: CommitmentType): TypeSpec {
   return TYPES.find((t) => t.id === type) ?? TYPES[1]!;
+}
+
+/** Maps an escrow record to the dashboard model without converting token amounts to numbers. */
+export function fromOnChain(c: OnChainCommitment): Commitment {
+  const status: CommitmentStatus = (() => {
+    switch (c.status) {
+      case 'Created':
+      case 'Funded':
+        return 'active';
+      case 'Released':
+        return 'settled';
+      case 'Refunded':
+      case 'Cancelled':
+        return 'exited';
+      case 'Disputed':
+        return 'disputed';
+      case 'Violated':
+        return 'violated';
+      default:
+        throw new Error(`Unsupported on-chain commitment status: ${c.status}`);
+    }
+  })();
+  const risk = c.risk.toLowerCase();
+  if (risk !== 'safe' && risk !== 'balanced' && risk !== 'aggressive') {
+    throw new Error(`Unsupported on-chain commitment risk profile: ${c.risk}`);
+  }
+  const type: CommitmentType = risk;
+  const spec = specFor(type);
+  if (c.amount < 0n) throw new Error('On-chain commitment amount cannot be negative.');
+
+  const durationSeconds = c.maturity - c.createdAt;
+  const durationDays = Number(durationSeconds / 86_400n);
+
+  return {
+    id: BigInt(c.id).toString(),
+    type,
+    asset: c.asset,
+    amount: c.amount.toString(),
+    durationDays,
+    maxLoss: spec.maxLoss,
+    penalty: c.penaltyBps / 100,
+    apy: DISPLAY_APY[type],
+    createdAt: Number(c.createdAt) * 1000,
+    status,
+    owner: c.owner,
+    txHash: null,
+    accrued_yield: c.accruedYield.toString(),
+  };
 }
 
 export function maturityOf(c: Commitment): number {
