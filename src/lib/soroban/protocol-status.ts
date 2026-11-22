@@ -1,5 +1,5 @@
 import { rpc, scValToBigInt, scValToNative, xdr } from '@stellar/stellar-sdk';
-import { config } from '../config';
+import { getActiveConfig } from '../config';
 import { simulateRead } from './tx';
 
 import type { ProtocolStatus } from './protocol-policy';
@@ -76,7 +76,7 @@ export interface GetProtocolStatusOptions {
 export async function getProtocolStatus(
   options: GetProtocolStatusOptions = {},
 ): Promise<ProtocolStatus> {
-  const contractId = options.contractId || config.escrowContractId;
+  const contractId = options.contractId || getActiveConfig().escrowContractId;
   if (!contractId) {
     return {
       status: 'unavailable',

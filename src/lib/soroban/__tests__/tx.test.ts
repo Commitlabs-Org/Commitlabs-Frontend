@@ -17,14 +17,15 @@ const mockServer = {
   getLatestLedger: mockGetLatestLedger,
 };
 
-vi.mock('@/lib/config', () => ({
-  config: {
+vi.mock('@/lib/config', () => {
+  const config = {
     escrowContractId: 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHP',
     passphrase: 'Test SDF Network ; September 2015',
     sorobanRpcUrl: 'https://rpc-futurenet.stellar.org',
     networkDetails: { label: 'Futurenet' },
-  },
-}));
+  };
+  return { config, getActiveConfig: () => config };
+});
 
 vi.mock('@stellar/freighter-api', () => ({
   isConnected: vi.fn(),

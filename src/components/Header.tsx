@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWallet } from './WalletProvider';
+import { useNetwork } from './NetworkProvider';
 import { shortAddress } from '@/lib/wallet';
+import { NETWORKS, NETWORK_IDS, type NetworkId } from '@/lib/network';
 
 const LINKS = [
   { href: '/create', label: 'Create' },
@@ -15,6 +17,7 @@ const LINKS = [
 export function Header() {
   const path = usePathname();
   const { status, address, connect, disconnect } = useWallet();
+  const { network, setNetwork } = useNetwork();
   return (
     <header className="header">
       <div className="container header-inner">
@@ -34,6 +37,21 @@ export function Header() {
             </Link>
           ))}
         </nav>
+        <label className="sr-only" htmlFor="network-select">
+          Stellar network
+        </label>
+        <select
+          id="network-select"
+          className="network-select"
+          value={network}
+          onChange={(e) => setNetwork(e.target.value as NetworkId)}
+        >
+          {NETWORK_IDS.map((id) => (
+            <option key={id} value={id}>
+              {NETWORKS[id].label}
+            </option>
+          ))}
+        </select>
         {status === 'connected' && address ? (
           <button className="btn btn-ghost" onClick={disconnect} title="Disconnect wallet">
             <span className="dot" /> {shortAddress(address)}

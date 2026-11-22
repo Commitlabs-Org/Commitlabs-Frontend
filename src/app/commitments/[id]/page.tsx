@@ -15,12 +15,8 @@ import {
   OnChainAttestation,
   OnChainDispute,
 } from '@/lib/soroban/read';
-import {
-  config,
-  ESCROW_CONTRACT_ID,
-  explorerAccount,
-  explorerContractUrl,
-} from '@/lib/config';
+import { explorerAccount, explorerContractUrl } from '@/lib/config';
+import { useNetwork } from '@/components/NetworkProvider';
 import { Skeleton } from '@/components/Skeleton';
 
 interface PageProps {
@@ -30,6 +26,7 @@ interface PageProps {
 }
 
 export default function CommitmentDetailPage({ params }: PageProps) {
+  const { config } = useNetwork();
   const rawId = params?.id ?? '';
   const validation = validateCommitmentId(rawId);
 
@@ -230,9 +227,9 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           <Link href="/dashboard" className="btn btn-ghost">
             &larr; Dashboard
           </Link>
-          {ESCROW_CONTRACT_ID && (
+          {config.isContractConfigured && (
             <a
-              href={explorerContractUrl(ESCROW_CONTRACT_ID)}
+              href={explorerContractUrl(config.escrowContractId)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-ghost"
@@ -596,15 +593,15 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           <li>
             <span>Escrow Contract</span>
             <code>
-              {ESCROW_CONTRACT_ID ? (
+              {config.isContractConfigured ? (
                 <a
-                  href={explorerContractUrl(ESCROW_CONTRACT_ID)}
+                  href={explorerContractUrl(config.escrowContractId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link"
                   style={{ wordBreak: 'break-all' }}
                 >
-                  {ESCROW_CONTRACT_ID}
+                  {config.escrowContractId}
                 </a>
               ) : (
                 'Unconfigured'

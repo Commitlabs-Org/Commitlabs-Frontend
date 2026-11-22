@@ -7,7 +7,13 @@ import * as statusModule from '@/lib/soroban/protocol-status';
 vi.mock('@/lib/config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/config')>();
   const escrowContractId = 'CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4';
-  return { ...actual, ESCROW_CONTRACT_ID: escrowContractId, config: { ...actual.config, escrowContractId } };
+  const config = { ...actual.config, escrowContractId };
+  return {
+    ...actual,
+    ESCROW_CONTRACT_ID: escrowContractId,
+    config,
+    getActiveConfig: () => config,
+  };
 });
 
 

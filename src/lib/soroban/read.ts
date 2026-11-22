@@ -7,7 +7,7 @@ import {
   TransactionBuilder,
   xdr,
 } from '@stellar/stellar-sdk';
-import { config, ESCROW_CONTRACT_ID, SOROBAN_RPC_URL } from '../config';
+import { getActiveConfig } from '../config';
 import { EscrowErrorCode, toTxError, TxError } from './errors';
 
 export const MAX_U64 = 18446744073709551615n;
@@ -220,17 +220,18 @@ function resolveServerAndContract(
   optionsOrServer?: ReadOptions | rpc.Server | { simulateTransaction: (tx: any) => Promise<any> },
   explicitContractId?: string,
 ): { server: rpc.Server | { simulateTransaction: (tx: any) => Promise<any> }; contractId: string } {
+  const config = getActiveConfig();
   let server: rpc.Server | { simulateTransaction: (tx: any) => Promise<any> };
-  let contractId = explicitContractId || ESCROW_CONTRACT_ID;
+  let contractId = explicitContractId || config.escrowContractId;
 
   if (optionsOrServer && 'simulateTransaction' in optionsOrServer) {
     server = optionsOrServer;
   } else if (optionsOrServer && typeof optionsOrServer === 'object') {
     const opts = optionsOrServer as ReadOptions;
-    server = opts.server || new rpc.Server(SOROBAN_RPC_URL);
+    server = opts.server || new rpc.Server(config.sorobanRpcUrl);
     if (opts.contractId) contractId = opts.contractId;
   } else {
-    server = new rpc.Server(SOROBAN_RPC_URL);
+    server = new rpc.Server(config.sorobanRpcUrl);
   }
 
   if (!contractId && !explicitContractId) {
@@ -262,7 +263,7 @@ export async function simulateEscrowRead(
   const contract = new Contract(contractId);
   const tx = new TransactionBuilder(dummyAccount, {
     fee: '100',
-    networkPassphrase: config.passphrase,
+    networkPassphrase: getActiveConfig().passphrase,
   })
     .addOperation(contract.call(functionName, ...args))
     .setTimeout(30)
