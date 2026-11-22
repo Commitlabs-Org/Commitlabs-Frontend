@@ -66,6 +66,12 @@ export interface Commitment {
   demo?: boolean;
   /** Present when the commitment is frozen and its dispute record is known. */
   dispute?: DisputeRecord;
+  /** Exact amount returned by the contract on early exit (base units, digit string). */
+  exitAmount?: string;
+  /** Exact penalty deducted by the contract on early exit (base units, digit string). */
+  exitPenaltyAmount?: string;
+  /** Transaction hash of the confirmed early exit transaction. */
+  exitTxHash?: string;
 }
 
 /** Result of reading persisted commitments; never throws. */
@@ -190,6 +196,11 @@ export function validateCommitment(value: unknown): Commitment | null {
     return null;
   }
 
+  const exitAmount = o.exitAmount !== undefined ? normalizeStoredAmount(o.exitAmount) : undefined;
+  const exitPenaltyAmount =
+    o.exitPenaltyAmount !== undefined ? normalizeStoredAmount(o.exitPenaltyAmount) : undefined;
+  const exitTxHash = isBoundedString(o.exitTxHash, MAX_TX_HASH) ? o.exitTxHash : undefined;
+
   return {
     id: o.id,
     type: o.type as CommitmentType,
@@ -205,6 +216,9 @@ export function validateCommitment(value: unknown): Commitment | null {
     txHash: typeof o.txHash === 'string' ? o.txHash : null,
     ...(o.demo === true ? { demo: true } : {}),
     ...(o.dispute !== undefined ? { dispute: o.dispute as DisputeRecord } : {}),
+    ...(exitAmount ? { exitAmount } : {}),
+    ...(exitPenaltyAmount ? { exitPenaltyAmount } : {}),
+    ...(exitTxHash ? { exitTxHash } : {}),
   };
 }
 

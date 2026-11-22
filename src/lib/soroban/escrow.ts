@@ -50,6 +50,18 @@ export interface OpenDisputeResult {
   transactionHash: string;
 }
 
+export interface EarlyExitParams {
+  commitmentId: string;
+  caller: string;
+}
+
+export interface EarlyExitResult {
+  transactionHash: string;
+  exitAmount: bigint;
+  penaltyAmount: bigint;
+  finalStatus: string;
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -189,4 +201,101 @@ export async function getDispute(commitmentId: string, source?: string): Promise
   if (result.error || result.result == null) return null;
 
   return decodeDisputeRecord(scValToNative(result.result as unknown as xdr.ScVal));
+}
+
+function toBigIntAmount(value: unknown): bigint | null {
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value)) {
+    return BigInt(value);
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
+    return BigInt(value.trim());
+  }
+  return null;
+}
+
+function normalizeFinalStatus(value: unknown): string {
+  if (Array.isArray(value)) {
+    return String(value[0] ?? 'exited');
+  }
+  if (value === undefined || value === null) return 'exited';
+  return String(value);
+}
+
+/**
+ * Decodes an `EarlyExitResult` returned by `early_exit_commitment`:
+ * `{ exit_amount, penalty_amount, final_status }`.
+ */
+export function decodeEarlyExitResult(
+  value: unknown,
+): Omit<EarlyExitResult, 'transactionHash'> | null {
+  if (Array.isArray(value)) {
+    if (value.length < 2) return null;
+    const exitAmount = toBigIntAmount(value[0]);
+    const penaltyAmount = toBigIntAmount(value[1]);
+    if (exitAmount === null || penaltyAmount === null) return null;
+    return {
+      exitAmount,
+      penaltyAmount,
+      finalStatus: normalizeFinalStatus(value[2]),
+    };
+  }
+
+  if (!isPlainObject(value)) return null;
+
+  const exitAmount = toBigIntAmount(pick(value, 'exit_amount', 'exitAmount'));
+  const penaltyAmount = toBigIntAmount(pick(value, 'penalty_amount', 'penaltyAmount'));
+  if (exitAmount === null || penaltyAmount === null) return null;
+
+  return {
+    exitAmount,
+    penaltyAmount,
+    finalStatus: normalizeFinalStatus(pick(value, 'final_status', 'finalStatus')),
+  };
+}
+
+/**
+ * Exit an active on-chain commitment early via `early_exit_commitment(commitment_id, caller)`.
+ * Returns the exact `exitAmount`, `penaltyAmount`, and `finalStatus` decoded from the
+ * contract's `EarlyExitResult`.
+ */
+export async function earlyExitCommitment({
+  commitmentId,
+  caller,
+}: EarlyExitParams): Promise<EarlyExitResult> {
+  const id = toCommitmentId(commitmentId);
+  if (id === null) {
+    throw new TxError('failed', 'This commitment is not on-chain and cannot be exited on-chain.', {
+      hint: 'Only on-chain commitments with a numeric id can be exited via the contract.',
+    });
+  }
+
+  const res = await invokeContract({
+    method: 'early_exit_commitment',
+    args: [nativeToScVal(BigInt(id)), nativeToScVal(Address.fromString(caller))],
+    source: caller,
+    signer: caller,
+  });
+
+  if (!res.returnValue) {
+    throw new TxError(
+      'failed',
+      'Early exit transaction succeeded, but the contract did not return an EarlyExitResult.',
+      { transactionHash: res.transactionHash },
+    );
+  }
+
+  const decoded = decodeEarlyExitResult(scValToNative(res.returnValue));
+  if (!decoded) {
+    throw new TxError(
+      'failed',
+      'Early exit transaction succeeded, but the contract result could not be decoded.',
+      { transactionHash: res.transactionHash },
+    );
+  }
+
+  return {
+    transactionHash: res.transactionHash,
+    ...decoded,
+  };
 }

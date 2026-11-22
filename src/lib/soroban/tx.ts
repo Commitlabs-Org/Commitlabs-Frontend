@@ -35,6 +35,7 @@ export interface InvokeContractParams {
 
 export interface InvokeResult {
   transactionHash: string;
+  returnValue?: xdr.ScVal;
 }
 
 export interface PreparedInvocation {
@@ -225,7 +226,7 @@ export async function submitPrepared(
     });
   }
 
-  return { transactionHash: sent.hash };
+  return { transactionHash: sent.hash, returnValue: result.returnValue };
 }
 
 export async function invokeContract(params: InvokeContractParams): Promise<InvokeResult> {
