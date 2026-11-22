@@ -4,7 +4,7 @@
   "private": true,
   "description": "CommitLabs - liquidity as a commitment on Stellar Soroban",
   "engines": {
-    "node": ">=20"
+    "node": ">=20 <21"
   },
   "scripts": {
     "dev": "next dev",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@stellar/freighter-api": "^1.7.1",
-    "@stellar/stellar-sdk": "^17.2.1",
+    "@stellar/stellar-sdk": "^15.1.0",
     "escrow-client": "file:packages/escrow-client",
     "next": "14.2.35",
     "react": "^18.3.1",

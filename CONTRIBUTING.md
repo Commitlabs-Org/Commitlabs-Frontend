@@ -16,12 +16,12 @@ This repository ships an [`.editorconfig`](./.editorconfig) at the root to keep 
 
 ## Toolchain
 
-This project pins its toolchain so contributors and CI run a consistent environment:
+This project specifies its toolchain so contributors and CI run a consistent environment:
 
 - **Node.js**: version `20` (see [`.nvmrc`](./.nvmrc); run `nvm use` to switch). The `engines` field in `package.json` enforces `>=20 <21`.
-- **Package manager**: `pnpm@9` (declared via `packageManager` and `engines.pnpm`).
+- **Package manager**: npm, using the committed `package-lock.json`.
 
-`engine-strict=true` is set in `.npmrc`, so installs fail fast on an unsupported Node or pnpm version rather than producing subtle errors later.
+`engine-strict=true` is set in `.npmrc`, so installs fail fast on an unsupported Node version rather than producing subtle errors later.
 
 ## Pull Request Flow
 
@@ -35,7 +35,7 @@ This project pins its toolchain so contributors and CI run a consistent environm
 
 - All new features and bug fixes must be accompanied by appropriate tests (Vitest).
 - We require a **minimum of 95% test coverage** on any new or changed logic.
-- Before opening your PR, run tests and check coverage locally using `npm run test:coverage` (or `pnpm test:coverage`).
+- Before opening your PR, run tests and check coverage locally using `npm run test:coverage`.
 - The build, tests, and linters must pass in CI before the PR can be merged.
 
 ## Frontend Performance Budgets
