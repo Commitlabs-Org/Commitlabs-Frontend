@@ -16,6 +16,7 @@
     "circular": "madge --circular --extensions ts,tsx src",
     "size": "node scripts/check-bundle-budget.mjs",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:size": "node --test scripts/check-bundle-budget.test.mjs",
     "bindings": "bash scripts/gen-escrow-bindings.sh"
@@ -38,6 +39,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.2.7",
     "axe-core": "^4.10.2",
     "cross-env": "^10.1.0",
     "jsdom": "^26.1.0",
