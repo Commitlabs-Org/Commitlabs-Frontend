@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nativeToScVal } from '@stellar/stellar-sdk';
-import { decodeEscrowEvent, fetchEscrowEvents } from '../events';
+import { decodeEscrowEvent, fetchEscrowEvents, type RawEvent } from '../events';
 
 describe('Soroban Escrow Events Decoder', () => {
   it('decodes Shape A (3 topics: name, id, owner with amount value)', () => {
-    const raw = {
+    const raw: RawEvent = {
       id: '0000000001',
       ledger: 100,
       ledgerClosedAt: '2026-03-01T12:00:00Z',
@@ -17,7 +17,7 @@ describe('Soroban Escrow Events Decoder', () => {
       txHash: 'abcdef0123456789',
     };
 
-    const decoded = decodeEscrowEvent(raw as any);
+    const decoded = decodeEscrowEvent(raw);
     expect(decoded.id).toBe('0000000001');
     expect(decoded.kind).toBe('create_commitment');
     expect(decoded.commitmentId).toBe('123');
@@ -28,7 +28,7 @@ describe('Soroban Escrow Events Decoder', () => {
   });
 
   it('decodes Shape B (2 topics: name, owner with [id, amount] tuple value)', () => {
-    const raw = {
+    const raw: RawEvent = {
       id: '0000000002',
       ledger: 105,
       ledgerClosedAt: '2026-03-01T12:05:00Z',
@@ -40,7 +40,7 @@ describe('Soroban Escrow Events Decoder', () => {
       txHash: '9876543210fedcba',
     };
 
-    const decoded = decodeEscrowEvent(raw as any);
+    const decoded = decodeEscrowEvent(raw);
     expect(decoded.id).toBe('0000000002');
     expect(decoded.kind).toBe('release');
     expect(decoded.commitmentId).toBe('456');
@@ -50,30 +50,58 @@ describe('Soroban Escrow Events Decoder', () => {
   });
 
   it('handles unknown event types and invalid topics gracefully without throwing', () => {
-    const rawUnknown = {
+    const rawUnknown: RawEvent = {
       id: '0000000003',
       ledger: 110,
       topic: [],
       value: nativeToScVal(0),
     };
 
-    const decoded = decodeEscrowEvent(rawUnknown as any);
+    const decoded = decodeEscrowEvent(rawUnknown);
     expect(decoded.id).toBe('0000000003');
     expect(decoded.kind).toBe('unknown');
     expect(decoded.ledger).toBe(110);
   });
 
   it('handles malformed ScVal topics safely', () => {
-    const rawMalformed = {
+    const rawMalformed: RawEvent = {
       id: '0000000004',
       ledger: 115,
       topic: ['invalid_not_an_xdr_string'],
       value: 'invalid_value',
     };
 
-    const decoded = decodeEscrowEvent(rawMalformed as any);
+    const decoded = decodeEscrowEvent(rawMalformed);
     expect(decoded.kind).toBe('unknown');
     expect(decoded.ledger).toBe(115);
+  });
+
+  it('decodes an object-valued payload', () => {
+    const raw: RawEvent = {
+      id: '0000000005',
+      ledger: 120,
+      topic: [nativeToScVal('release')],
+      value: nativeToScVal({ owner: 'GOBJECTOWNER', id: 8, amount: 25 }),
+    };
+
+    expect(decodeEscrowEvent(raw)).toMatchObject({
+      kind: 'release',
+      owner: 'GOBJECTOWNER',
+      commitmentId: '8',
+      amount: '25',
+    });
+  });
+
+  it('handles non-object decoded values without throwing', () => {
+    const raw: RawEvent = {
+      id: '0000000006',
+      ledger: 125,
+      topic: [nativeToScVal('unknown_event')],
+      value: nativeToScVal('plain text'),
+    };
+
+    expect(() => decodeEscrowEvent(raw)).not.toThrow();
+    expect(decodeEscrowEvent(raw).kind).toBe('unknown_event');
   });
 });
 

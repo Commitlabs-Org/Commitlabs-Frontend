@@ -363,9 +363,7 @@ export default function DashboardPage() {
               st === 'matured' ||
               (st === 'active' && maturityOf(c) - Date.now() <= 7 * 86_400_000);
             const isOnChain = !c.demo;
-            const accruedYield = BigInt(
-              (c as any).accrued_yield ?? (c as any).accruedYield ?? projectedYield(c),
-            );
+            const accruedYield = BigInt(c.accrued_yield ?? c.accruedYield ?? projectedYield(c));
             const showCoverageWarning =
               isOnChain &&
               isNearOrMatured &&
