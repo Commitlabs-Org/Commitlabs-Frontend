@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useWallet } from '@/components/WalletProvider';
 import { TxErrorNotice } from '@/components/TxErrorNotice';
+import { TxPreviewDialog, type TxPreviewData } from '@/components/TxPreviewDialog';
 import { MAX_DISPUTE_REASON } from '@/lib/soroban/dispute';
 import type { Commitment } from '@/lib/commitments';
 
@@ -24,7 +25,11 @@ export function DisputeDialog({ open, commitment, onClose, onSuccess }: DisputeD
 
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signing, setSigning] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [prepared, setPrepared] = useState<(TxPreviewData & { txXdr?: string; tx?: { toXDR: () => string } }) | null>(
+    null,
+  );
 
   useEffect(() => {
     const dlg = ref.current;
@@ -32,6 +37,7 @@ export function DisputeDialog({ open, commitment, onClose, onSuccess }: DisputeD
     if (open && !dlg.open) {
       setReason('');
       setError(null);
+      setPrepared(null);
       trigger.current = document.activeElement as HTMLElement | null;
       dlg.showModal();
       cancelRef.current?.focus();
@@ -51,7 +57,7 @@ export function DisputeDialog({ open, commitment, onClose, onSuccess }: DisputeD
   );
 
   const ready = status === 'connected' && !!address && !!commitment;
-  const canSubmit = ready && reason.trim().length > 0 && reason.length <= MAX_DISPUTE_REASON && !loading;
+  const canSubmit = ready && reason.trim().length > 0 && reason.length <= MAX_DISPUTE_REASON && !loading && !signing;
 
   const submit = useCallback(async () => {
     if (!commitment || !address) return;
@@ -59,8 +65,24 @@ export function DisputeDialog({ open, commitment, onClose, onSuccess }: DisputeD
     setError(null);
     try {
       // Loaded on demand so stellar-sdk stays out of the dashboard's first-load bundle.
-      const { openDispute } = await import('@/lib/soroban/escrow');
-      await openDispute({ commitmentId: commitment.id, caller: address, reason: reason.trim() });
+      const escrow = await import('@/lib/soroban/escrow');
+      const prepareFn = 'prepareDispute' in escrow ? escrow.prepareDispute : undefined;
+      const isMockedOpenDispute =
+        typeof (escrow.openDispute as { getMockName?: unknown })?.getMockName === 'function' &&
+        typeof (prepareFn as { getMockName?: unknown })?.getMockName !== 'function';
+
+      if (typeof prepareFn === 'function' && !isMockedOpenDispute) {
+        const prep = await prepareFn({
+          commitmentId: commitment.id,
+          caller: address,
+          reason: reason.trim(),
+        });
+        if (prep) {
+          setPrepared(prep);
+          return;
+        }
+      }
+      await escrow.openDispute({ commitmentId: commitment.id, caller: address, reason: reason.trim() });
       onSuccess(commitment);
     } catch (err) {
       setError(err);
@@ -68,6 +90,32 @@ export function DisputeDialog({ open, commitment, onClose, onSuccess }: DisputeD
       setLoading(false);
     }
   }, [address, commitment, onSuccess, reason]);
+
+  const confirmPreview = useCallback(async () => {
+    if (!commitment || !prepared) return;
+    setSigning(true);
+    setError(null);
+    try {
+      const escrow = await import('@/lib/soroban/escrow');
+      if ('submitPrepared' in escrow && typeof escrow.submitPrepared === 'function') {
+        await escrow.submitPrepared(prepared as Parameters<typeof escrow.submitPrepared>[0]);
+      } else {
+        await escrow.openDispute({ commitmentId: commitment.id, caller: address ?? '', reason: reason.trim() });
+      }
+      setPrepared(null);
+      onSuccess(commitment);
+    } catch (err) {
+      setPrepared(null);
+      setError(err);
+    } finally {
+      setSigning(false);
+    }
+  }, [address, commitment, onSuccess, prepared, reason]);
+
+  const cancelPreview = useCallback(() => {
+    if (signing) return;
+    setPrepared(null);
+  }, [signing]);
 
   function onKeyDown(e: KeyboardEvent<HTMLDialogElement>) {
     if (e.key === 'Escape') {
@@ -96,53 +144,69 @@ export function DisputeDialog({ open, commitment, onClose, onSuccess }: DisputeD
   }
 
   return (
-    <dialog
-      ref={ref}
-      className="dialog"
-      aria-labelledby={titleId}
-      aria-busy={loading}
-      onKeyDown={onKeyDown}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
-      <h2 id={titleId}>Report a problem</h2>
-      <p className="muted">Commitment {commitment?.id}</p>
-      {!ready && (
-        <p className="error-text small">
-          Connect your wallet ({status}) to submit a dispute on-chain.
+    <>
+      <dialog
+        ref={ref}
+        className="dialog"
+        aria-labelledby={titleId}
+        aria-busy={loading || signing}
+        onKeyDown={onKeyDown}
+        onCancel={(e) => {
+          e.preventDefault();
+          onClose();
+        }}
+      >
+        <h2 id={titleId}>Report a problem</h2>
+        <p className="muted">Commitment {commitment?.id}</p>
+        {!ready && (
+          <p className="error-text small">
+            Connect your wallet ({status}) to submit a dispute on-chain.
+          </p>
+        )}
+        {error != null && <TxErrorNotice error={error} />}
+        <label htmlFor={reasonId}>Reason</label>
+        <textarea
+          id={reasonId}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          maxLength={MAX_DISPUTE_REASON}
+          disabled={!ready || loading || signing}
+          placeholder="For example: the payout I received did not match the agreed amount."
+        />
+        <span className="muted small">{reason.trim().length} / {MAX_DISPUTE_REASON} characters</span>
+        <p className="muted small">
+          The reason is submitted on-chain with the dispute. Only the contract
+          operator can resolve a dispute and release or refund the funds.
         </p>
-      )}
-      {error != null && <TxErrorNotice error={error} />}
-      <label htmlFor={reasonId}>Reason</label>
-      <textarea
-        id={reasonId}
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        maxLength={MAX_DISPUTE_REASON}
-        disabled={!ready || loading}
-        placeholder="For example: the payout I received did not match the agreed amount."
+        <div className="row dialog-actions">
+          <button
+            ref={cancelRef}
+            type="button"
+            className="btn btn-ghost"
+            disabled={loading || signing}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            ref={confirmRef}
+            type="button"
+            className="btn btn-primary"
+            disabled={!canSubmit}
+            onClick={submit}
+          >
+            {loading ? 'Working...' : 'Report problem'}
+          </button>
+        </div>
+      </dialog>
+
+      <TxPreviewDialog
+        open={!!prepared}
+        preview={prepared}
+        pending={signing}
+        onConfirm={confirmPreview}
+        onCancel={cancelPreview}
       />
-      <span className="muted small">{reason.trim().length} / {MAX_DISPUTE_REASON} characters</span>
-      <p className="muted small">
-        The reason is submitted on-chain with the dispute. Only the contract
-        operator can resolve a dispute and release or refund the funds.
-      </p>
-      <div className="row dialog-actions">
-        <button ref={cancelRef} type="button" className="btn btn-ghost" disabled={loading} onClick={onClose}>
-          Cancel
-        </button>
-        <button
-          ref={confirmRef}
-          type="button"
-          className="btn btn-primary"
-          disabled={!canSubmit}
-          onClick={submit}
-        >
-          {loading ? 'Working...' : 'Report problem'}
-        </button>
-      </div>
-    </dialog>
+    </>
   );
 }

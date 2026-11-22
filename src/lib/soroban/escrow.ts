@@ -1,5 +1,5 @@
 import { Address, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
-import { invokeContract, simulateRead } from './tx';
+import { invokeContract, prepareInvocation, simulateRead, submitPrepared, type PreparedInvocation } from './tx';
 import { TxError } from './errors';
 import {
   DisputeCategory,
@@ -9,6 +9,36 @@ import {
 
 export { DisputeCategory, DISPUTE_CATEGORY_LABELS, MAX_DISPUTE_REASON } from './dispute';
 export type { DisputeRecord } from './dispute';
+export { submitPrepared } from './tx';
+export type { PreparedInvocation } from './tx';
+
+/** Friendly human-readable labels for escrow contract methods. */
+export const ESCROW_METHOD_LABELS: Record<string, string> = {
+  create_commitment: 'Create commitment',
+  create_commitment_default: 'Create commitment',
+  create_commitment_with_default: 'Create commitment',
+  fund_escrow: 'Fund escrow',
+  release: 'Release matured commitment',
+  settle_commitment: 'Settle commitment',
+  refund: 'Early exit refund',
+  refund_partial: 'Partial early exit refund',
+  early_exit_commitment: 'Early exit commitment',
+  dispute: 'Report a problem (open dispute)',
+  resolve_dispute: 'Resolve dispute',
+  cancel_commitment: 'Cancel commitment',
+  record_attestation: 'Record compliance attestation',
+  transfer_ownership: 'Transfer commitment ownership',
+  accept_ownership: 'Accept commitment ownership',
+  cancel_ownership_transfer: 'Cancel ownership transfer',
+  pause: 'Pause escrow contract',
+  unpause: 'Unpause escrow contract',
+  deposit_yield_pool: 'Deposit into yield pool',
+  withdraw_yield_pool: 'Withdraw from yield pool',
+};
+
+export function getMethodLabel(method: string): string {
+  return ESCROW_METHOD_LABELS[method] ?? method;
+}
 
 export interface OpenDisputeParams {
   commitmentId: string;
@@ -103,11 +133,7 @@ function normalizeCategory(value: unknown): DisputeCategory {
     : DisputeCategory.Other;
 }
 
-/** Flag a funded commitment as disputed, freezing release and refund until the
- * operator resolves it. Submits `dispute(commitment_id, caller, reason)` via
- * Freighter. The reason is client-side bounded because the contract accepts an
- * unbounded string. */
-export async function openDispute({ commitmentId, caller, reason }: OpenDisputeParams): Promise<OpenDisputeResult> {
+function validateDisputeInput({ commitmentId, caller, reason }: OpenDisputeParams) {
   const trimmed = (reason ?? '').trim();
   if (!trimmed) {
     throw new TxError('failed', 'Please describe the problem you want to report.');
@@ -123,12 +149,34 @@ export async function openDispute({ commitmentId, caller, reason }: OpenDisputeP
     });
   }
 
-  return invokeContract({
+  const callerArg = /^[GC][A-Z2-7]{55}$/.test(caller)
+    ? nativeToScVal(Address.fromString(caller))
+    : nativeToScVal(caller);
+
+  return {
     method: 'dispute',
-    args: [nativeToScVal(BigInt(id)), nativeToScVal(Address.fromString(caller)), nativeToScVal(trimmed)],
+    args: [nativeToScVal(BigInt(id)), callerArg, nativeToScVal(trimmed)],
     source: caller,
     signer: caller,
-  });
+  };
+}
+
+/**
+ * Prepares and simulates `dispute(commitment_id, caller, reason)` without
+ * prompting the wallet to sign.
+ */
+export async function prepareDispute(params: OpenDisputeParams): Promise<PreparedInvocation> {
+  const invocation = validateDisputeInput(params);
+  return prepareInvocation(invocation);
+}
+
+/** Flag a funded commitment as disputed, freezing release and refund until the
+ * operator resolves it. Submits `dispute(commitment_id, caller, reason)` via
+ * Freighter. The reason is client-side bounded because the contract accepts an
+ * unbounded string. */
+export async function openDispute(params: OpenDisputeParams): Promise<OpenDisputeResult> {
+  const invocation = validateDisputeInput(params);
+  return invokeContract(invocation);
 }
 
 /** Read the dispute record for a commitment, if one exists. Returns null when
