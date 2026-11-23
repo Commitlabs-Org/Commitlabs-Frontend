@@ -35,7 +35,7 @@ This project pins its toolchain so contributors and CI run a consistent environm
 
 - All new features and bug fixes must be accompanied by appropriate tests (Vitest).
 - We require a **minimum of 95% test coverage** on any new or changed logic.
-- Before opening your PR, run tests and check coverage locally using `npm run test:coverage` (or `pnpm test:coverage`).
+- Before opening your PR, run tests and check coverage locally using `npm run test:coverage` (or `pnpm test:coverage`), and run build/script checks with `npm run test:scripts` and `npm run test:size`.
 - The build, tests, and linters must pass in CI before the PR can be merged.
 
 ## Frontend Performance Budgets
