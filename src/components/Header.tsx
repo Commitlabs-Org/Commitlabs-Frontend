@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWallet } from './WalletProvider';
+import { shortAddress } from '@/lib/format';
 import { useNetwork } from './NetworkProvider';
-import { shortAddress } from '@/lib/wallet';
 import { NETWORKS, NETWORK_IDS, type NetworkId } from '@/lib/network';
 
 const LINKS = [

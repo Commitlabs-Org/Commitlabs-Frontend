@@ -6,6 +6,7 @@ import {
   ANNUAL_YIELD_BPS,
   DISPLAY_APY,
   MAX_AMOUNT_STROOPS,
+  coverageForecast,
 } from './yield';
 
 /**
@@ -190,5 +191,102 @@ describe('yield.ts - projectYieldStroops & helpers', () => {
       expect(formatStroops(10_001_234_567n)).toBe('1,000.1234567');
       expect(formatStroops(0n)).toBe('0');
     });
+  });
+});
+
+describe('coverageForecast', () => {
+  const DAY = 86_400_000;
+  const now = Date.UTC(2026, 0, 1);
+  const principal = 1_000_000_000_000n; // 100,000 tokens in stroops
+
+  function commitment(overrides: Partial<{
+    amount: string | bigint;
+    durationDays: number;
+    type: 'safe' | 'balanced' | 'aggressive';
+    createdAt: number;
+    status: string;
+  }> = {}) {
+    return {
+      amount: principal.toString(),
+      durationDays: 30,
+      type: 'balanced' as const,
+      createdAt: now - 10 * DAY,
+      status: 'active',
+      ...overrides,
+    };
+  }
+
+  it('returns zero need and covered status with no commitments', () => {
+    const forecast = coverageForecast([], 0n, now);
+
+    expect(forecast.totalNeedStroops).toBe(0n);
+    expect(forecast.covered).toBe(true);
+    expect(forecast.shortfallStroops).toBe(0n);
+    expect(forecast.buckets.map((b) => b.needStroops)).toEqual([0n, 0n, 0n]);
+  });
+
+  it('treats exactly equal coverage as covered', () => {
+    const c = commitment({ durationDays: 20 });
+    const need = projectYieldStroops(BigInt(c.amount), c.durationDays, c.type);
+
+    const forecast = coverageForecast([c], need, now);
+
+    expect(forecast.totalNeedStroops).toBe(need);
+    expect(forecast.covered).toBe(true);
+    expect(forecast.shortfallStroops).toBe(0n);
+    expect(forecast.buckets.every((b) => b.covered)).toBe(true);
+  });
+
+  it('flags a one-stroop shortfall as at risk', () => {
+    const c = commitment({ durationDays: 15 });
+    const need = projectYieldStroops(BigInt(c.amount), c.durationDays, c.type);
+
+    const forecast = coverageForecast([c], need - 1n, now);
+
+    expect(need).toBeGreaterThan(0n);
+    expect(forecast.covered).toBe(false);
+    expect(forecast.shortfallStroops).toBe(1n);
+    expect(forecast.buckets[0]!.covered).toBe(false);
+    expect(forecast.buckets[0]!.shortfallStroops).toBe(1n);
+  });
+
+  it('places already matured commitments in the 7-day bucket', () => {
+    const matured = commitment({
+      createdAt: now - 40 * DAY,
+      durationDays: 30,
+      status: 'matured',
+    });
+    const expected = projectYieldStroops(principal, 30, 'balanced');
+
+    const forecast = coverageForecast([matured], 0n, now);
+
+    expect(forecast.buckets[0]!.horizonDays).toBe(7);
+    expect(forecast.buckets[0]!.needStroops).toBe(expected);
+    // Cumulative horizons also include yield already due.
+    expect(forecast.buckets[1]!.needStroops).toBe(expected);
+    expect(forecast.buckets[2]!.needStroops).toBe(expected);
+  });
+
+  it('only counts commitments maturing inside a horizon for that bucket', () => {
+    const soon = commitment({ durationDays: 15 }); // matures in 5 days
+    const later = commitment({ durationDays: 100 }); // matures in 90 days
+    const soonYield = projectYieldStroops(principal, 15, 'balanced');
+    const laterYield = projectYieldStroops(principal, 100, 'balanced');
+
+    const forecast = coverageForecast([soon, later], 0n, now);
+
+    expect(forecast.buckets[0]!.needStroops).toBe(soonYield);
+    expect(forecast.buckets[1]!.needStroops).toBe(soonYield);
+    expect(forecast.buckets[2]!.needStroops).toBe(soonYield + laterYield);
+  });
+
+  it('ignores terminal commitments that no longer owe yield', () => {
+    const settled = commitment({ status: 'settled' });
+    const exited = commitment({ status: 'exited' });
+
+    const forecast = coverageForecast([settled, exited], 0n, now);
+
+    expect(forecast.totalNeedStroops).toBe(0n);
+    expect(forecast.covered).toBe(true);
   });
 });

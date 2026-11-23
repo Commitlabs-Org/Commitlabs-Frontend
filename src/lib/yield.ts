@@ -103,3 +103,105 @@ export function formatStroops(stroops: bigint, maxFractionDigits = 7): string {
   }
   return `${sign}${wholeFormatted}.${fracStr}`;
 }
+
+/** Maturity horizons (days) used by the protocol coverage forecast. */
+export const COVERAGE_HORIZONS = [7, 30, 90] as const;
+export type CoverageHorizonDays = (typeof COVERAGE_HORIZONS)[number];
+
+const DAY_MS = 86_400_000;
+
+/** Statuses that still owe yield. Settled, exited, violated and disputed records do not. */
+const FORECAST_STATUSES = new Set(['active', 'matured']);
+
+/**
+ * Minimal shape needed to forecast yield obligations. Structurally compatible
+ * with `Commitment`, but declared here so this module stays importable from
+ * `commitments.ts` without a cycle.
+ */
+export interface ForecastCommitment {
+  amount: string | bigint;
+  durationDays: number;
+  type: RiskProfile;
+  createdAt: number;
+  status?: string;
+}
+
+export interface CoverageBucket {
+  horizonDays: CoverageHorizonDays;
+  /** Yield owed by commitments maturing within this horizon, in stroops. */
+  needStroops: bigint;
+  covered: boolean;
+  shortfallStroops: bigint;
+}
+
+export interface CoverageForecast {
+  availableStroops: bigint;
+  /** Cumulative buckets: the 30-day need includes the 7-day need, and so on. */
+  buckets: CoverageBucket[];
+  /** Yield owed by everything maturing within the longest horizon (90 days). */
+  totalNeedStroops: bigint;
+  covered: boolean;
+  shortfallStroops: bigint;
+}
+
+/**
+ * Forecasts whether the available yield-pool balance covers the yield promised
+ * to funded commitments, grouped by maturity horizon. Only commitments that
+ * mature within 90 days (including already matured ones) contribute; yield is
+ * the full projected amount at maturity, matching the contract's integer math.
+ *
+ * Pure and dependency-free so it can be unit-tested and shared by pages.
+ */
+export function coverageForecast(
+  commitments: readonly ForecastCommitment[],
+  available: bigint,
+  now: number,
+): CoverageForecast {
+  const needByHorizon = new Map<CoverageHorizonDays, bigint>(
+    COVERAGE_HORIZONS.map((horizon) => [horizon, 0n]),
+  );
+
+  for (const commitment of commitments) {
+    if (commitment.status !== undefined && !FORECAST_STATUSES.has(commitment.status)) {
+      continue;
+    }
+    const maturity = commitment.createdAt + commitment.durationDays * DAY_MS;
+    if (maturity > now + COVERAGE_HORIZONS[COVERAGE_HORIZONS.length - 1]! * DAY_MS) {
+      continue;
+    }
+
+    let amount: bigint;
+    try {
+      amount = BigInt(commitment.amount);
+    } catch {
+      continue;
+    }
+    const yieldStroops = projectYieldStroops(amount, commitment.durationDays, commitment.type);
+
+    for (const horizon of COVERAGE_HORIZONS) {
+      if (maturity <= now + horizon * DAY_MS) {
+        needByHorizon.set(horizon, needByHorizon.get(horizon)! + yieldStroops);
+      }
+    }
+  }
+
+  const buckets: CoverageBucket[] = COVERAGE_HORIZONS.map((horizonDays) => {
+    const needStroops = needByHorizon.get(horizonDays)!;
+    return {
+      horizonDays,
+      needStroops,
+      covered: available >= needStroops,
+      shortfallStroops: needStroops > available ? needStroops - available : 0n,
+    };
+  });
+
+  const totalNeedStroops = buckets[buckets.length - 1]!.needStroops;
+
+  return {
+    availableStroops: available,
+    buckets,
+    totalNeedStroops,
+    covered: available >= totalNeedStroops,
+    shortfallStroops: totalNeedStroops > available ? totalNeedStroops - available : 0n,
+  };
+}

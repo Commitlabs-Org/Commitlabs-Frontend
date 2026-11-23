@@ -10,11 +10,11 @@ import {
   isNotFoundError,
   formatRelativeTime,
   formatAbsoluteTime,
-  shortenAddress,
   OnChainCommitment,
   OnChainAttestation,
   OnChainDispute,
 } from '@/lib/soroban/read';
+import { shortAddress } from '@/lib/format';
 import { explorerAccount, explorerContractUrl } from '@/lib/config';
 import { useNetwork } from '@/components/NetworkProvider';
 import { Skeleton } from '@/components/Skeleton';
@@ -249,7 +249,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           <b style={{ fontSize: '1.5rem', wordBreak: 'break-all' }}>
             {commitment.amount.toLocaleString('en-US')}
           </b>
-          <span className="muted small">Asset: {shortenAddress(commitment.asset)}</span>
+          <span className="muted small">Asset: {shortAddress(commitment.asset)}</span>
         </div>
 
         <div className="card metric">
@@ -531,7 +531,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
                           className="link"
                           title={att.attestor}
                         >
-                          {shortenAddress(att.attestor)}
+                          {shortAddress(att.attestor)}
                         </a>
                       </code>
                     </td>

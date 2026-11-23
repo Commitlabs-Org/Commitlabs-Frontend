@@ -84,6 +84,3 @@ export async function fetchXlmBalance(
   };
 }
 
-export function shortAddress(a: string): string {
-  return `${a.slice(0, 4)}...${a.slice(-4)}`;
-}

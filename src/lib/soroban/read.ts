@@ -456,8 +456,4 @@ export function formatAbsoluteTime(timestampSeconds: bigint | number): string {
   return date.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }
 
-export function shortenAddress(addr: string): string {
-  if (!addr || addr.length <= 14) return addr;
-  return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
-}
 
