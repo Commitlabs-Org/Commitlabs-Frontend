@@ -87,10 +87,49 @@ export interface OnChainDispute {
   disputedBy: string;
 }
 
+type SimulationServer = Pick<rpc.Server, 'simulateTransaction'>;
+
 export interface ReadOptions {
-  server?: rpc.Server | { simulateTransaction: (tx: any) => Promise<any> };
+  server?: SimulationServer;
   contractId?: string;
 }
+
+export type RawCommitment = Record<string, unknown> & {
+  id?: unknown;
+  owner?: unknown;
+  asset?: unknown;
+  amount?: unknown;
+  accrued_yield?: unknown;
+  accruedYield?: unknown;
+  risk?: unknown;
+  status?: unknown;
+  maturity?: unknown;
+  penalty_bps?: unknown;
+  penaltyBps?: unknown;
+  compliance_score?: unknown;
+  complianceScore?: unknown;
+  created_at?: unknown;
+  createdAt?: unknown;
+  metadata?: unknown;
+};
+
+export type RawAttestation = Record<string, unknown> & {
+  attestor?: unknown;
+  compliance_score?: unknown;
+  complianceScore?: unknown;
+  timestamp?: unknown;
+};
+
+export type RawDispute = Record<string, unknown> & {
+  reason_category?: unknown;
+  reasonCategory?: unknown;
+  reason_text?: unknown;
+  reasonText?: unknown;
+  disputed_at?: unknown;
+  disputedAt?: unknown;
+  disputed_by?: unknown;
+  disputedBy?: unknown;
+};
 
 const DISPUTE_REASON_NAMES: Record<number, string> = {
   0: 'Value Mismatch',
@@ -100,10 +139,23 @@ const DISPUTE_REASON_NAMES: Record<number, string> = {
   4: 'Other',
 };
 
-function normalizeEnumString(val: any, fallback: string): string {
+function isRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+  value: unknown,
+): value is T {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isMap(value: unknown): value is Map<unknown, unknown> {
+  return value instanceof Map;
+}
+
+function normalizeEnumString(val: unknown, fallback: string): string {
   if (typeof val === 'string') return val;
-  if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'string') return val[0];
-  if (val && typeof val === 'object') {
+  if (Array.isArray(val)) {
+    const values: unknown[] = val;
+    if (values.length > 0 && typeof values[0] === 'string') return values[0];
+  }
+  if (isRecord(val)) {
     if ('name' in val && typeof val.name === 'string') return val.name;
     const keys = Object.keys(val);
     if (keys.length > 0) return keys[0];
@@ -111,9 +163,9 @@ function normalizeEnumString(val: any, fallback: string): string {
   return fallback;
 }
 
-function normalizeMetadata(raw: any): Record<string, string> {
+function normalizeMetadata(raw: unknown): Record<string, string> {
   if (!raw) return {};
-  if (raw instanceof Map) {
+  if (isMap(raw)) {
     const res: Record<string, string> = {};
     for (const [k, v] of raw.entries()) {
       res[String(k)] = String(v);
@@ -122,16 +174,18 @@ function normalizeMetadata(raw: any): Record<string, string> {
   }
   if (Array.isArray(raw)) {
     const res: Record<string, string> = {};
-    for (const item of raw) {
-      if (Array.isArray(item) && item.length >= 2) {
-        res[String(item[0])] = String(item[1]);
-      } else if (item && typeof item === 'object' && 'key' in item && 'val' in item) {
+    const items: unknown[] = raw;
+    for (const item of items) {
+      if (Array.isArray(item)) {
+        const tuple: unknown[] = item;
+        if (tuple.length >= 2) res[String(tuple[0])] = String(tuple[1]);
+      } else if (isRecord(item) && 'key' in item && 'val' in item) {
         res[String(item.key)] = String(item.val);
       }
     }
     return res;
   }
-  if (typeof raw === 'object') {
+  if (isRecord(raw)) {
     const res: Record<string, string> = {};
     for (const [k, v] of Object.entries(raw)) {
       res[k] = String(v);
@@ -141,75 +195,92 @@ function normalizeMetadata(raw: any): Record<string, string> {
   return {};
 }
 
-export function normalizeCommitment(raw: any): OnChainCommitment {
+export function normalizeCommitment(raw: unknown): OnChainCommitment {
+  if (raw === null || raw === undefined) {
+    throw new TypeError('Expected a commitment record');
+  }
+  const commitment = isRecord<RawCommitment>(raw) ? raw : {};
   return {
-    id: String(raw.id ?? '0'),
-    owner: String(raw.owner ?? ''),
-    asset: String(raw.asset ?? ''),
-    amount: typeof raw.amount === 'bigint' ? raw.amount : BigInt(raw.amount ?? 0),
+    id: String(commitment.id ?? '0'),
+    owner: String(commitment.owner ?? ''),
+    asset: String(commitment.asset ?? ''),
+    amount:
+      typeof commitment.amount === 'bigint' ? commitment.amount : BigInt(commitment.amount ?? 0),
     accruedYield:
-      typeof raw.accrued_yield === 'bigint'
-        ? raw.accrued_yield
-        : typeof raw.accruedYield === 'bigint'
-          ? raw.accruedYield
-          : BigInt(raw.accrued_yield ?? raw.accruedYield ?? 0),
-    risk: normalizeEnumString(raw.risk, 'Balanced'),
-    status: normalizeEnumString(raw.status, 'Created'),
-    maturity: typeof raw.maturity === 'bigint' ? raw.maturity : BigInt(raw.maturity ?? 0),
-    penaltyBps: Number(raw.penalty_bps ?? raw.penaltyBps ?? 0),
-    complianceScore: Number(raw.compliance_score ?? raw.complianceScore ?? 100),
+      typeof commitment.accrued_yield === 'bigint'
+        ? commitment.accrued_yield
+        : typeof commitment.accruedYield === 'bigint'
+          ? commitment.accruedYield
+          : BigInt(commitment.accrued_yield ?? commitment.accruedYield ?? 0),
+    risk: normalizeEnumString(commitment.risk, 'Balanced'),
+    status: normalizeEnumString(commitment.status, 'Created'),
+    maturity:
+      typeof commitment.maturity === 'bigint'
+        ? commitment.maturity
+        : BigInt(commitment.maturity ?? 0),
+    penaltyBps: Number(commitment.penalty_bps ?? commitment.penaltyBps ?? 0),
+    complianceScore: Number(commitment.compliance_score ?? commitment.complianceScore ?? 100),
     createdAt:
-      typeof raw.created_at === 'bigint'
-        ? raw.created_at
-        : typeof raw.createdAt === 'bigint'
-          ? raw.createdAt
-          : BigInt(raw.created_at ?? raw.createdAt ?? 0),
-    metadata: normalizeMetadata(raw.metadata),
+      typeof commitment.created_at === 'bigint'
+        ? commitment.created_at
+        : typeof commitment.createdAt === 'bigint'
+          ? commitment.createdAt
+          : BigInt(commitment.created_at ?? commitment.createdAt ?? 0),
+    metadata: normalizeMetadata(commitment.metadata),
   };
 }
 
-export function normalizeAttestation(raw: any): OnChainAttestation {
+export function normalizeAttestation(raw: unknown): OnChainAttestation {
+  if (raw === null || raw === undefined) {
+    throw new TypeError('Expected an attestation record');
+  }
+  const attestation = isRecord<RawAttestation>(raw) ? raw : {};
   return {
-    attestor: String(raw.attestor ?? ''),
-    complianceScore: Number(raw.compliance_score ?? raw.complianceScore ?? 0),
-    timestamp: typeof raw.timestamp === 'bigint' ? raw.timestamp : BigInt(raw.timestamp ?? 0),
+    attestor: String(attestation.attestor ?? ''),
+    complianceScore: Number(attestation.compliance_score ?? attestation.complianceScore ?? 0),
+    timestamp:
+      typeof attestation.timestamp === 'bigint'
+        ? attestation.timestamp
+        : BigInt(attestation.timestamp ?? 0),
   };
 }
 
-export function normalizeDispute(raw: any): OnChainDispute | null {
+export function normalizeDispute(raw: unknown): OnChainDispute | null {
   if (!raw || (typeof raw === 'object' && Object.keys(raw).length === 0)) {
     return null;
   }
+  const dispute = isRecord<RawDispute>(raw) ? raw : {};
   let code = 4;
   let category = 'Other';
-  const rawCat = raw.reason_category ?? raw.reasonCategory;
+  const rawCat = dispute.reason_category ?? dispute.reasonCategory;
   if (typeof rawCat === 'bigint' || typeof rawCat === 'number') {
     code = Number(rawCat);
     category = DISPUTE_REASON_NAMES[code] ?? `Category #${code}`;
   } else if (typeof rawCat === 'string') {
     category = rawCat;
-  } else if (Array.isArray(rawCat) && typeof rawCat[0] === 'string') {
-    category = rawCat[0];
+  } else if (Array.isArray(rawCat)) {
+    const categories: unknown[] = rawCat;
+    if (typeof categories[0] === 'string') category = categories[0];
   }
 
   return {
     reasonCategory: category,
     reasonCode: code,
-    reasonText: String(raw.reason_text ?? raw.reasonText ?? ''),
+    reasonText: String(dispute.reason_text ?? dispute.reasonText ?? ''),
     disputedAt:
-      typeof raw.disputed_at === 'bigint'
-        ? raw.disputed_at
-        : typeof raw.disputedAt === 'bigint'
-          ? raw.disputedAt
-          : BigInt(raw.disputed_at ?? raw.disputedAt ?? 0),
-    disputedBy: String(raw.disputed_by ?? raw.disputedBy ?? ''),
+      typeof dispute.disputed_at === 'bigint'
+        ? dispute.disputed_at
+        : typeof dispute.disputedAt === 'bigint'
+          ? dispute.disputedAt
+          : BigInt(dispute.disputed_at ?? dispute.disputedAt ?? 0),
+    disputedBy: String(dispute.disputed_by ?? dispute.disputedBy ?? ''),
   };
 }
 
 export function isNotFoundError(err: unknown): boolean {
   if (!err) return false;
   if (err instanceof TxError && err.code === EscrowErrorCode.NotFound) return true;
-  if (typeof err === 'object' && err !== null && 'code' in err && (err as any).code === EscrowErrorCode.NotFound) {
+  if (isRecord(err) && err.code === EscrowErrorCode.NotFound) {
     return true;
   }
   const msg = err instanceof Error ? err.message : String(err);
@@ -217,13 +288,13 @@ export function isNotFoundError(err: unknown): boolean {
 }
 
 function resolveServerAndContract(
-  optionsOrServer?: ReadOptions | rpc.Server | { simulateTransaction: (tx: any) => Promise<any> },
+  optionsOrServer?: ReadOptions | SimulationServer,
   explicitContractId?: string,
-): { server: rpc.Server | { simulateTransaction: (tx: any) => Promise<any> }; contractId: string } {
-  let server: rpc.Server | { simulateTransaction: (tx: any) => Promise<any> };
+): { server: SimulationServer; contractId: string } {
+  let server: SimulationServer;
   let contractId = explicitContractId || ESCROW_CONTRACT_ID;
 
-  if (optionsOrServer && 'simulateTransaction' in optionsOrServer) {
+  if (isRecord(optionsOrServer) && typeof optionsOrServer.simulateTransaction === 'function') {
     server = optionsOrServer;
   } else if (optionsOrServer && typeof optionsOrServer === 'object') {
     const opts = optionsOrServer as ReadOptions;
@@ -249,9 +320,9 @@ function resolveServerAndContract(
 export async function simulateEscrowRead(
   functionName: string,
   args: xdr.ScVal[],
-  optionsOrServer?: ReadOptions | rpc.Server | { simulateTransaction: (tx: any) => Promise<any> },
+  optionsOrServer?: ReadOptions | SimulationServer,
   contractIdOverride?: string,
-): Promise<any> {
+): Promise<unknown> {
   const { server, contractId } = resolveServerAndContract(optionsOrServer, contractIdOverride);
 
   if (!contractId) {
@@ -271,24 +342,30 @@ export async function simulateEscrowRead(
   const sim = await server.simulateTransaction(tx);
 
   // Check for simulation errors
-  if (sim && typeof sim === 'object' && ('error' in sim || 'diagnostics' in sim)) {
-    if (sim.error || (Array.isArray(sim.diagnostics) && sim.diagnostics.length > 0 && !('result' in sim))) {
+  if (isRecord(sim) && ('error' in sim || 'diagnostics' in sim)) {
+    if (
+      sim.error ||
+      (Array.isArray(sim.diagnostics) && sim.diagnostics.length > 0 && !('result' in sim))
+    ) {
       throw toTxError(sim);
     }
   }
 
   let retvalScVal: xdr.ScVal | undefined;
 
-  if (sim && typeof sim === 'object') {
-    if ('result' in sim && sim.result && 'retval' in sim.result) {
-      retvalScVal = sim.result.retval as xdr.ScVal;
-    } else if ('results' in sim && Array.isArray(sim.results) && sim.results[0]?.xdr) {
-      retvalScVal = xdr.ScVal.fromXDR(sim.results[0].xdr, 'base64');
+  if (isRecord(sim)) {
+    if (isRecord(sim.result) && sim.result.retval instanceof xdr.ScVal) {
+      retvalScVal = sim.result.retval;
+    } else if (Array.isArray(sim.results)) {
+      const results: unknown[] = sim.results;
+      if (isRecord(results[0]) && typeof results[0].xdr === 'string' && results[0].xdr) {
+        retvalScVal = xdr.ScVal.fromXDR(results[0].xdr, 'base64');
+      }
     }
   }
 
   if (!retvalScVal) {
-    if (sim && typeof sim === 'object' && 'error' in sim) {
+    if (isRecord(sim) && 'error' in sim) {
       throw toTxError(sim);
     }
     return null;
@@ -302,7 +379,7 @@ export async function simulateEscrowRead(
  */
 export async function getCommitment(
   id: string | bigint,
-  optionsOrServer?: ReadOptions | rpc.Server | { simulateTransaction: (tx: any) => Promise<any> },
+  optionsOrServer?: ReadOptions | SimulationServer,
   contractId?: string,
 ): Promise<OnChainCommitment> {
   const u64Val = BigInt(id);
@@ -324,13 +401,14 @@ export async function getCommitment(
  */
 export async function getAttestations(
   id: string | bigint,
-  optionsOrServer?: ReadOptions | rpc.Server | { simulateTransaction: (tx: any) => Promise<any> },
+  optionsOrServer?: ReadOptions | SimulationServer,
   contractId?: string,
 ): Promise<OnChainAttestation[]> {
   const u64Val = BigInt(id);
   const scVal = nativeToScVal(u64Val, { type: 'u64' });
   const raw = await simulateEscrowRead('get_attestations', [scVal], optionsOrServer, contractId);
-  const list: OnChainAttestation[] = (Array.isArray(raw) ? raw : []).map(normalizeAttestation);
+  const values: unknown[] = Array.isArray(raw) ? raw : [];
+  const list: OnChainAttestation[] = values.map(normalizeAttestation);
   return list.sort((a, b) => (b.timestamp > a.timestamp ? 1 : b.timestamp < a.timestamp ? -1 : 0));
 }
 
@@ -339,7 +417,7 @@ export async function getAttestations(
  */
 export async function getDispute(
   id: string | bigint,
-  optionsOrServer?: ReadOptions | rpc.Server | { simulateTransaction: (tx: any) => Promise<any> },
+  optionsOrServer?: ReadOptions | SimulationServer,
   contractId?: string,
 ): Promise<OnChainDispute | null> {
   const u64Val = BigInt(id);

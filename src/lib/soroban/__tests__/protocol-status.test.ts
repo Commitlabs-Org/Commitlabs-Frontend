@@ -84,6 +84,9 @@ describe('policy table documentation and action gating', () => {
     'early_exit',
     'release',
     'settle',
+    'transfer_ownership',
+    'accept_ownership',
+    'cancel_ownership_transfer',
   ];
 
   it('has an entry for every known action with contract documentation', () => {
@@ -109,10 +112,13 @@ describe('policy table documentation and action gating', () => {
     expect(isActionBlocked('refund', true)).toBe(true);
     expect(isActionBlocked('refund_partial', true)).toBe(true);
     expect(isActionBlocked('early_exit', true)).toBe(true);
+    expect(isActionBlocked('transfer_ownership', true)).toBe(true);
 
-    // Actions NOT blocked when paused (settlement remains open)
+    // Actions NOT blocked when paused (settlement and transfer accept/cancel remain open)
     expect(isActionBlocked('release', true)).toBe(false);
     expect(isActionBlocked('settle', true)).toBe(false);
+    expect(isActionBlocked('accept_ownership', true)).toBe(false);
+    expect(isActionBlocked('cancel_ownership_transfer', true)).toBe(false);
 
     // When contract is not paused, nothing is blocked
     for (const action of ALL_ACTIONS) {

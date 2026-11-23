@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import Link from 'next/link';
 import { useWallet } from '@/components/WalletProvider';
 import { shortAddress } from '@/lib/format';
 import { explorerContractUrl } from '@/lib/config';
 import {
   fetchEscrowEvents,
   DecodedEscrowEvent,
+  isLedgerOutOfRangeError,
+  MAX_EVENTS_IN_MEMORY,
 } from '@/lib/soroban/events';
 
 const EVENT_KINDS = [
@@ -20,79 +21,200 @@ const EVENT_KINDS = [
   { value: 'resolve', label: 'Resolved' },
 ];
 
+export const POLL_INTERVAL_MS = 10000;
+const PAGE_LIMIT = 30;
+
 export default function ActivityPage() {
   const { address } = useWallet();
   const [events, setEvents] = useState<DecodedEscrowEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
   const [filterKind, setFilterKind] = useState('all');
   const [onlyMine, setOnlyMine] = useState(false);
-  const [cursor, setCursor] = useState<string | undefined>();
   const [olderAvailable, setOlderAvailable] = useState(false);
+  const [livePaused, setLivePaused] = useState(false);
+  const [newEventsCount, setNewEventsCount] = useState(0);
 
-  const isVisibleRef = useRef(true);
+  const pageCursorRef = useRef<string | undefined>(undefined);
+  const latestCursorRef = useRef<string | undefined>(undefined);
 
-  const loadEvents = useCallback(
-    async (isPolling = false) => {
-      if (!isPolling) setLoading(true);
-      setError(null);
-
-      try {
-        const res = await fetchEscrowEvents({
-          filters: {
-            kind: filterKind !== 'all' ? filterKind : undefined,
-            owner: onlyMine && address ? address : undefined,
-          },
-          cursor: isPolling ? undefined : cursor,
-          limit: 30,
-        });
-
-        setEvents((prev) => {
-          if (isPolling) {
-            // Merge & deduplicate by id
-            const existingIds = new Set(prev.map((e) => e.id));
-            const newItems = res.events.filter((e) => !existingIds.has(e.id));
-            return [...newItems, ...prev].slice(0, 500);
-          }
-          return res.events;
-        });
-
-        setOlderAvailable(res.olderEventsAvailable);
-      } catch (err: any) {
-        setError(err?.message || 'Failed to fetch events from Soroban RPC.');
-      } finally {
-        if (!isPolling) setLoading(false);
-      }
-    },
-    [filterKind, onlyMine, address, cursor]
+  const buildFilters = useCallback(
+    () => ({
+      kind: filterKind !== 'all' ? filterKind : undefined,
+      owner: onlyMine && address ? address : undefined,
+    }),
+    [filterKind, onlyMine, address]
   );
 
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+  const loadInitialEvents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setRetentionNotice(null);
+    setNewEventsCount(0);
+    pageCursorRef.current = undefined;
+    latestCursorRef.current = undefined;
 
-  // Handle visibility change and 15s polling
+    try {
+      const res = await fetchEscrowEvents({
+        filters: buildFilters(),
+        limit: PAGE_LIMIT,
+      });
+
+      if (res.retentionOutOfRange) {
+        setRetentionNotice(
+          res.retentionMessage ||
+            'The requested startLedger is outside the Soroban RPC retention window.'
+        );
+      }
+
+      const bounded = res.events.slice(0, MAX_EVENTS_IN_MEMORY);
+      setEvents(bounded);
+      pageCursorRef.current = res.cursor;
+      latestCursorRef.current = res.cursor || bounded[0]?.id;
+      setOlderAvailable(res.olderEventsAvailable);
+    } catch (err: any) {
+      if (isLedgerOutOfRangeError(err)) {
+        setRetentionNotice(
+          'The requested startLedger is outside the Soroban RPC retention window (only recent ledgers are retained by RPC).'
+        );
+        setOlderAvailable(false);
+      } else {
+        setError(err?.message || 'Failed to fetch events from Soroban RPC.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [buildFilters]);
+
+  const loadOlderEvents = useCallback(async () => {
+    if (loadingMore || loading) return;
+    setLoadingMore(true);
+    setError(null);
+
+    try {
+      const res = await fetchEscrowEvents({
+        filters: buildFilters(),
+        cursor: pageCursorRef.current,
+        limit: PAGE_LIMIT,
+      });
+
+      if (res.retentionOutOfRange) {
+        setRetentionNotice(
+          res.retentionMessage ||
+            'Older ledgers are outside the Soroban RPC retention window.'
+        );
+        setOlderAvailable(false);
+        return;
+      }
+
+      setEvents((prev) => {
+        const existingIds = new Set(prev.map((e) => e.id));
+        const additional = res.events.filter((e) => !existingIds.has(e.id));
+        return [...prev, ...additional].slice(0, MAX_EVENTS_IN_MEMORY);
+      });
+
+      if (res.cursor) {
+        pageCursorRef.current = res.cursor;
+      }
+      setOlderAvailable(res.olderEventsAvailable);
+    } catch (err: any) {
+      if (isLedgerOutOfRangeError(err)) {
+        setRetentionNotice(
+          'Older ledgers are outside the Soroban RPC retention window (only recent ledgers are retained by RPC).'
+        );
+        setOlderAvailable(false);
+      } else {
+        setError(err?.message || 'Failed to fetch older events from Soroban RPC.');
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [buildFilters, loading, loadingMore]);
+
+  const pollLatestEvents = useCallback(async () => {
+    try {
+      const res = await fetchEscrowEvents({
+        filters: buildFilters(),
+        cursor: latestCursorRef.current,
+        limit: PAGE_LIMIT,
+      });
+
+      if (res.retentionOutOfRange) {
+        setRetentionNotice(
+          res.retentionMessage ||
+            'The requested startLedger is outside the Soroban RPC retention window.'
+        );
+        return;
+      }
+
+      if (res.cursor) {
+        latestCursorRef.current = res.cursor;
+      }
+
+      setEvents((prev) => {
+        const existingIds = new Set(prev.map((e) => e.id));
+        const newItems = res.events.filter((e) => !existingIds.has(e.id));
+        if (newItems.length === 0) return prev;
+        setNewEventsCount((count) => count + newItems.length);
+        return [...newItems, ...prev].slice(0, MAX_EVENTS_IN_MEMORY);
+      });
+    } catch (err: any) {
+      if (isLedgerOutOfRangeError(err)) {
+        setRetentionNotice(
+          'The requested startLedger is outside the Soroban RPC retention window.'
+        );
+      }
+    }
+  }, [buildFilters]);
+
   useEffect(() => {
-    const handleVisibility = () => {
-      isVisibleRef.current = document.visibilityState === 'visible';
-      if (isVisibleRef.current) {
-        loadEvents(true);
+    loadInitialEvents();
+  }, [loadInitialEvents]);
+
+  // 10s visibility-aware live polling that stops when hidden, paused, or unmounted
+  useEffect(() => {
+    if (livePaused) return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (intervalId !== null) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      intervalId = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+          return;
+        }
+        pollLatestEvents();
+      }, POLL_INTERVAL_MS);
+    };
+
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    const interval = setInterval(() => {
-      if (isVisibleRef.current) {
-        loadEvents(true);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stopPolling();
+      } else {
+        startPolling();
       }
-    }, 15000);
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopPolling();
     };
-  }, [loadEvents]);
+  }, [livePaused, pollLatestEvents]);
 
   return (
     <section className="container pad-y">
@@ -101,14 +223,44 @@ export default function ActivityPage() {
           <h1>Activity Feed</h1>
           <p className="muted">Live on-chain events emitted by the CommitLabs Soroban escrow contract.</p>
         </div>
-        <button
-          className="btn btn-ghost"
-          onClick={() => loadEvents(false)}
-          disabled={loading}
-          title="Refresh feed"
-        >
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
+        <div className="row gap">
+          {newEventsCount > 0 && (
+            <button
+              type="button"
+              className="badge active"
+              onClick={() => setNewEventsCount(0)}
+              aria-label={`${newEventsCount} new events`}
+              title="Click to dismiss new events badge"
+            >
+              {newEventsCount} new {newEventsCount === 1 ? 'event' : 'events'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-pressed={livePaused}
+            onClick={() => setLivePaused((prev) => !prev)}
+          >
+            {livePaused ? 'Resume live' : 'Pause live'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => loadInitialEvents()}
+            disabled={loading}
+            title="Refresh feed"
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {newEventsCount > 0
+          ? `${newEventsCount} new ${newEventsCount === 1 ? 'event' : 'events'} received`
+          : livePaused
+            ? 'Live updates paused'
+            : 'Live updates active'}
       </div>
 
       <div className="card row between mb filter-bar">
@@ -140,10 +292,16 @@ export default function ActivityPage() {
         </div>
       </div>
 
+      {retentionNotice && (
+        <div className="card notice mb" role="status">
+          <p>{retentionNotice}</p>
+        </div>
+      )}
+
       {error && (
-        <div className="card error-box mb">
+        <div className="card error-box mb" role="alert">
           <p className="error-text">RPC Error: {error}</p>
-          <button className="btn btn-primary" onClick={() => loadEvents(false)}>
+          <button className="btn btn-primary" onClick={() => loadInitialEvents()}>
             Retry
           </button>
         </div>
@@ -214,7 +372,18 @@ export default function ActivityPage() {
             </table>
           </div>
 
-          {!olderAvailable && (
+          {olderAvailable ? (
+            <div className="center pad-sm">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={loadOlderEvents}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Loading older...' : 'Load older'}
+              </button>
+            </div>
+          ) : (
             <div className="center pad-sm">
               <span className="small muted">Older events are not available from RPC</span>
             </div>
