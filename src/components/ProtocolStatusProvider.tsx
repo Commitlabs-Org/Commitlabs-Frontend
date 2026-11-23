@@ -2,7 +2,8 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ProtocolStatus } from '@/lib/soroban/protocol-policy';
-import { config } from '@/lib/config';
+import { getActiveConfig } from '@/lib/config';
+import { useNetwork } from './NetworkProvider';
 
 export type ProtocolStatusState = 'loading' | 'ok' | 'unavailable';
 
@@ -26,6 +27,7 @@ function afterPageLoad(): Promise<void> {
 }
 
 export function ProtocolStatusProvider({ children }: { children: React.ReactNode }) {
+  const { network } = useNetwork();
   const [state, setState] = useState<{
     status: ProtocolStatusState;
     paused: boolean;
@@ -50,7 +52,7 @@ export function ProtocolStatusProvider({ children }: { children: React.ReactNode
       try {
         // Loaded on demand, after the page has finished loading, so stellar-sdk
         // stays out of the first-load bundle and does not compete with first paint.
-        if (!config.escrowContractId) {
+        if (!getActiveConfig().escrowContractId) {
           // Nothing to read without a deployed contract; skip loading stellar-sdk.
           setState({ status: 'unavailable', paused: false, yieldPool: 0n, fetchedAt: Date.now() });
           return;
@@ -79,7 +81,7 @@ export function ProtocolStatusProvider({ children }: { children: React.ReactNode
 
     inFlightRef.current = task;
     return task;
-  }, []);
+  }, [network]);
 
   useEffect(() => {
     // Fetch on mount

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { nativeToScVal } from '@stellar/stellar-sdk';
+import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
 import {
   decodeBool,
   decodeI128,
+  decodeYieldPoolStatus,
   getProtocolStatus,
+  getYieldPoolStatus,
   ACTION_POLICIES,
   isActionBlocked,
   getActionPauseReason,
@@ -56,6 +58,48 @@ describe('protocol-status decoders and reads', () => {
     expect(status.paused).toBe(true);
     expect(status.yieldPool).toBe(75000000n);
     expect(typeof status.fetchedAt).toBe('number');
+
+    spy.mockRestore();
+  });
+
+  function yieldPoolStatusScVal(fields: { balance: bigint; reserved: bigint; available: bigint }) {
+    return xdr.ScVal.scvMap(
+      Object.entries(fields).map(
+        ([key, value]) =>
+          new xdr.ScMapEntry({
+            key: xdr.ScVal.scvSymbol(key),
+            val: nativeToScVal(value, { type: 'i128' }),
+          }),
+      ),
+    );
+  }
+
+  it('decodes yield pool status i128s', () => {
+    const decoded = decodeYieldPoolStatus(
+      yieldPoolStatusScVal({ balance: 75000000n, reserved: 50000000n, available: 25000000n }),
+    );
+
+    expect(decoded).toEqual({ balance: 75000000n, reserved: 50000000n, available: 25000000n });
+  });
+
+  it('reads yield pool balance, reserved and available via get_yield_pool_status', async () => {
+    const spy = vi.spyOn(txModule, 'simulateRead').mockImplementation(async ({ method }) => {
+      if (method === 'get_yield_pool_status') {
+        return {
+          result: yieldPoolStatusScVal({ balance: 120000000n, reserved: 90000000n, available: 30000000n }),
+        };
+      }
+      throw new Error(`Unexpected method: ${method}`);
+    });
+
+    const pool = await getYieldPoolStatus({
+      contractId: 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    });
+
+    expect(pool.balance).toBe(120000000n);
+    expect(pool.reserved).toBe(90000000n);
+    expect(pool.available).toBe(30000000n);
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ method: 'get_yield_pool_status' }));
 
     spy.mockRestore();
   });

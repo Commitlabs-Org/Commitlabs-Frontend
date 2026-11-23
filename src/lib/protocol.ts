@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { rpc, xdr } from '@stellar/stellar-sdk';
-import { SOROBAN_RPC_URL, ESCROW_CONTRACT_ID } from './config';
+import { getActiveConfig } from './config';
 import type { RiskProfile } from './yield';
 
 export interface ProtocolParams {
@@ -58,16 +58,17 @@ export async function getProtocolParams(
     return cachedParams;
   }
 
-  const contractId = options.contractId || ESCROW_CONTRACT_ID;
+  const config = getActiveConfig();
+  const contractId = options.contractId || config.escrowContractId;
   if (!contractId) {
     return FALLBACK_PROTOCOL_PARAMS;
   }
 
   try {
-    const { rpc, Contract, xdr, scValToNative, Account, TransactionBuilder, Networks } =
+    const { rpc, Contract, xdr, scValToNative, Account, TransactionBuilder } =
       await import('@stellar/stellar-sdk');
 
-    const server = options.customServer || new rpc.Server(SOROBAN_RPC_URL);
+    const server = options.customServer || new rpc.Server(config.sorobanRpcUrl);
     const contract = new Contract(contractId);
     // Arbitrary dummy account for simulation (read-only calls require no auth signature)
     const dummyAccount = new Account('GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H', '1');
@@ -75,7 +76,7 @@ export async function getProtocolParams(
     async function simulateCall(operation: xdr.Operation): Promise<any> {
       const tx = new TransactionBuilder(dummyAccount, {
         fee: '100',
-        networkPassphrase: Networks.TESTNET,
+        networkPassphrase: config.passphrase,
       })
         .addOperation(operation)
         .setTimeout(30)

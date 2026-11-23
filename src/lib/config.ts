@@ -1,4 +1,5 @@
-import { NETWORKS, NetworkId, NetworkConfig } from './network';
+import { NETWORKS, NetworkId, NetworkConfig, isNetworkId } from './network';
+import { getDeploymentContractId } from './deployments';
 
 export interface AppConfig {
   readonly network: NetworkId;
@@ -70,7 +71,59 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
 
 export const config: AppConfig = parseConfig(process.env);
 
-// Backward-compatible exports
+/**
+ * Builds the config for any network, reusing `parseConfig` for all validation.
+ *
+ * The contract ID comes from the build-time environment for the configured
+ * default network (so existing deployments keep working) and otherwise from
+ * the typed `deployments/<network>.json` registry. URL overrides from the
+ * environment only apply to the default network; other networks use their
+ * canonical endpoints from `NETWORKS`.
+ */
+export function getConfig(
+  network: NetworkId,
+  env: Record<string, string | undefined> = process.env,
+): AppConfig {
+  const isDefaultNetwork = network === config.network;
+  const deploymentContractId = getDeploymentContractId(network);
+
+  return parseConfig({
+    NEXT_PUBLIC_STELLAR_NETWORK: network,
+    NEXT_PUBLIC_HORIZON_URL: isDefaultNetwork ? env.NEXT_PUBLIC_HORIZON_URL : undefined,
+    NEXT_PUBLIC_SOROBAN_RPC_URL: isDefaultNetwork ? env.NEXT_PUBLIC_SOROBAN_RPC_URL : undefined,
+    NEXT_PUBLIC_ESCROW_CONTRACT_ID:
+      (isDefaultNetwork ? env.NEXT_PUBLIC_ESCROW_CONTRACT_ID?.trim() : '') || deploymentContractId,
+  });
+}
+
+/**
+ * The config used by modules that perform RPC/Horizon reads at runtime. It is
+ * swapped by `NetworkProvider` when the user changes network, so those modules
+ * must call `getActiveConfig()` inside their functions instead of capturing a
+ * module-level constant.
+ */
+let activeConfig: AppConfig = config;
+
+export function getActiveConfig(): AppConfig {
+  return activeConfig;
+}
+
+/** Activates a network and returns its resolved config. */
+export function setActiveNetwork(
+  network: NetworkId,
+  env: Record<string, string | undefined> = process.env,
+): AppConfig {
+  activeConfig = getConfig(network, env);
+  return activeConfig;
+}
+
+/** Resolves a network identifier, falling back to the build-time default. */
+export function resolveNetwork(value: unknown, fallback: NetworkId = config.network): NetworkId {
+  return isNetworkId(value) ? value : fallback;
+}
+
+// Backward-compatible build-time exports. Runtime code that must follow the
+// header network selector should call getActiveConfig() instead.
 export const NETWORK = config.network;
 export const HORIZON_URL = config.horizonUrl;
 export const SOROBAN_RPC_URL = config.sorobanRpcUrl;
@@ -79,7 +132,7 @@ export const REPO_URL = config.repoUrl;
 export const LIVE_URL = config.liveUrl;
 
 export function explorerContractUrl(id: string): string {
-  return `${config.networkDetails.explorerBaseUrl}/contract/${id}`;
+  return `${getActiveConfig().networkDetails.explorerBaseUrl}/contract/${id}`;
 }
 
 export function explorerContract(id: string): string {
@@ -87,16 +140,17 @@ export function explorerContract(id: string): string {
 }
 
 export function explorerTx(hash: string): string {
-  return `${config.networkDetails.explorerBaseUrl}/tx/${hash}`;
+  return `${getActiveConfig().networkDetails.explorerBaseUrl}/tx/${hash}`;
 }
 
 export function explorerAccount(addr: string): string {
-  return `${config.networkDetails.explorerBaseUrl}/account/${addr}`;
+  return `${getActiveConfig().networkDetails.explorerBaseUrl}/account/${addr}`;
 }
 
 export const FRIENDBOT_URL =
   process.env.NEXT_PUBLIC_FRIENDBOT_URL ?? 'https://friendbot.stellar.org';
 
 export function friendbotAccountUrl(address: string): string {
-  return `${FRIENDBOT_URL}/?addr=${encodeURIComponent(address)}`;
+  const networkFriendbot = getActiveConfig().networkDetails.friendbotUrl;
+  return `${networkFriendbot ?? FRIENDBOT_URL}/?addr=${encodeURIComponent(address)}`;
 }

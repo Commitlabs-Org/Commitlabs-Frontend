@@ -6,6 +6,9 @@
  * behind each directive.
  */
 
+import { getConfig } from '../config';
+import type { NetworkId } from '../network';
+
 export interface CspOptions {
   /** Per-request, base64-encoded nonce for inline scripts. */
   nonce: string;
@@ -53,6 +56,28 @@ export function toOriginOrNull(rawUrl: string): string | null {
  *   at runtime (styled-jsx / hydration styles); the app has no external CSS
  *   beyond its own bundle.
  */
+/**
+ * Builds the CSP for one active network, allowing only that network's Horizon
+ * and Soroban RPC origins in `connect-src`.
+ */
+export function buildCspForNetwork({
+  nonce,
+  network,
+  isDev,
+}: {
+  nonce: string;
+  network: NetworkId;
+  isDev: boolean;
+}): string {
+  const config = getConfig(network);
+  return buildCsp({
+    nonce,
+    horizonUrl: config.horizonUrl,
+    rpcUrl: config.sorobanRpcUrl,
+    isDev,
+  });
+}
+
 export function buildCsp({ nonce, horizonUrl, rpcUrl, isDev }: CspOptions): string {
   const scriptSrc = ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"];
   if (isDev) {

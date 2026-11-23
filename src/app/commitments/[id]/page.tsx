@@ -10,17 +10,13 @@ import {
   isNotFoundError,
   formatRelativeTime,
   formatAbsoluteTime,
-  shortenAddress,
   OnChainCommitment,
   OnChainAttestation,
   OnChainDispute,
 } from '@/lib/soroban/read';
-import {
-  config,
-  ESCROW_CONTRACT_ID,
-  explorerAccount,
-  explorerContractUrl,
-} from '@/lib/config';
+import { shortAddress } from '@/lib/format';
+import { explorerAccount, explorerContractUrl } from '@/lib/config';
+import { useNetwork } from '@/components/NetworkProvider';
 import { Skeleton } from '@/components/Skeleton';
 import { TransferPanel } from '@/components/TransferPanel';
 import { CommitmentTimeline } from '@/components/CommitmentTimeline';
@@ -32,6 +28,7 @@ interface PageProps {
 }
 
 export default function CommitmentDetailPage({ params }: PageProps) {
+  const { config } = useNetwork();
   const rawId = params?.id ?? '';
   const validation = validateCommitmentId(rawId);
 
@@ -232,9 +229,9 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           <Link href="/dashboard" className="btn btn-ghost">
             &larr; Dashboard
           </Link>
-          {ESCROW_CONTRACT_ID && (
+          {config.isContractConfigured && (
             <a
-              href={explorerContractUrl(ESCROW_CONTRACT_ID)}
+              href={explorerContractUrl(config.escrowContractId)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-ghost"
@@ -253,7 +250,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           <b style={{ fontSize: '1.5rem', wordBreak: 'break-all' }}>
             {commitment.amount.toLocaleString('en-US')}
           </b>
-          <span className="muted small">Asset: {shortenAddress(commitment.asset)}</span>
+          <span className="muted small">Asset: {shortAddress(commitment.asset)}</span>
         </div>
 
         <div className="card metric">
@@ -537,7 +534,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
                           className="link"
                           title={att.attestor}
                         >
-                          {shortenAddress(att.attestor)}
+                          {shortAddress(att.attestor)}
                         </a>
                       </code>
                     </td>
@@ -603,15 +600,15 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           <li>
             <span>Escrow Contract</span>
             <code>
-              {ESCROW_CONTRACT_ID ? (
+              {config.isContractConfigured ? (
                 <a
-                  href={explorerContractUrl(ESCROW_CONTRACT_ID)}
+                  href={explorerContractUrl(config.escrowContractId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link"
                   style={{ wordBreak: 'break-all' }}
                 >
-                  {ESCROW_CONTRACT_ID}
+                  {config.escrowContractId}
                 </a>
               ) : (
                 'Unconfigured'
