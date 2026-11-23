@@ -19,6 +19,7 @@ import { explorerAccount, explorerContractUrl } from '@/lib/config';
 import { useNetwork } from '@/components/NetworkProvider';
 import { Skeleton } from '@/components/Skeleton';
 import { TransferPanel } from '@/components/TransferPanel';
+import { CommitmentTimeline } from '@/components/CommitmentTimeline';
 
 interface PageProps {
   params: {
@@ -427,6 +428,8 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      <CommitmentTimeline commitmentId={commitment.id} />
 
       {/* Section: Dispute Notice (Rendered ONLY when dispute exists) */}
       {dispute && (

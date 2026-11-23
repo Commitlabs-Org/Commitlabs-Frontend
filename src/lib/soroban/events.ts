@@ -1,5 +1,5 @@
-import { rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { getActiveConfig } from '../config';
+import { nativeToScVal, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 
 export interface DecodedEscrowEvent {
   id: string;
@@ -31,7 +31,7 @@ export function toScVal(val: unknown): xdr.ScVal {
     isRecord(val) &&
     ('switch' in val || 'arm' in val || 'type' in val || typeof val.toXDR === 'function')
   ) {
-    return val as xdr.ScVal;
+    return val as unknown as xdr.ScVal;
   }
   if (typeof val === 'string') {
     return xdr.ScVal.fromXDR(val, 'base64');
@@ -142,6 +142,41 @@ export const MAX_EVENTS_IN_MEMORY = 500;
 export const DEFAULT_PAGE_LIMIT = 50;
 export const RETENTION_WINDOW = 2000;
 const MAX_FILTER_PAGES = 10;
+const COMMITMENT_EVENT_NAMES = [
+  'create_commitment',
+  'fund',
+  'fund_escrow',
+  'cancel_commitment',
+  'release',
+  'dispute',
+  'refund',
+  'refund_partial',
+  'resolve',
+  'resolve_dispute',
+  'commitment_violated',
+];
+
+function encodeSymbolTopic(name: string): string {
+  // Encode the ScVal type and XDR string directly to avoid SDK symbol encoding issues in browsers.
+  const symbolBytes = Array.from(name, (character) => character.charCodeAt(0));
+  if (symbolBytes.some((byte) => byte > 0x7f)) {
+    throw new Error('Soroban event symbols must contain ASCII characters.');
+  }
+  const padding = (4 - (symbolBytes.length % 4)) % 4;
+  const xdrBytes = [
+    0,
+    0,
+    0,
+    15,
+    0,
+    0,
+    0,
+    symbolBytes.length,
+    ...symbolBytes,
+    ...Array(padding).fill(0),
+  ];
+  return btoa(String.fromCharCode(...xdrBytes));
+}
 
 export interface FetchEventsOptions {
   startLedger?: number;
@@ -152,6 +187,7 @@ export interface FetchEventsOptions {
   filters?: {
     kind?: string;
     owner?: string;
+    commitmentId?: string;
   };
 }
 
@@ -204,27 +240,26 @@ export async function fetchEscrowEvents(
   const limit = options.limit ?? DEFAULT_PAGE_LIMIT;
   const startLedger = options.startLedger ?? Math.max(1, latestLedger - RETENTION_WINDOW);
   const hasActiveFilters = Boolean(
-    (options.filters?.kind && options.filters.kind !== 'all') || options.filters?.owner
+    (options.filters?.kind && options.filters.kind !== 'all') ||
+      options.filters?.owner ||
+      options.filters?.commitmentId
   );
   const maxPages = options.maxPages ?? (hasActiveFilters ? MAX_FILTER_PAGES : 1);
-
-  const getEventsParams: Parameters<rpc.Server['getEvents']>[0] = {
-    filters: [
-      {
-        type: 'contract',
-        contractIds: [contractId],
-      },
-    ],
-    limit: options.limit ?? 50,
-  };
-
-  if (options.cursor) {
-    getEventsParams.cursor = options.cursor;
-  } else {
-    getEventsParams.startLedger = startLedger;
+  const commitmentId = options.filters?.commitmentId;
+  if (commitmentId !== undefined && !/^\d+$/.test(commitmentId)) {
+    throw new RangeError('commitmentId must be a valid u64 integer.');
   }
-
-  const response = await server.getEvents(getEventsParams);
+  const commitmentIdAsBigInt = commitmentId === undefined ? undefined : BigInt(commitmentId);
+  if (
+    commitmentIdAsBigInt !== undefined &&
+    (commitmentIdAsBigInt < 0n || commitmentIdAsBigInt > 18446744073709551615n)
+  ) {
+    throw new RangeError('commitmentId must be a valid u64 integer.');
+  }
+  const commitmentIdTopic =
+    commitmentIdAsBigInt === undefined
+      ? undefined
+      : nativeToScVal(commitmentIdAsBigInt, { type: 'u64' }).toXDR('base64');
   const seenIds = new Set<string>();
   const decoded: DecodedEscrowEvent[] = [];
   let currentCursor = options.cursor;
@@ -234,19 +269,30 @@ export async function fetchEscrowEvents(
   let pagesFetched = 0;
 
   while (pagesFetched < maxPages) {
-    const getEventsParams: any = {
-      filters: [
-        {
-          type: 'contract',
-          contractIds: [contractId],
-        },
-      ],
-      limit,
+    const topics =
+      commitmentIdTopic === undefined
+        ? undefined
+        : [
+            ...COMMITMENT_EVENT_NAMES.map((name) => [
+              encodeSymbolTopic(name),
+              commitmentIdTopic,
+              '*',
+            ]),
+            ['*', commitmentIdTopic, '*'],
+            // Legacy events put the commitment ID in the value rather than topic 1.
+            ['*', '*'],
+            ['*'],
+          ];
+    const eventFilter = {
+      type: 'contract' as const,
+      contractIds: [contractId],
+      ...(topics ? { topics } : {}),
     };
+    const getEventsParams: Parameters<rpc.Server['getEvents']>[0] = currentCursor
+      ? { filters: [eventFilter], limit, cursor: currentCursor }
+      : { filters: [eventFilter], limit, startLedger };
 
-    const item = decodeEscrowEvent(raw);
-
-    let response: any;
+    let response: rpc.Api.GetEventsResponse;
     try {
       response = await server.getEvents(getEventsParams);
     } catch (err) {
@@ -267,12 +313,12 @@ export async function fetchEscrowEvents(
     }
 
     pagesFetched += 1;
-    const rawEvents: any[] = response?.events || [];
+    const rawEvents = response.events;
     const pageRawCount = rawEvents.length;
     totalRawCount += pageRawCount;
 
     const nextCursor: string | undefined =
-      response?.cursor || (pageRawCount > 0 ? rawEvents[pageRawCount - 1]?.id : undefined);
+      response.cursor || (pageRawCount > 0 ? rawEvents[pageRawCount - 1]?.id : undefined);
     if (nextCursor) {
       lastCursor = nextCursor;
     }
@@ -281,7 +327,7 @@ export async function fetchEscrowEvents(
       if (seenIds.has(raw.id)) continue;
       seenIds.add(raw.id);
 
-      const item = decodeEscrowEvent(raw as any);
+      const item = decodeEscrowEvent(raw as RawEvent);
 
       if (
         options.filters?.kind &&
@@ -291,6 +337,13 @@ export async function fetchEscrowEvents(
         continue;
       }
       if (options.filters?.owner && item.owner !== options.filters.owner) {
+        continue;
+      }
+      if (
+        commitmentId !== undefined &&
+        raw.topic.length < 3 &&
+        item.commitmentId !== commitmentId
+      ) {
         continue;
       }
 
