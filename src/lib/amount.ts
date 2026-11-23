@@ -9,6 +9,12 @@ export const STELLAR_DECIMALS = 7;
 /** Mirrors `MAX_AMOUNT` in contracts/escrow/src/lib.rs: 1e12 stroops = 100,000 XLM. */
 export const MAX_AMOUNT = 1_000_000_000_000n;
 
+/** Mirrors `MIN_PARTIAL_WITHDRAWAL` in contracts/escrow/src/lib.rs. */
+export const MIN_PARTIAL_WITHDRAWAL = 10_000_000n;
+
+/** Mirrors `MIN_REMAINING_PRINCIPAL` in contracts/escrow/src/lib.rs. */
+export const MIN_REMAINING_PRINCIPAL = 10_000_000n;
+
 /** Longest lock the wizard accepts, in days. */
 export const MAX_DAYS = 365;
 
@@ -123,6 +129,74 @@ export function percentToBps(percent: number): bigint {
  */
 export function penaltyOf(amount: bigint, penaltyPercent: number): bigint {
   return (amount * percentToBps(penaltyPercent)) / BPS_DENOMINATOR;
+}
+
+export type PartialExitError =
+  | 'invalid_principal'
+  | 'invalid_withdrawal'
+  | 'invalid_penalty'
+  | 'below_minimum'
+  | 'remaining_below_minimum';
+
+export interface PartialExitBreakdown {
+  principal: bigint;
+  withdrawal: bigint;
+  penalty: bigint;
+  refund: bigint;
+  remaining: bigint;
+}
+
+export type PartialExitResult =
+  | { ok: true; value: PartialExitBreakdown }
+  | { ok: false; reason: PartialExitError };
+
+/**
+ * Calculates a contract-compatible partial refund without floating-point math.
+ *
+ * `penaltyBps` is the contract's integer basis-point value. The issue contract
+ * uses floor division for this UI calculation, and a full withdrawal is allowed
+ * to bypass the partial-withdrawal and remainder minimums just like the
+ * `refund_partial` entrypoint.
+ */
+export function partialExitBreakdown(
+  principal: bigint,
+  withdrawal: bigint,
+  penaltyBps: bigint | number,
+): PartialExitResult {
+  if (principal <= 0n) return { ok: false, reason: 'invalid_principal' };
+  if (withdrawal <= 0n || withdrawal > principal) {
+    return { ok: false, reason: 'invalid_withdrawal' };
+  }
+
+  let bps: bigint;
+  try {
+    bps = typeof penaltyBps === 'bigint' ? penaltyBps : BigInt(penaltyBps);
+  } catch {
+    return { ok: false, reason: 'invalid_penalty' };
+  }
+  if (bps < 0n || bps > 10_000n || (typeof penaltyBps === 'number' && !Number.isInteger(penaltyBps))) {
+    return { ok: false, reason: 'invalid_penalty' };
+  }
+
+  const remaining = principal - withdrawal;
+  if (remaining > 0n && withdrawal < MIN_PARTIAL_WITHDRAWAL) {
+    return { ok: false, reason: 'below_minimum' };
+  }
+  if (remaining > 0n && remaining < MIN_REMAINING_PRINCIPAL) {
+    return { ok: false, reason: 'remaining_below_minimum' };
+  }
+
+  const penalty = (withdrawal * bps) / BPS_DENOMINATOR;
+  return {
+    ok: true,
+    value: {
+      principal,
+      withdrawal,
+      penalty,
+      refund: withdrawal - penalty,
+      remaining,
+    },
+  };
 }
 
 /**

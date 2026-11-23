@@ -20,6 +20,7 @@ import {
 } from '@/lib/commitments';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DisputeDialog } from '@/components/DisputeDialog';
+import { PartialExitDialog } from '@/components/PartialExitDialog';
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
 import { getActionPauseReason, isActionBlocked } from '@/lib/soroban/protocol-policy';
@@ -93,6 +94,7 @@ export default function DashboardPage() {
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [balanceState, setBalanceState] = useState<BalanceState>({ status: 'idle' });
   const [disputeDialog, setDisputeDialog] = useState<Commitment | null>(null);
+  const [partialExitDialog, setPartialExitDialog] = useState<Commitment | null>(null);
   const [disputeRecords, setDisputeRecords] = useState<Record<string, DisputeRecord>>({});
   const [disputeError, setDisputeError] = useState<unknown>(null);
 
@@ -323,6 +325,28 @@ export default function DashboardPage() {
     }
   }
 
+  async function handlePartialExit(updated: Commitment) {
+    setPartialExitDialog(null);
+    let refreshed = updated;
+    if (address && /^\d+$/.test(updated.id)) {
+      try {
+        const { getCommitment } = await import('@/lib/soroban/read');
+        const onChain = await getCommitment(updated.id);
+        refreshed = {
+          ...updated,
+          amount: onChain.amount.toString(),
+          accrued_yield: onChain.accruedYield.toString(),
+          status: onChain.amount === 0n ? 'exited' : updated.status,
+        };
+      } catch {
+        // Keep the exact amount calculated from the successful transaction when
+        // the follow-up read is temporarily unavailable.
+      }
+    }
+    update(updated.id, refreshed);
+    setAnnouncement(`Commitment ${updated.id} partial exit confirmed`);
+  }
+
   if (!list) return <DashboardLoading />;
 
   const target = pending ? list.find((c) => c.id === pending.id) : undefined;
@@ -519,6 +543,20 @@ export default function DashboardPage() {
                           <span className="err small" role="status">
                             {exitPauseReason}
                           </span>
+                        )}
+                        {isOnChain && /^\d+$/.test(c.id) && ownerIsConnected && (
+                          <button
+                            className="btn btn-ghost"
+                            disabled={isActionBlocked('refund_partial', isPaused)}
+                            title={
+                              isActionBlocked('refund_partial', isPaused)
+                                ? getActionPauseReason('refund_partial', isPaused)
+                                : undefined
+                            }
+                            onClick={() => setPartialExitDialog(c)}
+                          >
+                            Partial exit
+                          </button>
                         )}
                       </div>
                     )}
@@ -717,6 +755,14 @@ export default function DashboardPage() {
           onSuccess={handleDisputeOpened}
         />
       )}
+
+      <PartialExitDialog
+        open={!!partialExitDialog}
+        commitment={partialExitDialog}
+        paused={isPaused}
+        onClose={() => setPartialExitDialog(null)}
+        onSuccess={handlePartialExit}
+      />
 
       <div className="row between wrap mt">
         <h2>Recent activity</h2>
