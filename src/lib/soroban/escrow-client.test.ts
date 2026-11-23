@@ -8,13 +8,14 @@ import {
 import { config } from '../config';
 import { Client } from 'escrow-client';
 
-vi.mock('../config', () => ({
-  config: {
+vi.mock('../config', () => {
+  const config = {
     escrowContractId: 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4',
     passphrase: 'Test SDF Network ; September 2015',
     sorobanRpcUrl: 'https://soroban-testnet.stellar.org',
-  },
-}));
+  };
+  return { config, getActiveConfig: () => config };
+});
 
 describe('getEscrowClient', () => {
   const defaultContractId = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4';

@@ -30,7 +30,8 @@ import { fetchXlmBalance } from '@/lib/wallet';
 import { shortAddress } from '@/lib/format';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
 import { DISPUTE_CATEGORY_LABELS, type DisputeRecord } from '@/lib/soroban/dispute';
-import { config, explorerTx } from '@/lib/config';
+import { explorerTx } from '@/lib/config';
+import { useNetwork } from '@/components/NetworkProvider';
 import { InlineError } from '@/components/InlineError';
 import { Skeleton } from '@/components/Skeleton';
 import { TxErrorNotice } from '@/components/TxErrorNotice';
@@ -72,6 +73,7 @@ type BalanceState =
   | { status: 'error'; message: string };
 
 export default function DashboardPage() {
+  const { config: networkConfig } = useNetwork();
   const { status, address } = useWallet();
   const protocolStatus = useProtocolStatus();
   const { params: protocolParams } = useProtocolParams();
@@ -377,7 +379,7 @@ export default function DashboardPage() {
           <b>{fmtUnits(yieldTotal)}</b>
         </div>
         <div className="card metric">
-          <span className="muted">{status === 'connected' ? `Wallet XLM (${config.networkDetails.label.toLowerCase()})` : 'Ready to settle'}</span>
+          <span className="muted">{status === 'connected' ? `Wallet XLM (${networkConfig.networkDetails.label.toLowerCase()})` : 'Ready to settle'}</span>
           {status === 'connected' ? (
             balanceState.status === 'loading' ? (
               <Skeleton width="110px" height="32px" style={{ marginTop: '4px' }} />

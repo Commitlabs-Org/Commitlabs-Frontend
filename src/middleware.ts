@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { HORIZON_URL, SOROBAN_RPC_URL } from '@/lib/config';
-import { buildCsp } from '@/lib/security/csp';
+import { config as buildConfig } from '@/lib/config';
+import { NETWORK_COOKIE, isNetworkId, type NetworkId } from '@/lib/network';
+import { buildCspForNetwork } from '@/lib/security/csp';
+
+/**
+ * The runtime network choice lives in localStorage, which the server cannot
+ * read; `NetworkProvider` mirrors it into a cookie so the CSP can follow the
+ * active network instead of allowing every network's hosts.
+ */
+function activeNetwork(request: NextRequest): NetworkId {
+  const fromCookie = request.cookies.get(NETWORK_COOKIE)?.value;
+  return isNetworkId(fromCookie) ? fromCookie : buildConfig.network;
+}
 
 /**
  * Generate a cryptographically random, base64-encoded nonce for this request.
@@ -28,10 +39,9 @@ export function generateNonce(): string {
  */
 export function middleware(request: NextRequest): NextResponse {
   const nonce = generateNonce();
-  const csp = buildCsp({
+  const csp = buildCspForNetwork({
     nonce,
-    horizonUrl: HORIZON_URL,
-    rpcUrl: SOROBAN_RPC_URL,
+    network: activeNetwork(request),
     isDev: process.env.NODE_ENV === 'development',
   });
 
