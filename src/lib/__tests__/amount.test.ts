@@ -3,10 +3,13 @@ import {
   AMOUNT_ERROR_MESSAGES,
   MAX_AMOUNT,
   MAX_DAYS,
+  MIN_PARTIAL_WITHDRAWAL,
+  MIN_REMAINING_PRINCIPAL,
   STELLAR_DECIMALS,
   formatAmount,
   parseAmount,
   parseDays,
+  partialExitBreakdown,
   penaltyOf,
   percentToBps,
   yieldOf,
@@ -221,5 +224,55 @@ describe('basis point math', () => {
     // 1e12 * 1600 * 365 / (365 * 1e4) = 1.6e11 exactly
     expect(yieldOf(MAX_AMOUNT, 16, 365)).toBe(160_000_000_000n);
     expect(STELLAR_DECIMALS).toBe(7);
+  });
+});
+
+describe('partial exit math', () => {
+  it('calculates a 100-unit withdrawal at 200 bps with bigint arithmetic', () => {
+    const result = partialExitBreakdown(100n * 10_000_000n, 100n * 10_000_000n, 200);
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        principal: 1_000_000_000n,
+        withdrawal: 1_000_000_000n,
+        penalty: 20_000_000n,
+        refund: 980_000_000n,
+        remaining: 0n,
+      },
+    });
+  });
+
+  it('rejects a partial withdrawal below the contract minimum', () => {
+    expect(
+      partialExitBreakdown(3n * MIN_PARTIAL_WITHDRAWAL, MIN_PARTIAL_WITHDRAWAL - 1n, 500),
+    ).toEqual({ ok: false, reason: 'below_minimum' });
+  });
+
+  it('rejects a withdrawal that leaves a dust remainder', () => {
+    const principal = 3n * MIN_REMAINING_PRINCIPAL;
+    expect(partialExitBreakdown(principal, principal - 1n, 500)).toEqual({
+      ok: false,
+      reason: 'remaining_below_minimum',
+    });
+  });
+
+  it('allows a full withdrawal and floors the penalty to stroops', () => {
+    expect(partialExitBreakdown(5_000_000n, 5_000_000n, 500)).toMatchObject({
+      ok: true,
+      value: { penalty: 250_000n, refund: 4_750_000n, remaining: 0n },
+    });
+    expect(partialExitBreakdown(3n * MIN_PARTIAL_WITHDRAWAL, MIN_PARTIAL_WITHDRAWAL, 1)).toMatchObject({
+      ok: true,
+      value: { penalty: 1_000n, refund: MIN_PARTIAL_WITHDRAWAL - 1_000n },
+    });
+  });
+
+  it.each([
+    [0n, MIN_PARTIAL_WITHDRAWAL, 500, 'invalid_principal'],
+    [10n * MIN_PARTIAL_WITHDRAWAL, 0n, 500, 'invalid_withdrawal'],
+    [10n * MIN_PARTIAL_WITHDRAWAL, 10n * MIN_PARTIAL_WITHDRAWAL + 1n, 500, 'invalid_withdrawal'],
+    [10n * MIN_PARTIAL_WITHDRAWAL, MIN_PARTIAL_WITHDRAWAL, 10_001, 'invalid_penalty'],
+  ])('rejects invalid partial-exit input', (principal, withdrawal, bps, reason) => {
+    expect(partialExitBreakdown(principal, withdrawal, bps)).toEqual({ ok: false, reason });
   });
 });
