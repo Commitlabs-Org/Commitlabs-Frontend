@@ -26,7 +26,8 @@ import { getActionPauseReason, isActionBlocked } from '@/lib/soroban/protocol-po
 import { useProtocolParams } from '@/lib/protocol';
 import { TxError } from '@/lib/soroban/errors';
 import { YieldCoverageChip } from '@/components/YieldCoverageChip';
-import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
+import { fetchXlmBalance } from '@/lib/wallet';
+import { shortAddress } from '@/lib/format';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
 import { DISPUTE_CATEGORY_LABELS, type DisputeRecord } from '@/lib/soroban/dispute';
 import { config, explorerTx } from '@/lib/config';
