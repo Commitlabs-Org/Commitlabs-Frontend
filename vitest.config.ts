@@ -84,5 +84,38 @@ export default defineConfig({
         },
       },
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportOnFailure: true,
+      include: ['src/lib/**', 'src/components/**', 'src/app/**'],
+      exclude: [
+        '**/*.{test,spec}.{ts,tsx}',
+        '**/test/**',
+        '**/__tests__/**',
+        '**/__fixtures__/**',
+        '**/fixtures/**',
+      ],
+      thresholds: {
+        'src/app/**': {
+          statements: 72,
+          branches: 80,
+          functions: 67,
+          lines: 72,
+        },
+        'src/components/**': {
+          statements: 80,
+          branches: 80,
+          functions: 77,
+          lines: 80,
+        },
+        'src/lib/**': {
+          statements: 82,
+          branches: 76,
+          functions: 89,
+          lines: 82,
+        },
+      },
+    },
   },
 });

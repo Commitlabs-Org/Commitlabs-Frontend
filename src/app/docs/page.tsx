@@ -1,8 +1,11 @@
 import { DocsContent } from './DocsContent';
 import { DocsErrorsTable, DocsPauseTable } from './DocsErrorsTable';
+import { DocsErrorsTable, DocsPauseTable } from './DocsErrorsTable';
 
 export const metadata = { title: 'Docs - CommitLabs' };
 
+  ['errors', 'Error codes'],
+  ['pause', 'Pause behaviour'],
   ['errors', 'Error codes'],
   ['pause', 'Pause behaviour'],
 export default function DocsPage() {
@@ -17,6 +20,13 @@ export default function DocsPage() {
         <p>These actions remain available or become blocked when the escrow contract is paused.</p>
         <DocsPauseTable />
 
+
+        <h2 id="errors">Error codes</h2>
+        <DocsErrorsTable />
+
+        <h2 id="pause">Pause behaviour</h2>
+        <p>These actions remain available or become blocked when the escrow contract is paused.</p>
+        <DocsPauseTable />
         </p>
   return <DocsContent />;
 }
