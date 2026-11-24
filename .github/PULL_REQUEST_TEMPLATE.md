@@ -22,8 +22,8 @@ Please review the [Developer Guide](https://github.com/Commitlabs-Org/Commitlabs
 - [ ] I have commented my code, particularly in hard-to-understand areas.
 - [ ] I have updated or added documentation where relevant (`DEVELOPER_GUIDE.md`, `README.md`, or inline files).
 - [ ] I have added unit/integration tests that prove my fix is effective or that my feature works.
-- [ ] Any new or modified logic has **at least 95% test coverage** (verified via `pnpm run test:coverage` or `npm run test:coverage`).
-- [ ] I have ran the project linter (`pnpm lint` or `npm run lint`) and fixed all error diagnostics.
+- [ ] Any new or modified logic has **at least 95% test coverage** (verified via `npm run test:coverage`).
+- [ ] I have ran the project linter (`npm run lint`) and fixed all error diagnostics.
 - [ ] I have verified that this change fits within the **96-hour campaign timeframe** for contributor assignments.
 - [ ] I have attached screenshots/videos showing the before and after states for any visual or UI changes.
 
