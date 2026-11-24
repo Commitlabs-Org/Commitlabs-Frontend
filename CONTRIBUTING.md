@@ -39,6 +39,13 @@ This project pins its toolchain so contributors and CI run a consistent environm
 - The coverage command writes text and lcov reports to the ignored `coverage/` directory. Current per-directory baselines are statements/lines, branches, and functions: `src/app/**` 72%/80%/67%, `src/components/**` 80%/80%/77%, and `src/lib/**` 82%/76%/89%. These baselines are rounded down from the measured suite coverage and will be raised as coverage improves; they do not replace the 95% expectation for new or changed logic.
 - The build, tests, and linters must pass in CI before the PR can be merged.
 
+### End-to-End Tests (Playwright)
+
+Browser end-to-end tests live under `e2e/` and run against a production build in demo mode (`NEXT_PUBLIC_ESCROW_CONTRACT_ID` unset) using Chromium:
+
+1. Install the Chromium browser binary once: `npx playwright install chromium`
+2. Run the suite: `npm run e2e` (this builds and starts the app automatically via `playwright.config.ts`).
+
 ## Frontend Performance Budgets
 
 The production build is checked against gzip-compressed first-load JavaScript budgets for `/`, `/create`, and `/dashboard`. The baseline comes from the Next.js build output: 96.2 kB, 100 kB, and 99.8 kB, respectively. The exact byte baselines and limits (10% headroom) are recorded in [`performance-budgets.json`](./performance-budgets.json); `/` has its own lower limit. The check also fails if the Freighter API implementation appears in the `/` first-load chunks.

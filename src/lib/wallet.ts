@@ -1,4 +1,4 @@
-import { HORIZON_URL, friendbotAccountUrl } from './config';
+import { getActiveConfig, friendbotAccountUrl } from './config';
 import { fetchJson, type HttpErrorKind } from './http';
 
 export type XlmBalanceResult =
@@ -50,7 +50,7 @@ export async function fetchXlmBalance(
 ): Promise<XlmBalanceResult> {
   const result = await fetchJson<{
     balances?: Array<{ asset_type: string; balance: string }>;
-  }>(`${HORIZON_URL}/accounts/${address}`, {
+  }>(`${getActiveConfig().horizonUrl}/accounts/${address}`, {
     signal: options?.signal,
     timeoutMs: options?.timeoutMs,
     retries: options?.retries,
@@ -84,6 +84,3 @@ export async function fetchXlmBalance(
   };
 }
 
-export function shortAddress(a: string): string {
-  return `${a.slice(0, 4)}...${a.slice(-4)}`;
-}

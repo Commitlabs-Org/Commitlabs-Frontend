@@ -11,4 +11,11 @@
 - Deploy tx: [4d10bb82...](https://stellar.expert/explorer/testnet/tx/4d10bb8248177746237ddf582496bee811f082ec617f025d78a03be468a38adf)
 - Smoke test: `create_commitment` (id 0, 1 XLM, Balanced, 30 days) then `fund_escrow` succeeded; `get_commitment` returns status `Funded`.
 
+## Per-network registry
+
+The app reads deployments from `deployments/<network>.json` through `src/lib/deployments.ts`. The
+header network selector defaults to `NEXT_PUBLIC_STELLAR_NETWORK` and can switch at runtime; a
+network whose file has no `commitlabs-escrow` entry (currently futurenet and mainnet) runs in
+read-only mode.
+
 See [contracts/README.md](contracts/README.md) for the function reference.

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import './globals.css';
+import { NetworkProvider } from '@/components/NetworkProvider';
+import { NetworkNotice } from '@/components/NetworkNotice';
 import { WalletProvider } from '@/components/WalletProvider';
 import { ProtocolStatusProvider } from '@/components/ProtocolStatusProvider';
 import { Header } from '@/components/Header';
@@ -26,15 +28,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" nonce={nonce}>
       <body>
-        <WalletProvider>
-          <ProtocolStatusProvider>
-            <Header />
-            <PausedBanner />
-            <WalletNotice />
-            <main id="main-content">{children}</main>
-            <Footer />
-          </ProtocolStatusProvider>
-        </WalletProvider>
+        <NetworkProvider>
+          <WalletProvider>
+            <ProtocolStatusProvider>
+              <Header />
+              <NetworkNotice />
+              <PausedBanner />
+              <WalletNotice />
+              <main id="main-content">{children}</main>
+              <Footer />
+            </ProtocolStatusProvider>
+          </WalletProvider>
+        </NetworkProvider>
       </body>
     </html>
   );

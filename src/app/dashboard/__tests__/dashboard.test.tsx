@@ -28,7 +28,6 @@ vi.mock('@/components/ProtocolStatusProvider', () => ({
 }));
 vi.mock('@/lib/wallet', () => ({
   fetchXlmBalance: vi.fn().mockResolvedValue(null),
-  shortAddress: vi.fn((a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`),
 }));
 vi.mock('@/lib/soroban/escrow', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/soroban/escrow')>();
