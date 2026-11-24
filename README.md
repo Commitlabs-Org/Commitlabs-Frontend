@@ -43,6 +43,7 @@ npm run circular   # madge circular dependency check
 | `NEXT_PUBLIC_HORIZON_URL` | `https://horizon-testnet.stellar.org` | Balance lookups |
 | `NEXT_PUBLIC_SOROBAN_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban RPC |
 | `NEXT_PUBLIC_ESCROW_CONTRACT_ID` | see below | Deployed escrow contract |
+| `NEXT_PUBLIC_ESCROW_TOKEN_ID` | from `deployments/<network>.json` | Optional SAC token contract ID override |
 
 ## Deployed contracts (Stellar testnet)
 
@@ -58,8 +59,10 @@ Deployed on Vercel (framework preset: Next.js). Set the variables above in the V
 
 ## Scope note
 
-Commitment creation in the web app is currently a demo recorded in browser storage; on-chain invocation of the
-escrow contract from the UI is not wired yet.
+When a Freighter wallet is connected and an escrow contract is configured for the active network, the Create
+wizard submits `create_commitment` and `fund_escrow` on-chain and records the returned commitment ID and
+transaction hash. Without a connected wallet or configured contract, the app falls back to browser-stored demo
+mode.
 
 ## License and contributing
 

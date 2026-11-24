@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet } from '@/components/WalletProvider';
 import { shortAddress } from '@/lib/format';
 import { explorerContractUrl } from '@/lib/config';
+import { CopyButton } from '@/components/CopyButton';
 import {
   fetchEscrowEvents,
   DecodedEscrowEvent,
@@ -342,7 +343,10 @@ export default function ActivityPage() {
                     <td>{ev.commitmentId ?? '—'}</td>
                     <td>
                       {ev.owner ? (
-                        <span title={ev.owner}>{shortAddress(ev.owner)}</span>
+                        <span className="copy-control">
+                          <span title={ev.owner}>{shortAddress(ev.owner)}</span>
+                          <CopyButton value={ev.owner} />
+                        </span>
                       ) : (
                         '—'
                       )}
@@ -354,14 +358,17 @@ export default function ActivityPage() {
                     </td>
                     <td>
                       {ev.txHash ? (
-                        <a
-                          href={explorerContractUrl(ev.txHash)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="link"
-                        >
-                          View tx
-                        </a>
+                        <span className="copy-control">
+                          <a
+                            href={explorerContractUrl(ev.txHash)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="link"
+                          >
+                            View tx
+                          </a>
+                          <CopyButton value={ev.txHash} label="Copy transaction hash" />
+                        </span>
                       ) : (
                         '—'
                       )}

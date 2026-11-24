@@ -40,3 +40,14 @@ export function getDeployment(network: NetworkId): NetworkDeployment {
 export function getDeploymentContractId(network: NetworkId): string {
   return getDeployment(network).contracts['commitlabs-escrow']?.id?.trim() ?? '';
 }
+
+/**
+ * Returns the SAC token contract ID deployed on a network, or '' when there is none.
+ * Strips any trailing human-readable annotation (e.g. "C... (native XLM SAC)").
+ */
+export function getDeploymentTokenId(network: NetworkId): string {
+  const raw = getDeployment(network).contracts['commitlabs-escrow']?.token?.trim() ?? '';
+  if (!raw) return '';
+  const candidate = raw.split(/\s+/)[0] ?? '';
+  return /^C[A-Z2-7]{55}$/.test(candidate) ? candidate : '';
+}

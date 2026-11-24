@@ -1,7 +1,7 @@
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger, MockAuth, MockAuthInvoke},
-    token, IntoVal,
+    testutils::{Address as _, Events, Ledger, MockAuth, MockAuthInvoke},
+    token, IntoVal, TryFromVal,
 };
 
 const PRINCIPAL: i128 = 1_000_000;
@@ -323,6 +323,80 @@ fn release_pays_principal_plus_yield() {
     let paid = f.client().release(&f.id, &f.owner);
     assert_eq!(paid, c.amount + c.accrued_yield);
     f.assert_paid(&before, paid, c.accrued_yield);
+}
+
+#[test]
+fn release_and_settle_emit_identical_topics_and_payload() {
+    let f = Fixture::new(PRINCIPAL, POOL);
+    // Create and fund a second identical commitment under the same owner and asset.
+    f.env.mock_all_auths();
+    let sac = token::StellarAssetClient::new(&f.env, &f.token);
+    sac.mint(&f.owner, &PRINCIPAL);
+    let second_id = f.client().create_commitment(
+        &f.owner,
+        &f.token,
+        &PRINCIPAL,
+        &RiskProfile::Balanced,
+        &30,
+        &300,
+        &Map::new(&f.env),
+    );
+    f.client().fund_escrow(&second_id);
+    f.env.mock_auths(&[]);
+
+    f.mature();
+    let c1 = f.commitment();
+    let c2 = f.client().get_commitment(&second_id);
+
+    f.authorize("release", &f.owner);
+    let release_payout = f.client().release(&f.id, &f.owner);
+    let release_events = f.env.events().all();
+    let (release_contract, release_topics, release_val) = release_events.last().unwrap();
+
+    f.env.mock_auths(&[MockAuth {
+        address: &f.owner,
+        invoke: &MockAuthInvoke {
+            contract: &f.contract,
+            fn_name: "settle_commitment",
+            args: (second_id, f.owner.clone()).into_val(&f.env),
+            sub_invokes: &[],
+        },
+    }]);
+    let settle_result = f.client().settle_commitment(&second_id, &f.owner);
+    let settle_events = f.env.events().all();
+    let (settle_contract, settle_topics, settle_val) = settle_events.last().unwrap();
+
+    assert_eq!(release_contract, f.contract);
+    assert_eq!(settle_contract, f.contract);
+    assert_eq!(release_payout, settle_result.settlement_amount);
+
+    let expected_release_topics: soroban_sdk::Vec<soroban_sdk::Val> = (
+        Symbol::new(&f.env, "release"),
+        c1.id,
+        c1.owner.clone(),
+    )
+        .into_val(&f.env);
+    let expected_settle_topics: soroban_sdk::Vec<soroban_sdk::Val> = (
+        Symbol::new(&f.env, "release"),
+        c2.id,
+        c2.owner.clone(),
+    )
+        .into_val(&f.env);
+    assert_eq!(release_topics, expected_release_topics);
+    assert_eq!(settle_topics, expected_settle_topics);
+
+    let release_data = ReleaseEventData::try_from_val(&f.env, &release_val).unwrap();
+    let settle_data = ReleaseEventData::try_from_val(&f.env, &settle_val).unwrap();
+    let expected_data = ReleaseEventData {
+        asset: c1.asset,
+        amount: c1.amount,
+        accrued_yield: c1.accrued_yield,
+        payout: release_payout,
+        risk: c1.risk,
+    };
+    assert_eq!(release_data, expected_data);
+    assert_eq!(settle_data, expected_data);
+    assert_eq!(release_data, settle_data);
 }
 
 struct Fixture {

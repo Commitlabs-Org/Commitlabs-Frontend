@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatAmount, penaltyOf } from '@/lib/amount';
 import {
   effectiveStatus,
@@ -18,9 +19,13 @@ import {
   subscribeCommitments,
   type Commitment,
 } from '@/lib/commitments';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { DisputeDialog } from '@/components/DisputeDialog';
 import { PartialExitDialog } from '@/components/PartialExitDialog';
+const ConfirmDialog = dynamic(() =>
+  import('@/components/ConfirmDialog').then((module) => module.ConfirmDialog),
+);
+const DisputeDialog = dynamic(() =>
+  import('@/components/DisputeDialog').then((module) => module.DisputeDialog),
+);
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
 import { getActionPauseReason, isActionBlocked } from '@/lib/soroban/protocol-policy';
@@ -92,11 +97,15 @@ export default function DashboardPage() {
   const [recentEvents, setRecentEvents] = useState<DecodedEscrowEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [balanceState, setBalanceState] = useState<BalanceState>({ status: 'idle' });
   const [disputeDialog, setDisputeDialog] = useState<Commitment | null>(null);
   const [partialExitDialog, setPartialExitDialog] = useState<Commitment | null>(null);
   const [disputeRecords, setDisputeRecords] = useState<Record<string, DisputeRecord>>({});
   const [disputeError, setDisputeError] = useState<unknown>(null);
+  const syncRequest = useRef(0);
 
   const reload = useCallback(() => {
     const result = loadCommitments();
@@ -162,6 +171,46 @@ export default function DashboardPage() {
     reload();
     return subscribeCommitments(reload);
   }, [reload]);
+
+  const syncChain = useCallback(
+    async (refresh = false) => {
+      if (!address || status !== 'connected') return;
+      const request = ++syncRequest.current;
+      const local = loadCommitments().items;
+      if (!refresh) {
+        setList(local);
+        setLastSyncedAt(null);
+      }
+      setSyncing(true);
+      setSyncError(null);
+      try {
+        const { mergeCommitments, syncOwnerCommitments } = await import('@/lib/soroban/sync');
+        const result = await syncOwnerCommitments(address, { refresh });
+        if (request !== syncRequest.current) return;
+        setList(mergeCommitments(local, result.commitments));
+        setLastSyncedAt(result.syncedAt);
+      } catch (err) {
+        if (request !== syncRequest.current) return;
+        setList(local);
+        const detail = err instanceof Error ? ` ${err.message}` : '';
+        setSyncError(`Couldn't sync on-chain commitments.${detail} Showing saved commitments.`);
+      } finally {
+        if (request === syncRequest.current) setSyncing(false);
+      }
+    },
+    [address, status],
+  );
+
+  useEffect(() => {
+    if (address && status === 'connected') {
+      void syncChain();
+    } else {
+      syncRequest.current += 1;
+      setSyncing(false);
+      setSyncError(null);
+      setLastSyncedAt(null);
+    }
+  }, [address, status, syncChain]);
 
   useEffect(() => {
     if (address) {
@@ -437,7 +486,32 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <h2 className="mt">Your commitments</h2>
+      <div className="row between wrap mt">
+        <h2>Your commitments</h2>
+        {address && status === 'connected' && (
+          <div className="row wrap" style={{ alignItems: 'center', gap: '10px' }}>
+            {lastSyncedAt !== null && (
+              <span className="muted small">
+                Last synced {new Date(lastSyncedAt).toLocaleString()}
+              </span>
+            )}
+            <button
+              className="btn btn-ghost"
+              onClick={() => void syncChain(true)}
+              disabled={syncing}
+            >
+              {syncing ? 'Syncing...' : 'Refresh chain data'}
+            </button>
+          </div>
+        )}
+      </div>
+      {syncError && (
+        <InlineError
+          message={syncError}
+          onRetry={() => void syncChain(true)}
+          retryLabel="Retry sync"
+        />
+      )}
       {list.length === 0 ? (
         <div className="card center">
           <p className="muted">No commitments yet.</p>

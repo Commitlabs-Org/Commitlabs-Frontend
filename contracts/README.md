@@ -7,12 +7,14 @@ Soroban (Rust) smart-contract workspace backing the CommitLabs liquidity commitm
 ```text
 contracts/
 |-- Cargo.toml                    # Cargo workspace; member: escrow
+|-- golden/math_vectors.json      # Shared Rust/TypeScript math parity vectors
 |-- escrow/
 |   |-- Cargo.toml                # commitlabs-escrow crate
 |   `-- src/
 |       |-- lib.rs                # EscrowContract implementation, types, errors
 |       |-- test_funding_window.rs # Funding-time maturity, expiry, and cancellation tests
 |       |-- test_penalty_math.rs   # Penalty rounding and minimum partial-withdrawal tests
+|       |-- test_golden_math.rs   # Shared Rust/TypeScript yield and penalty vectors
 |       `-- test_yield_reserve.rs # Yield-pool reservation accounting tests
 `-- scripts/
     |-- deploy-testnet.sh         # Build, deploy, initialize helper
@@ -97,6 +99,28 @@ Creation records the selected lock length in the existing `maturity - created_at
 | `set_fee_recipient(new_fee_recipient)`, `set_violation_threshold(threshold)`, `upgrade(new_wasm_hash)`                           | Admin auth             | Updates fee recipient, violation threshold, or upgrades the contract WASM.                                                                                                                                                                                                      |
 | `pause` / `unpause`                                                                                                               | Admin auth             | Toggles emergency pause flag. Halts all user-initiated state changes and capital outflows while preserving admin incident recovery paths (resolve_dispute, set_admin, upgrade, unpause). |
 | Read methods                                                                                                                      | None                   | `get_commitment`, `get_user_commitments`, `get_user_commitment_ids`, `get_user_commitment_ids_page`, `get_owner_commitments`, `get_attestations`, `get_dispute`, `get_default_penalty`, `get_yield_pool_balance`, `get_yield_pool_status`, `get_grace_period`, `get_violation_threshold`, `is_paused`, `is_attestor`. |
+
+## Events
+
+Commitment lifecycle events are emitted via `publish_commitment_event` using the canonical 3-topic schema `(Symbol(name), commitment_id, owner)` so off-chain indexers and `src/lib/soroban/events.ts` can filter by commitment id and owner consistently. Both `release` and `settle_commitment` emit the same `release` event with `ReleaseEventData`.
+
+| Event | Emitted by | Topics | Payload |
+| ----- | ---------- | ------ | ------- |
+| `create_commitment` | `create_commitment`, `create_commitment_default`, `create_commitment_with_default` | `(Symbol("create_commitment"), commitment_id, owner)` | `CreateCommitmentEventData { asset, amount, risk, maturity, penalty_bps }` |
+| `fund_escrow` | `fund_escrow` | `(Symbol("fund_escrow"), commitment_id, owner)` | `FundEscrowEventData { asset, amount, risk }` |
+| `cancel_commitment` | `cancel_commitment` | `(Symbol("cancel_commitment"), commitment_id, owner)` | `()` |
+| `release` | `release`, `settle_commitment` | `(Symbol("release"), commitment_id, owner)` | `ReleaseEventData { asset, amount, accrued_yield, payout, risk }` |
+| `refund` | `refund`, `early_exit_commitment` | `(Symbol("refund"), commitment_id, owner)` | `RefundEventData { asset, amount, refunded_amount, penalty, risk }` |
+| `refund_partial` | `refund_partial` | `(Symbol("refund_partial"), owner)` | `(commitment_id, refund_amount, penalty, remaining)` |
+| `dispute` | `dispute` | `(Symbol("dispute"), commitment_id, owner)` | `DisputeEventData { asset, amount, risk, reason_category, reason_text, disputed_by }` |
+| `resolve_dispute` | `resolve_dispute` | `(Symbol("resolve_dispute"), admin)` | `(commitment_id, release_to_owner, paid)` |
+| `commitment_violated` | `record_attestation` (below threshold) | `(Symbol("commitment_violated"), commitment_id, owner)` | `(score, threshold)` |
+| `deposit_yield_pool` | `deposit_yield_pool` | `(Symbol("deposit_yield_pool"), admin)` | `(amount, new_balance)` |
+| `withdraw_yield_pool` | `withdraw_yield_pool` | `(Symbol("withdraw_yield_pool"), admin)` | `(to, amount)` |
+| `pause` / `unpause` | `pause`, `unpause` | `(Symbol("pause" \| "unpause"), admin)` | `()` |
+| `upgrade` | `upgrade` | `(Symbol("upgrade"), admin)` | `new_wasm_hash` |
+
+> **Legacy compatibility:** Historic `release` events emitted prior to schema unification used 2 topics `(Symbol("release"), owner)` with tuple payload `(commitment_id, payout, accrued_yield)`. `decodeEscrowEvent` in `src/lib/soroban/events.ts` retains Shape B decoding as a documented fallback for those historic ledger entries.
 
 ## Pause Policy
 
@@ -246,6 +270,16 @@ Backend callers should use the normalized `BackendError` response shape and pres
 `FundingWindowExpired` is error code `16`; it is returned without moving tokens when funding is attempted after the 7-day window. Codes 1-15 and their enum positions remain unchanged. `ReservedYieldInvariant` is error code `17`. `BelowMinimum` is error code `18`.
 
 Run the isolated test suites with `cd contracts && cargo test -p commitlabs-escrow`.
+
+### Shared Math Vectors
+
+`golden/math_vectors.json` is the shared source for Rust and TypeScript yield and
+penalty parity tests. When adding a vector, compute its expected values using
+the contract formulas in `escrow/src/lib.rs` (including saturating yield
+multiplication and ceiling-rounded penalties), then add it to the matching
+array in the JSON file. Do not copy the table into either test suite; run
+`cd contracts && cargo test -p commitlabs-escrow golden` and `npm test` to
+verify both consumers.
 
 ## Deployment Flow
 

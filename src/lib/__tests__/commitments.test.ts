@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   loadCommitments,
+  fromOnChain,
   normalizeStoredAmount,
   projectedYield,
   resetCommitments,
@@ -169,5 +170,46 @@ describe('CommitmentStatus validation', () => {
       dispute: { reasonCategory: 2, reasonText: 'Fraud', disputedAt: new Date(), disputedBy: base.owner! },
     });
     expect(c?.dispute?.reasonCategory).toBe(2);
+  });
+});
+
+describe('fromOnChain', () => {
+  const onChain = {
+    id: '42',
+    owner: 'GCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHP',
+    asset: 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM',
+    amount: 1_000_000_000_000n,
+    accruedYield: 123n,
+    risk: 'Safe',
+    status: 'Funded',
+    maturity: 1_700_000_000n + 14n * 86_400n,
+    penaltyBps: 250,
+    complianceScore: 100,
+    createdAt: 1_700_000_000n,
+    metadata: {},
+  } as const;
+
+  it.each([
+    ['Created', 'active'],
+    ['Funded', 'active'],
+    ['Released', 'settled'],
+    ['Refunded', 'exited'],
+    ['Disputed', 'disputed'],
+    ['Violated', 'violated'],
+    ['Cancelled', 'exited'],
+  ] as const)('maps EscrowStatus %s to %s', (chainStatus, status) => {
+    expect(fromOnChain({ ...onChain, status: chainStatus }).status).toBe(status);
+  });
+
+  it('keeps large amounts as exact base-unit digit strings', () => {
+    expect(fromOnChain(onChain).amount).toBe('1000000000000');
+    expect(fromOnChain(onChain)).toMatchObject({
+      id: '42',
+      type: 'safe',
+      durationDays: 14,
+      createdAt: 1_700_000_000_000,
+      penalty: 2.5,
+      accrued_yield: '123',
+    });
   });
 });

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { explorerTx } from '@/lib/config';
 import { formatAbsoluteTime, formatRelativeTime } from '@/lib/soroban/read';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
+import { CopyButton } from '@/components/CopyButton';
 
 const PAGE_LIMIT = 20;
 
@@ -164,14 +165,17 @@ export function CommitmentTimeline({ commitmentId }: { commitmentId: string }) {
                   Amount: {event.amount === undefined ? '—' : `${formatAmount(event.amount)} units`}
                 </div>
                 {event.txHash && (
-                  <a
-                    className="link small"
-                    href={explorerTx(event.txHash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View transaction
-                  </a>
+                  <span className="copy-control">
+                    <a
+                      className="link small"
+                      href={explorerTx(event.txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View transaction
+                    </a>
+                    <CopyButton value={event.txHash} label="Copy transaction hash" />
+                  </span>
                 )}
               </li>
             );

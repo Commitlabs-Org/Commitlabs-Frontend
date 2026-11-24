@@ -20,6 +20,22 @@ export const MAX_DAYS = 365;
 
 const BPS_DENOMINATOR = 10_000n;
 const DAYS_PER_YEAR = 365n;
+const MAX_I128 = (1n << 127n) - 1n;
+const MIN_I128 = -(1n << 127n);
+
+/** Mirrors Rust i128::saturating_mul for the contract's yield arithmetic. */
+export function saturatingMultiplyI128(left: bigint, right: bigint): bigint {
+  const product = left * right;
+  if (product > MAX_I128) return MAX_I128;
+  if (product < MIN_I128) return MIN_I128;
+  return product;
+}
+
+function penaltyForBps(amount: bigint, bps: bigint): bigint {
+  if (bps === 0n) return 0n;
+  const penalty = ((amount * bps) + BPS_DENOMINATOR - 1n) / BPS_DENOMINATOR;
+  return penalty > amount ? amount : penalty;
+}
 
 export type AmountError =
   | 'empty'
@@ -124,11 +140,10 @@ export function percentToBps(percent: number): bigint {
 }
 
 /**
- * Early exit penalty: `amount * bps / 10_000`, rounded down like the contract's
- * `compute_refund_amount`. The refund is `amount - penalty`, so no stroop is lost.
+ * Early exit penalty rounded up like the contract's `penalty_for`.
  */
 export function penaltyOf(amount: bigint, penaltyPercent: number): bigint {
-  return (amount * percentToBps(penaltyPercent)) / BPS_DENOMINATOR;
+  return penaltyForBps(amount, percentToBps(penaltyPercent));
 }
 
 export type PartialExitError =
@@ -153,10 +168,9 @@ export type PartialExitResult =
 /**
  * Calculates a contract-compatible partial refund without floating-point math.
  *
- * `penaltyBps` is the contract's integer basis-point value. The issue contract
- * uses floor division for this UI calculation, and a full withdrawal is allowed
- * to bypass the partial-withdrawal and remainder minimums just like the
- * `refund_partial` entrypoint.
+ * `penaltyBps` is the contract's integer basis-point value. Penalties round up
+ * like the contract. A full withdrawal bypasses the partial-withdrawal and
+ * remainder minimums just like the `refund_partial` entrypoint.
  */
 export function partialExitBreakdown(
   principal: bigint,
@@ -186,7 +200,7 @@ export function partialExitBreakdown(
     return { ok: false, reason: 'remaining_below_minimum' };
   }
 
-  const penalty = (withdrawal * bps) / BPS_DENOMINATOR;
+  const penalty = penaltyForBps(withdrawal, bps);
   return {
     ok: true,
     value: {
@@ -200,10 +214,12 @@ export function partialExitBreakdown(
 }
 
 /**
- * Simple-interest yield: `amount * apyBps * days / (365 * 10_000)`, rounded down
- * once at the end (the contract's `calculate_accrued_yield` floors the same way),
- * so the projection never promises more than the base-unit math can pay.
+ * Simple-interest yield: `amount * apyBps * days / 365 / 10_000`, rounded down
+ * after each division in the same order as the contract's
+ * `calculate_accrued_yield`.
  */
 export function yieldOf(amount: bigint, apyPercent: number, days: number): bigint {
-  return (amount * percentToBps(apyPercent) * BigInt(days)) / (DAYS_PER_YEAR * BPS_DENOMINATOR);
+  const afterBps = saturatingMultiplyI128(amount, percentToBps(apyPercent));
+  const product = saturatingMultiplyI128(afterBps, BigInt(days));
+  return (product / DAYS_PER_YEAR) / BPS_DENOMINATOR;
 }

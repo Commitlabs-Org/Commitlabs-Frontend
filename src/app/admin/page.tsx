@@ -164,7 +164,7 @@ export default function AdminPage() {
         )}
 
         {successMessage && (
-          <div className="notice" role="status" style={{ borderColor: 'var(--ok)', color: 'var(--ok)', background: 'rgba(74,222,128,0.1)' }}>
+          <div className="notice" role="status" style={{ borderColor: 'var(--ok)', color: 'var(--ok)', background: 'var(--ok-soft)' }}>
             <p>{successMessage}</p>
           </div>
         )}
