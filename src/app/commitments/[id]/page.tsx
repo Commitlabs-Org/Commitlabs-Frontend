@@ -20,6 +20,7 @@ import { useNetwork } from '@/components/NetworkProvider';
 import { Skeleton } from '@/components/Skeleton';
 import { TransferPanel } from '@/components/TransferPanel';
 import { CommitmentTimeline } from '@/components/CommitmentTimeline';
+import { CopyButton } from '@/components/CopyButton';
 
 interface PageProps {
   params: {
@@ -311,6 +312,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
               >
                 {commitment.owner}
               </a>
+              <CopyButton value={commitment.owner} />
             </code>
           </li>
           <li>
