@@ -9,6 +9,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { WalletNotice } from '@/components/WalletNotice';
 import { PausedBanner } from '@/components/PausedBanner';
+import { ThemeBootstrap } from '@/components/ThemeBootstrap';
 
 export const metadata: Metadata = {
   title: 'CommitLabs - Liquidity as a Commitment',
@@ -27,6 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en" nonce={nonce}>
+      <head>
+        <meta name="color-scheme" content="light dark" />
+        <ThemeBootstrap nonce={nonce} />
+      </head>
       <body>
         <NetworkProvider>
           <WalletProvider>

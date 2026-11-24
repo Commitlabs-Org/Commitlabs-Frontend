@@ -157,7 +157,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
     return (
       <main className="container narrow page" role="main">
         <div className="card center">
-          <div className="error-boundary-icon" aria-hidden="true" style={{ borderColor: 'var(--warn)', color: 'var(--warn)', background: 'rgba(251, 191, 36, 0.1)' }}>
+          <div className="error-boundary-icon" aria-hidden="true" style={{ borderColor: 'var(--warn)', color: 'var(--warn)', background: 'var(--warn-chip-bg)' }}>
             ?
           </div>
           <h1>Commitment Not Found</h1>
@@ -435,7 +435,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
       {dispute && (
         <section
           className="card mt"
-          style={{ borderColor: 'var(--danger)', background: 'rgba(248, 113, 113, 0.05)' }}
+          style={{ borderColor: 'var(--danger)', background: 'var(--danger-soft)' }}
           aria-labelledby="dispute-heading"
         >
           <div className="row between wrap">
