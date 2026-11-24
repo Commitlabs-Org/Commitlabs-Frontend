@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { TYPES } from '@/lib/commitments';
-import { config } from '@/lib/config';
+import { useNetwork } from '@/components/NetworkProvider';
 import { useProtocolParams } from '@/lib/protocol';
 import { DISPLAY_APY } from '@/lib/yield';
 import { Skeleton } from '@/components/Skeleton';
@@ -29,10 +29,11 @@ const FEATURES = [
   ['Enforceable', 'Rules live in a smart contract, not a terms page.'],
   ['Attestable', 'Every state change emits events anyone can verify on-chain.'],
   ['Composable', 'Commitments are standard on-chain records other protocols can build on.'],
-  ['Transparent', `Open source UI and contracts, deployed on Stellar ${config.networkDetails.label.toLowerCase()}.`],
+  ['Transparent', 'Open source UI and contracts, deployed on Stellar Soroban.'],
 ];
 
 export default function Home() {
+  const { config } = useNetwork();
   const { params, loading, isFallback } = useProtocolParams();
   return (
     <>

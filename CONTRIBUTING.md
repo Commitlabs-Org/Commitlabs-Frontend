@@ -36,7 +36,15 @@ This project pins its toolchain so contributors and CI run a consistent environm
 - All new features and bug fixes must be accompanied by appropriate tests (Vitest).
 - We require a **minimum of 95% test coverage** on any new or changed logic.
 - Before opening your PR, run tests and check coverage locally using `npm run test:coverage` (or `pnpm test:coverage`).
+- The coverage command writes text and lcov reports to the ignored `coverage/` directory. Current per-directory baselines are statements/lines, branches, and functions: `src/app/**` 72%/80%/67%, `src/components/**` 80%/80%/77%, and `src/lib/**` 82%/76%/89%. These baselines are rounded down from the measured suite coverage and will be raised as coverage improves; they do not replace the 95% expectation for new or changed logic.
 - The build, tests, and linters must pass in CI before the PR can be merged.
+
+### End-to-End Tests (Playwright)
+
+Browser end-to-end tests live under `e2e/` and run against a production build in demo mode (`NEXT_PUBLIC_ESCROW_CONTRACT_ID` unset) using Chromium:
+
+1. Install the Chromium browser binary once: `npx playwright install chromium`
+2. Run the suite: `npm run e2e` (this builds and starts the app automatically via `playwright.config.ts`).
 
 ## Frontend Performance Budgets
 

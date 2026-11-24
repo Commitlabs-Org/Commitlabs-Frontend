@@ -6,12 +6,10 @@ import CommitmentDetailPage from '../page';
 import { Keypair } from '@stellar/stellar-sdk';
 import * as readModule from '@/lib/soroban/read';
 import * as escrowModule from '@/lib/soroban/escrow';
+import { formatRelativeTime, formatAbsoluteTime } from '@/lib/soroban/read';
+import { shortAddress } from '@/lib/format';
 import * as eventsModule from '@/lib/soroban/events';
-import {
-  formatRelativeTime,
-  formatAbsoluteTime,
-  shortenAddress,
-} from '@/lib/soroban/read';
+import * as eventsModule from '@/lib/soroban/events';
 import { EscrowErrorCode, TxError } from '@/lib/soroban/errors';
 
 let mockWalletAddress: string | null = null;
@@ -217,7 +215,7 @@ describe('CommitmentDetailPage Component', () => {
 
       // Attestations section
       expect(screen.getByText('Compliance Attestations')).toBeTruthy();
-      expect(screen.getByText('GATTES...111111')).toBeTruthy();
+      expect(screen.getByText('GATT...1111')).toBeTruthy();
 
       // Metadata section
       expect(screen.getByText('Commitment Metadata')).toBeTruthy();
@@ -292,10 +290,10 @@ describe('CommitmentDetailPage Component', () => {
     });
 
     it('shortens Stellar addresses', () => {
-      expect(shortenAddress('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF')).toBe(
-        'GAAAAA...AAAWHF',
+      expect(shortAddress('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF')).toBe(
+        'GAAA...AWHF',
       );
-      expect(shortenAddress('SHORT')).toBe('SHORT');
+      expect(shortAddress('SHORT')).toBe('SHORT');
     });
   });
 

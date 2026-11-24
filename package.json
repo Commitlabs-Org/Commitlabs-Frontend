@@ -16,8 +16,10 @@
     "circular": "madge --circular --extensions ts,tsx src",
     "size": "node scripts/check-bundle-budget.mjs",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:size": "node --test scripts/check-bundle-budget.test.mjs",
+    "e2e": "playwright test",
     "bindings": "bash scripts/gen-escrow-bindings.sh"
   },
   "dependencies": {
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^14.2.35",
+    "@playwright/test": "^1.59.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.5.2",
@@ -38,6 +41,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.2.7",
     "axe-core": "^4.10.2",
     "cross-env": "^10.1.0",
     "jsdom": "^26.1.0",

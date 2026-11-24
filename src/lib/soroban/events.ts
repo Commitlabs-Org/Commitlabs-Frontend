@@ -1,5 +1,6 @@
+import { getActiveConfig } from '../config';
 import { nativeToScVal, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
-import { SOROBAN_RPC_URL, ESCROW_CONTRACT_ID } from '../config';
+import { nativeToScVal, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 
 export interface DecodedEscrowEvent {
   id: string;
@@ -220,8 +221,9 @@ export async function fetchEscrowEvents(
   options: FetchEventsOptions = {},
   customServer?: rpc.Server
 ): Promise<FetchEventsResult> {
+  const config = getActiveConfig();
   const contractId =
-    options.contractId || ESCROW_CONTRACT_ID || (customServer ? 'CCONTRACTFORTESTS' : '');
+    options.contractId || config.escrowContractId || (customServer ? 'CCONTRACTFORTESTS' : '');
   if (!contractId) {
     return {
       events: [],
@@ -232,7 +234,7 @@ export async function fetchEscrowEvents(
     };
   }
 
-  const server = customServer || new rpc.Server(SOROBAN_RPC_URL);
+  const server = customServer || new rpc.Server(config.sorobanRpcUrl);
   const latestLedgerRes = await server.getLatestLedger();
   const latestLedger = latestLedgerRes.sequence;
 

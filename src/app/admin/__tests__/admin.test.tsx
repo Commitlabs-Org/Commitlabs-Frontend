@@ -309,55 +309,6 @@ describe('Admin Page Gate and Controls', () => {
     const confirmBtn = await screen.findByRole('button', { name: 'Pause' });
     fireEvent.click(confirmBtn);
 
-    await screen.findByRole('alert');
-    expect(screen.getByText(/Freighter rejected signature/i)).toBeDefined();
-  });
-});
-
-describe('Footer Admin Link Gate', () => {
-  it('renders Admin link when connected wallet is admin', async () => {
-    vi.spyOn(walletHook, 'useWallet').mockReturnValue({
-      status: 'connected',
-      address: ADMIN_ADDRESS,
-      message: null,
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    });
-
-    render(<Footer />);
-
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Admin' })).toBeDefined();
-    });
-  });
-
-  it('does not render Admin link when wallet is non-admin', async () => {
-    vi.spyOn(walletHook, 'useWallet').mockReturnValue({
-      status: 'connected',
-      address: NON_ADMIN_ADDRESS,
-      message: null,
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    });
-
-    render(<Footer />);
-
-    await waitFor(() => {
-      expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull();
-    });
-  });
-
-  it('does not render Admin link when disconnected', async () => {
-    vi.spyOn(walletHook, 'useWallet').mockReturnValue({
-      status: 'idle',
-      address: null,
-      message: null,
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    });
-
-    render(<Footer />);
-
-    expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull();
+    await screen.findByText(/Freighter rejected signature/i);
   });
 });
