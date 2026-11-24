@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatAmount, penaltyOf } from '@/lib/amount';
 import {
   effectiveStatus,
@@ -18,18 +19,25 @@ import {
   subscribeCommitments,
   type Commitment,
 } from '@/lib/commitments';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { DisputeDialog } from '@/components/DisputeDialog';
+import { PartialExitDialog } from '@/components/PartialExitDialog';
+const ConfirmDialog = dynamic(() =>
+  import('@/components/ConfirmDialog').then((module) => module.ConfirmDialog),
+);
+const DisputeDialog = dynamic(() =>
+  import('@/components/DisputeDialog').then((module) => module.DisputeDialog),
+);
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
 import { getActionPauseReason, isActionBlocked } from '@/lib/soroban/protocol-policy';
 import { useProtocolParams } from '@/lib/protocol';
 import { TxError } from '@/lib/soroban/errors';
 import { YieldCoverageChip } from '@/components/YieldCoverageChip';
-import { fetchXlmBalance, shortAddress } from '@/lib/wallet';
+import { fetchXlmBalance } from '@/lib/wallet';
+import { shortAddress } from '@/lib/format';
 import type { DecodedEscrowEvent } from '@/lib/soroban/events';
 import { DISPUTE_CATEGORY_LABELS, type DisputeRecord } from '@/lib/soroban/dispute';
-import { config, explorerTx } from '@/lib/config';
+import { explorerTx } from '@/lib/config';
+import { useNetwork } from '@/components/NetworkProvider';
 import { InlineError } from '@/components/InlineError';
 import { Skeleton } from '@/components/Skeleton';
 import { TxErrorNotice } from '@/components/TxErrorNotice';
@@ -71,6 +79,7 @@ type BalanceState =
   | { status: 'error'; message: string };
 
 export default function DashboardPage() {
+  const { config: networkConfig } = useNetwork();
   const { status, address } = useWallet();
   const protocolStatus = useProtocolStatus();
   const { params: protocolParams } = useProtocolParams();
@@ -88,10 +97,15 @@ export default function DashboardPage() {
   const [recentEvents, setRecentEvents] = useState<DecodedEscrowEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [balanceState, setBalanceState] = useState<BalanceState>({ status: 'idle' });
   const [disputeDialog, setDisputeDialog] = useState<Commitment | null>(null);
+  const [partialExitDialog, setPartialExitDialog] = useState<Commitment | null>(null);
   const [disputeRecords, setDisputeRecords] = useState<Record<string, DisputeRecord>>({});
   const [disputeError, setDisputeError] = useState<unknown>(null);
+  const syncRequest = useRef(0);
 
   const reload = useCallback(() => {
     const result = loadCommitments();
@@ -157,6 +171,46 @@ export default function DashboardPage() {
     reload();
     return subscribeCommitments(reload);
   }, [reload]);
+
+  const syncChain = useCallback(
+    async (refresh = false) => {
+      if (!address || status !== 'connected') return;
+      const request = ++syncRequest.current;
+      const local = loadCommitments().items;
+      if (!refresh) {
+        setList(local);
+        setLastSyncedAt(null);
+      }
+      setSyncing(true);
+      setSyncError(null);
+      try {
+        const { mergeCommitments, syncOwnerCommitments } = await import('@/lib/soroban/sync');
+        const result = await syncOwnerCommitments(address, { refresh });
+        if (request !== syncRequest.current) return;
+        setList(mergeCommitments(local, result.commitments));
+        setLastSyncedAt(result.syncedAt);
+      } catch (err) {
+        if (request !== syncRequest.current) return;
+        setList(local);
+        const detail = err instanceof Error ? ` ${err.message}` : '';
+        setSyncError(`Couldn't sync on-chain commitments.${detail} Showing saved commitments.`);
+      } finally {
+        if (request === syncRequest.current) setSyncing(false);
+      }
+    },
+    [address, status],
+  );
+
+  useEffect(() => {
+    if (address && status === 'connected') {
+      void syncChain();
+    } else {
+      syncRequest.current += 1;
+      setSyncing(false);
+      setSyncError(null);
+      setLastSyncedAt(null);
+    }
+  }, [address, status, syncChain]);
 
   useEffect(() => {
     if (address) {
@@ -320,6 +374,28 @@ export default function DashboardPage() {
     }
   }
 
+  async function handlePartialExit(updated: Commitment) {
+    setPartialExitDialog(null);
+    let refreshed = updated;
+    if (address && /^\d+$/.test(updated.id)) {
+      try {
+        const { getCommitment } = await import('@/lib/soroban/read');
+        const onChain = await getCommitment(updated.id);
+        refreshed = {
+          ...updated,
+          amount: onChain.amount.toString(),
+          accrued_yield: onChain.accruedYield.toString(),
+          status: onChain.amount === 0n ? 'exited' : updated.status,
+        };
+      } catch {
+        // Keep the exact amount calculated from the successful transaction when
+        // the follow-up read is temporarily unavailable.
+      }
+    }
+    update(updated.id, refreshed);
+    setAnnouncement(`Commitment ${updated.id} partial exit confirmed`);
+  }
+
   if (!list) return <DashboardLoading />;
 
   const target = pending ? list.find((c) => c.id === pending.id) : undefined;
@@ -376,7 +452,7 @@ export default function DashboardPage() {
           <b>{fmtUnits(yieldTotal)}</b>
         </div>
         <div className="card metric">
-          <span className="muted">{status === 'connected' ? `Wallet XLM (${config.networkDetails.label.toLowerCase()})` : 'Ready to settle'}</span>
+          <span className="muted">{status === 'connected' ? `Wallet XLM (${networkConfig.networkDetails.label.toLowerCase()})` : 'Ready to settle'}</span>
           {status === 'connected' ? (
             balanceState.status === 'loading' ? (
               <Skeleton width="110px" height="32px" style={{ marginTop: '4px' }} />
@@ -410,7 +486,32 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <h2 className="mt">Your commitments</h2>
+      <div className="row between wrap mt">
+        <h2>Your commitments</h2>
+        {address && status === 'connected' && (
+          <div className="row wrap" style={{ alignItems: 'center', gap: '10px' }}>
+            {lastSyncedAt !== null && (
+              <span className="muted small">
+                Last synced {new Date(lastSyncedAt).toLocaleString()}
+              </span>
+            )}
+            <button
+              className="btn btn-ghost"
+              onClick={() => void syncChain(true)}
+              disabled={syncing}
+            >
+              {syncing ? 'Syncing...' : 'Refresh chain data'}
+            </button>
+          </div>
+        )}
+      </div>
+      {syncError && (
+        <InlineError
+          message={syncError}
+          onRetry={() => void syncChain(true)}
+          retryLabel="Retry sync"
+        />
+      )}
       {list.length === 0 ? (
         <div className="card center">
           <p className="muted">No commitments yet.</p>
@@ -516,6 +617,20 @@ export default function DashboardPage() {
                           <span className="err small" role="status">
                             {exitPauseReason}
                           </span>
+                        )}
+                        {isOnChain && /^\d+$/.test(c.id) && ownerIsConnected && (
+                          <button
+                            className="btn btn-ghost"
+                            disabled={isActionBlocked('refund_partial', isPaused)}
+                            title={
+                              isActionBlocked('refund_partial', isPaused)
+                                ? getActionPauseReason('refund_partial', isPaused)
+                                : undefined
+                            }
+                            onClick={() => setPartialExitDialog(c)}
+                          >
+                            Partial exit
+                          </button>
                         )}
                       </div>
                     )}
@@ -714,6 +829,14 @@ export default function DashboardPage() {
           onSuccess={handleDisputeOpened}
         />
       )}
+
+      <PartialExitDialog
+        open={!!partialExitDialog}
+        commitment={partialExitDialog}
+        paused={isPaused}
+        onClose={() => setPartialExitDialog(null)}
+        onSuccess={handlePartialExit}
+      />
 
       <div className="row between wrap mt">
         <h2>Recent activity</h2>

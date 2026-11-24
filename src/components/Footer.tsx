@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { LIVE_URL, REPO_URL, config } from '@/lib/config';
+import { LIVE_URL, REPO_URL } from '@/lib/config';
 import { useWallet } from '@/components/WalletProvider';
+import { useNetwork } from './NetworkProvider';
 
 export function Footer() {
   const { status, address } = useWallet();
+  const { config } = useNetwork();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function Footer() {
         <span>CommitLabs &middot; Liquidity as a commitment on Stellar Soroban</span>
         <span className="footer-links">
           <Link href="/docs">Docs</Link>
+          <Link href="/protocol">Protocol health</Link>
           {isAdmin && <Link href="/admin">Admin</Link>}
           <a href={LIVE_URL} target="_blank" rel="noreferrer">
             Live demo

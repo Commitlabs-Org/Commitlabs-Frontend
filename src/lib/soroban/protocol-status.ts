@@ -1,8 +1,8 @@
 import { rpc, scValToBigInt, scValToNative, xdr } from '@stellar/stellar-sdk';
-import { config } from '../config';
+import { getActiveConfig } from '../config';
 import { simulateRead } from './tx';
 
-import type { ProtocolStatus } from './protocol-policy';
+import type { ProtocolStatus, YieldPoolStatus } from './protocol-policy';
 
 export * from './protocol-policy';
 
@@ -56,6 +56,39 @@ export function decodeI128(val: unknown): bigint {
   throw new Error(`Unable to decode value into i128 / bigint: ${val}`);
 }
 
+/** Unwraps a simulation result (ScVal, base64 XDR or `{ result: { retval } }`) to a native value. */
+function unwrapScVal(val: unknown): unknown {
+  if (val && typeof val === 'object') {
+    if ('result' in val && (val as any).result?.retval !== undefined) {
+      return unwrapScVal((val as any).result.retval);
+    }
+    if (val instanceof xdr.ScVal || ('switch' in val && typeof (val as any).switch === 'function')) {
+      return scValToNative(val as xdr.ScVal);
+    }
+  }
+  if (typeof val === 'string') {
+    try {
+      return scValToNative(xdr.ScVal.fromXDR(val, 'base64'));
+    } catch {
+      // not base64 xdr
+    }
+  }
+  return val;
+}
+
+/** Decodes the `YieldPoolStatus` struct returned by `get_yield_pool_status`. */
+export function decodeYieldPoolStatus(val: unknown): YieldPoolStatus {
+  const native = unwrapScVal(val) as Record<string, unknown> | null | undefined;
+  if (!native || typeof native !== 'object') {
+    throw new Error('Unable to decode yield pool status');
+  }
+  return {
+    balance: decodeI128(native.balance),
+    reserved: decodeI128(native.reserved),
+    available: decodeI128(native.available),
+  };
+}
+
 /** Runs a read-only simulation and returns the raw return value, throwing on failure. */
 async function readValue(method: string): Promise<unknown> {
   const res = await simulateRead({ method, args: [] });
@@ -76,7 +109,7 @@ export interface GetProtocolStatusOptions {
 export async function getProtocolStatus(
   options: GetProtocolStatusOptions = {},
 ): Promise<ProtocolStatus> {
-  const contractId = options.contractId || config.escrowContractId;
+  const contractId = options.contractId || getActiveConfig().escrowContractId;
   if (!contractId) {
     return {
       status: 'unavailable',
@@ -111,4 +144,22 @@ export async function getProtocolStatus(
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/**
+ * Reads the escrow yield pool's total balance, reserved (promised) amount and
+ * available amount via `get_yield_pool_status` (contracts/escrow/src/lib.rs).
+ *
+ * Unlike `getProtocolStatus`, this throws on RPC or contract errors so callers
+ * can show an error state instead of a misleading zero balance.
+ */
+export async function getYieldPoolStatus(
+  options: GetProtocolStatusOptions = {},
+): Promise<YieldPoolStatus> {
+  const contractId = options.contractId || config.escrowContractId;
+  if (!contractId) {
+    throw new Error('Escrow contract ID is not configured');
+  }
+  const raw = await readValue('get_yield_pool_status');
+  return decodeYieldPoolStatus(raw);
 }
