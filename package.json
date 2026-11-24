@@ -20,6 +20,7 @@
     "test:watch": "vitest",
     "test:size": "node --test scripts/check-bundle-budget.test.mjs",
     "e2e": "playwright test",
+    "test:scripts": "node --test scripts/validate-env.test.mjs",
     "bindings": "bash scripts/gen-escrow-bindings.sh"
   },
   "dependencies": {
