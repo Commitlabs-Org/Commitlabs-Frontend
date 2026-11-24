@@ -1,9 +1,37 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { loadCommitments } from '@/lib/commitments';
 import CreatePage from './page';
 
+const mockUseWallet = vi.fn<() => { address: string | null }>(() => ({
+  address: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+}));
+
 vi.mock('@/components/WalletProvider', () => ({
-  useWallet: () => ({ address: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H' }),
+  useWallet: () => mockUseWallet(),
+}));
+
+vi.mock('@/components/NetworkProvider', () => ({
+  useNetwork: () => ({
+    config: {
+      network: 'testnet',
+      networkDetails: {
+        label: 'Testnet',
+        explorerBaseUrl: 'https://stellar.expert/explorer/testnet',
+      },
+      escrowContractId: 'CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4',
+      escrowTokenId: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+      isContractConfigured: true,
+    },
+    isContractConfigured: true,
+  }),
+}));
+
+const mockCreateAndFund = vi.fn();
+const mockFundCommitment = vi.fn();
+vi.mock('@/lib/soroban/create', () => ({
+  createAndFundCommitment: (...args: unknown[]) => mockCreateAndFund(...args),
+  fundCommitment: (...args: unknown[]) => mockFundCommitment(...args),
 }));
 
 vi.mock('@/lib/protocol', () => ({
@@ -20,7 +48,13 @@ import { useProtocolParams } from '@/lib/protocol';
 describe('Create Wizard Component with Protocol Params', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
+    mockUseWallet.mockReturnValue({
+      address: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+    });
   });
+
+  afterEach(cleanup);
 
   it('renders review step showing on-chain penalty and projected yield from mocked params', async () => {
     vi.mocked(useProtocolParams).mockReturnValue({
@@ -87,5 +121,82 @@ describe('Create Wizard Component with Protocol Params', () => {
     expect(
       screen.getByText(/Could not verify on-chain parameters. Displaying default protocol parameters./i)
     ).toBeDefined();
+  });
+
+  it('saves locally in demo mode when no wallet is connected', () => {
+    mockUseWallet.mockReturnValue({ address: null });
+    vi.mocked(useProtocolParams).mockReturnValue({
+      params: {
+        penalties: { safe: 200, balanced: 500, aggressive: 1000 },
+        gracePeriodSeconds: 0,
+        isFallback: false,
+      },
+      loading: false,
+      isFallback: false,
+      refresh: vi.fn(),
+    });
+
+    render(<CreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Create commitment' }));
+
+    expect(mockCreateAndFund).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Commitment created' })).toBeDefined();
+    const [saved] = loadCommitments().items;
+    expect(saved.txHash).toBeNull();
+  });
+
+  it('blocks submit while on-chain transaction is pending and shows explorer link on success', async () => {
+    vi.mocked(useProtocolParams).mockReturnValue({
+      params: {
+        penalties: { safe: 200, balanced: 500, aggressive: 1000 },
+        gracePeriodSeconds: 0,
+        isFallback: false,
+      },
+      loading: false,
+      isFallback: false,
+      refresh: vi.fn(),
+    });
+
+    let resolveTx!: (val: unknown) => void;
+    mockCreateAndFund.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTx = resolve;
+        })
+    );
+
+    render(<CreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    const submitBtn = screen.getByRole('button', { name: 'Create commitment' });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      const pendingBtn = screen.getByRole('button', { name: 'Creating…' }) as HTMLButtonElement;
+      expect(pendingBtn.disabled).toBe(true);
+    });
+
+    const txHash = 'c'.repeat(64);
+    resolveTx({
+      status: 'funded',
+      commitmentId: '77',
+      createTxHash: txHash,
+      fundTxHash: txHash,
+      txHash,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Commitment created' })).toBeDefined();
+    });
+
+    const [saved] = loadCommitments().items;
+    expect(saved.id).toBe('77');
+    expect(saved.txHash).toBe(txHash);
+    expect(screen.getByRole('link', { name: /View transaction on Stellar Expert/i })).toBeDefined();
   });
 });

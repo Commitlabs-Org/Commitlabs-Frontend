@@ -36,6 +36,13 @@ export function validateEnv(env = process.env) {
       `Invalid NEXT_PUBLIC_ESCROW_CONTRACT_ID: "${rawContractId}". Must be a valid 56-character Soroban contract address starting with 'C'`
     );
   }
+
+  const rawTokenId = env.NEXT_PUBLIC_ESCROW_TOKEN_ID?.trim() ?? '';
+  if (rawTokenId && !/^C[A-Z2-7]{55}$/.test(rawTokenId)) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_ESCROW_TOKEN_ID: "${rawTokenId}". Must be a valid 56-character Soroban contract address starting with 'C'`
+    );
+  }
 }
 
 function validateHttpsUrl(val, name) {

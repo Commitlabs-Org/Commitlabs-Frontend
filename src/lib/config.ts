@@ -1,5 +1,5 @@
 import { NETWORKS, NetworkId, NetworkConfig, isNetworkId } from './network';
-import { getDeploymentContractId } from './deployments';
+import { getDeploymentContractId, getDeploymentTokenId } from './deployments';
 
 export interface AppConfig {
   readonly network: NetworkId;
@@ -8,6 +8,7 @@ export interface AppConfig {
   readonly horizonUrl: string;
   readonly sorobanRpcUrl: string;
   readonly escrowContractId: string;
+  readonly escrowTokenId: string;
   readonly isContractConfigured: boolean;
   readonly repoUrl: string;
   readonly liveUrl: string;
@@ -56,6 +57,13 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
     );
   }
 
+  const rawTokenId = env.NEXT_PUBLIC_ESCROW_TOKEN_ID?.trim() ?? '';
+  if (rawTokenId && !/^C[A-Z2-7]{55}$/.test(rawTokenId)) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_ESCROW_TOKEN_ID: "${rawTokenId}". Must be a valid 56-character Soroban contract address starting with 'C'`
+    );
+  }
+
   return Object.freeze({
     network,
     networkDetails,
@@ -63,6 +71,7 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
     horizonUrl,
     sorobanRpcUrl,
     escrowContractId: rawContractId,
+    escrowTokenId: rawTokenId,
     isContractConfigured: Boolean(rawContractId),
     repoUrl: 'https://github.com/Commitlabs-Org/Commitlabs-Frontend',
     liveUrl: 'https://commitlabs-frontend-pi.vercel.app',
@@ -86,6 +95,7 @@ export function getConfig(
 ): AppConfig {
   const isDefaultNetwork = network === config.network;
   const deploymentContractId = getDeploymentContractId(network);
+  const deploymentTokenId = getDeploymentTokenId(network);
 
   return parseConfig({
     NEXT_PUBLIC_STELLAR_NETWORK: network,
@@ -93,6 +103,8 @@ export function getConfig(
     NEXT_PUBLIC_SOROBAN_RPC_URL: isDefaultNetwork ? env.NEXT_PUBLIC_SOROBAN_RPC_URL : undefined,
     NEXT_PUBLIC_ESCROW_CONTRACT_ID:
       (isDefaultNetwork ? env.NEXT_PUBLIC_ESCROW_CONTRACT_ID?.trim() : '') || deploymentContractId,
+    NEXT_PUBLIC_ESCROW_TOKEN_ID:
+      (isDefaultNetwork ? env.NEXT_PUBLIC_ESCROW_TOKEN_ID?.trim() : '') || deploymentTokenId,
   });
 }
 
