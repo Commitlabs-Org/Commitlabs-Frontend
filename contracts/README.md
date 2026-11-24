@@ -98,6 +98,28 @@ Creation records the selected lock length in the existing `maturity - created_at
 | `pause` / `unpause`                                                                                                               | Admin auth             | Toggles emergency pause flag. Halts all user-initiated state changes and capital outflows while preserving admin incident recovery paths (resolve_dispute, set_admin, upgrade, unpause). |
 | Read methods                                                                                                                      | None                   | `get_commitment`, `get_user_commitments`, `get_user_commitment_ids`, `get_user_commitment_ids_page`, `get_owner_commitments`, `get_attestations`, `get_dispute`, `get_default_penalty`, `get_yield_pool_balance`, `get_yield_pool_status`, `get_grace_period`, `get_violation_threshold`, `is_paused`, `is_attestor`. |
 
+## Events
+
+Commitment lifecycle events are emitted via `publish_commitment_event` using the canonical 3-topic schema `(Symbol(name), commitment_id, owner)` so off-chain indexers and `src/lib/soroban/events.ts` can filter by commitment id and owner consistently. Both `release` and `settle_commitment` emit the same `release` event with `ReleaseEventData`.
+
+| Event | Emitted by | Topics | Payload |
+| ----- | ---------- | ------ | ------- |
+| `create_commitment` | `create_commitment`, `create_commitment_default`, `create_commitment_with_default` | `(Symbol("create_commitment"), commitment_id, owner)` | `CreateCommitmentEventData { asset, amount, risk, maturity, penalty_bps }` |
+| `fund_escrow` | `fund_escrow` | `(Symbol("fund_escrow"), commitment_id, owner)` | `FundEscrowEventData { asset, amount, risk }` |
+| `cancel_commitment` | `cancel_commitment` | `(Symbol("cancel_commitment"), commitment_id, owner)` | `()` |
+| `release` | `release`, `settle_commitment` | `(Symbol("release"), commitment_id, owner)` | `ReleaseEventData { asset, amount, accrued_yield, payout, risk }` |
+| `refund` | `refund`, `early_exit_commitment` | `(Symbol("refund"), commitment_id, owner)` | `RefundEventData { asset, amount, refunded_amount, penalty, risk }` |
+| `refund_partial` | `refund_partial` | `(Symbol("refund_partial"), owner)` | `(commitment_id, refund_amount, penalty, remaining)` |
+| `dispute` | `dispute` | `(Symbol("dispute"), commitment_id, owner)` | `DisputeEventData { asset, amount, risk, reason_category, reason_text, disputed_by }` |
+| `resolve_dispute` | `resolve_dispute` | `(Symbol("resolve_dispute"), admin)` | `(commitment_id, release_to_owner, paid)` |
+| `commitment_violated` | `record_attestation` (below threshold) | `(Symbol("commitment_violated"), commitment_id, owner)` | `(score, threshold)` |
+| `deposit_yield_pool` | `deposit_yield_pool` | `(Symbol("deposit_yield_pool"), admin)` | `(amount, new_balance)` |
+| `withdraw_yield_pool` | `withdraw_yield_pool` | `(Symbol("withdraw_yield_pool"), admin)` | `(to, amount)` |
+| `pause` / `unpause` | `pause`, `unpause` | `(Symbol("pause" \| "unpause"), admin)` | `()` |
+| `upgrade` | `upgrade` | `(Symbol("upgrade"), admin)` | `new_wasm_hash` |
+
+> **Legacy compatibility:** Historic `release` events emitted prior to schema unification used 2 topics `(Symbol("release"), owner)` with tuple payload `(commitment_id, payout, accrued_yield)`. `decodeEscrowEvent` in `src/lib/soroban/events.ts` retains Shape B decoding as a documented fallback for those historic ledger entries.
+
 ## Pause Policy
 
 The `pause` entrypoint halts state-changing operations and token outflows during incidents or emergency investigations. In accordance with the protocol safety invariants, the contract strictly segregates user operations from admin recovery paths:

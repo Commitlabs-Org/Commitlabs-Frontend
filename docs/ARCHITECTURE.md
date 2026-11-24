@@ -37,7 +37,10 @@ and early-exit controls only change that local record. **Create, settle, and ear
 local-only demo actions: they do not create or settle an escrow commitment on-chain.**
 
 On-chain reads are real Soroban RPC simulations: `src/lib/soroban/read.ts` loads commitment,
-attestation, and dispute data; `src/lib/soroban/events.ts` reads contract events; and
+attestation, and dispute data; `src/lib/soroban/events.ts` reads contract events (decoding the
+canonical `(name, commitment_id, owner)` commitment event schema—including unified `release`
+events with `ReleaseEventData` emitted by both `release` and `settle_commitment`—while retaining
+legacy 2-topic Shape B decoding as a fallback for historic events); and
 `src/lib/soroban/protocol-status.ts` reads pause state and yield-pool balance. `src/lib/protocol.ts`
 loads default penalty and grace-period parameters, caching successful results in memory and using
 defined fallback values when unavailable. The dashboard can submit a dispute via
