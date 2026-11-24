@@ -195,15 +195,15 @@ describe('basis point math', () => {
     expect(penaltyOf(MAX_AMOUNT, 8)).toBe(80_000_000_000n);
   });
 
-  it('rounds the penalty down to a whole stroop, like the contract', () => {
-    // 33 stroops at 5%: 33 * 500 / 10_000 = 1.65, floored to 1; refund 32
-    expect(penaltyOf(33n, 5)).toBe(1n);
-    expect(33n - penaltyOf(33n, 5)).toBe(32n);
-    // 1 stroop at 5% is 0.05, floored to 0
-    expect(penaltyOf(1n, 5)).toBe(0n);
+  it('rounds the penalty up to a whole stroop, like the contract', () => {
+    // 33 stroops at 5%: 33 * 500 / 10_000 = 1.65, rounded up to 2; refund 31
+    expect(penaltyOf(33n, 5)).toBe(2n);
+    expect(33n - penaltyOf(33n, 5)).toBe(31n);
+    // 1 stroop at 5% is rounded up to 1.
+    expect(penaltyOf(1n, 5)).toBe(1n);
   });
 
-  it('computes yield as amount * apyBps * days / (365 * 10_000) (hand calculated)', () => {
+  it('computes yield as amount * apyBps * days / 365 / 10_000 (hand calculated)', () => {
     // 365 days at 16% on 100: 1_000_000_000 * 1600 * 365 / (365 * 10_000) = 160_000_000 exactly
     expect(yieldOf(1_000_000_000n, 16, 365)).toBe(160_000_000n);
     // 1,000 at 9% for 14 days: 10_000_000_000 * 900 * 14 / 3_650_000 = 34_520_547.945..., floored
@@ -212,12 +212,11 @@ describe('basis point math', () => {
     expect(yieldOf(25_000_000_000n, 4.5, 7)).toBe(21_575_342n);
   });
 
-  it('floors once at the end, never promising more than base units can pay', () => {
+  it('floors after each division, like the contract', () => {
     const amount = 12_345_678n;
-    const exact = Number(amount) * 0.09 * 14 / 365;
+    const expected = (amount * 900n * 14n / 365n) / 10_000n;
     const got = yieldOf(amount, 9, 14);
-    expect(Number(got)).toBeLessThanOrEqual(exact);
-    expect(exact - Number(got)).toBeLessThan(1);
+    expect(got).toBe(expected);
   });
 
   it('handles the maximum amount', () => {
@@ -256,7 +255,7 @@ describe('partial exit math', () => {
     });
   });
 
-  it('allows a full withdrawal and floors the penalty to stroops', () => {
+  it('allows a full withdrawal and rounds the penalty up to stroops', () => {
     expect(partialExitBreakdown(5_000_000n, 5_000_000n, 500)).toMatchObject({
       ok: true,
       value: { penalty: 250_000n, refund: 4_750_000n, remaining: 0n },

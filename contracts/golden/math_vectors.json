@@ -1,0 +1,22 @@
+{
+  "yield_vectors": [
+    {"amount": "1", "days": 1, "risk": "safe", "expected_yield": "0"},
+    {"amount": "1", "days": 365, "risk": "safe", "expected_yield": "0"},
+    {"amount": "10000", "days": 365, "risk": "aggressive", "expected_yield": "1000"},
+    {"amount": "123456789", "days": 47, "risk": "balanced", "expected_yield": "1112802"},
+    {"amount": "1000000000000", "days": 365, "risk": "balanced", "expected_yield": "70000000000"},
+    {"amount": "1000000000000", "days": 365, "risk": "aggressive", "expected_yield": "100000000000"},
+    {"amount": "466140228658819812963526859495572", "days": 365, "risk": "aggressive", "expected_yield": "46614022865881981296352685949557"},
+    {"amount": "466140228658819812963526859495573", "days": 365, "risk": "aggressive", "expected_yield": "46614022865881981296352685949557"},
+    {"amount": "170141183460469231731687303715884105727", "days": 365, "risk": "aggressive", "expected_yield": "46614022865881981296352685949557"}
+  ],
+  "penalty_vectors": [
+    {"amount": "1", "bps": 0, "expected_penalty": "0", "expected_refund": "1"},
+    {"amount": "1", "bps": 1, "expected_penalty": "1", "expected_refund": "0"},
+    {"amount": "1", "bps": 9999, "expected_penalty": "1", "expected_refund": "0"},
+    {"amount": "1", "bps": 10000, "expected_penalty": "1", "expected_refund": "0"},
+    {"amount": "33", "bps": 500, "expected_penalty": "2", "expected_refund": "31"},
+    {"amount": "1000000000000", "bps": 9999, "expected_penalty": "999900000000", "expected_refund": "100000000"},
+    {"amount": "1000000000000", "bps": 10000, "expected_penalty": "1000000000000", "expected_refund": "0"}
+  ]
+}

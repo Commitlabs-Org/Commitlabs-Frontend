@@ -7,12 +7,14 @@ Soroban (Rust) smart-contract workspace backing the CommitLabs liquidity commitm
 ```text
 contracts/
 |-- Cargo.toml                    # Cargo workspace; member: escrow
+|-- golden/math_vectors.json      # Shared Rust/TypeScript math parity vectors
 |-- escrow/
 |   |-- Cargo.toml                # commitlabs-escrow crate
 |   `-- src/
 |       |-- lib.rs                # EscrowContract implementation, types, errors
 |       |-- test_funding_window.rs # Funding-time maturity, expiry, and cancellation tests
 |       |-- test_penalty_math.rs   # Penalty rounding and minimum partial-withdrawal tests
+|       |-- test_golden_math.rs   # Shared Rust/TypeScript yield and penalty vectors
 |       `-- test_yield_reserve.rs # Yield-pool reservation accounting tests
 `-- scripts/
     |-- deploy-testnet.sh         # Build, deploy, initialize helper
@@ -246,6 +248,16 @@ Backend callers should use the normalized `BackendError` response shape and pres
 `FundingWindowExpired` is error code `16`; it is returned without moving tokens when funding is attempted after the 7-day window. Codes 1-15 and their enum positions remain unchanged. `ReservedYieldInvariant` is error code `17`. `BelowMinimum` is error code `18`.
 
 Run the isolated test suites with `cd contracts && cargo test -p commitlabs-escrow`.
+
+### Shared Math Vectors
+
+`golden/math_vectors.json` is the shared source for Rust and TypeScript yield and
+penalty parity tests. When adding a vector, compute its expected values using
+the contract formulas in `escrow/src/lib.rs` (including saturating yield
+multiplication and ceiling-rounded penalties), then add it to the matching
+array in the JSON file. Do not copy the table into either test suite; run
+`cd contracts && cargo test -p commitlabs-escrow golden` and `npm test` to
+verify both consumers.
 
 ## Deployment Flow
 

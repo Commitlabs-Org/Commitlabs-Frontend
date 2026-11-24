@@ -2040,3 +2040,5 @@ mod test_pause;
 mod test_attestation;
 #[cfg(test)]
 mod test_penalty_math;
+#[cfg(test)]
+mod test_golden_math;
