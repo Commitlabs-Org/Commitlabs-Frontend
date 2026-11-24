@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { nativeToScVal } from '@stellar/stellar-sdk';
+import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
 import { decodeEscrowEvent, fetchEscrowEvents, type RawEvent } from '../events';
 
 describe('Soroban Escrow Events Decoder', () => {
@@ -200,6 +200,105 @@ describe('fetchEscrowEvents', () => {
     expect(res.events).toHaveLength(1);
     expect(res.events[0].kind).toBe('fund');
     expect(res.events[0].owner).toBe('GUSER1');
+  });
+
+  it('uses symbol and u64 topic filters for commitment IDs and matches legacy value IDs', async () => {
+    mockServer.getEvents.mockResolvedValue({
+      events: [
+        {
+          id: 'indexed-match',
+          ledger: 4990,
+          topic: [
+            xdr.ScVal.fromXDR('AAAADwAAABFjcmVhdGVfY29tbWl0bWVudAAAAA==', 'base64'),
+            nativeToScVal(123n, { type: 'u64' }),
+            nativeToScVal('GUSER1'),
+          ],
+          value: nativeToScVal(500),
+        },
+        {
+          id: 'legacy-match',
+          ledger: 4991,
+          topic: [
+            xdr.ScVal.fromXDR('AAAADwAAAAdyZWxlYXNlAA==', 'base64'),
+            nativeToScVal('GUSER1'),
+          ],
+          value: nativeToScVal([123, 250]),
+        },
+        {
+          id: 'legacy-mismatch',
+          ledger: 4992,
+          topic: [
+            xdr.ScVal.fromXDR('AAAADwAAAAdyZWxlYXNlAA==', 'base64'),
+            nativeToScVal('GUSER1'),
+          ],
+          value: nativeToScVal([456, 250]),
+        },
+      ],
+      cursor: 'commitment-cursor',
+    });
+
+    const res = await fetchEscrowEvents({ filters: { commitmentId: '123' } }, mockServer);
+    const topics = mockServer.getEvents.mock.calls[0][0].filters[0].topics;
+
+    expect(topics).toEqual(
+      expect.arrayContaining([
+        [
+          'AAAADwAAABFjcmVhdGVfY29tbWl0bWVudAAAAA==',
+          nativeToScVal(123n, { type: 'u64' }).toXDR('base64'),
+          '*',
+        ],
+        ['*', nativeToScVal(123n, { type: 'u64' }).toXDR('base64'), '*'],
+        ['*', '*'],
+        ['*'],
+      ])
+    );
+    expect(res.events.map((event) => event.id)).toEqual(['indexed-match', 'legacy-match']);
+  });
+
+  it('keeps commitment topic filters when continuing with the returned cursor', async () => {
+    mockServer.getEvents
+      .mockResolvedValueOnce({
+        cursor: 'cursor-page-one',
+        events: [
+          {
+            id: 'legacy-mismatch',
+            ledger: 4990,
+            topic: [
+              xdr.ScVal.fromXDR('AAAADwAAAAdyZWxlYXNlAA==', 'base64'),
+              nativeToScVal('GUSER1'),
+            ],
+            value: nativeToScVal([456, 250]),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        cursor: 'cursor-page-two',
+        events: [
+          {
+            id: 'legacy-match',
+            ledger: 4991,
+            topic: [
+              xdr.ScVal.fromXDR('AAAADwAAAAdyZWxlYXNlAA==', 'base64'),
+              nativeToScVal('GUSER1'),
+            ],
+            value: nativeToScVal([123, 250]),
+          },
+        ],
+      });
+
+    const res = await fetchEscrowEvents(
+      { filters: { commitmentId: '123' }, limit: 1 },
+      mockServer
+    );
+
+    expect(mockServer.getEvents).toHaveBeenCalledTimes(2);
+    expect(mockServer.getEvents.mock.calls[1][0]).toEqual(
+      expect.objectContaining({
+        cursor: 'cursor-page-one',
+        filters: mockServer.getEvents.mock.calls[0][0].filters,
+      })
+    );
+    expect(res.events.map((event) => event.id)).toEqual(['legacy-match']);
   });
 
   it('passes cursor when provided for paging', async () => {

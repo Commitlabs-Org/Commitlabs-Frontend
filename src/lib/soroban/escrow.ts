@@ -1,5 +1,5 @@
+import { invokeContract, prepareInvocation, simulateRead, submitPrepared, type PreparedInvocation } from './tx';
 import { Address, nativeToScVal, scValToNative, StrKey, xdr } from '@stellar/stellar-sdk';
-import { invokeContract, simulateRead } from './tx';
 import { TxError } from './errors';
 import {
   DisputeCategory,
@@ -60,6 +60,17 @@ export interface EarlyExitResult {
   exitAmount: bigint;
   penaltyAmount: bigint;
   finalStatus: string;
+}
+
+export interface RefundPartialParams {
+  commitmentId: string;
+  caller: string;
+  amount: bigint;
+}
+
+export interface RefundPartialResult {
+  transactionHash: string;
+  refundAmount: bigint;
 }
 
 export interface PendingTransferRecord {
@@ -320,6 +331,52 @@ export async function earlyExitCommitment({
     transactionHash: res.transactionHash,
     ...decoded,
   };
+}
+
+/**
+ * Partially refunds a funded commitment via
+ * `refund_partial(commitment_id, amount)`. The contract authenticates the
+ * commitment owner, while the caller is used as the transaction source and
+ * signer for the wallet safety checks.
+ */
+export async function refundPartial({
+  commitmentId,
+  caller,
+  amount,
+}: RefundPartialParams): Promise<RefundPartialResult> {
+  const id = toCommitmentId(commitmentId);
+  if (id === null) {
+    throw new TxError('failed', 'This commitment is not on-chain and cannot be partially refunded.');
+  }
+  if (amount <= 0n) {
+    throw new TxError('failed', 'The partial refund amount must be greater than zero.');
+  }
+
+  const res = await invokeContract({
+    method: 'refund_partial',
+    args: [nativeToScVal(BigInt(id), { type: 'u64' }), nativeToScVal(amount, { type: 'i128' })],
+    source: caller,
+    signer: caller,
+  });
+
+  if (!res.returnValue) {
+    throw new TxError(
+      'failed',
+      'Partial refund transaction succeeded, but the contract did not return the refund amount.',
+      { transactionHash: res.transactionHash },
+    );
+  }
+
+  const refundAmount = toBigIntAmount(scValToNative(res.returnValue));
+  if (refundAmount === null) {
+    throw new TxError(
+      'failed',
+      'Partial refund transaction succeeded, but the contract result could not be decoded.',
+      { transactionHash: res.transactionHash },
+    );
+  }
+
+  return { transactionHash: res.transactionHash, refundAmount };
 }
 
 function toTimestampSeconds(value: unknown): bigint {

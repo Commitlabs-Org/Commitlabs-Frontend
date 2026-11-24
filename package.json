@@ -19,6 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:size": "node --test scripts/check-bundle-budget.test.mjs",
+    "e2e": "playwright test",
     "bindings": "bash scripts/gen-escrow-bindings.sh"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^14.2.35",
+    "@playwright/test": "^1.59.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.5.2",

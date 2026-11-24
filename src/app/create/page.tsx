@@ -23,7 +23,8 @@ import {
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
 import { getActionPauseReason } from '@/lib/soroban/protocol-policy';
-import { ESCROW_CONTRACT_ID, explorerContractUrl, config } from '@/lib/config';
+import { explorerContractUrl } from '@/lib/config';
+import { useNetwork } from '@/components/NetworkProvider';
 import { useProtocolParams } from '@/lib/protocol';
 import {
   DISPLAY_APY,
@@ -51,6 +52,7 @@ function daysMessage(reason: DaysError, minDays: number): string {
 
 export default function CreatePage() {
   const { address } = useWallet();
+  const { config, isContractConfigured } = useNetwork();
   const protocolStatus = useProtocolStatus();
   const isPaused = protocolStatus.status === 'ok' && protocolStatus.paused;
   const pauseReason = getActionPauseReason('create_commitment', isPaused);
@@ -357,7 +359,7 @@ export default function CreatePage() {
           <p className="muted small">
             Demo mode: the commitment is recorded in this browser. On-chain submission to the{' '}
             {config.networkDetails.label.toLowerCase()} escrow contract is enabled once a contract ID is configured
-            {ESCROW_CONTRACT_ID ? '.' : ' (none set in this deployment).'}
+            {isContractConfigured ? '.' : ' (none set for this network).'}
           </p>
           <div className="row between wrap">
             <button className="btn btn-ghost" onClick={() => setStep(1)}>
@@ -371,9 +373,15 @@ export default function CreatePage() {
               )}
               <button
                 className="btn btn-primary"
-                disabled={!agree || isPaused}
+                disabled={!agree || isPaused || !isContractConfigured}
                 onClick={submit}
-                title={isPaused ? pauseReason : undefined}
+                title={
+                  !isContractConfigured
+                    ? `No escrow contract is deployed on ${config.networkDetails.label}; write actions are disabled.`
+                    : isPaused
+                      ? pauseReason
+                      : undefined
+                }
               >
                 Create commitment
               </button>
@@ -394,8 +402,12 @@ export default function CreatePage() {
             {created.id} &middot; {formatAmount(BigInt(created.amount))} {created.asset} for {created.durationDays}{' '}
             days
           </p>
-          {ESCROW_CONTRACT_ID && (
-            <a href={explorerContractUrl(ESCROW_CONTRACT_ID)} target="_blank" rel="noreferrer">
+          {isContractConfigured && (
+            <a
+              href={explorerContractUrl(config.escrowContractId)}
+              target="_blank"
+              rel="noreferrer"
+            >
               View escrow contract on Stellar Expert
             </a>
           )}
