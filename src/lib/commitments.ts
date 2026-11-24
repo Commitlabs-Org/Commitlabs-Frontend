@@ -326,62 +326,84 @@ export function saveCommitments(list: Commitment[]): boolean {
   return ok;
 }
 
-/** Clears persisted commitments and any in-memory fallback. */
-export function resetCommitments(): void {
-  memoryStore = null;
-  removeRaw(KEY);
+/** Maximum accepted size of an import file, in bytes. */
+export const MAX_IMPORT_BYTES = 1024 * 1024;
+
+export type ImportMode = 'merge' | 'replace';
+
+export interface ImportResult {
+  /** Items accepted from the file (after validation). */
+  imported: number;
+  /** Items rejected by validation. */
+  dropped: number;
+  /** Total items now stored after the import. */
+  total: number;
 }
 
-/** Subscribes to cross-tab changes of the commitments key. */
-export function subscribeCommitments(handler: () => void): () => void {
-  return subscribeStorage(KEY, handler);
+/** Serializes the current commitments as a versioned JSON document. */
+export function exportCommitments(list: Commitment[]): string {
+  return JSON.stringify({ version: CURRENT_VERSION, items: list }, null, 2);
 }
 
 /**
- * Opt-in sample records for the dashboard empty state. They are flagged with
- * `demo: true` so the UI can label them honestly.
+ * Imports commitments from JSON text. Rejects oversized input before parsing,
+ * runs each item through `migrate` + `validateCommitment`, and never overrides
+ * on-chain fields of an existing record: in merge mode local records keep their
+ * `txHash`, `owner`, `status`, `exitTxHash`, and dispute data, and only the
+ * newer `createdAt` wins for the rest. Throws on non-JSON or oversized input.
  */
-export function sampleCommitments(): Commitment[] {
-  const now = Date.now();
-  return [
-    {
-      id: newId(),
-      type: 'balanced',
-      asset: 'USDC',
-      amount: '25000000000',
-      durationDays: 30,
-      maxLoss: 8,
-      penalty: FALLBACK_PROTOCOL_PARAMS.penalties.balanced / 100,
-      apy: DISPLAY_APY.balanced,
-      createdAt: now - 12 * DAY,
-      status: 'active',
-      owner: null,
-      txHash: null,
-      demo: true,
-    },
-    {
-      id: newId(),
-      type: 'safe',
-      asset: 'XLM',
-      amount: '100000000000',
-      durationDays: 14,
-      maxLoss: 2,
-      penalty: FALLBACK_PROTOCOL_PARAMS.penalties.safe / 100,
-      apy: DISPLAY_APY.safe,
-      createdAt: now - 20 * DAY,
-      status: 'active',
-      owner: null,
-      txHash: null,
-      demo: true,
-    },
-  ];
-}
+export function importCommitments(text: string, mode: ImportMode): ImportResult {
+  if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES) {
+    throw new Error('Import file exceeds 1 MB.');
+  }
 
-export function fmt(n: number, digits = 2): string {
-  return n.toLocaleString('en-US', { maximumFractionDigits: digits });
-}
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('Import file is not valid JSON.');
+  }
 
-/** Abbreviated base-unit display for summaries; use `formatAmount` for full precision. */
-export function fmtUnits(value: bigint, maxFraction = 2): string {
-  return formatAmount(value, STELLAR_DECIMALS, { maxFraction });
+  const items = envelopeItems(migrate(parsed));
+  if (!items) throw new Error('Import file has no commitments list.');
+
+  let dropped = 0;
+  const incoming: Commitment[] = [];
+  for (const candidate of items) {
+    const commitment = validateCommitment(candidate);
+    if (commitment) incoming.push(commitment);
+    else dropped += 1;
+  }
+
+  const current = mode === 'replace' ? [] : loadCommitments().items;
+  const byId = new Map<string, Commitment>();
+  for (const c of current) byId.set(c.id, c);
+
+  for (const c of incoming) {
+    const local = byId.get(c.id);
+    if (!local) {
+      byId.set(c.id, c);
+      continue;
+    }
+    // Merge by id: keep the newest local fields, but never let the import
+    // overwrite on-chain state (txHash, owner, status, exit and dispute data).
+    const newer = c.createdAt > local.createdAt ? c : local;
+    byId.set(c.id, {
+      ...newer,
+      txHash: local.txHash,
+      owner: local.owner,
+      status: local.status,
+      ...(local.exitTxHash !== undefined ? { exitTxHash: local.exitTxHash } : {}),
+      ...(local.exitAmount !== undefined ? { exitAmount: local.exitAmount } : {}),
+      ...(local.exitPenaltyAmount !== undefined ? { exitPenaltyAmount: local.exitPenaltyAmount } : {}),
+      ...(local.dispute !== undefined ? { dispute: local.dispute } : {}),
+    });
+  }
+
+  const merged = [...byId.values()];
+  if (!saveCommitments(merged)) {
+    // Storage unavailable: saveCommitments already retained the list in memory.
+  }
+
+  return { imported: incoming.length, dropped, total: merged.length };
 }

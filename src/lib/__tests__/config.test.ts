@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { parseConfig, explorerContractUrl, explorerTx, explorerAccount } from '../config';
+import {
+  parseConfig,
+  getConfig,
+  setActiveNetwork,
+  explorerContractUrl,
+  explorerTx,
+  explorerAccount,
+} from '../config';
+import { getDeploymentContractId } from '../deployments';
 import { NETWORKS } from '../network';
 
 describe('Runtime Network Configuration & Helpers', () => {
@@ -139,5 +147,45 @@ describe('Build-Time Environment Validation Script', () => {
     });
     expect(res.status).toBe(1);
     expect(res.stderr).toContain('must use https: protocol');
+  });
+});
+
+describe('Runtime network selection & deployment registry', () => {
+  const validContractId = 'CBPNVNWDFZOUNB6REHBPGU2DRP4AJSVS7QJ3SEOUIDBTW6DZEHQKJ5E4';
+
+  it('building a futurenet config updates passphrase, explorer URL and RPC', () => {
+    const cfg = getConfig('futurenet', {});
+
+    expect(cfg.passphrase).toBe(NETWORKS.futurenet.passphrase);
+    expect(cfg.sorobanRpcUrl).toBe(NETWORKS.futurenet.defaultSorobanRpcUrl);
+    expect(cfg.horizonUrl).toBe(NETWORKS.futurenet.defaultHorizonUrl);
+    expect(cfg.networkDetails.explorerBaseUrl).toBe('https://stellar.expert/explorer/futurenet');
+  });
+
+  it('reads the escrow contract ID from the per-network deployment file', () => {
+    expect(getDeploymentContractId('testnet')).toBe(validContractId);
+    expect(getConfig('testnet', {}).escrowContractId).toBe(validContractId);
+    expect(getConfig('testnet', {}).isContractConfigured).toBe(true);
+  });
+
+  it('prefers the build-time contract override for the default network', () => {
+    const override = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM';
+    const cfg = getConfig('testnet', { NEXT_PUBLIC_ESCROW_CONTRACT_ID: override });
+    expect(cfg.escrowContractId).toBe(override);
+  });
+
+  it('networks without a deployment file have no contract configured', () => {
+    expect(getDeploymentContractId('mainnet')).toBe('');
+    expect(getConfig('mainnet', {}).isContractConfigured).toBe(false);
+    expect(getConfig('futurenet', {}).isContractConfigured).toBe(false);
+  });
+
+  it('switching the active network rebuilds explorer links', () => {
+    setActiveNetwork('futurenet', {});
+    expect(explorerContractUrl('CABC')).toContain('https://stellar.expert/explorer/futurenet/contract/CABC');
+    expect(explorerTx('hash')).toContain('https://stellar.expert/explorer/futurenet/tx/hash');
+
+    setActiveNetwork('testnet', {});
+    expect(explorerContractUrl('CABC')).toContain('https://stellar.expert/explorer/testnet/contract/CABC');
   });
 });

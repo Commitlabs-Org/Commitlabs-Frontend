@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCsp, toOriginOrNull } from '@/lib/security/csp';
+import { buildCsp, buildCspForNetwork, toOriginOrNull } from '@/lib/security/csp';
 
 const NONCE = 'abc123+/==';
 
@@ -133,5 +133,29 @@ describe('toOriginOrNull', () => {
   it('rejects non-http(s) schemes', () => {
     expect(toOriginOrNull('ftp://files.example.com')).toBeNull();
     expect(toOriginOrNull('ws://localhost:1234')).toBeNull();
+  });
+});
+
+describe('buildCspForNetwork', () => {
+  it('allows only the active network Horizon and RPC hosts in connect-src', () => {
+    const futurenet = directivesOf(
+      buildCspForNetwork({ nonce: NONCE, network: 'futurenet', isDev: false }),
+    );
+
+    expect(futurenet['connect-src']).toEqual([
+      "'self'",
+      'https://horizon-futurenet.stellar.org',
+      'https://rpc-futurenet.stellar.org',
+    ]);
+
+    const mainnet = directivesOf(
+      buildCspForNetwork({ nonce: NONCE, network: 'mainnet', isDev: false }),
+    );
+    expect(mainnet['connect-src']).toEqual([
+      "'self'",
+      'https://horizon.stellar.org',
+      'https://mainnet.stellar.org',
+    ]);
+    expect(mainnet['connect-src']).not.toContain('https://horizon-testnet.stellar.org');
   });
 });
