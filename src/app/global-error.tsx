@@ -38,7 +38,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           boxSizing: 'border-box',
         }}
       >
-        <div
+        <main
           style={{
             maxWidth: '520px',
             width: '100%',
@@ -149,7 +149,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               Reload application
             </button>
           </div>
-        </div>
+        </main>
       </body>
     </html>
   );

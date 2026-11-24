@@ -80,7 +80,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
   // State 1: Invalid ID format (Validation failure without calling RPC)
   if (!validation.valid) {
     return (
-      <main className="container narrow page" role="main">
+      <div className="container narrow page">
         <div className="card center">
           <div className="error-boundary-icon" aria-hidden="true">
             !
@@ -95,14 +95,14 @@ export default function CommitmentDetailPage({ params }: PageProps) {
             </Link>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   // State 2: Loading Skeleton
   if (loading) {
     return (
-      <main className="container page" role="main" aria-busy="true" aria-label="Loading commitment">
+      <div className="container page" aria-busy="true" aria-label="Loading commitment">
         <div className="row between wrap">
           <div>
             <Skeleton width={260} height={36} />
@@ -149,14 +149,14 @@ export default function CommitmentDetailPage({ params }: PageProps) {
             <Skeleton width="100%" height={60} />
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   // State 3: Not-Found State
   if (notFound) {
     return (
-      <main className="container narrow page" role="main">
+      <div className="container narrow page">
         <div className="card center">
           <div className="error-boundary-icon" aria-hidden="true" style={{ borderColor: 'var(--warn)', color: 'var(--warn)', background: 'var(--warn-chip-bg)' }}>
             ?
@@ -177,14 +177,14 @@ export default function CommitmentDetailPage({ params }: PageProps) {
             </Link>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   // State 4: Generic Error State with Retry
   if (error || !commitment) {
     return (
-      <main className="container narrow page" role="main">
+      <div className="container narrow page">
         <div className="card center">
           <div className="error-boundary-icon" aria-hidden="true">
             !
@@ -202,7 +202,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
             </Link>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -211,7 +211,7 @@ export default function CommitmentDetailPage({ params }: PageProps) {
   const metadataEntries = Object.entries(commitment.metadata);
 
   return (
-    <main className="container page" role="main">
+    <div className="container page">
       {/* Header & Status Bar */}
       <div className="row between wrap" style={{ marginBottom: '24px' }}>
         <div>
@@ -627,6 +627,6 @@ export default function CommitmentDetailPage({ params }: PageProps) {
           </li>
         </ul>
       </section>
-    </main>
+    </div>
   );
 }
