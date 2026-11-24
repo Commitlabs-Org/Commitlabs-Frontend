@@ -70,6 +70,8 @@ describe('ActivityPage Component', () => {
       expect(screen.getByText('release')).toBeDefined();
       expect(screen.getByText('101')).toBeDefined();
       expect(screen.getByText('102')).toBeDefined();
+      expect(screen.getAllByRole('button', { name: 'Copy address' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Copy transaction hash' })).toHaveLength(2);
       expect(screen.getByRole('button', { name: /Load older/i })).toBeDefined();
     });
   });

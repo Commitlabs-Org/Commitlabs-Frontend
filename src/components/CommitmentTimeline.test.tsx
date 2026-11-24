@@ -72,6 +72,7 @@ describe('CommitmentTimeline', () => {
     expect(items[1].textContent).toContain('create_commitment');
     expect(items[0].textContent).toContain('10,000,000 units');
     expect(items[0].textContent).toContain('2023-11-14');
+    expect(within(items[0]).getByRole('button', { name: 'Copy transaction hash' })).toBeTruthy();
     expect(within(items[0]).getByRole('link', { name: 'View transaction' }).getAttribute('href')).toContain(
       '/tx/'
     );

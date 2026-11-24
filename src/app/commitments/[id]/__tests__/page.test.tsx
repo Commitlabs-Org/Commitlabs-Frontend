@@ -210,6 +210,7 @@ describe('CommitmentDetailPage Component', () => {
 
       expect(screen.getByText('5,000,000,000')).toBeTruthy();
       expect(screen.getByText('+250,000,000')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Copy address' })).toBeTruthy();
       expect(screen.getAllByText('92 / 100')).toHaveLength(2);
       expect(screen.getByText(/3.00% \(300 basis points\)/i)).toBeTruthy();
 
