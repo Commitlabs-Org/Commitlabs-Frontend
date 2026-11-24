@@ -27,7 +27,37 @@ describe('Soroban Escrow Events Decoder', () => {
     expect(decoded.txHash).toBe('abcdef0123456789');
   });
 
-  it('decodes Shape B (2 topics: name, owner with [id, amount] tuple value)', () => {
+  it('decodes unified release event (name, id, owner) with ReleaseEventData payload', () => {
+    const raw: RawEvent = {
+      id: '0000000001b',
+      ledger: 102,
+      ledgerClosedAt: '2026-03-01T12:02:00Z',
+      topic: [
+        nativeToScVal('release'),
+        nativeToScVal(42n, { type: 'u64' }),
+        nativeToScVal('GABC1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+      ],
+      value: nativeToScVal({
+        asset: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+        amount: 1000000n,
+        accrued_yield: 5753n,
+        payout: 1005753n,
+        risk: 'Balanced',
+      }),
+      txHash: '1122334455667788',
+    };
+
+    const decoded = decodeEscrowEvent(raw);
+    expect(decoded.id).toBe('0000000001b');
+    expect(decoded.kind).toBe('release');
+    expect(decoded.commitmentId).toBe('42');
+    expect(decoded.owner).toBe('GABC1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    expect(decoded.amount).toBe('1005753');
+    expect(decoded.ledger).toBe(102);
+    expect(decoded.txHash).toBe('1122334455667788');
+  });
+
+  it('decodes historic Shape B release event (2 topics: name, owner with [id, payout, accrued_yield] tuple)', () => {
     const raw: RawEvent = {
       id: '0000000002',
       ledger: 105,
@@ -36,7 +66,7 @@ describe('Soroban Escrow Events Decoder', () => {
         nativeToScVal('release'),
         nativeToScVal('GXYZ1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
       ],
-      value: nativeToScVal([456, 10000000n]),
+      value: nativeToScVal([456, 1005753n, 5753n]),
       txHash: '9876543210fedcba',
     };
 
@@ -45,7 +75,7 @@ describe('Soroban Escrow Events Decoder', () => {
     expect(decoded.kind).toBe('release');
     expect(decoded.commitmentId).toBe('456');
     expect(decoded.owner).toBe('GXYZ1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-    expect(decoded.amount).toBe('10000000');
+    expect(decoded.amount).toBe('1005753');
     expect(decoded.ledger).toBe(105);
   });
 

@@ -932,11 +932,17 @@ impl EscrowContract {
         Self::require_not_paused(&env)?;
         let payout = Self::perform_release(&env, commitment_id, &caller)?;
         let c = Self::load(&env, commitment_id)?;
-        // Use the same raw publish pattern as create_commitment for consistent
-        // event capture in the SDK 23 test environment.
-        env.events().publish(
-            (Symbol::new(&env, "release"), c.owner.clone()),
-            (commitment_id, payout, c.accrued_yield),
+        Self::publish_commitment_event(
+            &env,
+            "release",
+            &c,
+            ReleaseEventData {
+                asset: c.asset.clone(),
+                amount: c.amount,
+                accrued_yield: c.accrued_yield,
+                payout,
+                risk: c.risk,
+            },
         );
         Ok(payout)
     }

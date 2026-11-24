@@ -74,7 +74,8 @@ export function decodeEscrowEvent(event: RawEvent): DecodedEscrowEvent {
     let amount: string | undefined;
     let description: string | undefined;
 
-    // Shape A: (name, id, owner)
+    // Canonical commitment event schema: (name, id, owner) with structured event data
+    // (e.g. ReleaseEventData, CreateCommitmentEventData, FundEscrowEventData).
     if (decodedTopics.length >= 3) {
       if (decodedTopics[1] !== null && decodedTopics[1] !== undefined) {
         commitmentId = String(decodedTopics[1]);
@@ -82,16 +83,26 @@ export function decodeEscrowEvent(event: RawEvent): DecodedEscrowEvent {
       if (typeof decodedTopics[2] === 'string') {
         owner = decodedTopics[2];
       }
-      if (typeof decodedValue === 'bigint' || typeof decodedValue === 'number') {
+      if (isRecord(decodedValue)) {
+        if ('payout' in decodedValue && decodedValue.payout !== undefined) {
+          amount = String(decodedValue.payout);
+        } else if ('amount' in decodedValue && decodedValue.amount !== undefined) {
+          amount = String(decodedValue.amount);
+        }
+        if ('reason_text' in decodedValue && decodedValue.reason_text !== undefined) {
+          description = String(decodedValue.reason_text).slice(0, 100);
+        } else if ('reason' in decodedValue && decodedValue.reason !== undefined) {
+          description = String(decodedValue.reason).slice(0, 100);
+        }
+      } else if (typeof decodedValue === 'bigint' || typeof decodedValue === 'number') {
         amount = String(decodedValue);
       } else if (Array.isArray(decodedValue) && decodedValue.length > 0) {
         amount = String(decodedValue[0]);
-      } else if (isRecord(decodedValue)) {
-        if ('amount' in decodedValue) amount = String(decodedValue.amount);
-        if ('reason' in decodedValue) description = String(decodedValue.reason).slice(0, 100);
       }
     }
-    // Shape B: (name, owner)
+    // Legacy fallback (Shape B): 2 topics (name, owner) with tuple [id, amount, ...] or record.
+    // Retained for historic `release` events emitted before schema unification and for
+    // non-commitment/admin events.
     else if (decodedTopics.length === 2) {
       if (typeof decodedTopics[1] === 'string') {
         owner = decodedTopics[1];
@@ -107,7 +118,7 @@ export function decodeEscrowEvent(event: RawEvent): DecodedEscrowEvent {
         amount = String(decodedValue);
       }
     }
-    // Shape C: (name)
+    // Legacy fallback (Shape C): 1 topic (name) with record payload { owner, id, amount }.
     else {
       if (isRecord(decodedValue)) {
         if ('owner' in decodedValue) owner = String(decodedValue.owner);
