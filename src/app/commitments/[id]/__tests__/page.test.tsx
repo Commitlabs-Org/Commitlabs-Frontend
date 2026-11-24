@@ -9,6 +9,7 @@ import * as escrowModule from '@/lib/soroban/escrow';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/soroban/read';
 import { shortAddress } from '@/lib/format';
 import * as eventsModule from '@/lib/soroban/events';
+import * as eventsModule from '@/lib/soroban/events';
 import { EscrowErrorCode, TxError } from '@/lib/soroban/errors';
 
 let mockWalletAddress: string | null = null;

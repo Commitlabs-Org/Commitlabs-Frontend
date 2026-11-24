@@ -8,11 +8,16 @@ import { useProtocolParams } from '@/lib/protocol';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
 import { TxError } from '@/lib/soroban/errors';
 import { penaltyOf, formatAmount } from '@/lib/amount';
+import { syncOwnerCommitments } from '@/lib/soroban/sync';
 
 vi.mock('@/lib/commitments', async (orig) => ({
   ...(await orig<typeof import('@/lib/commitments')>()),
   loadCommitments: () => ({ items: seed, dropped: 0, corrupt: false, storageUnavailable: false }),
   saveCommitments: vi.fn(),
+}));
+vi.mock('@/lib/soroban/sync', () => ({
+  mergeCommitments: (local: Commitment[], chain: Commitment[]) => [...local, ...chain],
+  syncOwnerCommitments: vi.fn(),
 }));
 vi.mock('@/components/WalletProvider', () => ({
   useWallet: () => ({ status: 'connected', address: 'GCALLER', message: null }),
@@ -27,7 +32,7 @@ vi.mock('@/components/ProtocolStatusProvider', () => ({
   }),
 }));
 vi.mock('@/lib/wallet', () => ({
-  fetchXlmBalance: vi.fn().mockResolvedValue(null),
+  fetchXlmBalance: vi.fn().mockResolvedValue({ status: 'success', balance: '0' }),
 }));
 vi.mock('@/lib/soroban/escrow', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/soroban/escrow')>();
@@ -69,6 +74,7 @@ const base = {
 let seed: Commitment[] = [];
 
 beforeEach(() => {
+  vi.mocked(syncOwnerCommitments).mockResolvedValue({ commitments: [], syncedAt: Date.now() });
   seed = [
     { ...base, id: 'CMT-DISPUTED', amount: '5000000000', durationDays: 30, createdAt: now - 10 * DAY, status: 'disputed' } as Commitment,
     { ...base, id: 'CMT-ACTIVE', amount: '10000000000', durationDays: 100, createdAt: now - 40 * DAY, status: 'active' } as Commitment,
@@ -96,6 +102,27 @@ beforeEach(() => {
     paused: false,
     yieldPool: 1_000_000_000_000n,
     fetchedAt: Date.now(),
+    refresh: vi.fn(),
+  });
+});
+
+describe('dashboard chain sync', () => {
+  it('keeps local commitments on RPC failure and offers a retry', async () => {
+    const user = userEvent.setup();
+    vi.mocked(syncOwnerCommitments)
+      .mockRejectedValueOnce(new Error('RPC unavailable'))
+      .mockResolvedValueOnce({ commitments: [], syncedAt: Date.now() });
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText(/Couldn't sync on-chain commitments/)).toBeDefined();
+    expect(screen.getByText('CMT-ACTIVE')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Retry sync' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Couldn't sync on-chain commitments/)).toBeNull(),
+    );
+    expect(syncOwnerCommitments).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -304,6 +331,7 @@ describe('dashboard on-chain early exit', () => {
       paused: true,
       yieldPool: 1_000_000_000_000n,
       fetchedAt: Date.now(),
+      refresh: vi.fn(),
     });
 
     render(<DashboardPage />);

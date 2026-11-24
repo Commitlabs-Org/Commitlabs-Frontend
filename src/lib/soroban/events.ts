@@ -1,5 +1,6 @@
 import { getActiveConfig } from '../config';
 import { nativeToScVal, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { nativeToScVal, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 
 export interface DecodedEscrowEvent {
   id: string;
