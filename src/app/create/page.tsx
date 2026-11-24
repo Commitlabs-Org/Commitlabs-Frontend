@@ -12,7 +12,6 @@ import {
 } from '@/lib/amount';
 import {
   TYPES,
-  fmtUnits,
   loadCommitments,
   newId,
   saveCommitments,
@@ -23,7 +22,7 @@ import {
 import { useWallet } from '@/components/WalletProvider';
 import { useProtocolStatus } from '@/components/ProtocolStatusProvider';
 import { getActionPauseReason } from '@/lib/soroban/protocol-policy';
-import { explorerContractUrl } from '@/lib/config';
+import { explorerContractUrl, explorerTx } from '@/lib/config';
 import { useNetwork } from '@/components/NetworkProvider';
 import { useProtocolParams } from '@/lib/protocol';
 import {
@@ -33,6 +32,7 @@ import {
   projectYieldStroops,
 } from '@/lib/yield';
 import { Skeleton } from '@/components/Skeleton';
+import { TxErrorNotice } from '@/components/TxErrorNotice';
 
 const ASSETS = ['USDC', 'XLM', 'EURC'];
 const STEP_LABELS = ['Type', 'Configure', 'Review', 'Done'];
@@ -64,6 +64,9 @@ export default function CreatePage() {
   const [days, setDays] = useState('30');
   const [agree, setAgree] = useState(false);
   const [created, setCreated] = useState<Commitment | null>(null);
+  const [pending, setPending] = useState<'creating' | 'funding' | 'retrying' | null>(null);
+  const [txError, setTxError] = useState<unknown>(null);
+  const [unfundedCommitment, setUnfundedCommitment] = useState<Commitment | null>(null);
   const [amountTouched, setAmountTouched] = useState(false);
   const [daysTouched, setDaysTouched] = useState(false);
   const [attempted, setAttempted] = useState(false);
@@ -107,13 +110,15 @@ export default function CreatePage() {
   const projected = valid ? projectYieldStroops(amt, dur, type) : 0n;
   const penalty = valid ? (amt * BigInt(penaltyBps)) / 10_000n : 0n;
 
+  const useOnChain = Boolean(address && isContractConfigured);
+
   function pickType(t: CommitmentType) {
     setType(t);
   }
 
-  function submit() {
-    const c: Commitment = {
-      id: newId(),
+  function buildCommitment(id: string, txHash: string | null): Commitment {
+    return {
+      id,
       type,
       asset,
       amount: amt.toString(),
@@ -124,11 +129,97 @@ export default function CreatePage() {
       createdAt: Date.now(),
       status: 'active',
       owner: address,
-      txHash: null,
+      txHash,
     };
-    saveCommitments([c, ...loadCommitments().items]);
-    setCreated(c);
-    setStep(3);
+  }
+
+  async function submit() {
+    if (pending) return;
+
+    if (!useOnChain) {
+      const c = buildCommitment(newId(), null);
+      saveCommitments([c, ...loadCommitments().items]);
+      setCreated(c);
+      setStep(3);
+      return;
+    }
+
+    if (isPaused || !address) return;
+
+    setTxError(null);
+    setUnfundedCommitment(null);
+    setPending('creating');
+    setAnnouncement('Creating commitment on-chain…');
+
+    try {
+      const { createAndFundCommitment } = await import('@/lib/soroban/create');
+      const result = await createAndFundCommitment({
+        owner: address,
+        asset,
+        amount: amt,
+        risk: type,
+        days: dur,
+        penaltyBps,
+        onProgress: (stage) => {
+          setPending(stage);
+          setAnnouncement(
+            stage === 'creating'
+              ? 'Creating commitment on-chain…'
+              : 'Commitment created. Funding escrow…'
+          );
+        },
+      });
+
+      if (result.status === 'funded') {
+        const c = buildCommitment(result.commitmentId, result.txHash);
+        saveCommitments([c, ...loadCommitments().items]);
+        setCreated(c);
+        setPending(null);
+        setStep(3);
+        return;
+      }
+
+      const recoverable = buildCommitment(result.commitmentId, result.createTxHash);
+      saveCommitments([recoverable, ...loadCommitments().items]);
+      setUnfundedCommitment(recoverable);
+      setTxError(result.error);
+      setPending(null);
+      setAnnouncement('Commitment created on-chain, but funding failed. You can retry funding.');
+    } catch (err) {
+      setTxError(err);
+      setPending(null);
+      setAnnouncement('Transaction failed. Review the error notice and try again.');
+    }
+  }
+
+  async function retryFund() {
+    if (pending || !unfundedCommitment || !address) return;
+
+    setTxError(null);
+    setPending('retrying');
+    setAnnouncement('Retrying escrow funding…');
+
+    try {
+      const { fundCommitment } = await import('@/lib/soroban/create');
+      const { txHash } = await fundCommitment({
+        commitmentId: unfundedCommitment.id,
+        owner: address,
+      });
+      const funded: Commitment = {
+        ...unfundedCommitment,
+        txHash: txHash ?? unfundedCommitment.txHash,
+      };
+      const existing = loadCommitments().items.filter((item) => item.id !== funded.id);
+      saveCommitments([funded, ...existing]);
+      setUnfundedCommitment(null);
+      setCreated(funded);
+      setPending(null);
+      setStep(3);
+    } catch (err) {
+      setTxError(err);
+      setPending(null);
+      setAnnouncement('Retry funding failed. Review the error notice and try again.');
+    }
   }
 
   function onTypeKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -291,7 +382,7 @@ export default function CreatePage() {
             <li>
               <span>Projected yield</span>
               <b>
-                {fmtUnits(projected)} {asset}
+                {formatAmount(projected)} {asset}
               </b>
             </li>
           </ul>
@@ -357,34 +448,59 @@ export default function CreatePage() {
             I understand leaving early applies the penalty and these terms cannot be changed.
           </label>
           <p className="muted small">
-            Demo mode: the commitment is recorded in this browser. On-chain submission to the{' '}
-            {config.networkDetails.label.toLowerCase()} escrow contract is enabled once a contract ID is configured
-            {isContractConfigured ? '.' : ' (none set for this network).'}
+            {useOnChain
+              ? `On-chain mode: submitting will create and fund your commitment on ${config.networkDetails.label} using your connected wallet.`
+              : `Demo mode: the commitment is recorded in this browser. Connect a wallet${
+                  isContractConfigured
+                    ? ''
+                    : ` and configure an escrow contract on ${config.networkDetails.label}`
+                } to submit on-chain.`}
           </p>
+          {txError ? <TxErrorNotice error={txError} /> : null}
+          {unfundedCommitment && (
+            <div className="notice" role="status">
+              <p>
+                Commitment #{unfundedCommitment.id} was created on-chain (status: created, awaiting
+                funding), but funding did not complete. Retry funding to lock your tokens in escrow.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={Boolean(pending)}
+                onClick={retryFund}
+              >
+                {pending === 'retrying' ? 'Retrying funding…' : 'Retry funding'}
+              </button>
+            </div>
+          )}
           <div className="row between wrap">
-            <button className="btn btn-ghost" onClick={() => setStep(1)}>
+            <button
+              className="btn btn-ghost"
+              disabled={Boolean(pending)}
+              onClick={() => setStep(1)}
+            >
               Back
             </button>
             <div className="row end wrap" style={{ gap: '12px', alignItems: 'center' }}>
-              {isPaused && (
+              {useOnChain && isPaused && (
                 <span className="err small" role="status">
                   {pauseReason}
                 </span>
               )}
-              <button
-                className="btn btn-primary"
-                disabled={!agree || isPaused || !isContractConfigured}
-                onClick={submit}
-                title={
-                  !isContractConfigured
-                    ? `No escrow contract is deployed on ${config.networkDetails.label}; write actions are disabled.`
-                    : isPaused
-                      ? pauseReason
-                      : undefined
-                }
-              >
-                Create commitment
-              </button>
+              {!unfundedCommitment && (
+                <button
+                  className="btn btn-primary"
+                  disabled={!agree || Boolean(pending) || (useOnChain && isPaused)}
+                  onClick={submit}
+                  title={useOnChain && isPaused ? pauseReason : undefined}
+                >
+                  {pending === 'creating'
+                    ? 'Creating…'
+                    : pending === 'funding'
+                      ? 'Funding…'
+                      : 'Create commitment'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -402,6 +518,11 @@ export default function CreatePage() {
             {created.id} &middot; {formatAmount(BigInt(created.amount))} {created.asset} for {created.durationDays}{' '}
             days
           </p>
+          {created.txHash && (
+            <a href={explorerTx(created.txHash)} target="_blank" rel="noreferrer">
+              View transaction on Stellar Expert
+            </a>
+          )}
           {isContractConfigured && (
             <a
               href={explorerContractUrl(config.escrowContractId)}
@@ -421,6 +542,8 @@ export default function CreatePage() {
                 setStep(0);
                 setAgree(false);
                 setCreated(null);
+                setTxError(null);
+                setUnfundedCommitment(null);
               }}
             >
               Create another
