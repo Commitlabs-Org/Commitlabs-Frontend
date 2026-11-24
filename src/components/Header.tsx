@@ -6,6 +6,7 @@ import { useWallet } from './WalletProvider';
 import { shortAddress } from '@/lib/format';
 import { useNetwork } from './NetworkProvider';
 import { NETWORKS, NETWORK_IDS, type NetworkId } from '@/lib/network';
+import { ThemeToggle } from './ThemeToggle';
 
 const LINKS = [
   { href: '/create', label: 'Create' },
@@ -52,6 +53,7 @@ export function Header() {
             </option>
           ))}
         </select>
+        <ThemeToggle />
         {status === 'connected' && address ? (
           <button className="btn btn-ghost" onClick={disconnect} title="Disconnect wallet">
             <span className="dot" /> {shortAddress(address)}
