@@ -1,3 +1,5 @@
+import { saturatingMultiplyI128 } from './amount';
+
 export type RiskProfile = 'safe' | 'balanced' | 'aggressive';
 
 /**
@@ -49,8 +51,8 @@ export function projectYieldStroops(
   const bps = BigInt(ANNUAL_YIELD_BPS[risk]);
   const days = BigInt(Math.floor(durationDays));
 
-  // BigInt multiplication does not overflow like fixed-width ints, but amount is bounded
-  const product = amount * bps * days;
+  const afterBps = saturatingMultiplyI128(amount, bps);
+  const product = saturatingMultiplyI128(afterBps, days);
   const afterDays = product / 365n;
   const result = afterDays / MAX_PENALTY_BPS;
 
