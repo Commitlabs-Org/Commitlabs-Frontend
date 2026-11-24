@@ -38,6 +38,28 @@ This project pins its toolchain so contributors and CI run a consistent environm
 - Before opening your PR, run tests and check coverage locally using `npm run test:coverage` (or `pnpm test:coverage`).
 - The build, tests, and linters must pass in CI before the PR can be merged.
 
+### Accessibility Testing (`vitest-axe`)
+
+Every route and shared layout component must have a co-located `*.a11y.test.tsx` suite using the shared helper in [`src/test/axe.ts`](./src/test/axe.ts):
+
+```tsx
+import { render } from '@testing-library/react';
+import { axe } from '@/test/axe';
+
+it('has no axe violations', async () => {
+  const { container } = render(
+    <main id="main-content">
+      <MyPage />
+    </main>,
+  );
+  expect(await axe(container)).toHaveNoViolations();
+});
+```
+
+- `src/test/axe.ts` registers the `toHaveNoViolations` matcher and disables only `color-contrast` because jsdom cannot compute rendered styles or canvas pixel contrast (contrast is audited in real browsers via Lighthouse CI).
+- Route tests should wrap page components in `<main id="main-content">` (matching `RootLayout`) so landmark rules are evaluated accurately and nested `<main>` elements are caught.
+- `RootLayout` provides a visible-on-focus skip link targeting `#main-content`; keep it as the first focusable element in `<body>`.
+
 ## Frontend Performance Budgets
 
 The production build is checked against gzip-compressed first-load JavaScript budgets for `/`, `/create`, and `/dashboard`. The baseline comes from the Next.js build output: 96.2 kB, 100 kB, and 99.8 kB, respectively. The exact byte baselines and limits (10% headroom) are recorded in [`performance-budgets.json`](./performance-budgets.json); `/` has its own lower limit. The check also fails if the Freighter API implementation appears in the `/` first-load chunks.

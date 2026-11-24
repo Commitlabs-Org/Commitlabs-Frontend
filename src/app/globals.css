@@ -103,6 +103,9 @@ input[type='checkbox'] { margin-top: 4px; }
 .err { color: var(--danger); font-weight: 400; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 100; padding: 10px 16px; background: var(--bg2); color: var(--text); border: 2px solid var(--accent); border-radius: 0 0 8px 0; font-weight: 600; text-decoration: none; }
+.skip-link:focus, .skip-link:focus-visible { left: 8px; top: 8px; outline: 2px solid var(--accent); outline-offset: 2px; }
+main#main-content:focus { outline: none; }
 h2:focus { outline: none; }
 .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .check-big { width: 56px; height: 56px; border-radius: 50%; background: var(--ok); color: #05210f; font-size: 1.8rem; display: grid; place-items: center; font-weight: 700; margin: 0 auto; }
