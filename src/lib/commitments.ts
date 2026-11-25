@@ -456,3 +456,63 @@ export function importCommitments(text: string, mode: ImportMode): ImportResult 
 
   return { imported: incoming.length, dropped, total: merged.length };
 }
+
+/** Clears persisted commitments and any in-memory fallback. */
+export function resetCommitments(): void {
+  memoryStore = null;
+  removeRaw(KEY);
+}
+
+/** Subscribes to cross-tab changes of the commitments key. */
+export function subscribeCommitments(handler: () => void): () => void {
+  return subscribeStorage(KEY, handler);
+}
+
+/**
+ * Opt-in sample records for the dashboard empty state. They are flagged with
+ * `demo: true` so the UI can label them honestly.
+ */
+export function sampleCommitments(): Commitment[] {
+  const now = Date.now();
+  return [
+    {
+      id: newId(),
+      type: 'balanced',
+      asset: 'USDC',
+      amount: '25000000000',
+      durationDays: 30,
+      maxLoss: 8,
+      penalty: FALLBACK_PROTOCOL_PARAMS.penalties.balanced / 100,
+      apy: DISPLAY_APY.balanced,
+      createdAt: now - 12 * DAY,
+      status: 'active',
+      owner: null,
+      txHash: null,
+      demo: true,
+    },
+    {
+      id: newId(),
+      type: 'safe',
+      asset: 'XLM',
+      amount: '100000000000',
+      durationDays: 14,
+      maxLoss: 2,
+      penalty: FALLBACK_PROTOCOL_PARAMS.penalties.safe / 100,
+      apy: DISPLAY_APY.safe,
+      createdAt: now - 20 * DAY,
+      status: 'active',
+      owner: null,
+      txHash: null,
+      demo: true,
+    },
+  ];
+}
+
+export function fmt(n: number, digits = 2): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: digits });
+}
+
+/** Abbreviated base-unit display for summaries; use `formatAmount` for full precision. */
+export function fmtUnits(value: bigint, maxFraction = 2): string {
+  return formatAmount(value, STELLAR_DECIMALS, { maxFraction });
+}
