@@ -364,3 +364,35 @@ td code { word-break: break-all; }
   margin: 16px 0 24px;
   text-align: left;
 }
+
+/* Notifications */
+.notification-bell-button {
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-badge 2s infinite ease-in-out;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-badge {
+    animation: none !important;
+    transition: none !important;
+  }
+  .notification-bell-button {
+    transition: none !important;
+  }
+}

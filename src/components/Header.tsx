@@ -7,6 +7,7 @@ import { shortAddress } from '@/lib/format';
 import { useNetwork } from './NetworkProvider';
 import { NETWORKS, NETWORK_IDS, type NetworkId } from '@/lib/network';
 import { ThemeToggle } from './ThemeToggle';
+import { NotificationBell } from './NotificationBell';
 
 const LINKS = [
   { href: '/create', label: 'Create' },
@@ -53,6 +54,7 @@ export function Header() {
             </option>
           ))}
         </select>
+        <NotificationBell />
         <ThemeToggle />
         {status === 'connected' && address ? (
           <button className="btn btn-ghost" onClick={disconnect} title="Disconnect wallet">

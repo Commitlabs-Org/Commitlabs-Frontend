@@ -5,6 +5,7 @@ import { NetworkProvider } from '@/components/NetworkProvider';
 import { NetworkNotice } from '@/components/NetworkNotice';
 import { WalletProvider } from '@/components/WalletProvider';
 import { ProtocolStatusProvider } from '@/components/ProtocolStatusProvider';
+import { NotificationProvider } from '@/components/NotificationProvider';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { WalletNotice } from '@/components/WalletNotice';
@@ -39,14 +40,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <NetworkProvider>
           <WalletProvider>
             <ProtocolStatusProvider>
-              <Header />
-              <NetworkNotice />
-              <PausedBanner />
-              <WalletNotice />
-              <main id="main-content" tabIndex={-1}>
-                {children}
-              </main>
-              <Footer />
+              <NotificationProvider>
+                <Header />
+                <NetworkNotice />
+                <PausedBanner />
+                <WalletNotice />
+                <main id="main-content" tabIndex={-1}>
+                  {children}
+                </main>
+                <Footer />
+              </NotificationProvider>
             </ProtocolStatusProvider>
           </WalletProvider>
         </NetworkProvider>
